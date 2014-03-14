@@ -1,9 +1,9 @@
 
-config: apache commons config
+config: use Config class to get apache commons Configuration instance.  file is "trader.properties" by default
 
 LOGGING
 use the slf4j API, which is bound to the logback framework in maven
-configuration is
+configuration is in src/main/resources/logback.xml
 
 trace: spammy debug
 debug: regular debug
