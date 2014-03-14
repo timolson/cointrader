@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.cryptocoinpartners</groupId>
+    <artifactId>trader</artifactId>
+    <version>0.1-SNAPSHOT</version>
+
+    <developers>
+        <developer>
+            <name>Tim Olson</name>
+            <email>Tim.Olson@CryptocoinPartners.com</email>
+            <organization>Cryptocoin Partners</organization>
+        </developer>
+        <developer>
+            <name>Mike Olson</name>
+            <email>Mike.Olson@CryptocoinPartners.com</email>
+            <organization>Cryptocoin Partners</organization>
+        </developer>
+        <developer>
+            <name>Philip Chen</name>
+            <email>Philip.Chen@CryptocoinPartners.com</email>
+            <organization>Cryptocoin Partners</organization>
+        </developer>
+    </developers>
+
+    <properties>
+        <xchange.version>2.0.0-SNAPSHOT</xchange.version>
+        <slf4j-api.version>1.7.5</slf4j-api.version>
+        <hibernate.version>4.3.4.Final</hibernate.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j-api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>log4j-over-slf4j</artifactId>
+            <version>${slf4j-api.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.0.13</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-configuration</groupId>
+            <artifactId>commons-configuration</artifactId>
+            <version>1.6</version>
+        </dependency>
+        <dependency>
+            <groupId>com.espertech</groupId>
+            <artifactId>esper</artifactId>
+            <version>4.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.beust</groupId>
+            <artifactId>jcommander</artifactId>
+            <version>1.30</version>
+        </dependency>
+        <dependency>
+            <groupId>com.xeiam.xchange</groupId>
+            <artifactId>xchange-core</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.xeiam.xchange</groupId>
+            <artifactId>xchange-bitfinex</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <version>2.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>${hibernate.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-entitymanager</artifactId>
+            <version>${hibernate.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate.javax.persistence</groupId>
+            <artifactId>hibernate-jpa-2.0-api</artifactId>
+            <version>1.0.1.Final</version>
+        </dependency>
+        <dependency>
+        	<groupId>mysql</groupId>
+        	<artifactId>mysql-connector-java</artifactId>
+        	<version>5.1.29</version>
+        </dependency>
+        <dependency> <!-- Support for Joda Time in Hibernate -->
+            <groupId>org.jadira.usertype</groupId>
+            <artifactId>usertype.jodatime</artifactId>
+            <version>2.0.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.joda</groupId>
+            <artifactId>joda-money</artifactId>
+            <version>0.9.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
+            <version>0.9.8</version>
+        </dependency>
+    </dependencies>
+
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+        </resources>
+    </build>
+
+
+    <!-- Point to the cryptocoinpartners.com internal repository -->
+    <repositories>
+        <repository>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <id>trader-release</id>
+            <name>libs-release-local</name>
+            <url>http://cryptocoinpartners.com:8080/artifactory/libs-release-local</url>
+        </repository>
+        <repository>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <id>trader-snapshot</id>
+            <name>libs-snapshot-local</name>
+            <url>http://cryptocoinpartners.com:8080/artifactory/libs-snapshot-local</url>
+        </repository>
+        <!-- this is for the XChange 2.0.0-SNAPSHOT code -->
+        <repository>
+            <id>sonatype-oss-snapshot</id>
+            <snapshots/>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </repository>
+    </repositories>
+
+    <!-- Point to the cryptocoinpartners.com internal repository -->
+    <pluginRepositories>
+        <pluginRepository>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <id>trader-plugins-release</id>
+            <url>http://cryptocoinpartners.com:8080/artifactory/plugins-release</url>
+        </pluginRepository>
+        <pluginRepository>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <id>trader-plugins-snapshot</id>
+            <url>http://cryptocoinpartners.com:8080/artifactory/plugins-snapshot</url>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <!-- Deploy to the cryptocoinpartners.com internal repository -->
+    <distributionManagement>
+        <snapshotRepository>
+            <id>trader-snapshot</id>
+            <url>http://cryptocoinpartners.com:8080/artifactory/libs-snapshot-local</url>
+        </snapshotRepository>
+        <repository>
+            <id>trader-release</id>
+            <url>http://cryptocoinpartners.com:8080/artifactory/libs-release-local</url>
+        </repository>
+    </distributionManagement>
+
+</project>
