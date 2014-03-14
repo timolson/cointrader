@@ -70,10 +70,7 @@ public class Main
         if( command == null )
             jc.usage();
         else {
-            if( mainParams.propertiesFilename.equals(MainParams.DEFAULT_PROPERTIES_FILENAME) )
-                lookForDefaultConfig();
-            else
-                importConfig(mainParams.propertiesFilename);
+            importConfig(mainParams.propertiesFilename);
             if( command.equals("ticker") )
                 ticker(tickerParams);
             else if( command.equals("backtest") )
@@ -85,13 +82,6 @@ public class Main
             else
                 jc.usage();
         }
-    }
-
-
-    private static void lookForDefaultConfig() throws ConfigurationException {
-        File file = new File(MainParams.DEFAULT_PROPERTIES_FILENAME);
-        if( file.exists() )
-            importConfig(MainParams.DEFAULT_PROPERTIES_FILENAME);
     }
 
 

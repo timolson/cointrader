@@ -18,7 +18,8 @@
         <appender-ref ref="FILE"/>
     </root>
 
-    <logger name="com.cryptocoinpartners" level="INFO"/>
-    <logger name="org.hibernate.ejb.HibernatePersistence" level="ERROR"/>
+    <logger name="com.cryptocoinpartners" level="info"/>
+    <logger name="org.hibernate.ejb.HibernatePersistence" level="error"/>
+    <logger name="org.hibernate.tool.hbm2ddl.SchemaExport" level="off"/>
 
 </configuration>
