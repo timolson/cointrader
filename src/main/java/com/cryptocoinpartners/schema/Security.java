@@ -1,34 +1,47 @@
 package com.cryptocoinpartners.schema;
 
-import javax.persistence.Entity;
-import javax.persistence.ManyToOne;
+import com.cryptocoinpartners.util.PersistUtil;
+
+import javax.persistence.*;
+import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 
 
 /**
+ * Represents an asset at a Market.  The same asset on different Markets are different Securities
+ *
  * @author Tim Olson
  */
 @Entity
 public class Security extends DbEntity {
 
-
-    public static Set<Security> forMarket(Market market) {
-        // todo hibernate query
-        return null;
+    /**
+     * @param market
+     * @return all Securities listed on the given Market
+     */
+    public static Collection<Security> forMarket(Market market) {
+        TypedQuery<Security> query = PersistUtil.getEntityManager()
+                                                .createQuery("select s from Security s where market=?1", Security.class);
+        query.setParameter(1,market);
+        List<Security> resultList = query.getResultList();
+        return resultList;
     }
 
 
+    /** This symbol may be unique to the market */
     public String getSymbol() {
         return symbol;
     }
 
 
+    @Enumerated(EnumType.STRING)
     public Market getMarket() {
         return market;
     }
 
 
-    public Security(Market market, String symbol) {
+    protected Security(Market market, String symbol) {
         this.market = market;
         this.symbol = symbol;
     }
@@ -37,6 +50,10 @@ public class Security extends DbEntity {
     public String toString() {
         return market.toString()+':'+symbol;
     }
+
+
+    public Security withLowercaseSymbol() { setSymbol(getSymbol().toLowerCase()); return this; }
+    public Security withUppercaseSymbol() { setSymbol(getSymbol().toLowerCase()); return this; }
 
 
     // JPA

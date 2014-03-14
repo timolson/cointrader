@@ -1,6 +1,6 @@
 package com.cryptocoinpartners.schema;
 
-import java.util.Set;
+import java.util.Collection;
 
 
 /**
@@ -11,5 +11,5 @@ public enum Market {
     BITFINEX, BTC_CHINA, BITSTAMP, BTCE, CRYPTSY;
 
 
-    public Set<Security> getSecurities() { return Security.forMarket(this); }
+    public Collection<Security> getSecurities() { return Security.forMarket(this); }
 }

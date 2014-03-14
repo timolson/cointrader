@@ -124,7 +124,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.cryptocoinpartners.Main</mainClass>
+                            <mainClass>com.cryptocoinpartners.bin.Main</mainClass>
                         </manifest>
                     </archive>
                     <descriptorRefs>

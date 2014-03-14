@@ -1,9 +1,11 @@
 package com.cryptocoinpartners.util;
 
+import com.cryptocoinpartners.bin.command.Command;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
 import org.reflections.util.ClasspathHelper;
 
+import java.util.Collection;
 import java.util.Set;
 
 

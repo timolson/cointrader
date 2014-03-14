@@ -2,6 +2,8 @@ package com.cryptocoinpartners.schema;
 
 import org.joda.time.Instant;
 
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
 import javax.persistence.MappedSuperclass;
 import java.math.BigDecimal;
 
@@ -18,6 +20,7 @@ public class Quote extends Pricing {
     }
 
 
+    @Enumerated(EnumType.STRING)
     public Side getSide() {
         return side;
     }

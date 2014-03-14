@@ -24,8 +24,7 @@ public class Subscription {
     }
 
 
-    public static void unsubscribe( MarketDataService marketDataService, Security security,
-                                    SubscriptionType subscriptionType, Esper... espers ) {
+    public void unsubscribe() {
         // todo
     }
 

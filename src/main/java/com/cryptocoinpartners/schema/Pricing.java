@@ -3,6 +3,7 @@ package com.cryptocoinpartners.schema;
 
 import org.joda.time.Instant;
 
+import javax.persistence.Column;
 import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
 import java.math.BigDecimal;
@@ -23,7 +24,11 @@ public class Pricing extends Event {
 
 
     public @ManyToOne Security getSecurity() { return security; }
+
+    @Column(precision = 30, scale = 15)
     public BigDecimal getPrice() { return price; }
+
+    @Column(precision = 30, scale = 15)
     public BigDecimal getSize() { return size; }
 
 

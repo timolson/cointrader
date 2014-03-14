@@ -1,10 +1,8 @@
 package com.cryptocoinpartners.util;
 
-import org.apache.commons.configuration.Configuration;
+import com.cryptocoinpartners.schema.*;
 
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.Persistence;
+import javax.persistence.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,27 +13,70 @@ import java.util.Map;
 public class PersistUtil {
 
 
-    public static EntityManager getEntityManager() {
-        return entityManager;
+    public static void insert(DbEntity... entities) {
+        EntityManager em = getEntityManager();
+        EntityTransaction transaction = em.getTransaction();
+        transaction.begin();
+        try {
+            for( DbEntity entity : entities )
+                em.persist(entity);
+            transaction.commit();
+        }
+        catch( Error t ) {
+            transaction.rollback();
+            throw t;
+        }
+        finally {
+            em.close();
+        }
     }
 
 
-    private static EntityManager entityManager;
+    public static EntityManager getEntityManager() {
+        init(false);
+        return entityManagerFactory.createEntityManager();
+    }
 
 
-    static {
+    public static void resetDatabase() {
+        init(true);
+        loadDefaultData();
+    }
+
+
+    private static void init(boolean resetDatabase) {
+        if( entityManagerFactory != null && !resetDatabase )
+            return;
         Map<String,String> properties = new HashMap<String, String>();
+        String createMode;
+        if(resetDatabase)
+            createMode = "create";
+        else
+            createMode = "update";
+        properties.put("hibernate.hbm2ddl.auto",createMode);
         properties.put("hibernate.connection.driver_class", Config.get().getString("db.driver"));
         properties.put("hibernate.dialect", Config.get().getString("db.dialect"));
         properties.put("hibernate.connection.url", Config.get().getString("db.url"));
         properties.put("hibernate.connection.username", Config.get().getString("db.username"));
         properties.put("hibernate.connection.password", Config.get().getString("db.password"));
-        properties.put("hibernate.hbm2ddl.auto", Config.get().getBoolean("db.autocreate",false)?"create":"");
 
-        EntityManagerFactory entityManagerFactory = Persistence.createEntityManagerFactory("com.cryptocoinpartners",properties);
-        entityManager = entityManagerFactory.createEntityManager();
-
+        entityManagerFactory = Persistence.createEntityManagerFactory("com.cryptocoinpartners.schema", properties);
     }
 
 
+    private static void loadDefaultData() {
+        PersistUtil.insert(
+
+                // DEFAULT ENTITIES GO HERE
+
+                // BITFINEX
+                new Forex(Market.BITFINEX, Currency.BTC, Currency.USD)
+                ,new Forex(Market.BITFINEX, Currency.LTC, Currency.USD)
+                ,new Forex(Market.BITFINEX, Currency.LTC, Currency.BTC)
+
+        );
+    }
+
+
+    private static EntityManagerFactory entityManagerFactory;
 }

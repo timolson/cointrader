@@ -4,6 +4,7 @@ package com.cryptocoinpartners.module.xchange;
 import com.cryptocoinpartners.service.Subscription;
 import com.cryptocoinpartners.schema.Trade;
 import com.cryptocoinpartners.util.MathUtil;
+import com.cryptocoinpartners.util.PersistUtil;
 import org.joda.time.Instant;
 
 import java.math.BigDecimal;
@@ -13,12 +14,8 @@ import java.util.Random;
 /**
  * @author Tim Olson
  */
+@SuppressWarnings("FieldCanBeLocal")
 public class FakeTicker {
-
-    public double averageTimeBetweenTrades = 1.5;
-    public double priceMovementStdDev = 0.0001;
-    public double averageVolume = 1.0;
-
 
     public FakeTicker(Subscription subscription) {
         this.subscription = subscription;
@@ -27,7 +24,7 @@ public class FakeTicker {
                 running = true;
                 while( running ) {
                     try {
-                        double lambda = averageTimeBetweenTrades; // a trade every 1.5 seconds
+                        double lambda = 1/averageTimeBetweenTrades;
                         double poissonSleep = -Math.log(1d-random.nextDouble())/lambda;
                         sleep((long)(1000*poissonSleep));
                     }
@@ -51,11 +48,12 @@ public class FakeTicker {
     private void produceTick() {
         Trade trade = new Trade(subscription.getSecurity(),Instant.now(),nextPrice(),nextVolume());
         subscription.publish(trade);
+        PersistUtil.insert(trade);
     }
 
 
     private BigDecimal nextVolume() {
-        return BigDecimal.valueOf((double) MathUtil.getPoissonRandom(averageVolume));
+        return BigDecimal.valueOf(volumeBasis * MathUtil.getPoissonRandom(averageVolume));
     }
 
 
@@ -69,6 +67,12 @@ public class FakeTicker {
         currentPrice = currentPrice.multiply(BigDecimal.valueOf(multiple));
         return currentPrice;
     }
+
+
+    private double averageTimeBetweenTrades = 2;
+    private double priceMovementStdDev = 0.0001;
+    private double averageVolume = 100.0;
+    private double volumeBasis = 1/1000.0;
 
 
     private Random random = new Random();
