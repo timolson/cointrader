@@ -1,15 +1,18 @@
 package com.cryptocoinpartners.schema;
 
 
+import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
 
 import javax.persistence.ManyToOne;
+import javax.persistence.MappedSuperclass;
 import java.util.UUID;
 
 
 /**
  * @author Tim Olson
  */
+@MappedSuperclass
 public class MarketData extends Event implements HasGuid {
 
 
@@ -19,20 +22,28 @@ public class MarketData extends Event implements HasGuid {
     }
 
 
-    @ManyToOne
-    public Security getSecurity() { return security; }
+    public @ManyToOne Security getSecurity() { return security; }
     public String getGuid() { return guid; }
+
 
     /**
      * this is the time when this event object was created.  it may be later than getTime() due to transmission delays
      * @return
      */
-    public Instant getCreatedTime() {
-        return createdTime;
+    @Type(type="org.jadira.usertype.dateandtime.joda.PersistentInstantAsMillisLong")
+    public Instant getTimeReceived() {
+        return timeReceived;
     }
 
 
-    private Instant createdTime = Instant.now();
+    // JPA
+    protected MarketData() {}
+    protected void setTimeReceived(Instant timeReceived) { this.timeReceived = timeReceived; }
+    protected void setSecurity(Security security) { this.security = security; }
+    protected void setGuid(String guid) { this.guid = guid; }
+
+
+    private Instant timeReceived = Instant.now();
     private Security security;
     private String guid = UUID.randomUUID().toString();
 }

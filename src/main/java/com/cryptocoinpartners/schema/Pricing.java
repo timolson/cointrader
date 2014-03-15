@@ -13,17 +13,14 @@ import java.math.BigDecimal;
  * @author Tim Olson
  */
 @MappedSuperclass
-public class Pricing extends Event {
+public class Pricing extends MarketData {
 
-    public Pricing(Security security, Instant time, BigDecimal price, BigDecimal size) {
-        super(time);
-        this.security = security;
+    public Pricing(Instant time, Security security, BigDecimal price, BigDecimal size) {
+        super(time, security);
         this.price = price;
         this.size = size;
     }
 
-
-    public @ManyToOne Security getSecurity() { return security; }
 
     @Column(precision = 30, scale = 15)
     public BigDecimal getPrice() { return price; }
@@ -33,13 +30,11 @@ public class Pricing extends Event {
 
 
     // JPA
-    protected Pricing() { }
-    protected void setSecurity(Security security) { this.security = security; }
+    protected Pricing() { super(); }
     protected void setPrice(BigDecimal price) { this.price = price; }
     protected void setSize(BigDecimal size) { this.size = size; }
 
 
-    private Security security;
     private BigDecimal price;
     private BigDecimal size;
 }

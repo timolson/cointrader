@@ -15,7 +15,7 @@ import java.math.BigDecimal;
 public class Quote extends Pricing {
 
     public Quote(Side side, Security security, Instant time, BigDecimal price, BigDecimal size) {
-        super(security, time, price, size);
+        super(time, security, price, size);
         this.side = side;
     }
 

@@ -1,0 +1,1 @@
+This module discovers all the MarketDataService subclasses and subscribes them fully to the esper engine

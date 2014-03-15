@@ -1,11 +1,9 @@
 package com.cryptocoinpartners.util;
 
-import com.cryptocoinpartners.bin.command.Command;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
 import org.reflections.util.ClasspathHelper;
 
-import java.util.Collection;
 import java.util.Set;
 
 
@@ -15,14 +13,16 @@ import java.util.Set;
 public class ReflectionUtil {
 
 
-    public static <T> Set<Class<? extends T>> getSubtypesOf( Class<T> cls ) {
+    public static <T> Set<Class<? extends T>> getSubtypesOf(Class<T> cls) {
         return reflections.getSubTypesOf(cls);
     }
 
 
     private static Reflections reflections;
+
+
     static {
         reflections = new Reflections(ClasspathHelper.forPackage("com.cryptocoinpartners"),
-                                      new SubTypesScanner() /* , other scanners here */ );
+                                      new SubTypesScanner() /* , other scanners here */);
     }
 }

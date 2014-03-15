@@ -1,10 +1,9 @@
-package com.cryptocoinpartners.module.xchange;
+package com.cryptocoinpartners.service.xchange;
 
 
 import com.cryptocoinpartners.service.Subscription;
 import com.cryptocoinpartners.schema.Trade;
 import com.cryptocoinpartners.util.MathUtil;
-import com.cryptocoinpartners.util.PersistUtil;
 import org.joda.time.Instant;
 
 import java.math.BigDecimal;
@@ -48,7 +47,6 @@ public class FakeTicker {
     private void produceTick() {
         Trade trade = new Trade(subscription.getSecurity(),Instant.now(),nextPrice(),nextVolume());
         subscription.publish(trade);
-        PersistUtil.insert(trade);
     }
 
 

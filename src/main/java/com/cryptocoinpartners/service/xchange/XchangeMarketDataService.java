@@ -1,4 +1,4 @@
-package com.cryptocoinpartners.module.xchange;
+package com.cryptocoinpartners.service.xchange;
 
 import com.cryptocoinpartners.schema.*;
 import com.cryptocoinpartners.service.MarketDataServiceBase;

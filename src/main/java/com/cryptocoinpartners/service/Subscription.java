@@ -1,7 +1,6 @@
 package com.cryptocoinpartners.service;
 
 
-import com.cryptocoinpartners.schema.Esper;
 import com.cryptocoinpartners.schema.Event;
 import com.cryptocoinpartners.schema.Security;
 
@@ -25,7 +24,7 @@ public class Subscription {
 
 
     public void unsubscribe() {
-        // todo
+        marketDataService.unsubscribe(this);
     }
 
 

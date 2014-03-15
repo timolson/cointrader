@@ -14,7 +14,7 @@ public class PersistUtil {
 
 
     public static void insert(DbEntity... entities) {
-        EntityManager em = getEntityManager();
+        EntityManager em = createEntityManager();
         EntityTransaction transaction = em.getTransaction();
         transaction.begin();
         try {
@@ -32,7 +32,7 @@ public class PersistUtil {
     }
 
 
-    public static EntityManager getEntityManager() {
+    public static EntityManager createEntityManager() {
         init(false);
         return entityManagerFactory.createEntityManager();
     }

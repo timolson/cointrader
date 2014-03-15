@@ -5,7 +5,6 @@ import com.cryptocoinpartners.util.PersistUtil;
 import javax.persistence.*;
 import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 
 /**
@@ -21,7 +20,7 @@ public class Security extends DbEntity {
      * @return all Securities listed on the given Market
      */
     public static Collection<Security> forMarket(Market market) {
-        TypedQuery<Security> query = PersistUtil.getEntityManager()
+        TypedQuery<Security> query = PersistUtil.createEntityManager()
                                                 .createQuery("select s from Security s where market=?1", Security.class);
         query.setParameter(1,market);
         List<Security> resultList = query.getResultList();

@@ -19,17 +19,20 @@ import java.util.Set;
 public abstract class MarketDataService {
 
 
-    public static void subscribeAll( Esper esper ) {
+    public static Collection<Subscription> subscribeAll(Esper esper) {
+        Collection<Subscription> subscriptions = new ArrayList<Subscription>();
         for( MarketDataService marketDataService : getAll() ) {
             for( MarketDataService dataService : all ) {
                 for( SubscriptionCapability capability : dataService.getSubscriptionCapabilities() ) {
                     for( Security security : capability.getMarket().getSecurities() ) {
                         Subscription subscription = Subscription.subscribe(marketDataService, security,
                                                                            capability.getSubscriptionType(), esper);
+                        subscriptions.add(subscription);
                     }
                 }
             }
         }
+        return subscriptions;
     }
 
 
@@ -64,7 +67,7 @@ public abstract class MarketDataService {
      *
      * After this is called, any information about the given Security should be posted to the esper instance
      * @param subscription
-     * @see Subscription#subscribe(MarketDataService, com.cryptocoinpartners.schema.Security, SubscriptionType, com.cryptocoinpartners.schema.Esper...)()
+     * @see Subscription#subscribe(MarketDataService, com.cryptocoinpartners.schema.Security, SubscriptionType, Esper...)()
      */
     abstract void subscribe(Subscription subscription);
 

@@ -12,6 +12,6 @@ import java.math.BigDecimal;
  */
 public class Tick extends Pricing {
     public Tick(Security security, Instant time, BigDecimal price, BigDecimal size) {
-        super(security, time, price, size);
+        super(time, security, price, size);
     }
 }
