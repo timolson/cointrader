@@ -8,9 +8,11 @@ import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,8 +34,12 @@ import java.util.regex.Pattern;
  */
 public class ModuleLoader {
 
-
     public static void load(Esper esper, String... moduleNames) throws ModuleLoaderError {
+        load(esper, null, moduleNames);
+    }
+
+
+    public static void load(Esper esper, @Nullable Configuration config, String... moduleNames) throws ModuleLoaderError {
         try {
             init();
             for( String name : moduleNames ) {
@@ -42,10 +48,10 @@ public class ModuleLoader {
                     break;
                 }
                 log.info("loading module "+name);
-                Configuration config = getConfig(name);
+                Configuration fullConfiguration = buildConfig(name,config);
                 Collection<ModuleListener> lifecycles = initListenerClasses(esper,name);
                 for( ModuleListener lifecycle : lifecycles )
-                    lifecycle.initModule(esper,config);
+                    lifecycle.initModule(esper,fullConfiguration);
                 loadEsperFiles(esper, name);
             }
         }
@@ -55,19 +61,15 @@ public class ModuleLoader {
     }
 
 
-    private static Configuration getConfig(String name) throws ConfigurationException {
+    private static Configuration buildConfig(String name, @Nullable Configuration c) throws ConfigurationException {
         CompositeConfiguration config = new CompositeConfiguration();
-        String path = "com/cryptocoinpartners/module/" + name;
-        File[] files = new File(path).listFiles();
-        if( files != null ) {
-            for( File file : files ) {
-                if( file.getName().toLowerCase().matches("config\\.[^\\.]") ) {
-                    log.debug("loading config file "+file.getPath());
-                    Configuration moreConfig = new ConfigurationFactory(file.getPath()).getConfiguration();
-                    config.addConfiguration(moreConfig);
-                }
-            }
-        }
+        config.addConfiguration(new SystemConfiguration());
+        String packageName = "com/cryptocoinpartners/module/"+name+"/config.properties";
+        URL resource = ModuleLoader.class.getClassLoader().getResource(packageName);
+        Configuration packageConfig = new PropertiesConfiguration(resource);
+        config.addConfiguration(packageConfig);
+        if( c != null )
+            config.addConfiguration(c);
         log.debug("module configuration is\n"+config);
         return config;
     }

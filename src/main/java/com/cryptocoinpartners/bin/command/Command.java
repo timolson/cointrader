@@ -15,13 +15,14 @@ import com.beust.jcommander.Parameters;
  * @see Parameters
  */
 @Parameters(commandNames = "example", commandDescription = "This is an example of how to annotate your subclasses")
-public class Command implements Runnable {
+public abstract class Command implements Runnable {
 
 //  @Parameter(names = {"-x","-X","--example"}, description = "this is an example")
 //  public boolean exampleSwitch;
 
-    public void run() {
-        System.err.println("<unimplemented>");
-        System.exit(404);
-    }
+//  public void run() {
+//      System.err.println("<unimplemented>");
+//      System.exit(404);
+//  }
+
 }

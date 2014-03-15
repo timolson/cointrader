@@ -2,9 +2,6 @@ package com.cryptocoinpartners.service;
 
 import com.cryptocoinpartners.module.ModuleLoader;
 import com.cryptocoinpartners.schema.Event;
-import com.cryptocoinpartners.schema.MarketData;
-import com.cryptocoinpartners.schema.Pricing;
-import com.cryptocoinpartners.schema.Trade;
 import com.cryptocoinpartners.util.ModuleLoaderError;
 import com.cryptocoinpartners.util.ReflectionUtil;
 import com.espertech.esper.client.*;
@@ -26,12 +23,10 @@ public class Esper {
 
     public Esper() {
         Configuration config = new Configuration();
-        config.addEventType(MarketData.class);
-        config.addEventType(Pricing.class);
-        config.addEventType(Trade.class);
-        //Set<Class<? extends Event>> eventTypes = ReflectionUtil.getSubtypesOf(Event.class);
-        //for( Class<? extends Event> eventType : eventTypes )
-        //    config.addEventType(eventType);
+        config.addEventType(Event.class);
+        Set<Class<? extends Event>> eventTypes = ReflectionUtil.getSubtypesOf(Event.class);
+        for( Class<? extends Event> eventType : eventTypes )
+            config.addEventType(eventType);
         epService = EPServiceProviderManager.getDefaultProvider(config);
         epRuntime = epService.getEPRuntime();
         epAdministrator = epService.getEPAdministrator();
@@ -48,8 +43,14 @@ public class Esper {
      * @throws ModuleLoaderError
      */
     public void loadModule( String... moduleNames ) throws ModuleLoaderError {
+        loadModule(null,moduleNames);
+    }
+
+
+    public void loadModule( org.apache.commons.configuration.Configuration c,
+                            String... moduleNames ) throws ModuleLoaderError {
         for( String name : moduleNames )
-            ModuleLoader.load(this, name);
+            ModuleLoader.load(this, c, name);
     }
 
 
