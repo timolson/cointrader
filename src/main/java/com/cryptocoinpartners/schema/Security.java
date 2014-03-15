@@ -8,12 +8,12 @@ import java.util.List;
 
 
 /**
- * Represents an asset at a Market.  The same asset on different Markets are different Securities
+ * Represents an Asset at a Market.  The same Asset on different Markets are different Securities
  *
  * @author Tim Olson
  */
 @Entity
-public class Security extends DbEntity {
+public class Security extends EntityBase {
 
     /**
      * @param market
@@ -28,7 +28,7 @@ public class Security extends DbEntity {
     }
 
 
-    /** This symbol may be unique to the market */
+    /** This symbol may be unique to the associated Market */
     public String getSymbol() {
         return symbol;
     }
@@ -61,6 +61,7 @@ public class Security extends DbEntity {
     protected void setMarket(Market market) { this.market = market; }
 
 
+    private Account account;
     private String symbol;
     private Market market;
 }

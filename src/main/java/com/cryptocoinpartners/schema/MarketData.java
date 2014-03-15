@@ -23,7 +23,13 @@ public class MarketData extends Event implements HasGuid {
 
 
     public @ManyToOne Security getSecurity() { return security; }
-    public String getGuid() { return guid; }
+
+
+    public String getGuid() {
+        if( guid == null )
+            guid = UUID.randomUUID().toString();
+        return guid;
+    }
 
 
     /**
@@ -45,5 +51,5 @@ public class MarketData extends Event implements HasGuid {
 
     private Instant timeReceived = Instant.now();
     private Security security;
-    private String guid = UUID.randomUUID().toString();
+    private String guid;
 }

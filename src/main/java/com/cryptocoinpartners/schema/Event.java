@@ -10,10 +10,11 @@ import javax.persistence.MappedSuperclass;
  * @author Tim Olson
  */
 @MappedSuperclass
-public class Event extends DbEntity {
+public class Event extends EntityBase {
 
     /**
-     * this is the time the event itself occured
+     * this is the time the event itself occured, not the time we received the event.  It should be remote server
+     * time if available.
      * @return
      */
     @Type(type="org.jadira.usertype.dateandtime.joda.PersistentInstantAsMillisLong")

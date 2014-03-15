@@ -14,8 +14,8 @@ import java.math.BigDecimal;
  */
 @Entity
 public class Trade extends Pricing {
-    public Trade(Security security, Instant time, BigDecimal price, BigDecimal size) {
-        super(time, security, price, size);
+    public Trade(Security security, Instant time, BigDecimal price, BigDecimal amount) {
+        super(time, security, price, amount);
     }
 
 

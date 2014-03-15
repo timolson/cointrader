@@ -13,12 +13,12 @@ import java.util.Map;
 public class PersistUtil {
 
 
-    public static void insert(DbEntity... entities) {
+    public static void insert(EntityBase... entities) {
         EntityManager em = createEntityManager();
         EntityTransaction transaction = em.getTransaction();
         transaction.begin();
         try {
-            for( DbEntity entity : entities )
+            for( EntityBase entity : entities )
                 em.persist(entity);
             transaction.commit();
         }

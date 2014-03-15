@@ -10,7 +10,7 @@ import javax.persistence.*;
  */
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @MappedSuperclass
-public class DbEntity {
+public class EntityBase {
 
     /**
      * We use a local database ID by default.  Large tables aggregated from multiple sources also have a getGuid()
@@ -24,7 +24,7 @@ public class DbEntity {
     protected void setId(long id) { this.id = id; }
 
 
-    protected DbEntity() {}
+    protected EntityBase() {}
 
 
     @SuppressWarnings("FieldCanBeLocal")

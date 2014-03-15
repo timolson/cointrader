@@ -4,7 +4,6 @@ package com.cryptocoinpartners.schema;
 import org.joda.time.Instant;
 
 import javax.persistence.Column;
-import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
 import java.math.BigDecimal;
 
@@ -15,10 +14,10 @@ import java.math.BigDecimal;
 @MappedSuperclass
 public class Pricing extends MarketData {
 
-    public Pricing(Instant time, Security security, BigDecimal price, BigDecimal size) {
+    public Pricing(Instant time, Security security, BigDecimal price, BigDecimal amount) {
         super(time, security);
         this.price = price;
-        this.size = size;
+        this.amount = amount;
     }
 
 
@@ -26,15 +25,15 @@ public class Pricing extends MarketData {
     public BigDecimal getPrice() { return price; }
 
     @Column(precision = 30, scale = 15)
-    public BigDecimal getSize() { return size; }
+    public BigDecimal getAmount() { return amount; }
 
 
     // JPA
     protected Pricing() { super(); }
     protected void setPrice(BigDecimal price) { this.price = price; }
-    protected void setSize(BigDecimal size) { this.size = size; }
+    protected void setAmount(BigDecimal amount) { this.amount = amount; }
 
 
     private BigDecimal price;
-    private BigDecimal size;
+    private BigDecimal amount;
 }

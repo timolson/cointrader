@@ -7,5 +7,5 @@ import javax.persistence.Entity;
  * @author Tim Olson
  */
 @Entity
-public class Strategy extends DbEntity {
+public class Strategy extends EntityBase {
 }
