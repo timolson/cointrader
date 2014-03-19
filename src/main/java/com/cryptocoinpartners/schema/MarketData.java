@@ -13,7 +13,7 @@ import java.util.UUID;
  * @author Tim Olson
  */
 @MappedSuperclass
-public class MarketData extends Event implements HasGuid {
+public class MarketData extends RemoteEvent {
 
 
     public MarketData(Instant time, Security security) {
@@ -25,31 +25,13 @@ public class MarketData extends Event implements HasGuid {
     public @ManyToOne Security getSecurity() { return security; }
 
 
-    public String getGuid() {
-        if( guid == null )
-            guid = UUID.randomUUID().toString();
-        return guid;
-    }
-
-
-    /**
-     * this is the time when this event object was created.  it may be later than getTime() due to transmission delays
-     * @return
-     */
-    @Type(type="org.jadira.usertype.dateandtime.joda.PersistentInstantAsMillisLong")
-    public Instant getTimeReceived() {
-        return timeReceived;
-    }
-
-
     // JPA
-    protected MarketData() {}
-    protected void setTimeReceived(Instant timeReceived) { this.timeReceived = timeReceived; }
+    protected MarketData() {
+        super();
+    }
+
     protected void setSecurity(Security security) { this.security = security; }
-    protected void setGuid(String guid) { this.guid = guid; }
 
 
-    private Instant timeReceived = Instant.now();
     private Security security;
-    private String guid;
 }

@@ -66,8 +66,10 @@ public class ModuleLoader {
         config.addConfiguration(new SystemConfiguration());
         String packageName = "com/cryptocoinpartners/module/"+name+"/config.properties";
         URL resource = ModuleLoader.class.getClassLoader().getResource(packageName);
-        Configuration packageConfig = new PropertiesConfiguration(resource);
-        config.addConfiguration(packageConfig);
+        if (resource != null) {
+            Configuration packageConfig = new PropertiesConfiguration(resource);
+            config.addConfiguration(packageConfig);
+        }
         if( c != null )
             config.addConfiguration(c);
         log.debug("module configuration is\n"+config);

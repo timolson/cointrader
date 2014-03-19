@@ -6,7 +6,7 @@ package com.cryptocoinpartners.schema;
  */
 public enum Currency {
     // Fiat
-    USD, RMB, EUR, JPY,
+    USD, RMB, EUR, JPY, GBP, // TODO: add more
 
     // Cryptos
     // Base coins Bitcoin, Litecoin, Primecoin

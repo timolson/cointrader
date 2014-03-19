@@ -61,7 +61,6 @@ public class Security extends EntityBase {
     protected void setMarket(Market market) { this.market = market; }
 
 
-    private Account account;
     private String symbol;
     private Market market;
 }
