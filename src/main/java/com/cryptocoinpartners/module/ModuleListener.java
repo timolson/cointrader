@@ -1,6 +1,5 @@
 package com.cryptocoinpartners.module;
 
-import com.cryptocoinpartners.service.Esper;
 import org.apache.commons.configuration.Configuration;
 
 

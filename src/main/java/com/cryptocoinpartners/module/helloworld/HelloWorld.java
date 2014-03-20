@@ -3,14 +3,14 @@ package com.cryptocoinpartners.module.helloworld;
 import com.cryptocoinpartners.module.ModuleListenerBase;
 import com.cryptocoinpartners.module.When;
 import com.cryptocoinpartners.schema.Event;
-import com.cryptocoinpartners.service.Esper;
+import com.cryptocoinpartners.module.Esper;
 import org.apache.commons.configuration.Configuration;
 
 
 /**
  * @author Tim Olson
  */
-public class HelloWorldListener extends ModuleListenerBase {
+public class HelloWorld extends ModuleListenerBase {
 
     public void initModule(Esper esper, Configuration config) {
         super.initModule(esper, config);

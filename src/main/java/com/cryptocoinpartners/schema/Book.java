@@ -2,6 +2,7 @@ package com.cryptocoinpartners.schema;
 
 import org.joda.time.Instant;
 
+import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 import java.util.List;
 
@@ -23,13 +24,14 @@ public class Book extends MarketData {
     }
 
 
-    @OneToMany
+    // todo custom JPA persistence as a complete book
+    @OneToMany(fetch = FetchType.EAGER)
     public List<Bid> getBids() {
         return bids;
     }
 
 
-    @OneToMany
+    @OneToMany(fetch = FetchType.EAGER)
     public List<Ask> getAsks() {
         return asks;
     }

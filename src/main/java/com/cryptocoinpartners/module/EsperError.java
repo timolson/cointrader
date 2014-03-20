@@ -1,4 +1,4 @@
-package com.cryptocoinpartners.service;
+package com.cryptocoinpartners.module;
 
 /**
  * @author Tim Olson

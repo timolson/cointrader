@@ -1,7 +1,7 @@
 package com.cryptocoinpartners.bin.command;
 
 import com.beust.jcommander.Parameters;
-import com.cryptocoinpartners.service.Esper;
+import com.cryptocoinpartners.module.Esper;
 
 
 /**

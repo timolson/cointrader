@@ -1,8 +1,9 @@
 package com.cryptocoinpartners.module;
 
-import com.cryptocoinpartners.service.Esper;
 import com.cryptocoinpartners.util.ModuleLoaderError;
 import com.cryptocoinpartners.util.ReflectionUtil;
+import com.espertech.esper.client.deploy.DeploymentException;
+import com.espertech.esper.client.deploy.ParseException;
 import org.apache.commons.configuration.*;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -26,11 +27,15 @@ import java.util.regex.Pattern;
  * <li>Classes implementing @ModuleListener have singletons created with their default constructor, and lifecycle
  * notifications are sent to those instances.</li>
  * <li>*.epl files are loaded as Esper Event Processing Language source</li>
- * <li>Any class which has a *.epl files are loaded as Esper Event Processing Language source</li>
+ * <li>Any file named *.epl is loaded as Esper Event Processing Language source.  If the file has the same name as a
+ * Java ModuleListener in the same module, then the EPL file may use the @IntoMethod annotation on its esper statements
+ * to push results into the module listener singleton's fields.</li>
  * </ol>
  *
  * @author Tim Olson
  * @see ModuleListener
+ * @see IntoMethod
+ * @see When
  */
 public class ModuleLoader {
 
@@ -65,7 +70,14 @@ public class ModuleLoader {
         CompositeConfiguration config = new CompositeConfiguration();
         config.addConfiguration(new SystemConfiguration());
         String packageName = "com/cryptocoinpartners/module/"+name+"/config.properties";
-        URL resource = ModuleLoader.class.getClassLoader().getResource(packageName);
+        ClassLoader classLoader = ModuleLoader.class.getClassLoader();
+        URL resource = classLoader.getResource(packageName);
+        if (resource != null) {
+            Configuration packageConfig = new PropertiesConfiguration(resource);
+            config.addConfiguration(packageConfig);
+        }
+        packageName = "com/cryptocoinpartners/module/"+name+"/"+name+".properties";
+        resource = classLoader.getResource(packageName);
         if (resource != null) {
             Configuration packageConfig = new PropertiesConfiguration(resource);
             config.addConfiguration(packageConfig);
@@ -104,7 +116,7 @@ public class ModuleLoader {
     }
 
 
-    private static void load(Esper esper, File file) throws IOException {
+    private static void load(Esper esper, File file) throws IOException, ParseException, DeploymentException {
         esper.loadStatements(FileUtils.readFileToString(file));
     }
 

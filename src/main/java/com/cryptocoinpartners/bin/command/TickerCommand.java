@@ -1,7 +1,7 @@
 package com.cryptocoinpartners.bin.command;
 
 import com.beust.jcommander.Parameters;
-import com.cryptocoinpartners.service.Esper;
+import com.cryptocoinpartners.module.Esper;
 
 
 /**
@@ -11,7 +11,7 @@ import com.cryptocoinpartners.service.Esper;
 public class TickerCommand extends Command {
     public void run() {
         Esper esper = new Esper();
-        esper.loadModule("gatherdata","savedata");
+        esper.loadModule("faketicker","savedata");
     }
 
 }
