@@ -14,8 +14,8 @@ import java.math.BigDecimal;
 @MappedSuperclass
 public class Quote extends Pricing {
 
-    public Quote(Side side, Security security, Instant time, BigDecimal price, BigDecimal amount) {
-        super(time, security, price, amount);
+    public Quote(Side side, Listing listing, Instant time, String remoteKey, BigDecimal price, BigDecimal amount) {
+        super(time, remoteKey, listing, price, amount);
         this.side = side;
     }
 

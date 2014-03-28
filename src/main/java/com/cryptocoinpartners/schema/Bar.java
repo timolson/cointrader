@@ -10,9 +10,9 @@ import java.math.BigDecimal;
  * @author Tim Olson
  */
 public class Bar extends MarketData {
-    public Bar( Instant time, Security security,
+    public Bar( Instant time, Listing listing,
                 BigDecimal open, BigDecimal high, BigDecimal low, BigDecimal close, @Nullable BigDecimal volume ) {
-        super(time, security);
+        super(time, null, listing);
         this.open = open;
         this.high = high;
         this.low = low;

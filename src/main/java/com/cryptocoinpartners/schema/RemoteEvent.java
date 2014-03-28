@@ -3,23 +3,17 @@ package com.cryptocoinpartners.schema;
 import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
 
+import javax.annotation.Nullable;
 import javax.persistence.MappedSuperclass;
 import java.util.UUID;
 
-/**
- * Created with IntelliJ IDEA.
- * User: mike_d_olson
- * Date: 3/19/14
- * Time: 2:53 PM
- * To change this template use File | Settings | File Templates.
- */
+
 @MappedSuperclass
 public class RemoteEvent extends Event implements HasGuid {
-    private Instant timeReceived = Instant.now();
-    private String guid;
 
-    public RemoteEvent(Instant time) {
+    public RemoteEvent(Instant time,@Nullable String remoteKey) {
         super(time);
+        this.remoteKey = remoteKey;
     }
 
     protected RemoteEvent() {
@@ -32,15 +26,24 @@ public class RemoteEvent extends Event implements HasGuid {
     }
 
     /**
-     * this is the time when this event object was created.  it may be later than getTime() due to transmission delays
-     * @return
+     * @return the time when this event object was created.  it may be later than getTime() due to transmission delays
      */
     @Type(type="org.jadira.usertype.dateandtime.joda.PersistentInstantAsMillisLong")
     public Instant getTimeReceived() {
         return timeReceived;
     }
 
+    public String getRemoteKey() { return remoteKey; }
+
+
     protected void setTimeReceived(Instant timeReceived) { this.timeReceived = timeReceived; }
 
     protected void setGuid(String guid) { this.guid = guid; }
+
+    protected void setRemoteKey(String remoteKey) { this.remoteKey = remoteKey; }
+
+
+    private Instant timeReceived = Instant.now();
+    private String guid;
+    private String remoteKey;
 }

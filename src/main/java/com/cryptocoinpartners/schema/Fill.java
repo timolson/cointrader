@@ -9,11 +9,12 @@ import java.math.BigDecimal;
 /**
  * @author Tim Olson
  */
+// todo Fill is not a pricing (which is market data)
 public class Fill extends Pricing {
 
 
-    public Fill(Order order, Instant time, Security security, BigDecimal price, BigDecimal amount ) {
-        super(time, security, price, amount);
+    public Fill(Order order, Instant time, Listing listing, BigDecimal price, BigDecimal amount ) {
+        super(time, null, listing, price, amount);
         this.order = order;
     }
 

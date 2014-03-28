@@ -4,7 +4,7 @@ import javax.persistence.Entity;
 
 
 /**
- * A Transfer represents the modification of multiple Positions, whether it is the purchase of a Security or transfer
+ * A Transfer represents the modification of multiple Positions, whether it is the purchase of a Listing or transfer
  * of funds between Accounts
  * @author Tim Olson
  */

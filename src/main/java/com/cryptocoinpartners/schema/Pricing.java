@@ -3,6 +3,7 @@ package com.cryptocoinpartners.schema;
 
 import org.joda.time.Instant;
 
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.MappedSuperclass;
 import java.math.BigDecimal;
@@ -14,8 +15,8 @@ import java.math.BigDecimal;
 @MappedSuperclass
 public class Pricing extends MarketData {
 
-    public Pricing(Instant time, Security security, BigDecimal price, BigDecimal amount) {
-        super(time, security);
+    public Pricing(Instant time, @Nullable String remoteKey, Listing listing, BigDecimal price, BigDecimal amount) {
+        super(time, remoteKey, listing);
         this.price = price;
         this.amount = amount;
     }

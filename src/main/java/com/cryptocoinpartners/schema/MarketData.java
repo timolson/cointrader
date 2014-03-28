@@ -1,12 +1,11 @@
 package com.cryptocoinpartners.schema;
 
 
-import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
 
+import javax.annotation.Nullable;
 import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
-import java.util.UUID;
 
 
 /**
@@ -16,13 +15,14 @@ import java.util.UUID;
 public class MarketData extends RemoteEvent {
 
 
-    public MarketData(Instant time, Security security) {
-        super(time);
-        this.security = security;
+    public MarketData(Instant time, @Nullable String remoteKey, Listing listing) {
+        super(time,remoteKey);
+        this.listing = listing;
     }
 
 
-    public @ManyToOne Security getSecurity() { return security; }
+    public @ManyToOne
+    Listing getListing() { return listing; }
 
 
     // JPA
@@ -30,8 +30,8 @@ public class MarketData extends RemoteEvent {
         super();
     }
 
-    protected void setSecurity(Security security) { this.security = security; }
+    protected void setListing(Listing listing) { this.listing = listing; }
 
 
-    private Security security;
+    private Listing listing;
 }

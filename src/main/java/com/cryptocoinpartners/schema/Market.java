@@ -11,5 +11,5 @@ public enum Market {
     BITFINEX, BTC_CHINA, BITSTAMP, BTCE, CRYPTSY;
 
 
-    public Collection<Security> getSecurities() { return Security.forMarket(this); }
+    public Collection<Listing> getSecurities() { return Listing.forMarket(this); }
 }

@@ -11,6 +11,7 @@ import java.math.BigDecimal;
  */
 @Entity
 @Table(name="Orders")
+// todo order is not a quote.  quote is market data
 public class Order extends Quote {
 
     enum OrderType { MARKET, LIMIT }
@@ -19,8 +20,8 @@ public class Order extends Quote {
 
 
     public Order(Strategy strategy, OrderType orderType, Side side,
-                 Security security, Instant time, BigDecimal price, BigDecimal amount) {
-        super(side, security, time, price, amount);
+                 Listing listing, Instant time, BigDecimal price, BigDecimal amount) {
+        super(side, listing, time, null, price, amount);
         this.strategy = strategy;
         this.orderType = orderType;
         this.orderStatus = OrderStatus.NEW;

@@ -9,7 +9,7 @@ import javax.persistence.Enumerated;
  * @author Tim Olson
  */
 @Entity
-public class Forex extends Security {
+public class Forex extends Listing {
 
 
     @Enumerated(EnumType.STRING)

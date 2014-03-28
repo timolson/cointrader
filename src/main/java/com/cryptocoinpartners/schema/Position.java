@@ -13,10 +13,10 @@ import java.math.BigDecimal;
 @Entity
 public class Position extends EntityBase {
 
-    public Position(Account account, BigDecimal amount, Security security) {
+    public Position(Account account, BigDecimal amount, Listing listing) {
         this.account = account;
         this.amount = amount;
-        this.security = security;
+        this.listing = listing;
     }
 
 
@@ -32,8 +32,8 @@ public class Position extends EntityBase {
 
 
     @ManyToOne
-    public Security getSecurity() {
-        return security;
+    public Listing getListing() {
+        return listing;
     }
 
 
@@ -47,8 +47,8 @@ public class Position extends EntityBase {
     }
 
 
-    protected void setSecurity(Security security) {
-        this.security = security;
+    protected void setListing(Listing listing) {
+        this.listing = listing;
     }
 
 
@@ -57,5 +57,5 @@ public class Position extends EntityBase {
 
     private Account account;
     private BigDecimal amount;
-    private Security security;
+    private Listing listing;
 }

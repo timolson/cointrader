@@ -12,15 +12,15 @@ import java.util.List;
  */
 public class Book extends MarketData {
 
-    public Book(Instant time, Security security, List<Bid> bids, List<Ask> asks) {
-        super(time, security);
+    public Book(Instant time, String remoteKey, Listing listing, List<Bid> bids, List<Ask> asks) {
+        super(time, remoteKey, listing);
         this.bids = bids;
         this.asks = asks;
     }
 
 
-    public Book(Instant time, Security security) {
-        super(time, security);
+    public Book(Instant time, String remoteKey, Listing listing) {
+        super(time, remoteKey, listing);
     }
 
 

@@ -4,16 +4,14 @@ package com.cryptocoinpartners.module.faketicker;
 import com.cryptocoinpartners.module.ConfigurationError;
 import com.cryptocoinpartners.module.Esper;
 import com.cryptocoinpartners.module.ModuleListenerBase;
+import com.cryptocoinpartners.schema.Listing;
 import com.cryptocoinpartners.schema.Market;
-import com.cryptocoinpartners.schema.Security;
 import com.cryptocoinpartners.schema.Trade;
 import com.cryptocoinpartners.util.MathUtil;
 import org.apache.commons.configuration.Configuration;
 import org.joda.time.Instant;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 
@@ -30,8 +28,8 @@ public class FakeTicker extends ModuleListenerBase {
             throw new ConfigurationError("FakeTicker must be configured with the \"faketicker.market\" property");
         for( String marketName : marketStr.toUpperCase().split(",") ) {
             Market market = Market.valueOf(marketName.toUpperCase());
-            for( Security security : Security.forMarket(market) ) {
-                new PoissonTickerThread(security).start();
+            for( Listing listing : Listing.forMarket(market) ) {
+                new PoissonTickerThread(listing).start();
             }
         }
     }
@@ -73,19 +71,19 @@ public class FakeTicker extends ModuleListenerBase {
                 }
                 if( !running )
                     break;
-                Trade trade = new Trade(security, Instant.now(), nextPrice(), nextVolume());
+                Trade trade = new Trade(listing, Instant.now(), null, nextPrice(), nextVolume());
                 esper.publish(trade);
             }
         }
 
 
-        private PoissonTickerThread(Security security) {
+        private PoissonTickerThread(Listing listing) {
             setDaemon(true);
-            this.security = security;
+            this.listing = listing;
         }
 
 
-        private final Security security;
+        private final Listing listing;
     }
 
 

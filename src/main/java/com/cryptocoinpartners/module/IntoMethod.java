@@ -1,5 +1,11 @@
 package com.cryptocoinpartners.module;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+
 /**
  * This annotation is registered with every Esper instance to allow the result of select statements to trigger a setter
  * in the EPL file's matching Java class.
@@ -8,6 +14,8 @@ package com.cryptocoinpartners.module;
  * @author Tim Olson
  * @see ModuleLoader
  */
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
 public @interface IntoMethod {
     /**
      * @return a comma-separated list of field names, one for each column in the select statement.  The setter for

@@ -13,18 +13,23 @@ import java.util.List;
  * @author Tim Olson
  */
 @Entity
-public class Security extends EntityBase {
+public class Listing extends EntityBase {
 
     /**
      * @param market
      * @return all Securities listed on the given Market
      */
-    public static Collection<Security> forMarket(Market market) {
-        TypedQuery<Security> query = PersistUtil.createEntityManager()
-                                                .createQuery("select s from Security s where market=?1", Security.class);
-        query.setParameter(1,market);
-        List<Security> resultList = query.getResultList();
-        return resultList;
+    public static Collection<Listing> forMarket(Market market) {
+        EntityManager entityManager = PersistUtil.createEntityManager();
+        try {
+            TypedQuery<Listing> query = entityManager.createQuery("select s from Listing s where market=?1",
+                                                                   Listing.class);
+            query.setParameter(1,market);
+            return query.getResultList();
+        }
+        finally {
+            entityManager.close();
+        }
     }
 
 
@@ -40,7 +45,7 @@ public class Security extends EntityBase {
     }
 
 
-    protected Security(Market market, String symbol) {
+    protected Listing(Market market, String symbol) {
         this.market = market;
         this.symbol = symbol;
     }
@@ -51,12 +56,12 @@ public class Security extends EntityBase {
     }
 
 
-    public Security withLowercaseSymbol() { setSymbol(getSymbol().toLowerCase()); return this; }
-    public Security withUppercaseSymbol() { setSymbol(getSymbol().toLowerCase()); return this; }
+    public Listing withLowercaseSymbol() { setSymbol(getSymbol().toLowerCase()); return this; }
+    public Listing withUppercaseSymbol() { setSymbol(getSymbol().toLowerCase()); return this; }
 
 
     // JPA
-    protected Security() {}
+    protected Listing() {}
     protected void setSymbol(String symbol) { this.symbol = symbol; }
     protected void setMarket(Market market) { this.market = market; }
 

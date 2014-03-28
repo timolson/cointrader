@@ -9,7 +9,7 @@ import java.math.BigDecimal;
  * @author Tim Olson
  */
 public class Ask extends Quote {
-    public Ask( Security security, Instant time, BigDecimal price, BigDecimal amount) {
-        super(Side.SELL, security, time, price, amount);
+    public Ask( Listing listing, Instant time, BigDecimal price, BigDecimal amount) {
+        super(Side.SELL, listing, time, null, price, amount);
     }
 }

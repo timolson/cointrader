@@ -11,7 +11,8 @@ import com.cryptocoinpartners.module.Esper;
 public class TickerCommand extends Command {
     public void run() {
         Esper esper = new Esper();
-        esper.loadModule("faketicker","savedata");
+        //esper.loadModule("faketicker","savedata");
+        esper.loadModule("xchangedata","savedata");
     }
 
 }

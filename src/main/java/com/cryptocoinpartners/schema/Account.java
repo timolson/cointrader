@@ -11,7 +11,7 @@ import java.util.Collection;
  */
 @Entity
 public class Account extends EntityBase {
-    // todo an Account is both a Security and an Owner?
+    // todo an Account is both a Listing and an Owner?
     public @OneToMany Collection<Position> getPositions() { return positions; }
 
 
