@@ -3,6 +3,7 @@ package com.cryptocoinpartners.schema;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.*;
+import java.util.UUID;
 
 
 /**
@@ -10,23 +11,26 @@ import javax.persistence.*;
  */
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @MappedSuperclass
+@Table(indexes = { @Index(columnList = "id") })
 public class EntityBase {
 
-    /**
-     * We use a local database ID by default.  Large tables aggregated from multiple sources also have a getGuid()
-     */
+
     @Id
-    @GeneratedValue(generator="increment")
-    @GenericGenerator(name="increment", strategy = "increment")
-    public long getId() { return id; }
-
-
-    protected void setId(long id) { this.id = id; }
+    @GeneratedValue(generator = "uuid")
+    @GenericGenerator(name = "uuid", strategy = "uuid2")
+    @Column( columnDefinition = "BINARY(16)", length = 16, updatable = false, nullable = false )
+    public UUID getId() {
+        return id;
+    }
 
 
     protected EntityBase() {}
 
 
-    @SuppressWarnings("FieldCanBeLocal")
-    private long id = -1;
+    protected void setId(UUID id) {
+        this.id = id;
+    }
+
+
+    protected UUID id;
 }
