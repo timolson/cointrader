@@ -7,6 +7,7 @@
         <exclude-unlisted-classes>false</exclude-unlisted-classes>
         <properties>
             <property name="hibernate.archive.autodetection" value="class"/>
+            <!--<property name="hibernate.globally_quoted_identifiers" value="true"/>-->
         </properties>
     </persistence-unit>
 </persistence>

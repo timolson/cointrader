@@ -1,61 +1,41 @@
 package com.cryptocoinpartners.schema;
 
-import javax.persistence.Entity;
-import javax.persistence.ManyToOne;
+import javax.persistence.*;
 import java.math.BigDecimal;
 
 
 /**
- * An Account has many Positions.  A Position represents an amount of some Security.
+ * A Fund has many Positions.  A Position represents an amount of some Security.
  *
  * @author Tim Olson
  */
 @Entity
 public class Position extends EntityBase {
 
-    public Position(Account account, BigDecimal amount, Listing listing) {
-        this.account = account;
+    public Position(Fund fund, Market market, Fungible fungible, BigDecimal amount) {
+        this.fund = fund;
+        this.market = market;
         this.amount = amount;
-        this.listing = listing;
+        this.fungible = fungible;
     }
 
 
-    @ManyToOne
-    public Account getAccount() {
-        return account;
-    }
+    @ManyToOne(optional = false) public Fund getFund() { return fund; }
+    @ManyToOne(optional = false) public Market getMarket() { return market; }
+    @Basic(optional = false) public BigDecimal getAmount() { return amount; }
+    @OneToOne(optional = false) public Fungible getFungible() { return fungible; }
 
 
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-
-    @ManyToOne
-    public Listing getListing() {
-        return listing;
-    }
-
-
-    protected void setAccount(Account account) {
-        this.account = account;
-    }
-
-
-    protected void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
-
-
-    protected void setListing(Listing listing) {
-        this.listing = listing;
-    }
-
-
+    // JPA
     protected Position() { }
+    protected void setFund(Fund fund) { this.fund = fund; }
+    protected void setMarket(Market market) { this.market = market; }
+    protected void setAmount(BigDecimal amount) { this.amount = amount; }
+    protected void setFungible(Fungible fungible) { this.fungible = fungible; }
 
 
-    private Account account;
+    private Fund fund;
     private BigDecimal amount;
-    private Listing listing;
+    private Fungible fungible;
+    private Market market;
 }

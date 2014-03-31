@@ -27,7 +27,10 @@ public class FakeTicker extends ModuleListenerBase {
         if( marketStr == null )
             throw new ConfigurationError("FakeTicker must be configured with the \"faketicker.market\" property");
         for( String marketName : marketStr.toUpperCase().split(",") ) {
-            Market market = Market.valueOf(marketName.toUpperCase());
+            String upperMarket = marketName.toUpperCase();
+            Market market = Market.forSymbol(upperMarket);
+            if( market == null )
+                throw new ConfigurationError("Could not find Market with symbol \""+ upperMarket +"\"");
             for( Listing listing : Listing.forMarket(market) ) {
                 new PoissonTickerThread(listing).start();
             }

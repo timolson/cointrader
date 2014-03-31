@@ -36,14 +36,9 @@ public class MarketDataError extends Event {
     }
 
 
-    protected void setException(@Nullable Exception exception) {
-        this.exception = exception;
-    }
-
-
-    protected void setListing(Listing listing) {
-        this.listing = listing;
-    }
+    protected MarketDataError() {}
+    protected void setException(@Nullable Exception exception) { this.exception = exception; }
+    protected void setListing(Listing listing) { this.listing = listing; }
 
 
     private Exception exception;

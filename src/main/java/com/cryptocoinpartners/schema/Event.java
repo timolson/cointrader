@@ -7,10 +7,12 @@ import javax.persistence.MappedSuperclass;
 
 
 /**
+ * Subclasses of Event may be posted to Esper
+ *
  * @author Tim Olson
  */
 @MappedSuperclass
-public class Event extends EntityBase {
+public abstract class Event extends EntityBase {
 
     /**
      * this is the time the event itself occured, not the time we received the event.  It should be remote server
@@ -23,13 +25,13 @@ public class Event extends EntityBase {
 
     /** Most events should use this constructor to provide the time of the original happening, not the time of
      *  object creation */
-    public Event(Instant time) {
+    protected Event(Instant time) {
         super();
         this.time = time;
     }
 
 
-    public Event() { this(Instant.now()); }
+    protected Event() { this(Instant.now()); }
 
 
     // JPA

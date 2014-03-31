@@ -27,7 +27,7 @@ public class Quote extends Pricing {
 
 
     // JPA
-    protected Quote() { }
+    protected Quote() {}
     protected void setSide(Side side) { this.side = side; }
 
 

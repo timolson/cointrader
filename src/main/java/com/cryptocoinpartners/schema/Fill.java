@@ -2,6 +2,7 @@ package com.cryptocoinpartners.schema;
 
 import org.joda.time.Instant;
 
+import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import java.math.BigDecimal;
 
@@ -10,6 +11,7 @@ import java.math.BigDecimal;
  * @author Tim Olson
  */
 // todo Fill is not a pricing (which is market data)
+@Entity
 public class Fill extends Pricing {
 
 
@@ -22,6 +24,8 @@ public class Fill extends Pricing {
     public @ManyToOne Order getOrder() { return order; }
 
 
+    // JPA
+    protected Fill() {}
     protected void setOrder(Order order) { this.order = order; }
 
 

@@ -2,6 +2,7 @@ package com.cryptocoinpartners.schema;
 
 import org.joda.time.Instant;
 
+import javax.persistence.Entity;
 import java.math.BigDecimal;
 
 
@@ -10,8 +11,18 @@ import java.math.BigDecimal;
  *
  * @author Tim Olson
  */
+@Entity
 public class Tick extends Pricing {
+
     public Tick(Listing listing, String remoteKey, Instant time, BigDecimal price, BigDecimal amount) {
         super(time, remoteKey, listing, price, amount);
     }
+
+
+    // todo
+
+
+    // JPA
+    protected Tick() {}
+
 }

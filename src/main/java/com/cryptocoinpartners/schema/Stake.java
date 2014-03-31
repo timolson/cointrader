@@ -1,25 +1,35 @@
 package com.cryptocoinpartners.schema;
 
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.ManyToOne;
 import java.math.BigDecimal;
 
 
 /**
- * Connects an Owner to an Account by an amount
+ * Connects an Owner to a Fund by an amount
  *
  * @author Tim Olson
  */
-public class Stake {
+@Entity
+public class Stake extends EntityBase {
 
-    public Stake(Owner owner, BigDecimal stake, Account account) {
+
+    public Stake(Owner owner, BigDecimal stake, Fund fund) {
         this.owner = owner;
         this.stake = stake;
-        this.account = account;
+        this.fund = fund;
     }
 
 
+    @ManyToOne
     public Owner getOwner() { return owner; }
+
+    @Column(precision = 30, scale = 15)
     public BigDecimal getStake() { return stake; }
-    public Account getAccount() { return account; }
+
+    @ManyToOne
+    public Fund getFund() { return fund; }
 
 
     // JPA
@@ -30,9 +40,10 @@ public class Stake {
             throw new IllegalArgumentException("stake must be in range [0,1]: "+stake);
         this.stake = stake;
     }
-    protected void setAccount(Account account) { this.account = account; }
+    protected void setFund(Fund fund) { this.fund = fund; }
+
 
     private Owner owner;
     private BigDecimal stake;
-    private Account account;
+    private Fund fund;
 }

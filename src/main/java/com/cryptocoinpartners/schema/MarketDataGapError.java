@@ -38,9 +38,8 @@ public class MarketDataGapError extends MarketDataError {
     }
 
 
-    protected void setGapInterval(Interval gapInterval) {
-        this.gapInterval = gapInterval;
-    }
+    protected MarketDataGapError() {}
+    protected void setGapInterval(Interval gapInterval) { this.gapInterval = gapInterval; }
 
 
     private Interval gapInterval;

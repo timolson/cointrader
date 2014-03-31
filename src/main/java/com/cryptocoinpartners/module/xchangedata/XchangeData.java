@@ -41,10 +41,7 @@ public class XchangeData extends ModuleListenerBase {
 
         Collection<Listing> listings = Listing.forMarket(Market.BITFINEX);
         for( final Listing listing : listings ) {
-            if( !(listing instanceof Forex) )
-                throw new Error("XchangeData can only handle Forex listings");
-            final Forex forex = (Forex) listing;
-            rateLimiter.execute(new FetchTradesRunnable(esper, forex));
+            rateLimiter.execute(new FetchTradesRunnable(esper, listing));
         }
     }
 
@@ -56,18 +53,17 @@ public class XchangeData extends ModuleListenerBase {
 
     private class FetchTradesRunnable implements Runnable {
 
-        public FetchTradesRunnable(Esper esper, Forex forex) {
+        public FetchTradesRunnable(Esper esper, Listing listing) {
             this.esper = esper;
-            this.forex = forex;
-            pair = new CurrencyPair(forex.getBaseCurrency().getSymbol(),
-                                    forex.getQuoteCurrency().getSymbol());
+            this.listing = listing;
+            pair = new CurrencyPair(listing.getBase().getSymbol(), listing.getQuote().getSymbol());
             lastTradeTime = 0;
             lastTradeId = 0;
             EntityManager entityManager = PersistUtil.createEntityManager();
             try {
                 TypedQuery<Trade> query = entityManager.createQuery("select t from Trade t where listing=?1 and time=(select max(time) from Trade where listing=?1)",
                                                                     Trade.class);
-                query.setParameter(1,forex);
+                query.setParameter(1, listing);
                 for( Trade trade : query.getResultList() ) {
                     long millis = trade.getTime().getMillis();
                     if( millis > lastTradeTime )
@@ -92,7 +88,7 @@ public class XchangeData extends ModuleListenerBase {
                     if( remoteId > lastTradeId ) {
                         Instant tradeInstant = new Instant(trade.getTimestamp());
                         Trade ourTrade =
-                                new Trade(forex, tradeInstant, trade.getId(),
+                                new Trade(listing, tradeInstant, trade.getId(),
                                           trade.getPrice(), trade.getTradableAmount());
                         esper.publish(ourTrade);
                         lastTradeTime = tradeInstant.getMillis();
@@ -101,8 +97,8 @@ public class XchangeData extends ModuleListenerBase {
                 }
             }
             catch( IOException e ) {
-                log.warn("Could not get Bitfinex trades for "+forex,e);
-                esper.publish(new MarketDataError(forex, e));
+                log.warn("Could not get Bitfinex trades for "+ listing,e);
+                esper.publish(new MarketDataError(listing, e));
             }
             finally {
                 // requeue
@@ -112,7 +108,7 @@ public class XchangeData extends ModuleListenerBase {
 
 
         private final Esper esper;
-        private final Forex forex;
+        private final Listing listing;
         private CurrencyPair pair;
         private long lastTradeTime;
         private long lastTradeId;

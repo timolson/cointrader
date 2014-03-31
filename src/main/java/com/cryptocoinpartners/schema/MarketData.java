@@ -12,17 +12,17 @@ import javax.persistence.MappedSuperclass;
  * @author Tim Olson
  */
 @MappedSuperclass
-public class MarketData extends RemoteEvent {
+public abstract class MarketData extends RemoteEvent {
 
 
-    public MarketData(Instant time, @Nullable String remoteKey, Listing listing) {
+    protected MarketData(Instant time, @Nullable String remoteKey, Listing listing) {
         super(time,remoteKey);
         this.listing = listing;
     }
 
 
-    public @ManyToOne
-    Listing getListing() { return listing; }
+    @ManyToOne(optional = false)
+    public Listing getListing() { return listing; }
 
 
     // JPA

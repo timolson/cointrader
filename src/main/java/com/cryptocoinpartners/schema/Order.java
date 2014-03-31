@@ -10,7 +10,7 @@ import java.math.BigDecimal;
  * @author Tim Olson
  */
 @Entity
-@Table(name="Orders")
+@Table(name="\"Order\"")
 // todo order is not a quote.  quote is market data
 public class Order extends Quote {
 
@@ -34,11 +34,12 @@ public class Order extends Quote {
     @Enumerated(EnumType.STRING)
     public OrderStatus getOrderStatus() { return orderStatus; }
 
-    public @ManyToOne Strategy getStrategy() { return strategy; }
+    @ManyToOne(optional = false)
+    public Strategy getStrategy() { return strategy; }
 
 
     // JPA
-    protected Order() { }
+    protected Order() {}
     protected void setOrderType(OrderType orderType) { this.orderType = orderType; }
     protected void setOrderStatus(OrderStatus orderStatus) { this.orderStatus = orderStatus; }
     protected void setStrategy(Strategy strategy) { this.strategy = strategy; }

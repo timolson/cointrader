@@ -13,7 +13,7 @@ import java.math.BigDecimal;
  * @author Tim Olson
  */
 @MappedSuperclass
-public class Pricing extends MarketData {
+public abstract class Pricing extends MarketData {
 
     public Pricing(Instant time, @Nullable String remoteKey, Listing listing, BigDecimal price, BigDecimal amount) {
         super(time, remoteKey, listing);

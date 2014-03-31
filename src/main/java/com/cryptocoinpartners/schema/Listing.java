@@ -8,7 +8,7 @@ import java.util.List;
 
 
 /**
- * Represents an Asset at a Market.  The same Asset on different Markets are different Securities
+ * Represents a possibility to trade one Fungible for another at a specific Market.
  *
  * @author Tim Olson
  */
@@ -33,39 +33,38 @@ public class Listing extends EntityBase {
     }
 
 
-    /** This symbol may be unique to the associated Market */
-    public String getSymbol() {
-        return symbol;
-    }
+    @OneToOne(optional = false)
+    public Fungible getBase() { return base; }
 
 
-    @Enumerated(EnumType.STRING)
-    public Market getMarket() {
-        return market;
-    }
+    @OneToOne(optional = false)
+    public Fungible getQuote() { return quote; }
 
 
-    protected Listing(Market market, String symbol) {
+    @OneToOne(optional = false)
+    public Market getMarket() { return market; }
+
+
+    public Listing(Market market, Fungible base, Fungible quote) {
+        this.base = base;
+        this.quote = quote;
         this.market = market;
-        this.symbol = symbol;
     }
 
 
     public String toString() {
-        return market.toString()+':'+symbol;
+        return market.toString()+':'+base+'.'+quote;
     }
-
-
-    public Listing withLowercaseSymbol() { setSymbol(getSymbol().toLowerCase()); return this; }
-    public Listing withUppercaseSymbol() { setSymbol(getSymbol().toLowerCase()); return this; }
 
 
     // JPA
     protected Listing() {}
-    protected void setSymbol(String symbol) { this.symbol = symbol; }
     protected void setMarket(Market market) { this.market = market; }
+    protected void setBase(Fungible base) { this.base = base; }
+    protected void setQuote(Fungible quote) { this.quote = quote; }
 
 
-    private String symbol;
+    private Fungible base;
+    private Fungible quote;
     private Market market;
 }

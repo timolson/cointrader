@@ -1,25 +1,24 @@
 package com.cryptocoinpartners.schema;
 
-import javax.persistence.Basic;
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
 import java.util.Collection;
 
 
 /**
- * An Owner is a person or corporate entity who holds Stakes in Funds
+ * Many Owners may have shares in the Fund.  The Fund has multiple Positions.
+ *
  * @author Tim Olson
  */
 @Entity
-public class Owner extends EntityBase {
+public class Fund extends EntityBase {
+
+    public @OneToMany Collection<Position> getPositions() { return positions; }
 
 
-    public Owner(String name) {
-        this.name = name;
-    }
+    public Fund(String name) { this.name = name; }
 
 
-    @Basic(optional = false)
     public String getName() { return name; }
 
 
@@ -27,11 +26,14 @@ public class Owner extends EntityBase {
     public Collection<Stake> getStakes() { return stakes; }
 
 
-    protected Owner() {}
+    // JPA
+    protected Fund() {}
+    protected void setPositions(Collection<Position> positions) { this.positions = positions; }
     protected void setName(String name) { this.name = name; }
     protected void setStakes(Collection<Stake> stakes) { this.stakes = stakes; }
 
 
-    private Collection<Stake> stakes;
     private String name;
+    private Collection<Position> positions;
+    private Collection<Stake> stakes;
 }
