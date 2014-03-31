@@ -2,9 +2,11 @@ package com.cryptocoinpartners.schema;
 
 import com.cryptocoinpartners.util.PersistUtil;
 
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.EntityManager;
+import javax.persistence.ManyToOne;
+import javax.persistence.TypedQuery;
 import java.util.Collection;
-import java.util.List;
 
 
 /**
@@ -33,15 +35,15 @@ public class Listing extends EntityBase {
     }
 
 
-    @OneToOne(optional = false)
+    @ManyToOne(optional = false)
     public Fungible getBase() { return base; }
 
 
-    @OneToOne(optional = false)
+    @ManyToOne(optional = false)
     public Fungible getQuote() { return quote; }
 
 
-    @OneToOne(optional = false)
+    @ManyToOne(optional = false)
     public Market getMarket() { return market; }
 
 

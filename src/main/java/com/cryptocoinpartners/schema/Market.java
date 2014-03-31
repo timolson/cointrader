@@ -18,11 +18,11 @@ import java.util.Map;
 @Entity
 public class Market extends EntityBase {
 
-    public static final Market BITFINEX = forSymbol("BITFINEX");
-    public static final Market BTC_CHINA = forSymbol("BTC_CHINA");
-    public static final Market BITSTAMP = forSymbol("BITSTAMP");
-    public static final Market BTCE = forSymbol("BTCE");
-    public static final Market CRYPTSY = forSymbol("CRYPTSY");
+    public static final Market BITFINEX = market("BITFINEX");
+    public static final Market BTC_CHINA = market("BTC_CHINA");
+    public static final Market BITSTAMP = market("BITSTAMP");
+    public static final Market BTCE = market("BTCE");
+    public static final Market CRYPTSY = market("CRYPTSY");
             
 
     public static Market forSymbol( String symbol ) {
@@ -51,6 +51,13 @@ public class Market extends EntityBase {
 
 
     private Market(String symbol) { this.symbol = symbol; }
+    
+    private static Market market(String symbol) {
+        if( PersistUtil.generatingDefaultData )
+            return new Market(symbol);
+        else
+            return forSymbol(symbol);
+    }
 
 
     private String symbol;

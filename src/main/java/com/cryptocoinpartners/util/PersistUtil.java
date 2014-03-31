@@ -47,13 +47,17 @@ public class PersistUtil {
 
     public static void resetDatabase() {
         init(true);
-        loadDefaultData();
     }
 
 
     private static void init(boolean resetDatabase) {
+        if( generatingDefaultData )
+            return;
         if( entityManagerFactory != null && !resetDatabase )
             return;
+        if( resetDatabase )
+            generatingDefaultData = true;
+
         Map<String,String> properties = new HashMap<String, String>();
         String createMode;
         if(resetDatabase)
@@ -69,6 +73,10 @@ public class PersistUtil {
 
         try {
             entityManagerFactory = Persistence.createEntityManagerFactory("com.cryptocoinpartners.schema", properties);
+            if( resetDatabase ) {
+                loadDefaultData();
+                generatingDefaultData = false;
+            }
         }
         catch( Throwable t ) {
             if( entityManagerFactory != null ) {
@@ -123,7 +131,7 @@ public class PersistUtil {
                 }
             }
         }
-        PersistUtil.insert((EntityBase[]) all.toArray());
+        PersistUtil.insert(all.toArray(new EntityBase[all.size()]));
     }
 
 
