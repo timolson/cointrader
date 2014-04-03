@@ -4,7 +4,10 @@ import com.cryptocoinpartners.module.ModuleListenerBase;
 import com.cryptocoinpartners.module.When;
 import com.cryptocoinpartners.schema.Event;
 import com.cryptocoinpartners.module.Esper;
+import com.cryptocoinpartners.schema.Fill;
 import org.apache.commons.configuration.Configuration;
+
+import java.math.BigDecimal;
 
 
 /**
@@ -25,4 +28,9 @@ public class HelloWorld extends ModuleListenerBase {
             log.trace(e.toString());
     }
 
+    public void setAvgTrade(BigDecimal avg) {
+        avgTrade = avg;
+    }
+
+    private BigDecimal avgTrade;
 }

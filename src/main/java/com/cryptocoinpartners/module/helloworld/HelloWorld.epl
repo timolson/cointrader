@@ -1,0 +1,2 @@
+@IntoMethod("setAvgTrade")
+select avg(price) from Trade.win(10 sec)
