@@ -45,6 +45,24 @@ public class XchangeData extends ModuleListenerBase {
         }
     }
 
+    /**
+     * @param esper
+     * @param config
+     * @param exchangeId  the exchagne ID from ExchangeNames
+     */
+    public void initModule(final Esper esper, Configuration config, int exchangeId) {
+        super.initModule(esper, config);
+ 
+        Exchange currentExchange = ExchangeFactory.INSTANCE.createExchange(ExchangeNames.findExchangeName(exchangeId));
+        dataService = currentExchange.getPollingMarketDataService();       
+        rateLimiter = new RateLimiter(queries, per);
+        
+        Market curMarket = ExchangeMarketMapping.getMarketByExchangeId(exchangeId);
+        Collection<Listing> listings = Listing.forMarket( curMarket);
+        for( final Listing listing : listings ) {
+            rateLimiter.execute(new FetchTradesRunnable(esper, listing));
+        }
+    }
 
     public void destroyModule() {
         super.destroyModule();

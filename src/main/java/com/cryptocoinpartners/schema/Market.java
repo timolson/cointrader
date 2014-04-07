@@ -25,6 +25,11 @@ public class Market extends EntityBase {
     public static final Market CRYPTSY = market("CRYPTSY");
             
 
+    public static Market getMarket(int exchangeId){
+    	
+    	return null;
+    }
+    
     public static Market forSymbol( String symbol ) {
         if( symbolMap == null ) {
             EntityManager em = PersistUtil.createEntityManager();
