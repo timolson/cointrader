@@ -13,19 +13,11 @@ import java.math.BigDecimal;
 /**
  * @author Tim Olson
  */
-public class HelloWorld extends ModuleListenerBase {
+public class CircuitBreaker extends ModuleListenerBase {
 
-    public void initModule(Esper esper, Configuration config) {
-        super.initModule(esper, config);
-        log.info("Hello, world!!!!");
-        if( config.containsKey("name") )
-            log.info("And hello to you, too, "+config.getString("name")+"!");
-    }
-
-    @When("select * from Event")
-    public void doSomethingWithEvery(Event e) {
-        if( log.isTraceEnabled() )
-            log.trace(e.toString());
+    @When("select NULL from Trade.win:time(60 sec) where listing=?listing having (max(price) - min(price))/min(price) > 0.1 ")
+    public void deactivateListing() {
+        // todo
     }
 
     public void setAvgTrade(BigDecimal avg) {

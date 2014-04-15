@@ -27,7 +27,7 @@
     </developers>
 
     <properties>
-        <xchange.version>2.0.0-SNAPSHOT</xchange.version>
+        <xchange.version>2.0.1-SNAPSHOT</xchange.version>
         <slf4j-api.version>1.7.5</slf4j-api.version>
         <hibernate.version>4.3.4.Final</hibernate.version>
     </properties>
@@ -71,6 +71,11 @@
         <dependency>
             <groupId>com.xeiam.xchange</groupId>
             <artifactId>xchange-bitfinex</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.xeiam.xchange</groupId>
+            <artifactId>xchange-bitstamp</artifactId>
             <version>${xchange.version}</version>
         </dependency>
         <dependency>
@@ -171,7 +176,7 @@
             <name>libs-snapshot-local</name>
             <url>http://cryptocoinpartners.com:8080/artifactory/libs-snapshot-local</url>
         </repository>
-        <!-- this is for the XChange 2.0.0-SNAPSHOT code -->
+        <!-- this is for the XChange SNAPSHOT code -->
         <repository>
             <id>sonatype-oss-snapshot</id>
             <snapshots/>

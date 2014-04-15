@@ -1,0 +1,2 @@
+@IntoMethod("createTick")
+select items.lastOf().price, sum(amount), items.lastOf().listing from Trade.win:time_batch(60 sec) group by listing
