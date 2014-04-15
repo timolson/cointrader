@@ -1,5 +1,6 @@
 package com.cryptocoinpartners.schema;
 
+import javax.persistence.Basic;
 import javax.persistence.Entity;
 
 
@@ -12,6 +13,7 @@ import javax.persistence.Entity;
 public abstract class Fungible extends EntityBase {
 
 
+    @Basic(optional = false)
     public String getSymbol() { return symbol; }
 
 

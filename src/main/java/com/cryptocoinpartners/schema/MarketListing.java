@@ -18,14 +18,17 @@ public class MarketListing extends EntityBase
     /**
      adds the MarketListing to the database if it does not already exist
      */
-    public static MarketListing findOrCreate(Market market, Listing listing) {
+    public static MarketListing findOrCreate(Market market, Fungible base, Fungible quote) {
+        final Listing listing = Listing.forPair(base, quote);
         final String queryStr = "select m from MarketListing m where market=?1 and listing=?2";
-        MarketListing result = PersistUtil.queryOne(MarketListing.class, queryStr, market, listing);
-        if( result == null ) {
-            result = new MarketListing(market,listing);
-            PersistUtil.insert(result);
+        try {
+            return PersistUtil.queryOne(MarketListing.class, queryStr, market, listing);
         }
-        return result;
+        catch( NoResultException e ) {
+            final MarketListing ml = new MarketListing(market, listing);
+            PersistUtil.insert(ml);
+            return ml;
+        }
     }
 
 

@@ -62,7 +62,7 @@ public class PersistUtil {
             if( params != null ) {
                 for( int i = 0; i < params.length; i++ ) {
                     Object param = params[i];
-                    query.setParameter(i,param);
+                    query.setParameter(i+1,param); // JPA uses 1-based indexes
                 }
             }
             query.setMaxResults(batchSize);
@@ -92,7 +92,7 @@ public class PersistUtil {
             if( params != null ) {
                 for( int i = 0; i < params.length; i++ ) {
                     Object param = params[i];
-                    query.setParameter(i,param);
+                    query.setParameter(i+1,param); // JPA uses 1-based indexes
                 }
             }
             return query.getResultList();
@@ -104,7 +104,12 @@ public class PersistUtil {
     }
 
 
-    public static <T extends EntityBase> T queryOne( Class<T> resultType, String queryStr, Object... params ) {
+    /**
+     returns a single result entity.  if none found, a javax.persistence.NoResultException is thrown.
+     */
+    public static <T extends EntityBase> T queryOne( Class<T> resultType, String queryStr, Object... params )
+        throws NoResultException
+    {
         EntityManager em = null;
         try {
             em = createEntityManager();
@@ -112,7 +117,7 @@ public class PersistUtil {
             if( params != null ) {
                 for( int i = 0; i < params.length; i++ ) {
                     Object param = params[i];
-                    query.setParameter(i,param);
+                    query.setParameter(i+1,param); // JPA uses 1-based indexes
                 }
             }
             return query.getSingleResult();
@@ -124,9 +129,42 @@ public class PersistUtil {
     }
 
 
+    /**
+     returns a single result entity or null if not found
+     */
+    public static <T extends EntityBase> T queryZeroOne( Class<T> resultType, String queryStr, Object... params ) {
+        EntityManager em = null;
+        try {
+            em = createEntityManager();
+            final TypedQuery<T> query = em.createQuery(queryStr,resultType);
+            if( params != null ) {
+                for( int i = 0; i < params.length; i++ ) {
+                    Object param = params[i];
+                    query.setParameter(i+1,param); // JPA uses 1-based indexes
+                }
+            }
+            try {
+                return query.getSingleResult();
+            }
+            catch( NoResultException x ) {
+                return null;
+            }
+        }
+        finally {
+            if( em != null )
+                em.close();
+        }
+    }
+
+
     public static EntityManager createEntityManager() {
         init(false);
         return entityManagerFactory.createEntityManager();
+    }
+
+
+    static {
+        MarketListing.class.getClass();
     }
 
 
@@ -187,13 +225,6 @@ public class PersistUtil {
         loadStaticFieldsFromClass(Currency.class);
         loadStaticFieldsFromClass(Market.class);
         loadStaticFieldsFromClass(Listing.class);
-
-        // MARKET LISTINGS
-        PersistUtil.insert(
-                 new MarketListing(Market.BITFINEX, Currency.BTC, Currency.USD)
-                ,new MarketListing(Market.BITFINEX, Currency.LTC, Currency.USD)
-                ,new MarketListing(Market.BITFINEX, Currency.LTC, Currency.BTC)
-        );
 
         generatingDefaultData = true;
     }

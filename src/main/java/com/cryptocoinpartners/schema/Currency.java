@@ -4,16 +4,12 @@ package com.cryptocoinpartners.schema;
 import com.cryptocoinpartners.util.PersistUtil;
 
 import javax.persistence.Entity;
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 
 /**
  * @author Tim Olson
  */
+@SuppressWarnings( "UnusedDeclaration" )
 @Entity
 public class Currency extends Fungible {
 
@@ -161,15 +157,7 @@ public class Currency extends Fungible {
 
 
     public static Currency forSymbol( String symbol ) {
-        if( symbolMap == null ) {
-            EntityManager em = PersistUtil.createEntityManager();
-            TypedQuery<Currency> query = em.createQuery("select c from Currency c", Currency.class);
-            List<Currency> currencies = query.getResultList();
-            symbolMap = new HashMap<String, Currency>();
-            for( Currency currency : currencies )
-                symbolMap.put(currency.getSymbol().toUpperCase(),currency);
-        }
-        return symbolMap.get(symbol.toUpperCase());
+        return PersistUtil.queryOne(Currency.class, "select c from Currency c where symbol=?1", symbol);
     }
 
 
@@ -201,5 +189,4 @@ public class Currency extends Fungible {
 
 
     private boolean fiat;
-    private static Map<String,Currency> symbolMap = null;
 }

@@ -39,7 +39,7 @@ public class XchangeData extends ModuleListenerBase {
         dataService = bitfinex.getPollingMarketDataService();
         rateLimiter = new RateLimiter(queries, per);
 
-        Collection<MarketListing> marketListings = MarketListing.forMarket(Market.BITFINEX);
+        Collection<MarketListing> marketListings = MarketListing.find(Market.BITFINEX);
         for( final MarketListing marketListing : marketListings ) {
             rateLimiter.execute(new FetchTradesRunnable(esper, marketListing));
         }
@@ -58,7 +58,7 @@ public class XchangeData extends ModuleListenerBase {
         rateLimiter = new RateLimiter(queries, per);
         
         Market curMarket = ExchangeMarketMapping.getMarketByExchangeId(exchangeId);
-        Collection<MarketListing> marketListings = MarketListing.forMarket(curMarket);
+        Collection<MarketListing> marketListings = MarketListing.find(curMarket);
         for( final MarketListing marketListing : marketListings ) {
             rateLimiter.execute(new FetchTradesRunnable(esper, marketListing));
         }
@@ -130,6 +130,14 @@ public class XchangeData extends ModuleListenerBase {
         private CurrencyPair pair;
         private long lastTradeTime;
         private long lastTradeId;
+    }
+
+
+    // This block initializes all the possible MarketListings we might handle
+    static {
+        MarketListing.findOrCreate( Market.BITFINEX, Currency.BTC, Currency.USD );
+        MarketListing.findOrCreate( Market.BITFINEX, Currency.LTC, Currency.USD );
+        MarketListing.findOrCreate( Market.BITFINEX, Currency.LTC, Currency.BTC );
     }
 
 

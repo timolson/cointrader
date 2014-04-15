@@ -21,26 +21,15 @@ public class Listing extends EntityBase
 
 
     public static Listing forPair( Fungible base, Fungible quote ) {
-        return PersistUtil.queryOne(Listing.class,"select a from Listing a where base=?1 and quote=?2",base,quote);
+        try {
+            return PersistUtil.queryOne(Listing.class, "select a from Listing a where base=?1 and quote=?2", base, quote);
+        }
+        catch( NoResultException e ) {
+            final Listing listing = new Listing(base, quote);
+            PersistUtil.insert(listing);
+            return listing;
+        }
     }
-
-
-    // BITCOIN
-    public static Listing BTCUSD = listing(Currency.BTC, Currency.USD);
-    public static Listing BTCEUR = listing(Currency.BTC, Currency.EUR);
-    public static Listing BTCCNY = listing(Currency.BTC, Currency.CNY);
-    public static Listing BTCJPY = listing(Currency.BTC, Currency.JPY);
-
-    // LITECOIN
-    public static Listing LTCUSD = listing(Currency.LTC, Currency.USD);
-    public static Listing LTCBTC = listing(Currency.LTC, Currency.BTC);
-
-    // PRIMECOIN
-    public static Listing XPMBTC = listing(Currency.XPM, Currency.BTC);
-    public static Listing XPMLTC = listing(Currency.XPM, Currency.LTC);
-
-    // OTHERS
-    // todo
 
 
     public String toString()

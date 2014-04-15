@@ -30,7 +30,7 @@ public class FakeTicker extends ModuleListenerBase {
             Market market = Market.forSymbol(upperMarket);
             if( market == null )
                 throw new ConfigurationError("Could not find Market with symbol \""+ upperMarket +"\"");
-            for( MarketListing marketListing : MarketListing.forMarket(market) ) {
+            for( MarketListing marketListing : MarketListing.find(market) ) {
                 new PoissonTickerThread(marketListing).start();
             }
         }
