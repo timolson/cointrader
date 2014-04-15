@@ -14,12 +14,12 @@
             <password>tX4YxpS7cBH8qZPD</password>
         </server>
         <server>
-            <id>trader-releases</id>
+            <id>trader-release</id>
             <username>trader</username>
             <password>tX4YxpS7cBH8qZPD</password>
         </server>
         <server>
-            <id>trader-snapshots</id>
+            <id>trader-snapshot</id>
             <username>trader</username>
             <password>tX4YxpS7cBH8qZPD</password>
         </server>

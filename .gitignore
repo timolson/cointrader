@@ -2,6 +2,9 @@ trader.iml
 trader.log
 target
 .idea
+.project
+.settings
+.classpath
 tmp.txt
 trader.properties
 trader.jar
