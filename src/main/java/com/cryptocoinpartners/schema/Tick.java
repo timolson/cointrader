@@ -7,15 +7,15 @@ import java.math.BigDecimal;
 
 
 /**
- * A Tick is a point-in-time snapshot of a Listing
+ * A Tick is a point-in-time snapshot of a MarketListing
  *
  * @author Tim Olson
  */
 @Entity
 public class Tick extends Pricing {
 
-    public Tick(Listing listing, String remoteKey, Instant time, BigDecimal price, BigDecimal amount) {
-        super(time, remoteKey, listing, price, amount);
+    public Tick(MarketListing marketListing, String remoteKey, Instant time, BigDecimal price, BigDecimal amount) {
+        super(time, remoteKey, marketListing, price, amount);
     }
 
 

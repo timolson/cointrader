@@ -1,14 +1,12 @@
 package com.cryptocoinpartners.util;
 
 import com.cryptocoinpartners.schema.*;
+import com.cryptocoinpartners.schema.Currency;
 
 import javax.persistence.*;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 /**
@@ -31,6 +29,93 @@ public class PersistUtil {
                 transaction.rollback();
                 throw t;
             }
+        }
+        finally {
+            if( em != null )
+                em.close();
+        }
+    }
+
+
+    public static interface EntityHandler<T extends EntityBase> {
+        /**
+         @param row an entity returned from the queryEach
+         @return true to continue with the next result row, or false to halt iteration
+         @see #queryEach(Class, com.cryptocoinpartners.util.PersistUtil.EntityHandler, int, String, Object...)
+         */
+        boolean handleEntity(T row);
+    }
+
+
+    public static <T extends EntityBase> void queryEach( Class<T> resultType, EntityHandler<T> handler,
+                                                         String queryStr, Object... params ) {
+        queryEach(resultType,handler,20,queryStr,params);
+    }
+
+
+    public static <T extends EntityBase> void queryEach( Class<T> resultType, EntityHandler<T> handler, int batchSize,
+                                                         String queryStr, Object... params ) {
+        EntityManager em = null;
+        try {
+            em = createEntityManager();
+            final TypedQuery<T> query = em.createQuery(queryStr, resultType);
+            if( params != null ) {
+                for( int i = 0; i < params.length; i++ ) {
+                    Object param = params[i];
+                    query.setParameter(i,param);
+                }
+            }
+            query.setMaxResults(batchSize);
+            for( int start = 0; ; start += batchSize ) {
+                query.setFirstResult(start);
+                final List<T> list = query.getResultList();
+                if( list.isEmpty() )
+                    return;
+                for( T row : list ) {
+                    if( !handler.handleEntity(row) )
+                        return;
+                }
+            }
+        }
+        finally {
+            if( em != null )
+                em.close();
+        }
+    }
+
+
+    public static <T extends EntityBase> List<T> queryList( Class<T> resultType, String queryStr, Object... params ) {
+        EntityManager em = null;
+        try {
+            em = createEntityManager();
+            final TypedQuery<T> query = em.createQuery(queryStr, resultType);
+            if( params != null ) {
+                for( int i = 0; i < params.length; i++ ) {
+                    Object param = params[i];
+                    query.setParameter(i,param);
+                }
+            }
+            return query.getResultList();
+        }
+        finally {
+            if( em != null )
+                em.close();
+        }
+    }
+
+
+    public static <T extends EntityBase> T queryOne( Class<T> resultType, String queryStr, Object... params ) {
+        EntityManager em = null;
+        try {
+            em = createEntityManager();
+            final TypedQuery<T> query = em.createQuery(queryStr,resultType);
+            if( params != null ) {
+                for( int i = 0; i < params.length; i++ ) {
+                    Object param = params[i];
+                    query.setParameter(i,param);
+                }
+            }
+            return query.getSingleResult();
         }
         finally {
             if( em != null )
@@ -101,12 +186,13 @@ public class PersistUtil {
 
         loadStaticFieldsFromClass(Currency.class);
         loadStaticFieldsFromClass(Market.class);
+        loadStaticFieldsFromClass(Listing.class);
 
-        // LISTINGS
+        // MARKET LISTINGS
         PersistUtil.insert(
-                 new Listing(Market.BITFINEX, Currency.BTC, Currency.USD)
-                ,new Listing(Market.BITFINEX, Currency.LTC, Currency.USD)
-                ,new Listing(Market.BITFINEX, Currency.LTC, Currency.BTC)
+                 new MarketListing(Market.BITFINEX, Currency.BTC, Currency.USD)
+                ,new MarketListing(Market.BITFINEX, Currency.LTC, Currency.USD)
+                ,new MarketListing(Market.BITFINEX, Currency.LTC, Currency.BTC)
         );
 
         generatingDefaultData = true;

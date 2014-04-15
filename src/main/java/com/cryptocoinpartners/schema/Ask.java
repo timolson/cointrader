@@ -9,8 +9,8 @@ import java.math.BigDecimal;
  * @author Tim Olson
  */
 public class Ask extends Quote {
-    public Ask( Listing listing, Instant time, Instant timeReceived, BigDecimal price, BigDecimal amount) {
-        super(Side.SELL, listing, time, null, price, amount);
+    public Ask( MarketListing marketListing, Instant time, Instant timeReceived, BigDecimal price, BigDecimal amount) {
+        super(Side.SELL, marketListing, time, null, price, amount);
         setTimeReceived(timeReceived);
     }
 }

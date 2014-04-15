@@ -39,9 +39,9 @@ public class XchangeData extends ModuleListenerBase {
         dataService = bitfinex.getPollingMarketDataService();
         rateLimiter = new RateLimiter(queries, per);
 
-        Collection<Listing> listings = Listing.forMarket(Market.BITFINEX);
-        for( final Listing listing : listings ) {
-            rateLimiter.execute(new FetchTradesRunnable(esper, listing));
+        Collection<MarketListing> marketListings = MarketListing.forMarket(Market.BITFINEX);
+        for( final MarketListing marketListing : marketListings ) {
+            rateLimiter.execute(new FetchTradesRunnable(esper, marketListing));
         }
     }
 
@@ -58,9 +58,9 @@ public class XchangeData extends ModuleListenerBase {
         rateLimiter = new RateLimiter(queries, per);
         
         Market curMarket = ExchangeMarketMapping.getMarketByExchangeId(exchangeId);
-        Collection<Listing> listings = Listing.forMarket( curMarket);
-        for( final Listing listing : listings ) {
-            rateLimiter.execute(new FetchTradesRunnable(esper, listing));
+        Collection<MarketListing> marketListings = MarketListing.forMarket(curMarket);
+        for( final MarketListing marketListing : marketListings ) {
+            rateLimiter.execute(new FetchTradesRunnable(esper, marketListing));
         }
     }
 
@@ -71,17 +71,17 @@ public class XchangeData extends ModuleListenerBase {
 
     private class FetchTradesRunnable implements Runnable {
 
-        public FetchTradesRunnable(Esper esper, Listing listing) {
+        public FetchTradesRunnable(Esper esper, MarketListing marketListing ) {
             this.esper = esper;
-            this.listing = listing;
-            pair = new CurrencyPair(listing.getBase().getSymbol(), listing.getQuote().getSymbol());
+            this.marketListing = marketListing;
+            pair = new CurrencyPair(marketListing.getBase().getSymbol(), marketListing.getQuote().getSymbol());
             lastTradeTime = 0;
             lastTradeId = 0;
             EntityManager entityManager = PersistUtil.createEntityManager();
             try {
-                TypedQuery<Trade> query = entityManager.createQuery("select t from Trade t where listing=?1 and time=(select max(time) from Trade where listing=?1)",
+                TypedQuery<Trade> query = entityManager.createQuery("select t from Trade t where marketListing=?1 and time=(select max(time) from Trade where marketListing=?1)",
                                                                     Trade.class);
-                query.setParameter(1, listing);
+                query.setParameter(1, marketListing);
                 for( Trade trade : query.getResultList() ) {
                     long millis = trade.getTime().getMillis();
                     if( millis > lastTradeTime )
@@ -106,7 +106,7 @@ public class XchangeData extends ModuleListenerBase {
                     if( remoteId > lastTradeId ) {
                         Instant tradeInstant = new Instant(trade.getTimestamp());
                         Trade ourTrade =
-                                new Trade(listing, tradeInstant, trade.getId(),
+                                new Trade(marketListing, tradeInstant, trade.getId(),
                                           trade.getPrice(), trade.getTradableAmount());
                         esper.publish(ourTrade);
                         lastTradeTime = tradeInstant.getMillis();
@@ -115,8 +115,8 @@ public class XchangeData extends ModuleListenerBase {
                 }
             }
             catch( IOException e ) {
-                log.warn("Could not get Bitfinex trades for "+ listing,e);
-                esper.publish(new MarketDataError(listing, e));
+                log.warn("Could not get Bitfinex trades for "+ marketListing,e);
+                esper.publish(new MarketDataError(marketListing, e));
             }
             finally {
                 // requeue
@@ -126,7 +126,7 @@ public class XchangeData extends ModuleListenerBase {
 
 
         private final Esper esper;
-        private final Listing listing;
+        private final MarketListing marketListing;
         private CurrencyPair pair;
         private long lastTradeTime;
         private long lastTradeId;

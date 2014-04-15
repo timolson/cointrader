@@ -15,8 +15,8 @@ import java.math.BigDecimal;
 public class Fill extends Pricing {
 
 
-    public Fill(Order order, Instant time, Listing listing, BigDecimal price, BigDecimal amount ) {
-        super(time, null, listing, price, amount);
+    public Fill(Order order, Instant time, MarketListing marketListing, BigDecimal price, BigDecimal amount ) {
+        super(time, null, marketListing, price, amount);
         this.order = order;
     }
 

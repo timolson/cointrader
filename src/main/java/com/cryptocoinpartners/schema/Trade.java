@@ -9,15 +9,15 @@ import java.math.BigDecimal;
 
 
 /**
- * Trade represents a single known transaction of a Listing
+ * Trade represents a single known transaction of a MarketListing
  *
  * @author Tim Olson
  */
 @Entity
 public class Trade extends Pricing {
 
-    public Trade(Listing listing, Instant time, @Nullable String remoteKey, BigDecimal price, BigDecimal amount) {
-        super(time, remoteKey, listing, price, amount);
+    public Trade(MarketListing marketListing, Instant time, @Nullable String remoteKey, BigDecimal price, BigDecimal amount) {
+        super(time, remoteKey, marketListing, price, amount);
     }
 
 

@@ -15,14 +15,14 @@ import javax.persistence.MappedSuperclass;
 public abstract class MarketData extends RemoteEvent {
 
 
-    protected MarketData(Instant time, @Nullable String remoteKey, Listing listing) {
+    protected MarketData(Instant time, @Nullable String remoteKey, MarketListing marketListing ) {
         super(time,remoteKey);
-        this.listing = listing;
+        this.marketListing = marketListing;
     }
 
 
     @ManyToOne(optional = false)
-    public Listing getListing() { return listing; }
+    public MarketListing getMarketListing() { return marketListing; }
 
 
     // JPA
@@ -30,8 +30,8 @@ public abstract class MarketData extends RemoteEvent {
         super();
     }
 
-    protected void setListing(Listing listing) { this.listing = listing; }
+    protected void setMarketListing(MarketListing marketListing ) { this.marketListing = marketListing; }
 
 
-    private Listing listing;
+    private MarketListing marketListing;
 }

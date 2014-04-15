@@ -4,9 +4,8 @@ package com.cryptocoinpartners.module.faketicker;
 import com.cryptocoinpartners.module.ConfigurationError;
 import com.cryptocoinpartners.module.Esper;
 import com.cryptocoinpartners.module.ModuleListenerBase;
-import com.cryptocoinpartners.schema.Listing;
-import com.cryptocoinpartners.schema.Market;
-import com.cryptocoinpartners.schema.Trade;
+import com.cryptocoinpartners.schema.*;
+import com.cryptocoinpartners.schema.MarketListing;
 import com.cryptocoinpartners.util.MathUtil;
 import org.apache.commons.configuration.Configuration;
 import org.joda.time.Instant;
@@ -31,8 +30,8 @@ public class FakeTicker extends ModuleListenerBase {
             Market market = Market.forSymbol(upperMarket);
             if( market == null )
                 throw new ConfigurationError("Could not find Market with symbol \""+ upperMarket +"\"");
-            for( Listing listing : Listing.forMarket(market) ) {
-                new PoissonTickerThread(listing).start();
+            for( MarketListing marketListing : MarketListing.forMarket(market) ) {
+                new PoissonTickerThread(marketListing).start();
             }
         }
     }
@@ -74,19 +73,19 @@ public class FakeTicker extends ModuleListenerBase {
                 }
                 if( !running )
                     break;
-                Trade trade = new Trade(listing, Instant.now(), null, nextPrice(), nextVolume());
+                Trade trade = new Trade(marketListing, Instant.now(), null, nextPrice(), nextVolume());
                 esper.publish(trade);
             }
         }
 
 
-        private PoissonTickerThread(Listing listing) {
+        private PoissonTickerThread(MarketListing marketListing ) {
             setDaemon(true);
-            this.listing = listing;
+            this.marketListing = marketListing;
         }
 
 
-        private final Listing listing;
+        private final MarketListing marketListing;
     }
 
 

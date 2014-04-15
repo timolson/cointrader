@@ -20,13 +20,13 @@ public class Book extends MarketData {
 
         
         public BookBuilder addBid( BigDecimal price, BigDecimal amount ) {
-            book.bids.add(new Bid(book.getListing(),book.getTime(),book.getTimeReceived(),price,amount));
+            book.bids.add(new Bid(book.getMarketListing(),book.getTime(),book.getTimeReceived(),price,amount));
             return this;
         }
     
     
         public BookBuilder addAsk( BigDecimal price, BigDecimal amount ) {
-            book.asks.add(new Ask(book.getListing(),book.getTime(),book.getTimeReceived(),price,amount));
+            book.asks.add(new Ask(book.getMarketListing(),book.getTime(),book.getTimeReceived(),price,amount));
             return this;
         }
 
@@ -36,8 +36,8 @@ public class Book extends MarketData {
     }
 
     
-    public static BookBuilder builder(Instant time, String remoteKey, Listing listing) {
-        return new BookBuilder(new Book(time, remoteKey,listing));
+    public static BookBuilder builder(Instant time, String remoteKey, MarketListing marketListing ) {
+        return new BookBuilder(new Book(time, remoteKey, marketListing));
     }
     
 
@@ -58,7 +58,7 @@ public class Book extends MarketData {
     @Transient
     public Bid getBestBid() {
         if( bids.isEmpty() )
-            return new Bid(getListing(),getTime(),getTimeReceived(),BigDecimal.ZERO,BigDecimal.ZERO);
+            return new Bid(getMarketListing(),getTime(),getTimeReceived(),BigDecimal.ZERO,BigDecimal.ZERO);
         return bids.get(0);
     }
 
@@ -66,7 +66,7 @@ public class Book extends MarketData {
     @Transient
     public Ask getBestAsk() {
         if( asks.isEmpty() ) {
-            return new Ask(getListing(),getTime(),getTimeReceived(), MAX_ASK_PRICE,BigDecimal.ZERO);
+            return new Ask(getMarketListing(),getTime(),getTimeReceived(), MAX_ASK_PRICE,BigDecimal.ZERO);
         }
         return asks.get(0);
     }
@@ -157,14 +157,14 @@ public class Book extends MarketData {
     
     private class BidCreator implements QuoteCreator<Bid> {
         public Bid create(BigDecimal price, BigDecimal amount) {
-            return new Bid(getListing(),getTime(),getTimeReceived(),price,amount);
+            return new Bid(getMarketListing(),getTime(),getTimeReceived(),price,amount);
         }
     }
 
 
     private class AskCreator implements QuoteCreator<Ask> {
         public Ask create(BigDecimal price, BigDecimal amount) {
-            return new Ask(getListing(),getTime(),getTimeReceived(),price,amount);
+            return new Ask(getMarketListing(),getTime(),getTimeReceived(),price,amount);
         }
     }
     
@@ -173,8 +173,8 @@ public class Book extends MarketData {
     protected Book() { }
 
 
-    private Book(Instant time, String remoteKey, Listing listing) {
-        super(time, remoteKey, listing);
+    private Book(Instant time, String remoteKey, MarketListing marketListing ) {
+        super(time, remoteKey, marketListing);
         bids = new LinkedList<Bid>();
         asks = new LinkedList<Ask>();
     }
