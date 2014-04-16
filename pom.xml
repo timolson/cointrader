@@ -79,6 +79,16 @@
             <version>${xchange.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.xeiam.xchange</groupId>
+            <artifactId>xchange-btcchina</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.xeiam.xchange</groupId>
+            <artifactId>xchange-btce</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+        <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>
             <version>2.3</version>

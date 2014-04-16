@@ -20,9 +20,20 @@ public class Listing extends EntityBase
     public Fungible getQuote() { return quote; }
 
 
+    /**
+     will create the listing if it doesn't exist
+     @param base
+     @param quote
+     @return
+     */
     public static Listing forPair( Fungible base, Fungible quote ) {
         try {
-            return PersistUtil.queryOne(Listing.class, "select a from Listing a where base=?1 and quote=?2", base, quote);
+            Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2", base, quote);
+            if( listing == null ) {
+                listing = new Listing(base,quote);
+                PersistUtil.insert(listing);
+            }
+            return listing;
         }
         catch( NoResultException e ) {
             final Listing listing = new Listing(base, quote);
@@ -75,6 +86,6 @@ public class Listing extends EntityBase
         Fungible quote = Fungible.forSymbol(quoteSymbol);
         if( quote == null )
             throw new IllegalArgumentException("Invalid quote symbol: \""+quoteSymbol+"\"");
-        return PersistUtil.queryOne(Listing.class,"select x from Listing x where base=?1 and quote=?2",base,quote);
+        return Listing.forPair(base,quote);
     }
 }

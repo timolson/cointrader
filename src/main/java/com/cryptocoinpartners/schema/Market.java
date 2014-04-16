@@ -19,7 +19,7 @@ import java.util.Map;
 public class Market extends EntityBase {
 
     public static final Market BITFINEX = market("BITFINEX");
-    public static final Market BTC_CHINA = market("BTC_CHINA");
+    public static final Market BTCCHINA = market("BTCCHINA");
     public static final Market BITSTAMP = market("BITSTAMP");
     public static final Market BTCE = market("BTCE");
     public static final Market CRYPTSY = market("CRYPTSY");
