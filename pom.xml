@@ -167,6 +167,13 @@
 
     <!-- Point to the cryptocoinpartners.com internal repository -->
     <repositories>
+        <!-- this is for the XChange SNAPSHOT code -->
+        <repository>
+            <id>sonatype-oss-snapshot</id>
+            <snapshots/>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </repository>
+        <!--
         <repository>
             <snapshots>
                 <enabled>false</enabled>
@@ -186,15 +193,11 @@
             <name>libs-snapshot-local</name>
             <url>http://cryptocoinpartners.com:8080/artifactory/libs-snapshot-local</url>
         </repository>
-        <!-- this is for the XChange SNAPSHOT code -->
-        <repository>
-            <id>sonatype-oss-snapshot</id>
-            <snapshots/>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </repository>
+        -->
     </repositories>
 
     <!-- Point to the cryptocoinpartners.com internal repository -->
+    <!--
     <pluginRepositories>
         <pluginRepository>
             <snapshots>
@@ -217,6 +220,7 @@
             <url>http://cryptocoinpartners.com:8080/artifactory/plugins-snapshot</url>
         </pluginRepository>
     </pluginRepositories>
+    -->
 
     <!-- Deploy to the cryptocoinpartners.com internal repository -->
     <distributionManagement>
