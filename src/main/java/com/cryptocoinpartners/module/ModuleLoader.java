@@ -1,7 +1,6 @@
 package com.cryptocoinpartners.module;
 
-import com.cryptocoinpartners.util.ModuleLoaderError;
-import com.cryptocoinpartners.util.ReflectionUtil;
+import com.cryptocoinpartners.util.*;
 import com.espertech.esper.client.deploy.DeploymentException;
 import com.espertech.esper.client.deploy.ParseException;
 import org.apache.commons.configuration.*;
@@ -67,25 +66,21 @@ public class ModuleLoader {
 
 
     private static Configuration buildConfig(String name, @Nullable Configuration c) throws ConfigurationException {
-        CompositeConfiguration config = new CompositeConfiguration();
-        config.addConfiguration(new SystemConfiguration());
+        final ArrayList<AbstractConfiguration> moduleConfigs = new ArrayList<AbstractConfiguration>();
         String packageName = "com/cryptocoinpartners/module/"+name+"/config.properties";
         ClassLoader classLoader = ModuleLoader.class.getClassLoader();
         URL resource = classLoader.getResource(packageName);
         if (resource != null) {
-            Configuration packageConfig = new PropertiesConfiguration(resource);
-            config.addConfiguration(packageConfig);
+            PropertiesConfiguration packageConfig = new PropertiesConfiguration(resource);
+            moduleConfigs.add(packageConfig);
         }
         packageName = "com/cryptocoinpartners/module/"+name+"/"+name+".properties";
         resource = classLoader.getResource(packageName);
         if (resource != null) {
-            Configuration packageConfig = new PropertiesConfiguration(resource);
-            config.addConfiguration(packageConfig);
+            PropertiesConfiguration packageConfig = new PropertiesConfiguration(resource);
+            moduleConfigs.add(packageConfig);
         }
-        if( c != null )
-            config.addConfiguration(c);
-        log.debug("module configuration is\n"+config);
-        return config;
+        return Config.module(moduleConfigs);
     }
 
 

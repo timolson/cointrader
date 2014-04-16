@@ -1,17 +1,15 @@
 package com.cryptocoinpartners.bin;
 
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
-import com.beust.jcommander.Parameters;
+import com.beust.jcommander.*;
 import com.cryptocoinpartners.bin.command.Command;
 import com.cryptocoinpartners.util.Config;
 import com.cryptocoinpartners.util.ReflectionUtil;
 import org.apache.commons.configuration.ConfigurationException;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import javax.net.ssl.*;
+import java.security.GeneralSecurityException;
+import java.util.*;
 
 
 /**
@@ -30,6 +28,9 @@ public class Main
 
         @Parameter(names = {"-f","--properties-file"}, description = "location of the trader.properties config file")
         String propertiesFilename = DEFAULT_PROPERTIES_FILENAME;
+
+        @DynamicParameter( names = {"-D"}, description = "use the -D flag to set configuration properties \"-Ddb.username=dbuser\"" )
+        Map<String,String> definitions = new HashMap<String, String>();
     }
 
 
@@ -64,16 +65,41 @@ public class Main
             System.exit(7001);
         }
         try {
-            Config.init(mainParams.propertiesFilename);
+            Config.init(mainParams.propertiesFilename,mainParams.definitions);
         }
         catch( ConfigurationException e ) {
             if( !mainParams.propertiesFilename.equals(DEFAULT_PROPERTIES_FILENAME) )
                 throw e;
             LoggerFactory.getLogger(Main.class).info(DEFAULT_PROPERTIES_FILENAME+" not found.  Using "+FALLBACK_PROPERTIES_FILENAME+" instead.");
-            Config.init(FALLBACK_PROPERTIES_FILENAME);
+            Config.init(FALLBACK_PROPERTIES_FILENAME,mainParams.definitions);
         }
+        installTrustManager();
         command.run();
     }
 
+
+    private static void installTrustManager() {
+        TrustManager[] trustAllCerts = new TrustManager[] {
+            new X509TrustManager() {
+                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                    return null;
+                }
+                public void checkClientTrusted(
+                    java.security.cert.X509Certificate[] certs, String authType) {
+                    }
+                public void checkServerTrusted(
+                    java.security.cert.X509Certificate[] certs, String authType) {
+                }
+            }
+        };
+
+        // Install the all-trusting trust manager
+        try {
+            SSLContext sc = SSLContext.getInstance("SSL");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+        } catch (GeneralSecurityException e) {
+        }
+    }
 
 }

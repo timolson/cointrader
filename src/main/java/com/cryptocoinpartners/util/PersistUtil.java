@@ -188,11 +188,11 @@ public class PersistUtil {
         else
             createMode = "update";
         properties.put("hibernate.hbm2ddl.auto",createMode);
-        properties.put("hibernate.connection.driver_class", Config.get().getString("db.driver"));
-        properties.put("hibernate.dialect", Config.get().getString("db.dialect"));
-        properties.put("hibernate.connection.url", Config.get().getString("db.url"));
-        properties.put("hibernate.connection.username", Config.get().getString("db.username"));
-        properties.put("hibernate.connection.password", Config.get().getString("db.password"));
+        properties.put("hibernate.connection.driver_class", Config.combined().getString("db.driver"));
+        properties.put("hibernate.dialect", Config.combined().getString("db.dialect"));
+        properties.put("hibernate.connection.url", Config.combined().getString("db.url"));
+        properties.put("hibernate.connection.username", Config.combined().getString("db.username"));
+        properties.put("hibernate.connection.password", Config.combined().getString("db.password"));
 
         try {
             entityManagerFactory = Persistence.createEntityManagerFactory("com.cryptocoinpartners.schema", properties);
