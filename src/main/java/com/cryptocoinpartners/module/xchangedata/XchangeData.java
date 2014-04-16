@@ -7,19 +7,20 @@ import com.cryptocoinpartners.util.PersistUtil;
 import com.cryptocoinpartners.util.RateLimiter;
 import com.xeiam.xchange.Exchange;
 import com.xeiam.xchange.ExchangeFactory;
-import com.xeiam.xchange.bitfinex.v1.BitfinexExchange;
 import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.marketdata.Trades;
 import com.xeiam.xchange.service.polling.PollingMarketDataService;
-import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration.*;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 
+import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 /**
@@ -27,53 +28,122 @@ import java.util.List;
  */
 public class XchangeData extends ModuleListenerBase {
 
-    // rate limit
-    // one query per second
-    public int queries = 1;
-    public Duration per = Duration.standardSeconds(1);
-
 
     public void initModule(final Esper esper, Configuration config) {
         super.initModule(esper, config);
-        Exchange bitfinex = ExchangeFactory.INSTANCE.createExchange(BitfinexExchange.class.getName());
-        dataService = bitfinex.getPollingMarketDataService();
-        rateLimiter = new RateLimiter(queries, per);
 
-        Collection<MarketListing> marketListings = MarketListing.find(Market.BITFINEX);
-        for( final MarketListing marketListing : marketListings ) {
-            rateLimiter.execute(new FetchTradesRunnable(esper, marketListing));
+        final String configPrefix = "xchange";
+
+        // find all the config keys starting with "xchange." and collect their second groups after the dot
+        final Iterator xchangeConfigKeys = config.getKeys(configPrefix);
+        Set<String> exchangeTags = new HashSet<String>();
+        final Pattern configPattern = Pattern.compile(configPrefix+"\\.([^\\.]+)\\..+");
+        while( xchangeConfigKeys.hasNext() ) {
+            String key = (String) xchangeConfigKeys.next();
+            final Matcher matcher = configPattern.matcher(key);
+            if( matcher.matches() )
+                exchangeTags.add(matcher.group(1));
+        }
+
+
+        // now we have all the exchange tags.  process each config group
+        for( String tag : exchangeTags ) {
+            // three configs required:
+            // .class the full classname of the Xchange implementation
+            // .rate.queries rate limit the number of queries to this many (default: 1)
+            // .rate.period rate limit the number of queries during this period of time (default: 1 second)
+            Market market = Market.forSymbol(tag.toUpperCase());
+            if( market != null ) {
+                String prefix = configPrefix+"." + tag + '.';
+                final String exchangeClassName = config.getString(prefix + "class");
+                final String helperClassName = config.getString(prefix + "helper.class", null);
+                int queries = config.getInt(prefix + "rate.queries", 1);
+                Duration period = Duration.millis((long) (1000 * config.getDouble(prefix + "rate.period", 1))); // rate.period in seconds
+                final List listings = config.getList(prefix + "listings");
+                initExchange(exchangeClassName, helperClassName, queries, period, market, listings);
+            }
+            else {
+                log.warn("Could not find Market for property \"xchange." + tag + ".*\"");
+            }
         }
     }
 
-    /**
-     * @param esper
-     * @param config
-     * @param exchangeId  the exchagne ID from ExchangeNames
-     */
-    public void initModule(final Esper esper, Configuration config, int exchangeId) {
-        super.initModule(esper, config);
- 
-        Exchange currentExchange = ExchangeFactory.INSTANCE.createExchange(ExchangeNames.findExchangeName(exchangeId));
-        dataService = currentExchange.getPollingMarketDataService();       
-        rateLimiter = new RateLimiter(queries, per);
-        
-        Market curMarket = ExchangeMarketMapping.getMarketByExchangeId(exchangeId);
-        Collection<MarketListing> marketListings = MarketListing.find(curMarket);
-        for( final MarketListing marketListing : marketListings ) {
-            rateLimiter.execute(new FetchTradesRunnable(esper, marketListing));
-        }
-    }
 
     public void destroyModule() {
         super.destroyModule();
     }
 
 
+    /** You may implement this interface to customize the interaction with the Xchange library for each exchange.
+        Set the class name of your Helper in the module configuration using the key:<br/>
+        xchange.<marketname>.helper.class=com.foo.bar.MyHelper<br/>
+        if you leave out the package name it is assumed to be the same as the XchangeData class (i.e. the xchange
+        module package).
+     */
+    public interface Helper {
+        Object[] getTradeParameters( CurrencyPair pair, long lastTradeTime, long lastTradeId );
+        void handleTrades( Trades tradeSpec );
+    }
+
+
+    private void initExchange( String exchangeClassName, @Nullable String helperClassName, int queries, Duration per,
+                               Market market, List listings )
+    {
+        Exchange exchange = ExchangeFactory.INSTANCE.createExchange(exchangeClassName);
+        Helper helper = null;
+        if( helperClassName != null && !helperClassName.isEmpty() ) {
+            if( helperClassName.indexOf('.') == -1 )
+                helperClassName = XchangeData.class.getPackage().getName()+'.'+helperClassName;
+            try {
+                final Class<?> helperClass = getClass().getClassLoader().loadClass(helperClassName);
+                try {
+                    helper = (Helper) helperClass.newInstance();
+                }
+                catch( InstantiationException e ) {
+                    log.error("Could not initialize XchanngeData "+exchangeClassName+" because helper class "+helperClassName+" could not be instantiated ",e);
+                    return;
+                }
+                catch( IllegalAccessException e ) {
+                    log.error("Could not initialize XchanngeData "+exchangeClassName+" because helper class "+helperClassName+" could not be instantiated ",e);
+                    return;
+                }
+                catch( ClassCastException e ) {
+                    log.error("Could not initialize XchanngeData "+exchangeClassName+" because helper class "+helperClassName+" does not implement "+Helper.class);
+                    return;
+                }
+            }
+            catch( ClassNotFoundException e ) {
+                log.error("Could not initialize XchanngeData "+exchangeClassName+" because helper class "+helperClassName+" was not found");
+                return;
+            }
+        }
+        PollingMarketDataService dataService = exchange.getPollingMarketDataService();
+        RateLimiter rateLimiter = new RateLimiter(queries, per);
+        Collection<MarketListing> marketListings = new ArrayList<MarketListing>(listings.size());
+        for( Object listingSymbol : listings ) {
+            Listing listing = Listing.forSymbol(listingSymbol.toString().toUpperCase());
+            final MarketListing marketListing = MarketListing.findOrCreate(market, listing);
+            marketListings.add(marketListing);
+        }
+        for( final MarketListing marketListing : marketListings ) {
+            rateLimiter.execute(new FetchTradesRunnable(esper, marketListing, rateLimiter, dataService, helper));
+        }
+    }
+
+
     private class FetchTradesRunnable implements Runnable {
 
-        public FetchTradesRunnable(Esper esper, MarketListing marketListing ) {
+
+        private final Helper helper;
+
+
+        public FetchTradesRunnable(Esper esper, MarketListing marketListing, RateLimiter rateLimiter,
+                                   PollingMarketDataService dataService, @Nullable Helper helper ) {
             this.esper = esper;
             this.marketListing = marketListing;
+            this.rateLimiter = rateLimiter;
+            this.dataService = dataService;
+            this.helper = helper;
             pair = new CurrencyPair(marketListing.getBase().getSymbol(), marketListing.getQuote().getSymbol());
             lastTradeTime = 0;
             lastTradeId = 0;
@@ -99,7 +169,14 @@ public class XchangeData extends ModuleListenerBase {
 
         public void run() {
             try {
-                Trades tradeSpec = dataService.getTrades(pair, lastTradeTime);
+                Object[] params;
+                if( helper != null )
+                    params = helper.getTradeParameters(pair,lastTradeTime,lastTradeId);
+                else
+                    params = new Object[] {};
+                Trades tradeSpec = dataService.getTrades(pair, params);
+                if( helper != null )
+                    helper.handleTrades(tradeSpec);
                 List<com.xeiam.xchange.dto.marketdata.Trade> trades = tradeSpec.getTrades();
                 for( com.xeiam.xchange.dto.marketdata.Trade trade : trades ) {
                     long remoteId = Long.valueOf(trade.getId());
@@ -125,6 +202,8 @@ public class XchangeData extends ModuleListenerBase {
         }
 
 
+        private PollingMarketDataService dataService;
+        private RateLimiter rateLimiter;
         private final Esper esper;
         private final MarketListing marketListing;
         private CurrencyPair pair;
@@ -133,14 +212,4 @@ public class XchangeData extends ModuleListenerBase {
     }
 
 
-    // This block initializes all the possible MarketListings we might handle
-    static {
-        MarketListing.findOrCreate( Market.BITFINEX, Currency.BTC, Currency.USD );
-        MarketListing.findOrCreate( Market.BITFINEX, Currency.LTC, Currency.USD );
-        MarketListing.findOrCreate( Market.BITFINEX, Currency.LTC, Currency.BTC );
-    }
-
-
-    private PollingMarketDataService dataService;
-    private RateLimiter rateLimiter;
 }

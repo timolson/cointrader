@@ -62,4 +62,19 @@ public class Listing extends EntityBase
     }
 
 
+    public static Listing forSymbol( String symbol )
+    {
+        final int dot = symbol.indexOf('.');
+        if( dot == -1 )
+            throw new IllegalArgumentException("Invalid Listing symbol: \""+symbol+"\"");
+        final String baseSymbol = symbol.substring(0, dot);
+        Fungible base = Fungible.forSymbol(baseSymbol);
+        if( base == null )
+            throw new IllegalArgumentException("Invalid base symbol: \""+baseSymbol+"\"");
+        final String quoteSymbol = symbol.substring(dot + 1, symbol.length());
+        Fungible quote = Fungible.forSymbol(quoteSymbol);
+        if( quote == null )
+            throw new IllegalArgumentException("Invalid quote symbol: \""+quoteSymbol+"\"");
+        return PersistUtil.queryOne(Listing.class,"select x from Listing x where base=?1 and quote=?2",base,quote);
+    }
 }

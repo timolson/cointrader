@@ -212,9 +212,10 @@ public class PersistUtil {
 
 
     /**
-     * This flag is used by Currency to know whether to generate fields with new Currency objects or read them from
-     * the existing rows in the database.
+     * This flag is used by Currency and Market to know whether to assign their static final field singletons to
+     * new Currency objects or read the singletons from existing rows in the database.
      * @see Currency
+     * @see Market
      */
     public static boolean generatingDefaultData = false;
 
@@ -224,9 +225,8 @@ public class PersistUtil {
 
         loadStaticFieldsFromClass(Currency.class);
         loadStaticFieldsFromClass(Market.class);
-        loadStaticFieldsFromClass(Listing.class);
 
-        generatingDefaultData = true;
+        generatingDefaultData = false;
     }
 
 
