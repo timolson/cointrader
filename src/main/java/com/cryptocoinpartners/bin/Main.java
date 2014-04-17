@@ -58,7 +58,14 @@ public class Main
         }
 
         // now parse the commandline
-        parameterParser.parse(args);
+        try {
+            parameterParser.parse(args);
+        }
+        catch( MissingCommandException e ) {
+            System.err.println(e.getMessage());
+            parameterParser.usage();
+            System.exit(7002);
+        }
         String commandName = parameterParser.getParsedCommand();
         // find the command, if any
         Command command = commandLookup.get(commandName);
