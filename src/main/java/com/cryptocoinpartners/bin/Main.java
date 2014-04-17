@@ -8,6 +8,7 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.*;
+import java.lang.reflect.Modifier;
 import java.security.GeneralSecurityException;
 import java.util.*;
 
@@ -43,6 +44,8 @@ public class Main
         Map<String,Command> commandLookup = new HashMap<String,Command>();
         Set<Class<? extends Command>> commands = ReflectionUtil.getSubtypesOf(Command.class);
         for( Class<? extends Command> commandType : commands ) {
+            if( Modifier.isAbstract(commandType.getModifiers()))
+                continue;
             Command command = commandType.newInstance();
             Parameters annotation = command.getClass().getAnnotation(Parameters.class);
             if( annotation == null ) {

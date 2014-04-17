@@ -123,6 +123,11 @@
             <artifactId>commons-io</artifactId>
             <version>2.4</version>
         </dependency>
+        <dependency> <!-- this is found in the project's /repo directory -->
+            <groupId>com.bethecoder</groupId>
+            <artifactId>ascii-table</artifactId>
+            <version>1.0</version>
+        </dependency>
     </dependencies>
 
 
@@ -165,7 +170,6 @@
     </build>
 
 
-    <!-- Point to the cryptocoinpartners.com internal repository -->
     <repositories>
         <!-- this is for the XChange SNAPSHOT code -->
         <repository>
@@ -173,6 +177,13 @@
             <snapshots/>
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </repository>
+        <!-- this is for any jars registered in the project's /repo directory -->
+        <repository>
+            <id>project-local</id>
+            <name>project-local</name>
+            <url>file:${project.basedir}/repo</url>
+        </repository>
+        <!-- Point to the cryptocoinpartners.com internal repository -->
         <!--
         <repository>
             <snapshots>

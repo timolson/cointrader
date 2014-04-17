@@ -37,23 +37,23 @@ public class PersistUtil {
     }
 
 
-    public static interface EntityHandler<T extends EntityBase> {
+    public static interface RowHandler<T> {
         /**
          @param row an entity returned from the queryEach
          @return true to continue with the next result row, or false to halt iteration
-         @see #queryEach(Class, com.cryptocoinpartners.util.PersistUtil.EntityHandler, int, String, Object...)
+         @see #queryEach(Class, com.cryptocoinpartners.util.PersistUtil.RowHandler, int, String, Object...)
          */
         boolean handleEntity(T row);
     }
 
 
-    public static <T extends EntityBase> void queryEach( Class<T> resultType, EntityHandler<T> handler,
+    public static <T> void queryEach( Class<T> resultType, RowHandler<T> handler,
                                                          String queryStr, Object... params ) {
         queryEach(resultType,handler,20,queryStr,params);
     }
 
 
-    public static <T extends EntityBase> void queryEach( Class<T> resultType, EntityHandler<T> handler, int batchSize,
+    public static <T> void queryEach( Class<T> resultType, RowHandler<T> handler, int batchSize,
                                                          String queryStr, Object... params ) {
         EntityManager em = null;
         try {
