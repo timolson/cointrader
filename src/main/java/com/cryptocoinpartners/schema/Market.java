@@ -25,21 +25,13 @@ public class Market extends EntityBase {
     public static final Market CRYPTSY = market("CRYPTSY");
             
 
-    public static Market getMarket(int exchangeId){
-    	
-    	return null;
-    }
-    
     public static Market forSymbol( String symbol ) {
-        if( symbolMap == null ) {
-            EntityManager em = PersistUtil.createEntityManager();
-            TypedQuery<Market> query = em.createQuery("select m from Market m", Market.class);
-            List<Market> markets = query.getResultList();
-            symbolMap = new HashMap<String, Market>();
-            for( Market market : markets )
-                symbolMap.put(market.getSymbol(),market);
+        Market found = PersistUtil.queryZeroOne(Market.class, "select m from Market m where symbol=?1", symbol);
+        if( found == null ) {
+            found = new Market(symbol);
+            PersistUtil.insert(found);
         }
-        return symbolMap.get(symbol);
+        return found;
     }
 
 
@@ -66,5 +58,4 @@ public class Market extends EntityBase {
 
 
     private String symbol;
-    private static Map<String,Market> symbolMap = null;
 }

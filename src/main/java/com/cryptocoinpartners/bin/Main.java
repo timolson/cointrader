@@ -2,14 +2,12 @@ package com.cryptocoinpartners.bin;
 
 import com.beust.jcommander.*;
 import com.cryptocoinpartners.bin.command.Command;
-import com.cryptocoinpartners.util.Config;
-import com.cryptocoinpartners.util.ReflectionUtil;
+import com.cryptocoinpartners.util.*;
 import org.apache.commons.configuration.ConfigurationException;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.*;
 import java.lang.reflect.Modifier;
-import java.security.GeneralSecurityException;
 import java.util.*;
 
 
@@ -21,6 +19,7 @@ public class Main
 {
     static final String DEFAULT_PROPERTIES_FILENAME = "trader.properties";
     static final String FALLBACK_PROPERTIES_FILENAME = "trader-default.properties";
+    private static final Logger log = LoggerFactory.getLogger(Main.class);
 
     static class MainParams {
         @SuppressWarnings("UnusedDeclaration")
@@ -73,10 +72,25 @@ public class Main
         catch( ConfigurationException e ) {
             if( !mainParams.propertiesFilename.equals(DEFAULT_PROPERTIES_FILENAME) )
                 throw e;
-            LoggerFactory.getLogger(Main.class).info(DEFAULT_PROPERTIES_FILENAME+" not found.  Using "+FALLBACK_PROPERTIES_FILENAME+" instead.");
-            Config.init(FALLBACK_PROPERTIES_FILENAME,mainParams.definitions);
+            try {
+                Config.init(FALLBACK_PROPERTIES_FILENAME, mainParams.definitions);
+                log.info(DEFAULT_PROPERTIES_FILENAME + " not found.  Using " + FALLBACK_PROPERTIES_FILENAME + " instead.");
+            }
+            catch( ConfigurationException x ) {
+                System.err.println("Could not load "+DEFAULT_PROPERTIES_FILENAME+" or "+FALLBACK_PROPERTIES_FILENAME);
+                System.exit(1);
+            }
         }
-        command.run();
+        try {
+            command.run();
+        }
+        catch( Throwable t ) {
+            log.error("Uncaught error while running "+command.getClass().getSimpleName(),t);
+        }
+        finally {
+            PersistUtil.shutdown();
+        }
+        System.exit(0);
     }
 
 

@@ -163,14 +163,19 @@ public class PersistUtil {
     }
 
 
+    /*
     static {
         MarketListing.class.getClass();
     }
+    */
 
 
     public static void resetDatabase() {
         init(true);
     }
+
+
+    public static void shutdown() { entityManagerFactory.close(); }
 
 
     private static void init(boolean resetDatabase) {
