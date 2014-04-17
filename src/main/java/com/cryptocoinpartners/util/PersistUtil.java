@@ -1,6 +1,7 @@
 package com.cryptocoinpartners.util;
 
 import com.cryptocoinpartners.schema.*;
+import com.cryptocoinpartners.schema.Currency;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -227,8 +228,8 @@ public class PersistUtil {
 
     private static void loadDefaultData() {
         // Touch the singleton holders
-        Currencies.class.getClass();
-        Market.class.getClass();
+        Currencies.BTC.getSymbol(); // this should load all the singletons in Currencies
+        Markets.BITFINEX.getSymbol();  // this should load all the singletons in Markets
     }
 
 

@@ -3,8 +3,7 @@ package com.cryptocoinpartners.schema;
 
 import com.cryptocoinpartners.util.PersistUtil;
 
-import javax.persistence.Entity;
-import javax.persistence.EntityNotFoundException;
+import javax.persistence.*;
 
 
 /**
@@ -30,12 +29,10 @@ public class Currency extends Fungible {
     // used by Currencies
     static Currency forSymbolOrCreate( String symbol, boolean isFiat )
     {
-        if( PersistUtil.generatingDefaultData )
-            return new Currency(isFiat, symbol);
         try {
             return forSymbol(symbol);
         }
-        catch( EntityNotFoundException e ) {
+        catch( NoResultException e ) {
             final Currency currency = new Currency(isFiat, symbol);
             PersistUtil.insert(currency);
             return currency;

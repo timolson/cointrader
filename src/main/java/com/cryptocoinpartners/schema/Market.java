@@ -29,14 +29,6 @@ public class Market extends EntityBase {
     }
 
 
-    static Market market( String symbol ) {
-        if( PersistUtil.generatingDefaultData )
-            return new Market(symbol);
-        else
-            return forSymbol(symbol);
-    }
-
-
     @Basic(optional = false)
     public String getSymbol() { return symbol; }
 
