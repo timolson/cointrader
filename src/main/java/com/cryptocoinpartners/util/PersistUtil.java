@@ -1,7 +1,6 @@
 package com.cryptocoinpartners.util;
 
 import com.cryptocoinpartners.schema.*;
-import com.cryptocoinpartners.schema.Currency;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -212,9 +211,7 @@ public class PersistUtil {
 
         try {
             entityManagerFactory = Persistence.createEntityManagerFactory("com.cryptocoinpartners.schema", properties);
-            if( resetDatabase ) {
-                loadDefaultData();
-            }
+            ensureSingletonsExist();
         }
         catch( Throwable t ) {
             if( entityManagerFactory != null ) {
@@ -226,7 +223,7 @@ public class PersistUtil {
     }
 
 
-    private static void loadDefaultData() {
+    private static void ensureSingletonsExist() {
         // Touch the singleton holders
         Currencies.BTC.getSymbol(); // this should load all the singletons in Currencies
         Markets.BITFINEX.getSymbol();  // this should load all the singletons in Markets
