@@ -3,12 +3,14 @@ package com.cryptocoinpartners.module.xchangedata;
 import com.cryptocoinpartners.module.Esper;
 import com.cryptocoinpartners.module.ModuleListenerBase;
 import com.cryptocoinpartners.schema.*;
+import com.cryptocoinpartners.schema.Trade;
 import com.cryptocoinpartners.util.PersistUtil;
 import com.cryptocoinpartners.util.RateLimiter;
 import com.xeiam.xchange.Exchange;
 import com.xeiam.xchange.ExchangeFactory;
 import com.xeiam.xchange.currency.CurrencyPair;
-import com.xeiam.xchange.dto.marketdata.Trades;
+import com.xeiam.xchange.dto.marketdata.*;
+import com.xeiam.xchange.dto.trade.LimitOrder;
 import com.xeiam.xchange.service.polling.PollingMarketDataService;
 import org.apache.commons.configuration.*;
 import org.joda.time.Duration;
@@ -81,8 +83,10 @@ public class XchangeData extends ModuleListenerBase {
         module package).
      */
     public interface Helper {
-        Object[] getTradeParameters( CurrencyPair pair, long lastTradeTime, long lastTradeId );
+        Object[] getTradesParameters( CurrencyPair pair, long lastTradeTime, long lastTradeId );
+        Object[] getOrderBookParameters( CurrencyPair pair );
         void handleTrades( Trades tradeSpec );
+        void handleOrderBook( OrderBook orderBook );
     }
 
 
@@ -169,11 +173,26 @@ public class XchangeData extends ModuleListenerBase {
 
         public void run() {
             try {
+                if( getTradesNext )
+                    getTrades();
+                else
+                    getBook();
+            }
+            finally {
+                getTradesNext = !getTradesNext;
+                rateLimiter.execute(this); // run again. requeue
+            }
+        }
+
+
+        protected void getTrades()
+        {
+            try {
                 Object[] params;
                 if( helper != null )
-                    params = helper.getTradeParameters(pair,lastTradeTime,lastTradeId);
+                    params = helper.getTradesParameters(pair, lastTradeTime, lastTradeId);
                 else
-                    params = new Object[] {};
+                    params = new Object[] { };
                 Trades tradeSpec = dataService.getTrades(pair, params);
                 if( helper != null )
                     helper.handleTrades(tradeSpec);
@@ -192,16 +211,38 @@ public class XchangeData extends ModuleListenerBase {
                 }
             }
             catch( IOException e ) {
-                log.warn("Could not get Bitfinex trades for "+ marketListing,e);
+                log.warn("Could not get trades for " + marketListing, e);
                 esper.publish(new MarketDataError(marketListing, e));
-            }
-            finally {
-                // requeue
-                rateLimiter.execute(this);
             }
         }
 
 
+        protected void getBook()
+        {
+            try {
+                Object[] params;
+                if( helper != null )
+                    params = helper.getOrderBookParameters(pair);
+                else
+                    params = new Object[0];
+                final OrderBook orderBook = dataService.getOrderBook(pair, params);
+                if( helper != null )
+                    helper.handleOrderBook(orderBook);
+                final Book.BookBuilder builder = Book.builder(new Instant(orderBook.getTimeStamp()), null, marketListing);
+                for( LimitOrder limitOrder : orderBook.getBids() )
+                    builder.addBid(limitOrder.getLimitPrice(),limitOrder.getTradableAmount());
+                for( LimitOrder limitOrder : orderBook.getAsks() )
+                    builder.addAsk(limitOrder.getLimitPrice(), limitOrder.getTradableAmount());
+                esper.publish(builder.build());
+            }
+            catch( IOException e ) {
+                log.warn("Could not get book for " + marketListing, e);
+                esper.publish(new MarketDataError(marketListing, e));
+            }
+        }
+
+
+        private boolean getTradesNext = true;
         private PollingMarketDataService dataService;
         private RateLimiter rateLimiter;
         private final Esper esper;

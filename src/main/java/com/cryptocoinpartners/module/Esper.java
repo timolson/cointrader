@@ -4,10 +4,9 @@ import com.cryptocoinpartners.schema.Event;
 import com.cryptocoinpartners.util.ModuleLoaderError;
 import com.cryptocoinpartners.util.ReflectionUtil;
 import com.espertech.esper.client.*;
-import com.espertech.esper.client.deploy.DeploymentException;
-import com.espertech.esper.client.deploy.DeploymentResult;
-import com.espertech.esper.client.deploy.EPDeploymentAdmin;
-import com.espertech.esper.client.deploy.ParseException;
+import com.espertech.esper.client.deploy.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
@@ -104,6 +103,19 @@ public class Esper {
     }
 
 
+    public void subscribe( Object listener )
+    {
+        for( Method method : listener.getClass().getMethods() ) {
+            When when = method.getAnnotation(When.class);
+            if( when != null ) {
+                String statement = when.value();
+                log.debug("subscribing "+method+" with statement \""+statement+"\"");
+                subscribe(listener, method, statement);
+            }
+        }
+    }
+
+
     /**
      * For use by ModuleLoader only
      * @see ModuleLoader
@@ -168,6 +180,8 @@ public class Esper {
         epAdministrator = epService.getEPAdministrator();
     }
 
+
+    private static Logger log = LoggerFactory.getLogger(Esper.class);
 
     private Set<String> loaded = new HashSet<String>();
     private EPServiceProvider epService;

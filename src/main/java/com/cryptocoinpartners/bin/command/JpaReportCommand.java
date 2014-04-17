@@ -1,18 +1,18 @@
 package com.cryptocoinpartners.bin.command;
 
-import com.bethecoder.ascii_table.ASCIITable;
 import com.cryptocoinpartners.util.PersistUtil;
 
 import java.util.ArrayList;
 import java.util.List;
 
 
-public abstract class JpaReportCommand extends Command
+public abstract class JpaReportCommand extends ReportCommand
 {
 
-    public void run()
+
+    protected Output runReport()
     {
-        final Query query = getQuery();
+        final JpaReportCommand.Query query = getQuery();
         final List<String[]> rowStrings = new ArrayList<String[]>();
 
         PersistUtil.queryEach(
@@ -31,7 +31,8 @@ public abstract class JpaReportCommand extends Command
         );
         String [][] rowStringTable = new String[rowStrings.size()][];
         rowStrings.toArray(rowStringTable);
-        ASCIITable.getInstance().printTable(query.headers, rowStringTable);
+        final String[] headers = query.headers;
+        return new Output(headers, rowStringTable);
     }
 
 

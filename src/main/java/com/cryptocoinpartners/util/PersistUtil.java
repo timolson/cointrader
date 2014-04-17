@@ -2,6 +2,8 @@ package com.cryptocoinpartners.util;
 
 import com.cryptocoinpartners.schema.*;
 import com.cryptocoinpartners.schema.Currency;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.persistence.*;
 import java.lang.reflect.Field;
@@ -13,6 +15,9 @@ import java.util.*;
  * @author Tim Olson
  */
 public class PersistUtil {
+
+    private static Logger log = LoggerFactory.getLogger("com.cryptocoinpartners.persist");
+
 
     public static void insert(EntityBase... entities) {
         EntityManager em = null;
@@ -178,21 +183,32 @@ public class PersistUtil {
     public static void shutdown() { entityManagerFactory.close(); }
 
 
-    private static void init(boolean resetDatabase) {
+    private static synchronized void init(boolean resetDatabase) {
         if( generatingDefaultData )
             return;
-        if( entityManagerFactory != null && !resetDatabase )
-            return;
-        if( resetDatabase )
+        if( entityManagerFactory != null ) {
+            if( !entityManagerFactory.isOpen() ) {
+                log.warn("entityManagerFactory was closed.  Re-initializing");
+                entityManagerFactory = null;
+            }
+            else if( !resetDatabase ) {
+                // entityManagerFactory exists, is open, and a reset is not requested.  continue to use existing EMF
+                return;
+            }
+        }
+        if( resetDatabase ) {
+            log.info("resetting database");
             generatingDefaultData = true;
-
-        Map<String,String> properties = new HashMap<String, String>();
+        }
+        else
+            log.info("initializing persistence");
+        Map<String, String> properties = new HashMap<String, String>();
         String createMode;
-        if(resetDatabase)
+        if( resetDatabase )
             createMode = "create";
         else
             createMode = "update";
-        properties.put("hibernate.hbm2ddl.auto",createMode);
+        properties.put("hibernate.hbm2ddl.auto", createMode);
         properties.put("hibernate.connection.driver_class", Config.combined().getString("db.driver"));
         properties.put("hibernate.dialect", Config.combined().getString("db.dialect"));
         properties.put("hibernate.connection.url", Config.combined().getString("db.url"));
@@ -211,7 +227,7 @@ public class PersistUtil {
                 entityManagerFactory.close();
                 entityManagerFactory = null;
             }
-            throw new Error("Could not initialize db",t);
+            throw new Error("Could not initialize db", t);
         }
     }
 

@@ -1,6 +1,8 @@
 package com.cryptocoinpartners.module.xchangedata;
 
 import com.cryptocoinpartners.schema.Market;
+import com.cryptocoinpartners.schema.Markets;
+
 
 /**
  * 
@@ -21,7 +23,7 @@ public class ExchangeMarketMapping {
 		//TODO
 		switch (id) {
 		case ExchangeNames.Bitfinex:
-			market = Market.BITFINEX;
+			market = Markets.BITFINEX;
 			break;
 		default:
 			return null;

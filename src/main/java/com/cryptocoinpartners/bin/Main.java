@@ -90,7 +90,6 @@ public class Main
         finally {
             PersistUtil.shutdown();
         }
-        System.exit(0);
     }
 
 

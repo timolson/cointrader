@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -92,22 +91,9 @@ public class ModuleLoader {
             log.debug("instantiating ModuleListener "+listenerClass.getSimpleName());
             ModuleListener listener = listenerClass.newInstance();
             listeners.add(listener);
-            initTriggers(esper,listener);
+            esper.subscribe(listener);
         }
         return listeners;
-    }
-
-
-    private static void initTriggers(Esper esper, ModuleListener listener) {
-        for( Method method : listener.getClass().getMethods() ) {
-            When when = method.getAnnotation(When.class);
-            if( when != null ) {
-                String statement = when.value();
-                log.debug("subscribing "+method+" with statement \""+statement+"\"");
-                esper.subscribe(listener, method, statement);
-            }
-        }
-
     }
 
 
