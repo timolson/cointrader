@@ -64,15 +64,7 @@ public class Listing extends EntityBase
         this.quote = quote;
     }
 
-
-    private static Listing listing( Fungible base, Fungible quote ) {
-        if( PersistUtil.generatingDefaultData )
-            return new Listing(base,quote);
-        else
-            return forPair(base,quote);
-    }
-
-
+    
     public static Listing forSymbol( String symbol )
     {
         final int dot = symbol.indexOf('.');

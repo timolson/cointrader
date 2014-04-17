@@ -1,13 +1,10 @@
 package com.cryptocoinpartners.util;
 
 import com.cryptocoinpartners.schema.*;
-import com.cryptocoinpartners.schema.Currency;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.persistence.*;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import java.util.*;
 
 
@@ -183,9 +180,7 @@ public class PersistUtil {
     public static void shutdown() { entityManagerFactory.close(); }
 
 
-    private static synchronized void init(boolean resetDatabase) {
-        if( generatingDefaultData )
-            return;
+    private static void init(boolean resetDatabase) {
         if( entityManagerFactory != null ) {
             if( !entityManagerFactory.isOpen() ) {
                 log.warn("entityManagerFactory was closed.  Re-initializing");
@@ -198,7 +193,6 @@ public class PersistUtil {
         }
         if( resetDatabase ) {
             log.info("resetting database");
-            generatingDefaultData = true;
         }
         else
             log.info("initializing persistence");
@@ -219,7 +213,6 @@ public class PersistUtil {
             entityManagerFactory = Persistence.createEntityManagerFactory("com.cryptocoinpartners.schema", properties);
             if( resetDatabase ) {
                 loadDefaultData();
-                generatingDefaultData = false;
             }
         }
         catch( Throwable t ) {
@@ -232,44 +225,10 @@ public class PersistUtil {
     }
 
 
-    /**
-     * This flag is used by Currency and Market to know whether to assign their static final field singletons to
-     * new Currency objects or read the singletons from existing rows in the database.
-     * @see Currency
-     * @see Market
-     */
-    public static boolean generatingDefaultData = false;
-
-
     private static void loadDefaultData() {
-        generatingDefaultData = true;
-
-        loadStaticFieldsFromClass(Currency.class);
-        loadStaticFieldsFromClass(Market.class);
-
-        generatingDefaultData = false;
-    }
-
-
-    /**
-     * Finds all static member fields which have the same type as the containing class, then loads those static
-     * members as rows in the db
-     * @param cls the class to inspect
-     */
-    private static <T extends EntityBase> void loadStaticFieldsFromClass(Class<T> cls) {
-        List<EntityBase> all = new ArrayList<EntityBase>();
-        Field[] fields = cls.getDeclaredFields();
-        for( Field field : fields ) {
-            if( Modifier.isStatic(field.getModifiers()) && cls.isAssignableFrom(field.getType()) ) {
-                try {
-                    all.add((EntityBase) field.get(null));
-                }
-                catch( IllegalAccessException e ) {
-                    throw new Error("Could not read "+ cls.getSimpleName()+" field "+field,e);
-                }
-            }
-        }
-        PersistUtil.insert(all.toArray(new EntityBase[all.size()]));
+        // Touch the singleton holders
+        Currencies.class.getClass();
+        Market.class.getClass();
     }
 
 
