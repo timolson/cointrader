@@ -1,1 +1,0 @@
-select m.symbol as Market, base.symbol as Base, quote.symbol as Quote, count(*) as Trades from Trade t, MarketListing ml, Market m, Listing s, Currency base, Currency quote where t.marketListing_id=ml.id and ml.market_id=m.id and ml.listing_id=s.id and s.base_id=base.id and s.quote_id=quote.id group by ml.id order by m.symbol, base.symbol, quote.symbol;
