@@ -12,7 +12,7 @@ import java.util.*;
  * @author Tim Olson
  */
 @Entity
-public class Book extends MarketData {
+public class Book extends MarketData implements Spread {
     
     public static class BookBuilder {
         
