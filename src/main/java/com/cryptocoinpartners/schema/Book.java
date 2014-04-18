@@ -98,8 +98,37 @@ public class Book extends MarketData implements Spread {
             return BigDecimal.ZERO;
         return asks.get(0).getAmount();
     }
-    
-    
+
+
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder(getMarketListing().toString() + " Book at "+getTime()+" bids={");
+        boolean first = true;
+        for( Bid bid : bids ) {
+            if( first )
+                first = false;
+            else
+                sb.append(';');
+            sb.append(bid.getAmount());
+            sb.append('@');
+            sb.append(bid.getPrice());
+        }
+        sb.append("} asks={");
+        first = true;
+        for( Ask ask : asks ) {
+            if( first )
+                first = false;
+            else
+                sb.append(';');
+            sb.append(ask.getAmount());
+            sb.append('@');
+            sb.append(ask.getPrice());
+        }
+        sb.append('}');
+        return sb.toString();
+    }
+
+
     // JPA
 
     // These getters and setters are for conversion in JPA

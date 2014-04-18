@@ -1,9 +1,10 @@
 package com.cryptocoinpartners.bin.command;
 
+import com.beust.jcommander.Parameter;
 import com.cryptocoinpartners.util.PersistUtil;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.lang.reflect.Array;
+import java.util.*;
 
 
 public abstract class JpaReportCommand extends ReportCommand
@@ -15,25 +16,59 @@ public abstract class JpaReportCommand extends ReportCommand
         final JpaReportCommand.Query query = getQuery();
         final List<String[]> rowStrings = new ArrayList<String[]>();
 
-        PersistUtil.queryEach(
-                Object[].class,
-                new PersistUtil.RowHandler<Object[]>()
-                {
-                    public boolean handleEntity( Object[] row )
+        if( limit != 0 ) {
+            PersistUtil.queryEach(
+                    Object.class,
+                    new PersistUtil.RowHandler<Object>()
                     {
-                        final String[] rowFormat = formatRow(row);
-                        rowStrings.add(rowFormat);
-                        return true;
-                    }
-                },
-                query.queryStr,
-                query.params
-        );
+                        private int count = 0;
+                        public boolean handleEntity( Object row )
+                        {
+                            handleResult(row, rowStrings);
+                            return ++count < limit;
+                        }
+                    },
+                    limit,
+                    query.queryStr,
+                    query.params
+            );
+        }
+        else {
+            PersistUtil.queryEach(
+                    Object.class,
+                    new PersistUtil.RowHandler<Object>()
+                    {
+                        public boolean handleEntity( Object row )
+                        {
+                            handleResult(row, rowStrings);
+                            return true;
+                        }
+                    },
+                    query.queryStr,
+                    query.params
+            );
+        }
         String [][] rowStringTable = new String[rowStrings.size()][];
         rowStrings.toArray(rowStringTable);
         final String[] headers = query.headers;
         return new Output(headers, rowStringTable);
     }
+
+
+    protected void handleResult( Object row, List<String[]> rowStrings )
+    {
+        Object[] array;
+        if( row.getClass().isArray() )
+            array = (Object[]) row;
+        else
+            array = new Object[] {row};
+        final String[] rowFormat = formatRow(array);
+        rowStrings.add(rowFormat);
+    }
+
+
+    @Parameter(names={"-l","--limit"})
+    protected int limit = 0;
 
 
     protected class Query

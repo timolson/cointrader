@@ -6,6 +6,7 @@ import com.beust.jcommander.Parameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.*;
 
 
@@ -57,18 +58,19 @@ public abstract class ReportCommand extends Command
     protected void outputCsv( Output output, Writer out )
     {
         final CSVWriter writer = new CSVWriter(out);
-        writer.writeNext(output.headers);
+        if( output.headers != null )
+            writer.writeNext(output.headers);
         for( String[] row : output.rows )
             writer.writeNext(row);
     }
 
 
     protected class Output {
-        String[] headers;
+        @Nullable String[] headers;
         String[][] rows;
 
 
-        public Output( String[] headers, String[][] rows ) { this.headers = headers; this.rows = rows; }
+        public Output( @Nullable String[] headers, String[][] rows ) { this.headers = headers; this.rows = rows; }
     }
 
 
