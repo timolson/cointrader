@@ -1,6 +1,9 @@
 package com.cryptocoinpartners.schema;
 
+import com.cryptocoinpartners.util.PersistUtil;
+import com.cryptocoinpartners.util.Visitor;
 import org.joda.time.Instant;
+import org.joda.time.Interval;
 
 import javax.persistence.*;
 import java.io.*;
@@ -12,34 +15,19 @@ import java.util.*;
  * @author Tim Olson
  */
 @Entity
+@Table(indexes = {@Index(columnList = "time"),@Index(columnList = "timeReceived")})
 public class Book extends MarketData implements Spread {
     
-    public static class BookBuilder {
-        
-        public Book build() { book.sort(); return book; }
 
-        
-        public BookBuilder addBid( BigDecimal price, BigDecimal amount ) {
-            book.bids.add(new Bid(book.getMarketListing(),book.getTime(),book.getTimeReceived(),price,amount));
-            return this;
-        }
-    
-    
-        public BookBuilder addAsk( BigDecimal price, BigDecimal amount ) {
-            book.asks.add(new Ask(book.getMarketListing(),book.getTime(),book.getTimeReceived(),price,amount));
-            return this;
-        }
-
-        
-        public BookBuilder(Book book) { this.book = book; }
-        private Book book;
+    public static void find(Interval timeInterval,Visitor<Book> visitor) {
+        PersistUtil.queryEach(Book.class, visitor, "select b from Book b where time > ?1 and time < ?2");
     }
 
-    
-    public static BookBuilder builder(Instant time, String remoteKey, MarketListing marketListing ) {
-        return new BookBuilder(new Book(time, remoteKey, marketListing));
+
+    public static void forAll(Visitor<Book> visitor) {
+        PersistUtil.queryEach(Book.class,visitor,"select b from Book b");
     }
-    
+
 
     @Transient
     public List<Bid> getBids() {
@@ -53,8 +41,6 @@ public class Book extends MarketData implements Spread {
     }
     
     
-    // todo how to split into multiple columns?
-    // todo how to make JPA ignore field?
     @Transient
     public Bid getBestBid() {
         if( bids.isEmpty() )
@@ -97,6 +83,33 @@ public class Book extends MarketData implements Spread {
         if( asks.isEmpty() )
             return BigDecimal.ZERO;
         return asks.get(0).getAmount();
+    }
+
+
+    public static class BookBuilder {
+
+        public Book build() { book.sort(); return book; }
+
+
+        public BookBuilder addBid( BigDecimal price, BigDecimal amount ) {
+            book.bids.add(new Bid(book.getMarketListing(),book.getTime(),book.getTimeReceived(),price,amount));
+            return this;
+        }
+
+
+        public BookBuilder addAsk( BigDecimal price, BigDecimal amount ) {
+            book.asks.add(new Ask(book.getMarketListing(),book.getTime(),book.getTimeReceived(),price,amount));
+            return this;
+        }
+
+
+        public BookBuilder(Book book) { this.book = book; }
+        private Book book;
+    }
+
+
+    public static BookBuilder builder(Instant time, String remoteKey, MarketListing marketListing ) {
+        return new BookBuilder(new Book(time, remoteKey, marketListing));
     }
 
 

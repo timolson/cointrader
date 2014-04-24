@@ -26,7 +26,7 @@ public class Main
         @Parameter(names = {"h","help","-h","-H","-help","--help"}, help = true, description = "Show this usage help")
         boolean help;
 
-        @Parameter(names = {"-f","--properties-file"}, description = "location of the trader.properties config file")
+        @Parameter(names = {"-f","-properties-file"}, description = "location of the trader.properties config file")
         String propertiesFilename = DEFAULT_PROPERTIES_FILENAME;
 
         @DynamicParameter( names = {"-D"}, description = "use the -D flag to set configuration properties \"-Ddb.username=dbuser\"" )

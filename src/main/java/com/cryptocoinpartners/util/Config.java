@@ -32,7 +32,7 @@ public class Config {
     }
 
 
-    public static Configuration module( Collection<? extends AbstractConfiguration> moduleConfigs ) {
+    public static AbstractConfiguration module( Collection<? extends AbstractConfiguration> moduleConfigs ) {
         final CombinedConfiguration result = new CombinedConfiguration();
         result.addConfiguration(appConfig);
         for( AbstractConfiguration moduleConfig : moduleConfigs )

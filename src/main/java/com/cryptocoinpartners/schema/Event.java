@@ -3,7 +3,7 @@ package com.cryptocoinpartners.schema;
 import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
 
-import javax.persistence.MappedSuperclass;
+import javax.persistence.*;
 
 
 /**

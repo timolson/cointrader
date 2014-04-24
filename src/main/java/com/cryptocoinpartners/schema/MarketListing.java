@@ -15,6 +15,12 @@ import java.util.Collection;
 public class MarketListing extends EntityBase
 {
 
+    public static Collection<MarketListing> findAll()
+    {
+        return PersistUtil.queryList(MarketListing.class,"select ml from MarketListing");
+    }
+
+
     /**
      adds the MarketListing to the database if it does not already exist
      */

@@ -39,23 +39,13 @@ public class PersistUtil {
     }
 
 
-    public static interface RowHandler<T> {
-        /**
-         @param row an entity returned from the queryEach
-         @return true to continue with the next result row, or false to halt iteration
-         @see #queryEach(Class, com.cryptocoinpartners.util.PersistUtil.RowHandler, int, String, Object...)
-         */
-        boolean handleEntity(T row);
-    }
-
-
-    public static <T> void queryEach( Class<T> resultType, RowHandler<T> handler,
+    public static <T> void queryEach( Class<T> resultType, Visitor<T> handler,
                                                          String queryStr, Object... params ) {
         queryEach(resultType,handler,20,queryStr,params);
     }
 
 
-    public static <T> void queryEach( Class<T> resultType, RowHandler<T> handler, int batchSize,
+    public static <T> void queryEach( Class<T> resultType, Visitor<T> handler, int batchSize,
                                                          String queryStr, Object... params ) {
         EntityManager em = null;
         try {
@@ -74,7 +64,7 @@ public class PersistUtil {
                 if( list.isEmpty() )
                     return;
                 for( T row : list ) {
-                    if( !handler.handleEntity(row) )
+                    if( !handler.handleItem(row) )
                         return;
                 }
             }
@@ -86,7 +76,7 @@ public class PersistUtil {
     }
 
 
-    public static <T extends EntityBase> List<T> queryList( Class<T> resultType, String queryStr, Object... params ) {
+    public static <T> List<T> queryList( Class<T> resultType, String queryStr, Object... params ) {
         EntityManager em = null;
         try {
             em = createEntityManager();
@@ -109,7 +99,7 @@ public class PersistUtil {
     /**
      returns a single result entity.  if none found, a javax.persistence.NoResultException is thrown.
      */
-    public static <T extends EntityBase> T queryOne( Class<T> resultType, String queryStr, Object... params )
+    public static <T> T queryOne( Class<T> resultType, String queryStr, Object... params )
         throws NoResultException
     {
         EntityManager em = null;
@@ -134,7 +124,7 @@ public class PersistUtil {
     /**
      returns a single result entity or null if not found
      */
-    public static <T extends EntityBase> T queryZeroOne( Class<T> resultType, String queryStr, Object... params ) {
+    public static <T> T queryZeroOne( Class<T> resultType, String queryStr, Object... params ) {
         EntityManager em = null;
         try {
             em = createEntityManager();

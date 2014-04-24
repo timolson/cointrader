@@ -4,14 +4,13 @@ package com.cryptocoinpartners.schema;
 import org.joda.time.Instant;
 
 import javax.annotation.Nullable;
-import javax.persistence.ManyToOne;
-import javax.persistence.MappedSuperclass;
+import javax.persistence.*;
 
 
 /**
  * @author Tim Olson
  */
-@MappedSuperclass
+@Entity
 public abstract class MarketData extends RemoteEvent {
 
 

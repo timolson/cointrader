@@ -2,8 +2,8 @@ package com.cryptocoinpartners.bin.command;
 
 import com.beust.jcommander.Parameter;
 import com.cryptocoinpartners.util.PersistUtil;
+import com.cryptocoinpartners.util.Visitor;
 
-import java.lang.reflect.Array;
 import java.util.*;
 
 
@@ -19,10 +19,10 @@ public abstract class JpaReportCommand extends ReportCommand
         if( limit != 0 ) {
             PersistUtil.queryEach(
                     Object.class,
-                    new PersistUtil.RowHandler<Object>()
+                    new Visitor<Object>()
                     {
                         private int count = 0;
-                        public boolean handleEntity( Object row )
+                        public boolean handleItem( Object row )
                         {
                             handleResult(row, rowStrings);
                             return ++count < limit;
@@ -36,9 +36,9 @@ public abstract class JpaReportCommand extends ReportCommand
         else {
             PersistUtil.queryEach(
                     Object.class,
-                    new PersistUtil.RowHandler<Object>()
+                    new Visitor<Object>()
                     {
-                        public boolean handleEntity( Object row )
+                        public boolean handleItem( Object row )
                         {
                             handleResult(row, rowStrings);
                             return true;
@@ -67,7 +67,7 @@ public abstract class JpaReportCommand extends ReportCommand
     }
 
 
-    @Parameter(names={"-l","--limit"})
+    @Parameter(names={"-l","-limit"})
     protected int limit = 0;
 
 

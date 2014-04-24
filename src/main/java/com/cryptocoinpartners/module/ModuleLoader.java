@@ -42,7 +42,7 @@ public class ModuleLoader {
     }
 
 
-    public static void load(Esper esper, @Nullable Configuration config, String... moduleNames) throws ModuleLoaderError {
+    public static void load(Esper esper, @Nullable AbstractConfiguration config, String... moduleNames) throws ModuleLoaderError {
         try {
             init();
             for( String name : moduleNames ) {
@@ -64,7 +64,8 @@ public class ModuleLoader {
     }
 
 
-    private static Configuration buildConfig(String name, @Nullable Configuration c) throws ConfigurationException {
+    private static AbstractConfiguration buildConfig(String name, @Nullable AbstractConfiguration c)
+            throws ConfigurationException {
         final ArrayList<AbstractConfiguration> moduleConfigs = new ArrayList<AbstractConfiguration>();
         String packageName = "com/cryptocoinpartners/module/"+name+"/config.properties";
         ClassLoader classLoader = ModuleLoader.class.getClassLoader();
@@ -79,6 +80,8 @@ public class ModuleLoader {
             PropertiesConfiguration packageConfig = new PropertiesConfiguration(resource);
             moduleConfigs.add(packageConfig);
         }
+        if( c != null )
+            moduleConfigs.add(c);
         return Config.module(moduleConfigs);
     }
 
