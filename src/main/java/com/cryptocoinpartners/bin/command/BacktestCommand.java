@@ -9,6 +9,7 @@ import com.cryptocoinpartners.util.ModuleLoaderError;
 /**
  * @author Tim Olson
  */
+@SuppressWarnings("UnusedDeclaration")
 @Parameters(commandNames = "backtest", commandDescription = "backtest a strategy")
 public class BacktestCommand extends Command {
 

@@ -39,9 +39,54 @@ public class PersistUtil {
     }
 
 
+    /**
+     * Use this method if you do not know the number of columns or rows in the result set.  The visitor will be called
+     * once for each row with an Object[] of column values
+     */
+    public static void queryEach( Visitor<Object[]> handler, String queryStr, Object... params) {
+        queryEach(handler, defaultBatchSize, queryStr, params);
+    }
+
+
+    /**
+     * Use this method if you do not know the number of columns or rows in the result set.  The visitor will be called
+     * once for each row with an Object[] of column values
+     */
+    @SuppressWarnings("ConstantConditions")
+    public static void queryEach( Visitor<Object[]> handler, int batchSize, String queryStr, Object... params) {
+        EntityManager em = null;
+        try {
+            em = createEntityManager();
+            final Query query = em.createQuery(queryStr);
+            if( params != null ) {
+                for( int i = 0; i < params.length; i++ ) {
+                    Object param = params[i];
+                    query.setParameter(i+1,param); // JPA uses 1-based indexes
+                }
+            }
+            query.setMaxResults(batchSize);
+            for( int start = 0; ; start += batchSize ) {
+                query.setFirstResult(start);
+                List list = query.getResultList();
+                if( list.isEmpty() )
+                    return;
+                for( Object row : list ) {
+                    if( row.getClass().isArray() && !handler.handleItem((Object[])row)
+                        || !row.getClass().isArray() && !handler.handleItem(new Object[]{row}) )
+                        return;
+                }
+            }
+        }
+        finally {
+            if( em != null )
+                em.close();
+        }
+    }
+
+
     public static <T> void queryEach( Class<T> resultType, Visitor<T> handler,
                                                          String queryStr, Object... params ) {
-        queryEach(resultType,handler,20,queryStr,params);
+        queryEach(resultType,handler, defaultBatchSize,queryStr,params);
     }
 
 
@@ -221,4 +266,5 @@ public class PersistUtil {
 
 
     private static EntityManagerFactory entityManagerFactory;
+    private static final int defaultBatchSize = 20;
 }

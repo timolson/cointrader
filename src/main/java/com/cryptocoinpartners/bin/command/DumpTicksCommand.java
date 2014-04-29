@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.List;
 
 
+@SuppressWarnings("UnusedDeclaration")
 @Parameters( commandNames = "dump-ticks", commandDescription = "generate ticks into a csv file" )
 public class DumpTicksCommand extends Command
 {

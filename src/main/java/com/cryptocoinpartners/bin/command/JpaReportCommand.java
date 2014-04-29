@@ -3,6 +3,7 @@ package com.cryptocoinpartners.bin.command;
 import com.beust.jcommander.Parameter;
 import com.cryptocoinpartners.util.PersistUtil;
 import com.cryptocoinpartners.util.Visitor;
+import org.apache.commons.lang.ArrayUtils;
 
 import java.util.*;
 
@@ -16,13 +17,14 @@ public abstract class JpaReportCommand extends ReportCommand
         final JpaReportCommand.Query query = getQuery();
         final List<String[]> rowStrings = new ArrayList<String[]>();
 
+        if( log.isTraceEnabled() )
+            log.trace("Querying: "+query.queryStr+" / "+ArrayUtils.toString(query.params));
         if( limit != 0 ) {
             PersistUtil.queryEach(
-                    Object.class,
-                    new Visitor<Object>()
+                    new Visitor<Object[]>()
                     {
                         private int count = 0;
-                        public boolean handleItem( Object row )
+                        public boolean handleItem( Object[] row )
                         {
                             handleResult(row, rowStrings);
                             return ++count < limit;
@@ -35,10 +37,9 @@ public abstract class JpaReportCommand extends ReportCommand
         }
         else {
             PersistUtil.queryEach(
-                    Object.class,
-                    new Visitor<Object>()
+                    new Visitor<Object[]>()
                     {
-                        public boolean handleItem( Object row )
+                        public boolean handleItem( Object[] row )
                         {
                             handleResult(row, rowStrings);
                             return true;
@@ -55,14 +56,9 @@ public abstract class JpaReportCommand extends ReportCommand
     }
 
 
-    protected void handleResult( Object row, List<String[]> rowStrings )
+    protected void handleResult( Object[] row, List<String[]> rowStrings )
     {
-        Object[] array;
-        if( row.getClass().isArray() )
-            array = (Object[]) row;
-        else
-            array = new Object[] {row};
-        final String[] rowFormat = formatRow(array);
+        final String[] rowFormat = formatRow(row);
         rowStrings.add(rowFormat);
     }
 
@@ -110,7 +106,7 @@ public abstract class JpaReportCommand extends ReportCommand
 
     protected String formatColumn( int columnIndex, Object item )
     {
-        return item.toString();
+        return String.valueOf(item);
     }
 
 

@@ -3,11 +3,11 @@ package com.cryptocoinpartners.bin.command;
 import au.com.bytecode.opencsv.CSVWriter;
 import com.bethecoder.ascii_table.ASCIITable;
 import com.beust.jcommander.Parameter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import java.io.*;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
 
 
 public abstract class ReportCommand extends Command
@@ -77,5 +77,4 @@ public abstract class ReportCommand extends Command
 
     @Parameter(names = "-csv", description = "specifies a file for output in CSV format")
     private String csv = null;
-    private static Logger log = LoggerFactory.getLogger(ReportCommand.class);
 }

@@ -3,6 +3,7 @@ package com.cryptocoinpartners.bin.command;
 import com.beust.jcommander.Parameters;
 
 
+@SuppressWarnings("UnusedDeclaration")
 @Parameters(commandNames = "report-data",commandDescription = "Shows how many trades have been recorded in the database for each MarketListing")
 public class ReportDataCommand extends JpaReportCommand
 {

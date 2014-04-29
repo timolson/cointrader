@@ -7,6 +7,7 @@ import com.cryptocoinpartners.module.Esper;
 /**
  * @author Tim Olson
  */
+@SuppressWarnings("UnusedDeclaration")
 @Parameters(commandNames = "ticker", commandDescription = "Launch a data gathering node")
 public class TickerCommand extends Command {
     public void run() {
