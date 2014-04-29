@@ -2,39 +2,16 @@ package com.cryptocoinpartners.schema;
 
 import com.cryptocoinpartners.util.PersistUtil;
 
-import javax.persistence.Entity;
-import javax.persistence.EntityManager;
-import javax.persistence.ManyToOne;
-import javax.persistence.TypedQuery;
-import java.util.Collection;
+import javax.persistence.*;
 
 
 /**
- * Represents a possibility to trade one Fungible for another at a specific Market.
- *
- * @author Tim Olson
+ * Represents the possibility to trade one Fungible for another
  */
+@SuppressWarnings( "UnusedDeclaration" )
 @Entity
-public class Listing extends EntityBase {
-
-    /**
-     * @param market
-     * @return all Securities listed on the given Market
-     */
-    public static Collection<Listing> forMarket(Market market) {
-        EntityManager entityManager = PersistUtil.createEntityManager();
-        try {
-            TypedQuery<Listing> query = entityManager.createQuery("select s from Listing s where market=?1",
-                                                                   Listing.class);
-            query.setParameter(1,market);
-            return query.getResultList();
-        }
-        finally {
-            entityManager.close();
-        }
-    }
-
-
+public class Listing extends EntityBase
+{
     @ManyToOne(optional = false)
     public Fungible getBase() { return base; }
 
@@ -43,30 +20,64 @@ public class Listing extends EntityBase {
     public Fungible getQuote() { return quote; }
 
 
-    @ManyToOne(optional = false)
-    public Market getMarket() { return market; }
-
-
-    public Listing(Market market, Fungible base, Fungible quote) {
-        this.base = base;
-        this.quote = quote;
-        this.market = market;
+    /**
+     will create the listing if it doesn't exist
+     @param base
+     @param quote
+     @return
+     */
+    public static Listing forPair( Fungible base, Fungible quote ) {
+        try {
+            Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2", base, quote);
+            if( listing == null ) {
+                listing = new Listing(base,quote);
+                PersistUtil.insert(listing);
+            }
+            return listing;
+        }
+        catch( NoResultException e ) {
+            final Listing listing = new Listing(base, quote);
+            PersistUtil.insert(listing);
+            return listing;
+        }
     }
 
 
-    public String toString() {
-        return market.toString()+':'+base+'.'+quote;
+    public String toString()
+    {
+        return base.getSymbol()+'.'+quote.getSymbol();
     }
 
 
     // JPA
-    protected Listing() {}
-    protected void setMarket(Market market) { this.market = market; }
+    protected Listing() { }
     protected void setBase(Fungible base) { this.base = base; }
     protected void setQuote(Fungible quote) { this.quote = quote; }
 
 
-    private Fungible base;
-    private Fungible quote;
-    private Market market;
+    protected Fungible base;
+    protected Fungible quote;
+
+
+    private Listing( Fungible base, Fungible quote ) {
+        this.base = base;
+        this.quote = quote;
+    }
+
+    
+    public static Listing forSymbol( String symbol )
+    {
+        final int dot = symbol.indexOf('.');
+        if( dot == -1 )
+            throw new IllegalArgumentException("Invalid Listing symbol: \""+symbol+"\"");
+        final String baseSymbol = symbol.substring(0, dot);
+        Fungible base = Fungible.forSymbol(baseSymbol);
+        if( base == null )
+            throw new IllegalArgumentException("Invalid base symbol: \""+baseSymbol+"\"");
+        final String quoteSymbol = symbol.substring(dot + 1, symbol.length());
+        Fungible quote = Fungible.forSymbol(quoteSymbol);
+        if( quote == null )
+            throw new IllegalArgumentException("Invalid quote symbol: \""+quoteSymbol+"\"");
+        return Listing.forPair(base,quote);
+    }
 }

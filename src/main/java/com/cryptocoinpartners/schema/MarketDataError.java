@@ -13,14 +13,14 @@ import javax.persistence.MappedSuperclass;
 @MappedSuperclass
 public class MarketDataError extends Event {
 
-    public MarketDataError(Listing listing) {
-        this(listing,null);
+    public MarketDataError(MarketListing marketListing ) {
+        this(marketListing,null);
     }
 
 
-    public MarketDataError(Listing listing, @Nullable Exception exception) {
+    public MarketDataError(MarketListing marketListing, @Nullable Exception exception) {
         this.exception = exception;
-        this.listing = listing;
+        this.marketListing = marketListing;
     }
 
 
@@ -31,16 +31,16 @@ public class MarketDataError extends Event {
 
 
     @ManyToOne
-    public Listing getListing() {
-        return listing;
+    public MarketListing getMarketListing() {
+        return marketListing;
     }
 
 
     protected MarketDataError() {}
     protected void setException(@Nullable Exception exception) { this.exception = exception; }
-    protected void setListing(Listing listing) { this.listing = listing; }
+    protected void setMarketListing(MarketListing marketListing ) { this.marketListing = marketListing; }
 
 
     private Exception exception;
-    private Listing listing;
+    private MarketListing marketListing;
 }

@@ -4,17 +4,21 @@ import com.cryptocoinpartners.schema.Event;
 import com.cryptocoinpartners.util.ModuleLoaderError;
 import com.cryptocoinpartners.util.ReflectionUtil;
 import com.espertech.esper.client.*;
-import com.espertech.esper.client.deploy.DeploymentException;
-import com.espertech.esper.client.deploy.DeploymentResult;
-import com.espertech.esper.client.deploy.EPDeploymentAdmin;
-import com.espertech.esper.client.deploy.ParseException;
+import com.espertech.esper.client.deploy.*;
+import com.espertech.esper.client.time.CurrentTimeEvent;
+import com.espertech.esper.client.time.CurrentTimeSpanEvent;
+import com.espertech.esper.core.service.EPServiceProviderImpl;
+import org.apache.commons.configuration.AbstractConfiguration;
+import org.apache.commons.configuration.MapConfiguration;
+import org.joda.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 
 /**
@@ -30,25 +34,69 @@ public class Esper {
     }
 
 
+    public interface TimeProvider {
+        /**
+         @return the Instant the Esper should be initialized to as the starting time
+         */
+        Instant getInitialTime();
+
+        /**
+         @param event The event to be published after the time is advanced
+         */
+        Instant nextTime(Event event);
+    }
+
+
+    /**
+     @param useInternalTimer if true, Esper's internal timer is disabled and time is only advanced when an Event is
+                             published or the advanceTime() method is called.
+     */
+    public Esper( TimeProvider timeProvider )
+    {
+        this.timeProvider = timeProvider;
+        construct();
+    }
+
+
     /**
      * Modules are located in their own packages under com.cryptocoinpartners.module.  The package name is the module
      * name.  If a module is already loaded, it will be skipped.
      * For details, see ModuleLoader
      *
-     * @param moduleNames simple package names in the order they will be loaded
+     * @param moduleName simple package names in the order they will be loaded
      * @see ModuleLoader#load(Esper, String...)
      * @throws ModuleLoaderError
      */
-    public void loadModule( String... moduleNames ) throws ModuleLoaderError {
-        loadModule(null, moduleNames);
+    public void loadModule( AbstractConfiguration c,
+                            String moduleName ) throws ModuleLoaderError {
+        ModuleLoader.load(this, c, moduleName);
     }
 
 
-    public void loadModule( org.apache.commons.configuration.Configuration c,
-                            String... moduleNames ) throws ModuleLoaderError {
-        for( String name : moduleNames )
-            ModuleLoader.load(this, c, name);
+    /**
+     * Modules are located in their own packages under com.cryptocoinpartners.module.  The package name is the module
+     * name.  If a module is already loaded, it will be skipped.
+     * For details, see ModuleLoader
+     *
+     @param moduleName
+     @param config a series of key-value pairs; the array must have even length.  keys must be strings and values will
+                   have toString() called on them.  the k-v pairs are put into a configuration map and passed as
+                   module configuration to the ModuleLoader
+     @throws ModuleLoaderError
+     */
+    public void loadModule( String moduleName, Object... config ) throws ModuleLoaderError
+    {
+        final MapConfiguration configuration = new MapConfiguration(new HashMap());
+        if( config.length % 2 != 0 )
+            throw new IllegalArgumentException("Must have an even number of parameters (key-value pairs) in loadModule");
+        for( int i = 0; i < config.length; i++ ) {
+            Object key = config[i++];
+            Object value = config[i];
+            configuration.setProperty(key.toString(),value);
+        }
+        ModuleLoader.load(this,configuration,moduleName);
     }
+
 
 
     public boolean isModuleLoaded( String name ) {
@@ -56,13 +104,36 @@ public class Esper {
     }
 
 
-    public void publish(Event e) {
+    public void publish(Event e)
+    {
+        if( timeProvider != null ) {
+            Instant time = timeProvider.nextTime(e);
+            advanceTime(time);
+        }
         epRuntime.sendEvent(e);
     }
 
 
     public void destroy() {
         epService.destroy();
+        // todo shutdown loaded modules
+    }
+
+
+    public void advanceTime( Instant now ) {
+        if( timeProvider == null )
+            throw new IllegalArgumentException("Can only advanceTime() when the Esper was constructed with a TimeProvider");
+        if( lastTime == null ) {
+            // jump to the start time instead of stepping to it
+            epRuntime.sendEvent(new CurrentTimeEvent(now.getMillis()));
+        }
+        else if( now.isBefore(lastTime) )
+            throw new IllegalArgumentException("advanceTime must always move time forward. "+now+" < "+lastTime);
+        else if( now.isAfter(lastTime) ) {
+            // step time up to now
+            epRuntime.sendEvent(new CurrentTimeSpanEvent(now.getMillis()));
+        }
+        lastTime = now;
     }
 
 
@@ -99,6 +170,19 @@ public class Esper {
                         }
                     }
                 }
+            }
+        }
+    }
+
+
+    public void subscribe( Object listener )
+    {
+        for( Method method : listener.getClass().getMethods() ) {
+            When when = method.getAnnotation(When.class);
+            if( when != null ) {
+                String statement = when.value();
+                log.debug("subscribing "+method+" with statement \""+statement+"\"");
+                subscribe(listener, method, statement);
             }
         }
     }
@@ -163,12 +247,24 @@ public class Esper {
         for( Class<? extends Event> eventType : eventTypes )
             config.addEventType(eventType);
         config.addImport(IntoMethod.class);
+        if( timeProvider != null ) {
+            config.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
+        }
         epService = EPServiceProviderManager.getDefaultProvider(config);
+        if( timeProvider != null ) {
+            lastTime = timeProvider.getInitialTime();
+            final EPServiceProviderImpl epService1 = (EPServiceProviderImpl) epService;
+            epService1.initialize(lastTime.getMillis());
+        }
         epRuntime = epService.getEPRuntime();
         epAdministrator = epService.getEPAdministrator();
     }
 
 
+    private static Logger log = LoggerFactory.getLogger(Esper.class);
+
+    private TimeProvider timeProvider;
+    private Instant lastTime = null;
     private Set<String> loaded = new HashSet<String>();
     private EPServiceProvider epService;
     private EPRuntime epRuntime;

@@ -1,5 +1,8 @@
 package com.cryptocoinpartners.schema;
 
+import com.cryptocoinpartners.util.PersistUtil;
+
+import javax.persistence.Basic;
 import javax.persistence.Entity;
 
 
@@ -12,6 +15,13 @@ import javax.persistence.Entity;
 public abstract class Fungible extends EntityBase {
 
 
+    public static Fungible forSymbol( String symbol )
+    {
+        return PersistUtil.queryOne(Fungible.class,"select f from Fungible f where symbol=?1",symbol);
+    }
+
+
+    @Basic(optional = false)
     public String getSymbol() { return symbol; }
 
 
@@ -27,4 +37,6 @@ public abstract class Fungible extends EntityBase {
 
 
     protected String symbol;
+
+
 }

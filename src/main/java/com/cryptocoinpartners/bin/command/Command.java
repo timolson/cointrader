@@ -2,6 +2,8 @@ package com.cryptocoinpartners.bin.command;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -17,7 +19,7 @@ import com.beust.jcommander.Parameters;
 @Parameters(commandNames = "example", commandDescription = "This is an example of how to annotate your subclasses")
 public abstract class Command implements Runnable {
 
-//  @Parameter(names = {"-x","-X","--example"}, description = "this is an example")
+//  @Parameter(names = {"-x","-X","-example"}, description = "this is an example")
 //  public boolean exampleSwitch;
 
 //  public void run() {
@@ -25,4 +27,5 @@ public abstract class Command implements Runnable {
 //      System.exit(404);
 //  }
 
+    protected Logger log = LoggerFactory.getLogger(getClass());
 }

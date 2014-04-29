@@ -4,8 +4,7 @@ import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
 
 import javax.annotation.Nullable;
-import javax.persistence.Basic;
-import javax.persistence.MappedSuperclass;
+import javax.persistence.*;
 
 
 @MappedSuperclass

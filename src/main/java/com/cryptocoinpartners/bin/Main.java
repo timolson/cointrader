@@ -1,17 +1,14 @@
 package com.cryptocoinpartners.bin;
 
-import com.beust.jcommander.JCommander;
-import com.beust.jcommander.Parameter;
-import com.beust.jcommander.Parameters;
+import com.beust.jcommander.*;
 import com.cryptocoinpartners.bin.command.Command;
-import com.cryptocoinpartners.util.Config;
-import com.cryptocoinpartners.util.ReflectionUtil;
+import com.cryptocoinpartners.util.*;
 import org.apache.commons.configuration.ConfigurationException;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.lang.reflect.Modifier;
+import java.util.*;
 
 
 /**
@@ -22,14 +19,18 @@ public class Main
 {
     static final String DEFAULT_PROPERTIES_FILENAME = "trader.properties";
     static final String FALLBACK_PROPERTIES_FILENAME = "trader-default.properties";
+    private static final Logger log = LoggerFactory.getLogger(Main.class);
 
     static class MainParams {
         @SuppressWarnings("UnusedDeclaration")
         @Parameter(names = {"h","help","-h","-H","-help","--help"}, help = true, description = "Show this usage help")
         boolean help;
 
-        @Parameter(names = {"-f","--properties-file"}, description = "location of the trader.properties config file")
+        @Parameter(names = {"-f","-properties-file"}, description = "location of the trader.properties config file")
         String propertiesFilename = DEFAULT_PROPERTIES_FILENAME;
+
+        @DynamicParameter( names = {"-D"}, description = "use the -D flag to set configuration properties \"-Ddb.username=dbuser\"" )
+        Map<String,String> definitions = new HashMap<String, String>();
     }
 
 
@@ -42,6 +43,8 @@ public class Main
         Map<String,Command> commandLookup = new HashMap<String,Command>();
         Set<Class<? extends Command>> commands = ReflectionUtil.getSubtypesOf(Command.class);
         for( Class<? extends Command> commandType : commands ) {
+            if( Modifier.isAbstract(commandType.getModifiers()))
+                continue;
             Command command = commandType.newInstance();
             Parameters annotation = command.getClass().getAnnotation(Parameters.class);
             if( annotation == null ) {
@@ -55,7 +58,14 @@ public class Main
         }
 
         // now parse the commandline
-        parameterParser.parse(args);
+        try {
+            parameterParser.parse(args);
+        }
+        catch( MissingCommandException e ) {
+            System.err.println(e.getMessage());
+            parameterParser.usage();
+            System.exit(7002);
+        }
         String commandName = parameterParser.getParsedCommand();
         // find the command, if any
         Command command = commandLookup.get(commandName);
@@ -64,15 +74,29 @@ public class Main
             System.exit(7001);
         }
         try {
-            Config.init(mainParams.propertiesFilename);
+            Config.init(mainParams.propertiesFilename,mainParams.definitions);
         }
         catch( ConfigurationException e ) {
             if( !mainParams.propertiesFilename.equals(DEFAULT_PROPERTIES_FILENAME) )
                 throw e;
-            LoggerFactory.getLogger(Main.class).info(DEFAULT_PROPERTIES_FILENAME+" not found.  Using "+FALLBACK_PROPERTIES_FILENAME+" instead.");
-            Config.init(FALLBACK_PROPERTIES_FILENAME);
+            try {
+                Config.init(FALLBACK_PROPERTIES_FILENAME, mainParams.definitions);
+                log.info(DEFAULT_PROPERTIES_FILENAME + " not found.  Using " + FALLBACK_PROPERTIES_FILENAME + " instead.");
+            }
+            catch( ConfigurationException x ) {
+                System.err.println("Could not load "+DEFAULT_PROPERTIES_FILENAME+" or "+FALLBACK_PROPERTIES_FILENAME);
+                System.exit(1);
+            }
         }
-        command.run();
+        try {
+            command.run();
+        }
+        catch( Throwable t ) {
+            log.error("Uncaught error while running "+command.getClass().getSimpleName(),t);
+        }
+        finally {
+            PersistUtil.shutdown();
+        }
     }
 
 

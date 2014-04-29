@@ -27,7 +27,7 @@
     </developers>
 
     <properties>
-        <xchange.version>2.0.0-SNAPSHOT</xchange.version>
+        <xchange.version>2.0.1-SNAPSHOT</xchange.version>
         <slf4j-api.version>1.7.5</slf4j-api.version>
         <hibernate.version>4.3.4.Final</hibernate.version>
     </properties>
@@ -74,6 +74,21 @@
             <version>${xchange.version}</version>
         </dependency>
         <dependency>
+            <groupId>com.xeiam.xchange</groupId>
+            <artifactId>xchange-bitstamp</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.xeiam.xchange</groupId>
+            <artifactId>xchange-btcchina</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.xeiam.xchange</groupId>
+            <artifactId>xchange-btce</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+        <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>
             <version>2.3</version>
@@ -107,6 +122,21 @@
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.4</version>
+        </dependency>
+        <dependency> <!-- this is found in the project's /repo directory -->
+            <groupId>com.bethecoder</groupId>
+            <artifactId>ascii-table</artifactId>
+            <version>1.0</version>
+        </dependency>
+        <dependency>
+        	<groupId>net.sf.opencsv</groupId>
+        	<artifactId>opencsv</artifactId>
+        	<version>2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.clutch.dates</groupId>
+            <artifactId>stringtotime</artifactId>
+            <version>1.0.6</version>
         </dependency>
     </dependencies>
 
@@ -150,8 +180,21 @@
     </build>
 
 
-    <!-- Point to the cryptocoinpartners.com internal repository -->
     <repositories>
+        <!-- this is for the XChange SNAPSHOT code -->
+        <repository>
+            <id>sonatype-oss-snapshot</id>
+            <snapshots/>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </repository>
+        <!-- this is for any jars registered in the project's /repo directory -->
+        <repository>
+            <id>project-local</id>
+            <name>project-local</name>
+            <url>file:${project.basedir}/repo</url>
+        </repository>
+        <!-- Point to the cryptocoinpartners.com internal repository -->
+        <!--
         <repository>
             <snapshots>
                 <enabled>false</enabled>
@@ -171,15 +214,11 @@
             <name>libs-snapshot-local</name>
             <url>http://cryptocoinpartners.com:8080/artifactory/libs-snapshot-local</url>
         </repository>
-        <!-- this is for the XChange 2.0.0-SNAPSHOT code -->
-        <repository>
-            <id>sonatype-oss-snapshot</id>
-            <snapshots/>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </repository>
+        -->
     </repositories>
 
     <!-- Point to the cryptocoinpartners.com internal repository -->
+    <!--
     <pluginRepositories>
         <pluginRepository>
             <snapshots>
@@ -202,6 +241,7 @@
             <url>http://cryptocoinpartners.com:8080/artifactory/plugins-snapshot</url>
         </pluginRepository>
     </pluginRepositories>
+    -->
 
     <!-- Deploy to the cryptocoinpartners.com internal repository -->
     <distributionManagement>

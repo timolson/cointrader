@@ -15,8 +15,8 @@ import java.math.BigDecimal;
 @MappedSuperclass
 public abstract class Pricing extends MarketData {
 
-    public Pricing(Instant time, @Nullable String remoteKey, Listing listing, BigDecimal price, BigDecimal amount) {
-        super(time, remoteKey, listing);
+    public Pricing(Instant time, @Nullable String remoteKey, MarketListing marketListing, BigDecimal price, BigDecimal amount) {
+        super(time, remoteKey, marketListing);
         this.price = price;
         this.amount = amount;
     }

@@ -18,23 +18,14 @@ import java.util.Map;
 @Entity
 public class Market extends EntityBase {
 
-    public static final Market BITFINEX = market("BITFINEX");
-    public static final Market BTC_CHINA = market("BTC_CHINA");
-    public static final Market BITSTAMP = market("BITSTAMP");
-    public static final Market BTCE = market("BTCE");
-    public static final Market CRYPTSY = market("CRYPTSY");
-            
 
     public static Market forSymbol( String symbol ) {
-        if( symbolMap == null ) {
-            EntityManager em = PersistUtil.createEntityManager();
-            TypedQuery<Market> query = em.createQuery("select m from Market m", Market.class);
-            List<Market> markets = query.getResultList();
-            symbolMap = new HashMap<String, Market>();
-            for( Market market : markets )
-                symbolMap.put(market.getSymbol(),market);
+        Market found = PersistUtil.queryZeroOne(Market.class, "select m from Market m where symbol=?1", symbol);
+        if( found == null ) {
+            found = new Market(symbol);
+            PersistUtil.insert(found);
         }
-        return symbolMap.get(symbol);
+        return found;
     }
 
 
@@ -51,15 +42,7 @@ public class Market extends EntityBase {
 
 
     private Market(String symbol) { this.symbol = symbol; }
-    
-    private static Market market(String symbol) {
-        if( PersistUtil.generatingDefaultData )
-            return new Market(symbol);
-        else
-            return forSymbol(symbol);
-    }
 
 
     private String symbol;
-    private static Map<String,Market> symbolMap = null;
 }

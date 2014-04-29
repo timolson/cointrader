@@ -1,6 +1,9 @@
 package com.cryptocoinpartners.schema;
 
+import com.cryptocoinpartners.util.PersistUtil;
+import com.cryptocoinpartners.util.Visitor;
 import org.joda.time.Instant;
+import org.joda.time.Interval;
 
 import javax.persistence.*;
 import java.io.*;
@@ -12,34 +15,19 @@ import java.util.*;
  * @author Tim Olson
  */
 @Entity
-public class Book extends MarketData {
+@Table(indexes = {@Index(columnList = "time"),@Index(columnList = "timeReceived")})
+public class Book extends MarketData implements Spread {
     
-    public static class BookBuilder {
-        
-        public Book build() { book.sort(); return book; }
 
-        
-        public BookBuilder addBid( BigDecimal price, BigDecimal amount ) {
-            book.bids.add(new Bid(book.getListing(),book.getTime(),book.getTimeReceived(),price,amount));
-            return this;
-        }
-    
-    
-        public BookBuilder addAsk( BigDecimal price, BigDecimal amount ) {
-            book.asks.add(new Ask(book.getListing(),book.getTime(),book.getTimeReceived(),price,amount));
-            return this;
-        }
-
-        
-        public BookBuilder(Book book) { this.book = book; }
-        private Book book;
+    public static void find(Interval timeInterval,Visitor<Book> visitor) {
+        PersistUtil.queryEach(Book.class, visitor, "select b from Book b where time > ?1 and time < ?2");
     }
 
-    
-    public static BookBuilder builder(Instant time, String remoteKey, Listing listing) {
-        return new BookBuilder(new Book(time, remoteKey,listing));
+
+    public static void forAll(Visitor<Book> visitor) {
+        PersistUtil.queryEach(Book.class,visitor,"select b from Book b");
     }
-    
+
 
     @Transient
     public List<Bid> getBids() {
@@ -53,12 +41,10 @@ public class Book extends MarketData {
     }
     
     
-    // todo how to split into multiple columns?
-    // todo how to make JPA ignore field?
     @Transient
     public Bid getBestBid() {
         if( bids.isEmpty() )
-            return new Bid(getListing(),getTime(),getTimeReceived(),BigDecimal.ZERO,BigDecimal.ZERO);
+            return new Bid(getMarketListing(),getTime(),getTimeReceived(),BigDecimal.ZERO,BigDecimal.ZERO);
         return bids.get(0);
     }
 
@@ -66,7 +52,7 @@ public class Book extends MarketData {
     @Transient
     public Ask getBestAsk() {
         if( asks.isEmpty() ) {
-            return new Ask(getListing(),getTime(),getTimeReceived(), MAX_ASK_PRICE,BigDecimal.ZERO);
+            return new Ask(getMarketListing(),getTime(),getTimeReceived(), MAX_ASK_PRICE,BigDecimal.ZERO);
         }
         return asks.get(0);
     }
@@ -98,8 +84,64 @@ public class Book extends MarketData {
             return BigDecimal.ZERO;
         return asks.get(0).getAmount();
     }
-    
-    
+
+
+    public static class BookBuilder {
+
+        public Book build() { book.sort(); return book; }
+
+
+        public BookBuilder addBid( BigDecimal price, BigDecimal amount ) {
+            book.bids.add(new Bid(book.getMarketListing(),book.getTime(),book.getTimeReceived(),price,amount));
+            return this;
+        }
+
+
+        public BookBuilder addAsk( BigDecimal price, BigDecimal amount ) {
+            book.asks.add(new Ask(book.getMarketListing(),book.getTime(),book.getTimeReceived(),price,amount));
+            return this;
+        }
+
+
+        public BookBuilder(Book book) { this.book = book; }
+        private Book book;
+    }
+
+
+    public static BookBuilder builder(Instant time, String remoteKey, MarketListing marketListing ) {
+        return new BookBuilder(new Book(time, remoteKey, marketListing));
+    }
+
+
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder(getMarketListing().toString() + " Book at "+getTime()+" bids={");
+        boolean first = true;
+        for( Bid bid : bids ) {
+            if( first )
+                first = false;
+            else
+                sb.append(';');
+            sb.append(bid.getAmount());
+            sb.append('@');
+            sb.append(bid.getPrice());
+        }
+        sb.append("} asks={");
+        first = true;
+        for( Ask ask : asks ) {
+            if( first )
+                first = false;
+            else
+                sb.append(';');
+            sb.append(ask.getAmount());
+            sb.append('@');
+            sb.append(ask.getPrice());
+        }
+        sb.append('}');
+        return sb.toString();
+    }
+
+
     // JPA
 
     // These getters and setters are for conversion in JPA
@@ -157,14 +199,14 @@ public class Book extends MarketData {
     
     private class BidCreator implements QuoteCreator<Bid> {
         public Bid create(BigDecimal price, BigDecimal amount) {
-            return new Bid(getListing(),getTime(),getTimeReceived(),price,amount);
+            return new Bid(getMarketListing(),getTime(),getTimeReceived(),price,amount);
         }
     }
 
 
     private class AskCreator implements QuoteCreator<Ask> {
         public Ask create(BigDecimal price, BigDecimal amount) {
-            return new Ask(getListing(),getTime(),getTimeReceived(),price,amount);
+            return new Ask(getMarketListing(),getTime(),getTimeReceived(),price,amount);
         }
     }
     
@@ -173,8 +215,8 @@ public class Book extends MarketData {
     protected Book() { }
 
 
-    private Book(Instant time, String remoteKey, Listing listing) {
-        super(time, remoteKey, listing);
+    private Book(Instant time, String remoteKey, MarketListing marketListing ) {
+        super(time, remoteKey, marketListing);
         bids = new LinkedList<Bid>();
         asks = new LinkedList<Ask>();
     }

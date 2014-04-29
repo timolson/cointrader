@@ -20,8 +20,8 @@ public class Order extends Quote {
 
 
     public Order(Strategy strategy, OrderType orderType, Side side,
-                 Listing listing, Instant time, BigDecimal price, BigDecimal amount) {
-        super(side, listing, time, null, price, amount);
+                 MarketListing marketListing, Instant time, BigDecimal price, BigDecimal amount) {
+        super(side, marketListing, time, null, price, amount);
         this.strategy = strategy;
         this.orderType = orderType;
         this.orderStatus = OrderStatus.NEW;

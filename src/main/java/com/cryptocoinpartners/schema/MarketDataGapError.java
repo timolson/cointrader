@@ -2,7 +2,6 @@ package com.cryptocoinpartners.schema;
 
 import org.hibernate.annotations.Columns;
 import org.hibernate.annotations.Type;
-import org.jadira.usertype.dateandtime.joda.PersistentInterval;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.joda.time.Interval;
@@ -19,14 +18,14 @@ import javax.persistence.Entity;
 public class MarketDataGapError extends MarketDataError {
 
 
-    public MarketDataGapError(Listing listing, Duration gapDuration) {
-        super(listing);
+    public MarketDataGapError(MarketListing marketListing, Duration gapDuration) {
+        super(marketListing);
         gapInterval = new Interval(Instant.now(),Instant.now().withDurationAdded(gapDuration,1));
     }
 
 
-    public MarketDataGapError(Listing listing, Duration gapDuration, @Nullable Exception exception) {
-        super(listing, exception);
+    public MarketDataGapError(MarketListing marketListing, Duration gapDuration, @Nullable Exception exception) {
+        super(marketListing, exception);
         gapInterval = new Interval(Instant.now(),Instant.now().withDurationAdded(gapDuration,1));
     }
 

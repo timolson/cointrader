@@ -1,7 +1,6 @@
 package com.cryptocoinpartners.module;
 
-import com.cryptocoinpartners.util.ModuleLoaderError;
-import com.cryptocoinpartners.util.ReflectionUtil;
+import com.cryptocoinpartners.util.*;
 import com.espertech.esper.client.deploy.DeploymentException;
 import com.espertech.esper.client.deploy.ParseException;
 import org.apache.commons.configuration.*;
@@ -12,7 +11,6 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -44,7 +42,7 @@ public class ModuleLoader {
     }
 
 
-    public static void load(Esper esper, @Nullable Configuration config, String... moduleNames) throws ModuleLoaderError {
+    public static void load(Esper esper, @Nullable AbstractConfiguration config, String... moduleNames) throws ModuleLoaderError {
         try {
             init();
             for( String name : moduleNames ) {
@@ -66,26 +64,25 @@ public class ModuleLoader {
     }
 
 
-    private static Configuration buildConfig(String name, @Nullable Configuration c) throws ConfigurationException {
-        CompositeConfiguration config = new CompositeConfiguration();
-        config.addConfiguration(new SystemConfiguration());
+    private static AbstractConfiguration buildConfig(String name, @Nullable AbstractConfiguration c)
+            throws ConfigurationException {
+        final ArrayList<AbstractConfiguration> moduleConfigs = new ArrayList<AbstractConfiguration>();
         String packageName = "com/cryptocoinpartners/module/"+name+"/config.properties";
         ClassLoader classLoader = ModuleLoader.class.getClassLoader();
         URL resource = classLoader.getResource(packageName);
         if (resource != null) {
-            Configuration packageConfig = new PropertiesConfiguration(resource);
-            config.addConfiguration(packageConfig);
+            PropertiesConfiguration packageConfig = new PropertiesConfiguration(resource);
+            moduleConfigs.add(packageConfig);
         }
         packageName = "com/cryptocoinpartners/module/"+name+"/"+name+".properties";
         resource = classLoader.getResource(packageName);
         if (resource != null) {
-            Configuration packageConfig = new PropertiesConfiguration(resource);
-            config.addConfiguration(packageConfig);
+            PropertiesConfiguration packageConfig = new PropertiesConfiguration(resource);
+            moduleConfigs.add(packageConfig);
         }
         if( c != null )
-            config.addConfiguration(c);
-        log.debug("module configuration is\n"+config);
-        return config;
+            moduleConfigs.add(c);
+        return Config.module(moduleConfigs);
     }
 
 
@@ -97,22 +94,9 @@ public class ModuleLoader {
             log.debug("instantiating ModuleListener "+listenerClass.getSimpleName());
             ModuleListener listener = listenerClass.newInstance();
             listeners.add(listener);
-            initTriggers(esper,listener);
+            esper.subscribe(listener);
         }
         return listeners;
-    }
-
-
-    private static void initTriggers(Esper esper, ModuleListener listener) {
-        for( Method method : listener.getClass().getMethods() ) {
-            When when = method.getAnnotation(When.class);
-            if( when != null ) {
-                String statement = when.value();
-                log.debug("subscribing "+method+" with statement \""+statement+"\"");
-                esper.subscribe(listener, method, statement);
-            }
-        }
-
     }
 
 
