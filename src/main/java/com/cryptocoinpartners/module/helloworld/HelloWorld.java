@@ -28,6 +28,7 @@ public class HelloWorld extends ModuleListenerBase {
             log.trace(e.toString());
     }
 
+    /** see HelloWorld.epl */
     public void setAvgTrade(BigDecimal avg) {
         avgTrade = avg;
     }
