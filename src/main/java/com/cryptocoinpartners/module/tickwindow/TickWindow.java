@@ -41,8 +41,8 @@ public class TickWindow extends ModuleListenerBase {
 
 
     @When("select * from Book")
-    public void handleBook(Book t) {
-        getAccumulatingTick(t.getMarketListing()).updateBook(t);
+    public void handleBook(Book b) {
+        getAccumulatingTick(b.getMarketListing()).updateBook(b);
     }
 
 

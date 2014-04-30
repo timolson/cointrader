@@ -51,10 +51,10 @@ public class SaveTicksCsv extends ModuleListenerBase
         final String timeStr = timeFormat.format(t.getTime().toDate());
         final BigDecimal price = t.getLastPrice();
         final BigDecimal vol = t.getAmount();
-        final String bid = t.getBestBid() == null ? "" : t.getBestBid().getPrice().toEngineeringString();
-        final String bidVol = t.getBestBid() == null ? "" : t.getBestBid().getAmount().toEngineeringString();
-        final String ask = t.getBestAsk() == null ? "" : t.getBestAsk().getPrice().toEngineeringString();
-        final String askVol = t.getBestAsk() == null ? "" : t.getBestAsk().getAmount().toEngineeringString();
+        final String bid = t.getBestBid() == null ? "" : t.getBestBid().getPrice().toPlainString();
+        final String bidVol = t.getBestBid() == null ? "" : t.getBestBid().getAmount().toPlainString();
+        final String ask = t.getBestAsk() == null ? "" : t.getBestAsk().getPrice().toPlainString();
+        final String askVol = t.getBestAsk() == null ? "" : t.getBestAsk().getAmount().toPlainString();
         if( price != null ) {
             writer.writeNext(new String[] {
                                      listing.toString(),
@@ -62,8 +62,8 @@ public class SaveTicksCsv extends ModuleListenerBase
                                      base.getSymbol(),
                                      quote.getSymbol(),
                                      timeStr,
-                                     price.toEngineeringString(),
-                                     vol.toEngineeringString(),
+                                     price.toPlainString(),
+                                     vol.toPlainString(),
                                      bid,
                                      bidVol,
                                      ask,
