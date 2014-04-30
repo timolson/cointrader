@@ -51,7 +51,10 @@ public abstract class ReportCommand extends Command
 
     protected void outputAscii( Output output )
     {
-        ASCIITable.getInstance().printTable(output.headers, output.rows);
+        if( output.rows.length == 0 )
+            System.out.println("no results");
+        else
+            ASCIITable.getInstance().printTable(output.headers, output.rows);
     }
 
 
