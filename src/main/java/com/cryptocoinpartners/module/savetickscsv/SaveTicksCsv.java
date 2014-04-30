@@ -9,8 +9,10 @@ import org.joda.time.Instant;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 
 
+@SuppressWarnings("UnusedDeclaration")
 public class SaveTicksCsv extends ModuleListenerBase
 {
 
@@ -22,6 +24,7 @@ public class SaveTicksCsv extends ModuleListenerBase
         final String filename = config.getString("savetickscsv.filename");
         if( filename == null )
             throw new Error("You must specify savetickscsv.filename");
+        allowNa = config.getBoolean("savetickscsv.na",false);
         try {
             writer = new CSVWriter(new FileWriter(filename));
             writer.writeNext(headers);
@@ -33,13 +36,19 @@ public class SaveTicksCsv extends ModuleListenerBase
     }
 
 
+    @SuppressWarnings("ConstantConditions")
     @When("select * from Tick")
     public void saveTick( Tick t ) {
+        if( !allowNa ) {
+            if( t.getBestAsk() == null || t.getBestBid() == null || t.getLastPrice() == null )
+                return;
+        }
+
         final MarketListing listing = t.getMarketListing();
         final String market = listing.getMarket().getSymbol();
         final Fungible base = listing.getBase();
         final Fungible quote = listing.getQuote();
-        final Instant time = t.getTime();
+        final String timeStr = timeFormat.format(t.getTime().toDate());
         final BigDecimal price = t.getLastPrice();
         final BigDecimal vol = t.getAmount();
         final String bid = t.getBestBid() == null ? "" : t.getBestBid().getPrice().toEngineeringString();
@@ -52,7 +61,7 @@ public class SaveTicksCsv extends ModuleListenerBase
                                      market,
                                      base.getSymbol(),
                                      quote.getSymbol(),
-                                     time.toString(),
+                                     timeStr,
                                      price.toEngineeringString(),
                                      vol.toEngineeringString(),
                                      bid,
@@ -83,5 +92,7 @@ public class SaveTicksCsv extends ModuleListenerBase
     }
 
 
+    private static final SimpleDateFormat timeFormat = new SimpleDateFormat("yyyyMMddHHmmss");
     private CSVWriter writer;
+    private boolean allowNa;
 }

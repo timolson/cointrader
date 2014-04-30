@@ -212,7 +212,7 @@ public class PersistUtil {
     }
 
 
-    public static void shutdown() { entityManagerFactory.close(); }
+    public static void shutdown() { if( entityManagerFactory != null ) entityManagerFactory.close(); }
 
 
     private static void init(boolean resetDatabase) {

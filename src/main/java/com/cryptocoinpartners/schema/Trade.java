@@ -18,7 +18,7 @@ import java.util.List;
  * @author Tim Olson
  */
 @Entity
-@Table(indexes = {@Index(columnList = "time"),@Index(columnList = "timeReceived")})
+@Table(indexes = {@Index(columnList = "time"),@Index(columnList = "timeReceived"),@Index(columnList = "marketListing_id,remoteKey")})
 public class Trade extends Pricing {
 
     public Trade(MarketListing marketListing, Instant time, @Nullable String remoteKey, BigDecimal price, BigDecimal amount) {

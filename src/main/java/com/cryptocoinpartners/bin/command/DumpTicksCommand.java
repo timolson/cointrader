@@ -58,21 +58,28 @@ public class DumpTicksCommand extends Command
 
         Esper esper = replay.getEsper();
         esper.loadModule("tickwindow"); // generate ticks
-        esper.loadModule("savetickscsv", "savetickscsv.filename", filenames.get(0)); // save ticks as csv
+        esper.loadModule("savetickscsv",  // save ticks as csv
+                         "savetickscsv.filename", filenames.get(0),
+                         "savetickscsv.na", allowNa
+                        );
         replay.run();
         esper.destroy();
         System.exit(0);
     }
 
 
-    @Parameter( names = { "-start" } )
+    @Parameter( names = { "-start" }, description = "English time description of the time to start dumping ticks")
     public String startStr = null;
 
 
-    @Parameter( names = { "-end" } )
+    @Parameter( names = { "-end" }, description = "English time description of the time to stop dumping ticks" )
     public String endStr = null;
 
 
-    @Parameter( required = true, arity = 1 )
+    @Parameter( names = "-na", description = "If set, any ticks which are missing data (no Book or last Trade) will still be output")
+    public boolean allowNa = false;
+
+
+    @Parameter( required = true, arity = 1, description = "output filename")
     public List<String> filenames;
 }
