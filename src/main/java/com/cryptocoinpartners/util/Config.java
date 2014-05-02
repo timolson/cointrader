@@ -1,6 +1,7 @@
 package com.cryptocoinpartners.util;
 
 import org.apache.commons.configuration.*;
+import org.apache.commons.configuration.tree.OverrideCombiner;
 
 import java.io.File;
 import java.util.Collection;
@@ -22,23 +23,23 @@ public class Config {
     public static void init(String filename, Map<String,String> commandLine ) throws ConfigurationException {
         if( ! new File(filename).exists() )
             throw new ConfigurationException("Could not find configuration file \""+filename+"\"");
-        appConfig = new PropertiesConfiguration(filename);
         clConfig = new MapConfiguration(commandLine);
         sysConfig = new SystemConfiguration();
-        combined = new CombinedConfiguration();
-        combined.addConfiguration(appConfig);
-        combined.addConfiguration(sysConfig);
+        appConfig = new PropertiesConfiguration(filename);
+        combined = new CombinedConfiguration(new OverrideCombiner());
         combined.addConfiguration(clConfig);
+        combined.addConfiguration(sysConfig);
+        combined.addConfiguration(appConfig);
     }
 
 
     public static AbstractConfiguration module( Collection<? extends AbstractConfiguration> moduleConfigs ) {
-        final CombinedConfiguration result = new CombinedConfiguration();
-        result.addConfiguration(appConfig);
+        final CombinedConfiguration result = new CombinedConfiguration(new OverrideCombiner());
+        result.addConfiguration(clConfig);
+        result.addConfiguration(sysConfig);
         for( AbstractConfiguration moduleConfig : moduleConfigs )
             result.addConfiguration(moduleConfig);
-        result.addConfiguration(sysConfig);
-        result.addConfiguration(clConfig);
+        result.addConfiguration(appConfig);
         return result;
     }
 

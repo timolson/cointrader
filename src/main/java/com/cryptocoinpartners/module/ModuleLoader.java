@@ -66,22 +66,29 @@ public class ModuleLoader {
 
     private static AbstractConfiguration buildConfig(String name, @Nullable AbstractConfiguration c)
             throws ConfigurationException {
+        final ClassLoader classLoader = ModuleLoader.class.getClassLoader();
         final ArrayList<AbstractConfiguration> moduleConfigs = new ArrayList<AbstractConfiguration>();
-        String packageName = "com/cryptocoinpartners/module/"+name+"/config.properties";
-        ClassLoader classLoader = ModuleLoader.class.getClassLoader();
+
+        // first priority is the caller's configuration
+        if( c != null )
+            moduleConfigs.add(c);
+
+        // then add the package-specific props file
+        String packageName = "com/cryptocoinpartners/module/"+name+"/"+name+".properties";
         URL resource = classLoader.getResource(packageName);
         if (resource != null) {
             PropertiesConfiguration packageConfig = new PropertiesConfiguration(resource);
             moduleConfigs.add(packageConfig);
         }
-        packageName = "com/cryptocoinpartners/module/"+name+"/"+name+".properties";
+
+        // then the more generic config.properties
+        packageName = "com/cryptocoinpartners/module/"+name+"/config.properties";
         resource = classLoader.getResource(packageName);
         if (resource != null) {
             PropertiesConfiguration packageConfig = new PropertiesConfiguration(resource);
             moduleConfigs.add(packageConfig);
         }
-        if( c != null )
-            moduleConfigs.add(c);
+
         return Config.module(moduleConfigs);
     }
 

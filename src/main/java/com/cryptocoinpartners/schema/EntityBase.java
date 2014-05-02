@@ -15,8 +15,6 @@ public abstract class EntityBase {
 
 
     @Id
-    @GeneratedValue(generator = "uuid")
-    @GenericGenerator(name = "uuid", strategy = "uuid2")
     @Column( columnDefinition = "BINARY(16)", length = 16, updatable = false, nullable = false )
     public UUID getId() { return id; }
 
@@ -24,6 +22,13 @@ public abstract class EntityBase {
     // JPA
     protected EntityBase() {}
     protected void setId(UUID id) { this.id = id; }
+
+
+    @PrePersist
+    protected void ensureId() {
+        if( id == null )
+            id = UUID.randomUUID();
+    }
 
 
     private UUID id;
