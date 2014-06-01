@@ -193,66 +193,6 @@
             <name>project-local</name>
             <url>file:${project.basedir}/repo</url>
         </repository>
-        <!-- Point to the cryptocoinpartners.com internal repository -->
-        <!--
-        <repository>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <id>trader-release</id>
-            <name>libs-release-local</name>
-            <url>http://cryptocoinpartners.com:8080/artifactory/libs-release-local</url>
-        </repository>
-        <repository>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <id>trader-snapshot</id>
-            <name>libs-snapshot-local</name>
-            <url>http://cryptocoinpartners.com:8080/artifactory/libs-snapshot-local</url>
-        </repository>
-        -->
     </repositories>
-
-    <!-- Point to the cryptocoinpartners.com internal repository -->
-    <!--
-    <pluginRepositories>
-        <pluginRepository>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <id>trader-plugins-release</id>
-            <url>http://cryptocoinpartners.com:8080/artifactory/plugins-release</url>
-        </pluginRepository>
-        <pluginRepository>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <id>trader-plugins-snapshot</id>
-            <url>http://cryptocoinpartners.com:8080/artifactory/plugins-snapshot</url>
-        </pluginRepository>
-    </pluginRepositories>
-    -->
-
-    <!-- Deploy to the cryptocoinpartners.com internal repository -->
-    <distributionManagement>
-        <snapshotRepository>
-            <id>trader-snapshot</id>
-            <url>http://cryptocoinpartners.com:8080/artifactory/libs-snapshot-local</url>
-        </snapshotRepository>
-        <repository>
-            <id>trader-release</id>
-            <url>http://cryptocoinpartners.com:8080/artifactory/libs-release-local</url>
-        </repository>
-    </distributionManagement>
 
 </project>
