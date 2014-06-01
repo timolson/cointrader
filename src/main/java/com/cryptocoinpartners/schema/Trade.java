@@ -21,8 +21,30 @@ import java.util.List;
 @Table(indexes = {@Index(columnList = "time"),@Index(columnList = "timeReceived"),@Index(columnList = "marketListing_id,remoteKey")})
 public class Trade extends Pricing {
 
-    public Trade(MarketListing marketListing, Instant time, @Nullable String remoteKey, BigDecimal price, BigDecimal amount) {
-        super(time, remoteKey, marketListing, price, amount);
+    public static Trade fromDoubles( MarketListing marketListing, Instant time, @Nullable String remoteKey,
+                                     double price, double volume) {
+        long priceCount = Math.round(price/marketListing.getPriceBasis());
+        long volumeCount = Math.round(volume/marketListing.getVolumeBasis());
+        return new Trade(marketListing,time,remoteKey,priceCount,volumeCount);
+    }
+
+
+    /**
+     * @param marketListing what MarketListing was traded
+     * @param time when the trade originally occured
+     * @param remoteKey the unique key assigned by the market data provider to this trade.  helps prevent duplication of market data
+     * @param priceCount the trade price as a count of "pips," where the size of the pip is the marketListing's priceBasis()
+     * @param volumeCount the trade price as a count of "pips," where the size of the pip is the marketListing's volumeBasis()
+     */
+    public Trade( MarketListing marketListing, Instant time, @Nullable String remoteKey,
+                  long priceCount, long volumeCount) {
+        super(time, remoteKey, marketListing, priceCount, volumeCount);
+    }
+
+
+    public Trade( MarketListing marketListing, Instant time, @Nullable String remoteKey,
+                  BigDecimal price, BigDecimal volume ) {
+        super(time, remoteKey, marketListing, price, volume);
     }
 
 

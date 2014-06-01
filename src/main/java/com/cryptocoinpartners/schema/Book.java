@@ -5,6 +5,7 @@ import com.cryptocoinpartners.util.Visitor;
 import org.joda.time.Instant;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import javax.persistence.*;
 import java.io.*;
 import java.math.BigDecimal;
@@ -12,6 +13,9 @@ import java.util.*;
 
 
 /**
+ * Book represents a snapshot of all the limit orders for a MarketListing.  Book has a "compact" database representation
+ *
+ *
  * @author Tim Olson
  */
 @Entity
@@ -44,45 +48,50 @@ public class Book extends MarketData implements Spread {
     @Transient
     public Bid getBestBid() {
         if( bids.isEmpty() )
-            return new Bid(getMarketListing(),getTime(),getTimeReceived(),BigDecimal.ZERO,BigDecimal.ZERO);
+            return new Bid(getMarketListing(),getTime(),getTimeReceived(),0,0);
         return bids.get(0);
     }
+
 
 
     @Transient
     public Ask getBestAsk() {
         if( asks.isEmpty() ) {
-            return new Ask(getMarketListing(),getTime(),getTimeReceived(), MAX_ASK_PRICE,BigDecimal.ZERO);
+            return new Ask(getMarketListing(),getTime(),getTimeReceived(), Long.MAX_VALUE, 0);
         }
         return asks.get(0);
     }
 
 
-    public BigDecimal getBidPrice() {
+    @Nullable
+    public Double getBidPrice() {
         if( bids.isEmpty() )
-            return BigDecimal.ZERO;
-        return bids.get(0).getPrice();
+            return null;
+        return bids.get(0).getPriceAsDouble();
     }
     
     
-    public BigDecimal getBidAmount() {
+    @Nullable
+    public Double getBidAmount() {
         if( bids.isEmpty() )
-            return BigDecimal.ZERO;
-        return bids.get(0).getAmount();
+            return null;
+        return bids.get(0).getVolumeAsDouble();
     }
     
     
-    public BigDecimal getAskPrice() {
+    @Nullable
+    public Double getAskPrice() {
         if( asks.isEmpty() )
-            return BigDecimal.ZERO;
-        return asks.get(0).getPrice();
+            return null;
+        return asks.get(0).getPriceAsDouble();
     }
     
-    
-    public BigDecimal getAskAmount() {
+
+    @Nullable
+    public Double getAskAmount() {
         if( asks.isEmpty() )
-            return BigDecimal.ZERO;
-        return asks.get(0).getAmount();
+            return null;
+        return asks.get(0).getVolumeAsDouble();
     }
 
 
@@ -92,13 +101,19 @@ public class Book extends MarketData implements Spread {
 
 
         public BookBuilder addBid( BigDecimal price, BigDecimal amount ) {
-            book.bids.add(new Bid(book.getMarketListing(),book.getTime(),book.getTimeReceived(),price,amount));
+            MarketListing ml = book.getMarketListing();
+            book.bids.add(new Bid(ml, book.getTime(), book.getTimeReceived(),
+                                  DiscreteAmount.countForValueRounded(price,ml.getPriceBasis()),
+                                  DiscreteAmount.countForValueRounded(amount,ml.getVolumeBasis())));
             return this;
         }
 
 
         public BookBuilder addAsk( BigDecimal price, BigDecimal amount ) {
-            book.asks.add(new Ask(book.getMarketListing(),book.getTime(),book.getTimeReceived(),price,amount));
+            MarketListing ml = book.getMarketListing();
+            book.asks.add(new Ask(ml,book.getTime(),book.getTimeReceived(),
+                                  DiscreteAmount.countForValueRounded(price,ml.getPriceBasis()),
+                                  DiscreteAmount.countForValueRounded(amount,ml.getVolumeBasis())));
             return this;
         }
 
@@ -122,9 +137,9 @@ public class Book extends MarketData implements Spread {
                 first = false;
             else
                 sb.append(';');
-            sb.append(bid.getAmount());
+            sb.append(bid.getVolumeCount());
             sb.append('@');
-            sb.append(bid.getPrice());
+            sb.append(bid.getPriceCount());
         }
         sb.append("} asks={");
         first = true;
@@ -133,9 +148,9 @@ public class Book extends MarketData implements Spread {
                 first = false;
             else
                 sb.append(';');
-            sb.append(ask.getAmount());
+            sb.append(ask.getVolumeCount());
             sb.append('@');
-            sb.append(ask.getPrice());
+            sb.append(ask.getPriceCount());
         }
         sb.append('}');
         return sb.toString();
@@ -150,20 +165,21 @@ public class Book extends MarketData implements Spread {
     @Lob protected byte[] getAskBlob() { return convertToDatabaseColumn(asks); }
     protected void setAskBlob(byte[] blob) { asks = convertToEntityAttribute(blob,new AskCreator()); }
     // these fields are derived from the blobs
-    public void setBidPrice( BigDecimal ignored ) {}
-    public void setBidAmount( BigDecimal ignored ) {}
-    public void setAskPrice( BigDecimal ignored ) {}
-    public void setAskAmount( BigDecimal ignored ) {}
+    public void setBidPrice( @SuppressWarnings("UnusedParameters") Double ignored ) {}
+    public void setBidAmount( @SuppressWarnings("UnusedParameters") Double ignored ) {}
+    public void setAskPrice( @SuppressWarnings("UnusedParameters") Double ignored ) {}
+    public void setAskAmount( @SuppressWarnings("UnusedParameters") Double ignored ) {}
 
 
 
+    @SuppressWarnings("ConstantConditions")
     private static <T extends Quote> byte[] convertToDatabaseColumn(List<T> quotes) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try {
             ObjectOutputStream out = new ObjectOutputStream(bos);
             for( T quote : quotes ) {
-                out.writeObject(quote.getPrice());
-                out.writeObject(quote.getAmount());
+                out.writeLong(quote.getPriceCount());
+                out.writeLong(quote.getVolumeCount());
             }
         }
         catch( IOException e ) {
@@ -178,14 +194,11 @@ public class Book extends MarketData implements Spread {
         ByteArrayInputStream bin = new ByteArrayInputStream(bytes);
         try {
             ObjectInputStream in = new ObjectInputStream(bin);
-            BigDecimal price = (BigDecimal) in.readObject();
-            BigDecimal amount = (BigDecimal) in.readObject();
+            long price = in.readLong();
+            long amount = in.readLong();
             result.add(quoteCreator.create(price, amount));
         }
         catch( IOException e ) {
-            throw new Error(e);
-        }
-        catch( ClassNotFoundException e ) {
             throw new Error(e);
         }
         return result;
@@ -193,19 +206,19 @@ public class Book extends MarketData implements Spread {
         
         
     private static interface QuoteCreator<T> {
-        T create( BigDecimal price, BigDecimal amount );
+        T create( long price, long amount );
     }
     
     
     private class BidCreator implements QuoteCreator<Bid> {
-        public Bid create(BigDecimal price, BigDecimal amount) {
+        public Bid create(long price, long amount) {
             return new Bid(getMarketListing(),getTime(),getTimeReceived(),price,amount);
         }
     }
 
 
     private class AskCreator implements QuoteCreator<Ask> {
-        public Ask create(BigDecimal price, BigDecimal amount) {
+        public Ask create(long price, long amount) {
             return new Ask(getMarketListing(),getTime(),getTimeReceived(),price,amount);
         }
     }
@@ -224,13 +237,15 @@ public class Book extends MarketData implements Spread {
 
     private void sort() {
         Collections.sort(bids, new Comparator<Bid>() {
+            @SuppressWarnings("ConstantConditions")
             public int compare(Bid bid, Bid bid2) {
-                return - bid.getPrice().compareTo(bid2.getPrice()); // high to low
+                return - bid.getPriceCount().compareTo(bid2.getPriceCount()); // high to low
             }
         });
         Collections.sort(asks, new Comparator<Ask>() {
+            @SuppressWarnings("ConstantConditions")
             public int compare(Ask ask, Ask ask2) {
-                return ask.getPrice().compareTo(ask2.getPrice()); // low to high
+                return ask.getPriceCount().compareTo(ask2.getPriceCount()); // low to high
             }
         });
     }
@@ -238,5 +253,4 @@ public class Book extends MarketData implements Spread {
 
     private List<Bid> bids;
     private List<Ask> asks;
-    private final BigDecimal MAX_ASK_PRICE = BigDecimal.valueOf(Double.MAX_VALUE);
 }

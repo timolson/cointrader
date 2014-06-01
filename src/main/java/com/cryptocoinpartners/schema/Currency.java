@@ -9,7 +9,6 @@ import javax.persistence.*;
 /**
  * @author Tim Olson
  */
-@SuppressWarnings( "UnusedDeclaration" )
 @Entity
 public class Currency extends Fungible {
 
@@ -27,21 +26,21 @@ public class Currency extends Fungible {
 
 
     // used by Currencies
-    static Currency forSymbolOrCreate( String symbol, boolean isFiat )
+    static Currency forSymbolOrCreate( String symbol, boolean isFiat, double basis )
     {
         try {
             return forSymbol(symbol);
         }
         catch( NoResultException e ) {
-            final Currency currency = new Currency(isFiat, symbol);
+            final Currency currency = new Currency(isFiat, symbol, basis);
             PersistUtil.insert(currency);
             return currency;
         }
     }
 
 
-    private Currency(boolean fiat, String symbol) {
-        super(symbol);
+    private Currency(boolean fiat, String symbol, double basis) {
+        super(symbol,basis);
         this.fiat = fiat;
     }
 

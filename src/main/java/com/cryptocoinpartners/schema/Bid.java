@@ -11,8 +11,8 @@ import java.math.BigDecimal;
  */
 @Entity
 public class Bid extends Quote {
-    public Bid(MarketListing marketListing, Instant time, Instant timeReceived, BigDecimal price, BigDecimal amount) {
-        super(Side.BUY, marketListing, time, null, price, amount);
+    public Bid(MarketListing marketListing, Instant time, Instant timeReceived, long priceCount, long volumeCount) {
+        super(Side.BUY, marketListing, time, null, priceCount, volumeCount);
         setTimeReceived(timeReceived);
     }
 

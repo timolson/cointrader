@@ -57,19 +57,19 @@ public class TickWindow extends ModuleListenerBase {
 
 
     private static class AccumulatingTick extends Tick {
-        private AccumulatingTick( MarketListing ml )
-        {
-            super(ml, null, null, null, BigDecimal.ZERO, null, null);
+        private AccumulatingTick( MarketListing ml ) {
+            super(ml, null, null, null, 0L, null, null);
         }
 
 
+        @SuppressWarnings("ConstantConditions")
         private void updateTrade( Trade t ) {
-            setLastPrice(t.getPrice());
-            final BigDecimal oldAmount = getAmount();
+            setPriceCount(t.getPriceCount());
+            final Long oldAmount = getVolumeCount();
             if( oldAmount == null )
-                setAmount(t.getAmount());
+                setVolumeCount(t.getVolumeCount());
             else
-                setAmount(oldAmount.add(t.getAmount()));
+                setVolumeCount(oldAmount+t.getVolumeCount());
         }
 
 
@@ -83,11 +83,11 @@ public class TickWindow extends ModuleListenerBase {
         {
             long startTime = getTime() == null ? now : getTime().getMillis();
             final Instant endInstant = new Instant(now);
-            final BigDecimal amount = getAmount() == null ? BigDecimal.ZERO : getAmount();
+            final long amount = getVolumeCount() == null ? 0 : getVolumeCount();
             Tick tick = new Tick( getMarketListing(), new Instant(startTime), endInstant,
-                                  getLastPrice(), amount, getBestBid(), getBestAsk());
+                                  getPriceCount(), amount, getBestBid(), getBestAsk());
             setStartInstant(endInstant);
-            setAmount(null);
+            setVolumeCount(0L);
             return tick;
         }
     }

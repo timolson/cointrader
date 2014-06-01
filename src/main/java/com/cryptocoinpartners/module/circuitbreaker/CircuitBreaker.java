@@ -1,4 +1,4 @@
-package com.cryptocoinpartners.module.helloworld;
+package com.cryptocoinpartners.module.circuitbreaker;
 
 import com.cryptocoinpartners.module.ModuleListenerBase;
 import com.cryptocoinpartners.module.When;
@@ -15,14 +15,9 @@ import java.math.BigDecimal;
  */
 public class CircuitBreaker extends ModuleListenerBase {
 
-    @When("select NULL from Trade.win:time(60 sec) where listing=?listing having (max(price) - min(price))/min(price) > 0.1 ")
+    @When("select NULL from Trade.win:time(60 sec) where listing=?listing having (max(priceAsDouble) - min(priceAsDouble))/min(priceAsDouble) > 0.1 ")
     public void deactivateListing() {
         // todo
     }
 
-    public void setAvgTrade(BigDecimal avg) {
-        avgTrade = avg;
-    }
-
-    private BigDecimal avgTrade;
 }

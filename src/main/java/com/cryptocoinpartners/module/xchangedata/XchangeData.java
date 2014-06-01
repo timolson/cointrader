@@ -201,9 +201,8 @@ public class XchangeData extends ModuleListenerBase {
                     long remoteId = Long.valueOf(trade.getId());
                     if( remoteId > lastTradeId ) {
                         Instant tradeInstant = new Instant(trade.getTimestamp());
-                        Trade ourTrade =
-                                new Trade(marketListing, tradeInstant, trade.getId(),
-                                          trade.getPrice(), trade.getTradableAmount());
+                        Trade ourTrade = new Trade(marketListing, tradeInstant, trade.getId(),
+                                                   trade.getPrice(), trade.getTradableAmount());
                         esper.publish(ourTrade);
                         lastTradeTime = tradeInstant.getMillis();
                         lastTradeId = remoteId;

@@ -3,30 +3,31 @@ package com.cryptocoinpartners.schema;
 public class Currencies
 {
     // Fiat
-	public static final Currency USD = fiat("USD");
-	public static final Currency EUR = fiat("EUR");
-	public static final Currency JPY = fiat("JPY");
-	public static final Currency GBP = fiat("GBP");
-	public static final Currency AUD = fiat("AUD");
-	public static final Currency CHF = fiat("CHF");
-	public static final Currency CAD = fiat("CAD");
-	public static final Currency MXN = fiat("MXN");
-	public static final Currency CNY = fiat("CNY");
-	public static final Currency NZD = fiat("NZD");
-	public static final Currency SEK = fiat("SEK");
-	public static final Currency RUB = fiat("RUB");
-	public static final Currency HKD = fiat("HKD");
-	public static final Currency SGD = fiat("SGD");
-	public static final Currency TRY = fiat("TRY");
+	public static final Currency USD = fiat("USD",0.01);
+	public static final Currency EUR = fiat("EUR",0.01);
+	public static final Currency JPY = fiat("JPY",1.00);
+	public static final Currency GBP = fiat("GBP",0.01);
+	public static final Currency AUD = fiat("AUD",0.01);
+	public static final Currency CHF = fiat("CHF",0.05);
+	public static final Currency CAD = fiat("CAD",0.01);
+	public static final Currency MXN = fiat("MXN",0.01);
+	public static final Currency CNY = fiat("CNY",0.01);
+	public static final Currency NZD = fiat("NZD",0.10);
+	public static final Currency SEK = fiat("SEK",1.00);
+	public static final Currency RUB = fiat("RUB",0.01);
+	public static final Currency HKD = fiat("HKD",0.01);
+	public static final Currency SGD = fiat("SGD",0.01);
+	public static final Currency TRY = fiat("TRY",0.01);
 
     // Cryptos
 
     // Base coins Bitcoin, Litecoin, Primecoin
-	public static final Currency BTC = crypto("BTC");
-	public static final Currency LTC = crypto("LTC");
-	public static final Currency XPM = crypto("XPM");
+	public static final Currency BTC = crypto("BTC",1e-8);
+	public static final Currency LTC = crypto("LTC",1e-8);
+	public static final Currency XPM = crypto("XPM",1e-8);
 
     // Altcoins
+    /* these need currency basis research
 	public static final Currency FORTY_TWO = crypto("42");
 	public static final Currency POINTS = crypto("Points");
 	public static final Currency GDC = crypto("GDC");
@@ -140,12 +141,12 @@ public class Currencies
 	public static final Currency GLD = crypto("GLD");
 	public static final Currency JKC = crypto("JKC");
 	public static final Currency MINT = crypto("MINT");
+    */
 
-
-    private static Currency fiat(String symbol) {
-        return Currency.forSymbolOrCreate(symbol, true);
+    private static Currency fiat(String symbol, double basis) {
+        return Currency.forSymbolOrCreate(symbol, true, basis);
     }
-    private static Currency crypto(String symbol) {
-        return Currency.forSymbolOrCreate(symbol, false);
+    private static Currency crypto(String symbol, double basis) {
+        return Currency.forSymbolOrCreate(symbol, false, basis);
     }
 }

@@ -21,16 +21,19 @@ public class MarketListing extends EntityBase
     }
 
 
-    /**
-     adds the MarketListing to the database if it does not already exist
-     */
+    /** adds the MarketListing to the database if it does not already exist */
     public static MarketListing findOrCreate(Market market, Listing listing) {
+        return findOrCreate(market, listing, listing.getQuote().getBasis(), listing.getBase().getBasis());
+    }
+
+
+    public static MarketListing findOrCreate(Market market, Listing listing, double quoteBasis, double volumeBasis) {
         final String queryStr = "select m from MarketListing m where market=?1 and listing=?2";
         try {
             return PersistUtil.queryOne(MarketListing.class, queryStr, market, listing);
         }
         catch( NoResultException e ) {
-            final MarketListing ml = new MarketListing(market, listing);
+            final MarketListing ml = new MarketListing(market, listing, quoteBasis, volumeBasis);
             PersistUtil.insert(ml);
             return ml;
         }
@@ -61,11 +64,16 @@ public class MarketListing extends EntityBase
     public Listing getListing() { return listing; }
 
 
-    /**
-     @return true iff the Listing is currently traded at the Market.  The MarketListing could have been retired.
-     */
-    public boolean isActive() { return active; }
+    @Basic(optional = false)
+    public double getPriceBasis() { return quoteBasis; }
 
+
+    @Basic(optional = false)
+    public double getVolumeBasis() { return volumeBasis; }
+
+
+    /** @return true iff the Listing is currently traded at the Market.  The MarketListing could have been retired. */
+    public boolean isActive() { return active; }
 
 
     @Transient
@@ -76,9 +84,11 @@ public class MarketListing extends EntityBase
     public Fungible getQuote() { return listing.getQuote(); }
 
 
-    public String toString() {
-        return market.toString()+':'+listing.toString();
-    }
+    @Transient
+    private String getSymbol() { return market.toString()+':'+listing.toString(); }
+
+
+    public String toString() { return getSymbol(); }
 
 
     // JPA
@@ -86,16 +96,22 @@ public class MarketListing extends EntityBase
     protected void setMarket( Market market ) { this.market = market; }
     protected void setListing( Listing listing ) { this.listing = listing; }
     protected void setActive( boolean active ) { this.active = active; }
+    protected void setPriceBasis(double quoteBasis) { this.quoteBasis = quoteBasis; }
+    protected void setVolumeBasis(double volumeBasis) { this.volumeBasis = volumeBasis; }
 
 
-    private MarketListing( Market market, Listing listing ) {
+    private MarketListing( Market market, Listing listing, double quoteBasis, double volumeBasis ) {
         this.market = market;
         this.listing = listing;
+        this.quoteBasis = quoteBasis;
+        this.volumeBasis = volumeBasis;
         this.active = true;
     }
 
 
     private Market market;
     private Listing listing;
+    private double quoteBasis;
+    private double volumeBasis;
     private boolean active;
 }

@@ -13,7 +13,6 @@ import org.apache.commons.lang.StringUtils;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 
 
@@ -56,7 +55,7 @@ public class SaveTicksCsv extends ModuleListenerBase
     public void saveTick( Tick t ) {
         if( !allowNa ) {
             if( t.getBestAsk() == null && t.getBestBid() == null
-                        || t.getLastPrice() == null )
+                        || t.getPriceCount() == null )
                 return;
         }
 
@@ -65,21 +64,19 @@ public class SaveTicksCsv extends ModuleListenerBase
         final Fungible base = listing.getBase();
         final Fungible quote = listing.getQuote();
         final String timeStr = timeFormat.format(t.getTime().toDate());
-        final BigDecimal price = t.getLastPrice();
-        final BigDecimal vol = t.getAmount();
-        final String bid = t.getBestBid() == null ? "" : t.getBestBid().getPrice().toPlainString();
-        final String bidVol = t.getBestBid() == null ? "" : t.getBestBid().getAmount().toPlainString();
-        final String ask = t.getBestAsk() == null ? "" : t.getBestAsk().getPrice().toPlainString();
-        final String askVol = t.getBestAsk() == null ? "" : t.getBestAsk().getAmount().toPlainString();
-        if( price != null ) {
+        final String bid = t.getBestBid() == null ? "" : String.valueOf(t.getBestBid().getPriceAsDouble());
+        final String bidVol = t.getBestBid() == null ? "" : String.valueOf(t.getBestBid().getVolumeAsDouble());
+        final String ask = t.getBestAsk() == null ? "" : String.valueOf(t.getBestAsk().getPriceAsDouble());
+        final String askVol = t.getBestAsk() == null ? "" : String.valueOf(t.getBestAsk().getVolumeAsDouble());
+        if( t.getPriceCount() != null ) {
             writer.writeNext(new String[] {
                                      listing.toString(),
                                      market,
                                      base.getSymbol(),
                                      quote.getSymbol(),
                                      timeStr,
-                                     price.toPlainString(),
-                                     vol.toPlainString(),
+                                     String.valueOf(t.getPriceAsDouble()),
+                                     String.valueOf(t.getVolumeAsDouble()),
                                      bid,
                                      bidVol,
                                      ask,

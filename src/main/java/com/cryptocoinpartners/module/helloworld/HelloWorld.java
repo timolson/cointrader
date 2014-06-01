@@ -29,9 +29,9 @@ public class HelloWorld extends ModuleListenerBase {
     }
 
     /** see HelloWorld.epl */
-    public void setAvgTrade(BigDecimal avg) {
+    public void setAvgTrade(double avg) {
         avgTrade = avg;
     }
 
-    private BigDecimal avgTrade;
+    private double avgTrade;
 }

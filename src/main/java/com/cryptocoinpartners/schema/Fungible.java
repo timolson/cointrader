@@ -25,18 +25,23 @@ public abstract class Fungible extends EntityBase {
     public String getSymbol() { return symbol; }
 
 
+    @Basic(optional = false)
+    public double getBasis() { return basis; }
+
+
     public String toString() { return symbol; }
 
 
-    protected Fungible(String symbol) { this.symbol = symbol; }
+    protected Fungible( String symbol, double basis ) { this.symbol = symbol; this.basis = basis; }
 
 
     // JPA
     protected Fungible() {}
     protected void setSymbol(String symbol) { this.symbol = symbol; }
+    protected void setBasis(double basis) { this.basis = basis; }
 
 
-    protected String symbol;
-
+    private String symbol;
+    private double basis;
 
 }

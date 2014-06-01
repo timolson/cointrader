@@ -11,8 +11,8 @@ import java.math.BigDecimal;
  */
 @Entity
 public class Ask extends Quote {
-    public Ask( MarketListing marketListing, Instant time, Instant timeReceived, BigDecimal price, BigDecimal amount) {
-        super(Side.SELL, marketListing, time, null, price, amount);
+    public Ask( MarketListing marketListing, Instant time, Instant timeReceived, long priceCount, long volumeCount) {
+        super(Side.SELL, marketListing, time, null, priceCount, volumeCount);
         setTimeReceived(timeReceived);
     }
 

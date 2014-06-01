@@ -10,7 +10,6 @@ import com.cryptocoinpartners.util.MathUtil;
 import org.apache.commons.configuration.Configuration;
 import org.joda.time.Instant;
 
-import java.math.BigDecimal;
 import java.util.Random;
 
 
@@ -37,24 +36,22 @@ public class FakeTicker extends ModuleListenerBase {
     }
 
 
-    public void stop() {
-        running = false;
+    public void stop() { running = false; }
+
+
+    private double nextVolume() {
+        return volumeBasis*MathUtil.getPoissonRandom(averageVolume);
     }
 
 
-    private BigDecimal nextVolume() {
-        return BigDecimal.valueOf(volumeBasis*MathUtil.getPoissonRandom(averageVolume));
-    }
-
-
-    private BigDecimal nextPrice() {
+    private double nextPrice() {
         double delta = random.nextGaussian()*priceMovementStdDev;
         double multiple;
         if( delta < 0 )
             multiple = 1/(1 - delta);
         else
             multiple = 1 + delta;
-        currentPrice = currentPrice.multiply(BigDecimal.valueOf(multiple));
+        currentPrice *= multiple;
         return currentPrice;
     }
 
@@ -73,7 +70,7 @@ public class FakeTicker extends ModuleListenerBase {
                 }
                 if( !running )
                     break;
-                Trade trade = new Trade(marketListing, Instant.now(), null, nextPrice(), nextVolume());
+                Trade trade = Trade.fromDoubles(marketListing, Instant.now(), null, nextPrice(), nextVolume());
                 esper.publish(trade);
             }
         }
@@ -96,7 +93,7 @@ public class FakeTicker extends ModuleListenerBase {
 
 
     private Random random = new Random();
-    private BigDecimal currentPrice = BigDecimal.valueOf(100);
+    private double currentPrice = 100;
     private volatile boolean running;
 
 }
