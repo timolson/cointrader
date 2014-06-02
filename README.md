@@ -173,11 +173,11 @@ The underlying log implementation is logback, and the config file is at `src/mai
 * `error`: problems which have no recovery.  notify human administrator immediately
 
 # Dev Credits
-Tim Olson, lead developer
-Mike Olson
-Philip Chen
-Tsung-Yao Hsu
-@yzernik
+* Tim Olson, lead developer
+* Mike Olson
+* Philip Chen
+* Tsung-Yao Hsu
+* @yzernik
 
 ## Thanks
-@timmolter
+* @timmolter
