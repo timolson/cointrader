@@ -1,13 +1,13 @@
 cointrader
 ==========
 
-Bitcoin, Litecoin, altcoin algorithmic trading platform based on Java, Esper, and [timmolter/XChange](https://github.com/timmolter/XChange)
+Bitcoin, Litecoin, and altcoin algorithmic trading platform based on Java, ([Esper](http://esper.codehaus.org/)), and [timmolter/XChange](https://github.com/timmolter/XChange)
 
 Features:
 Data collection, schema, persistence, event engine, csv dump, module architecture for trading algos
 
 Planned:
-order execution, backtesting
+accounting, order execution, backtesting
 
 
 ## Introduction
@@ -33,7 +33,20 @@ and provides an event-based ([Esper](http://esper.codehaus.org/)) architecture f
  5. `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar <command>`
  6. for example, to run the data collector, invoke
   2. `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar ticker`
-10. If you get errors about "Unable to find valid certification path..." or com.sun.security.provider.certpath.SunCertPathBuilderException, it is because BTC-e uses an expired SSL cert.  To fix this problem, follow the instructions in `cointrader/src/main/config/install-cert.txt`
+10. If you get errors about "Unable to find valid certification path..." or com.sun.security.provider.certpath.SunCertPathBuilderException, it is because BTC-e uses an expired SSL cert.  To fix this problem, follow the instructions in `cointrader/src/main/config/install-cert.txt`  See also the [XChange project's SSL Cert documentation](https://github.com/timmolter/XChange/wiki/Installing-SSL-Certificates-into-TrustStore)
+
+###Basic Commands
+For the below, `trader XXX` means `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar XXX`
+* Drop and Rebuild Database
+ * `trader reset-database`
+* Collect Data
+ * `trader ticker`
+* Report Data Rows
+ * `trader report-data`
+* Generate CSV File From All Data
+ * `trader dump-ticks <filename>`
+* Ad-Hoc JPA Queries
+ * `trader report-jpa 'select t from Trade t'`
 
 ## Schema
 [Schema Diagram](http://drive.google.com/open?id=0BwrtnwfeGzdDU3hpbkhjdGJoRHM)
