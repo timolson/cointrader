@@ -79,26 +79,26 @@ A subtype of `EntityBase`, any subclass of `Event` may be published to Esper.
 A `Fungible` is anything that can be traded for another similar item of the same type.  Fungibles include `Currency`, Stocks, Bonds, Options, etc.
 
 ## Listing
-A `Listing` has a symbol but is not related to a `Market`.  Generally, it represents a tradeable security like BTC.USD when there is no need to differentiate between the same security on different Markets.  Usually, you want to use `MarketListing` instead, unless you are creating an order which wants to trade a Listing without regard to the account or Market where the trading occurs.
-Every `Listing` has a `baseFungible` and a `quoteFungible`.  The `baseFungible` is what you are buying/selling and the `quoteFungible` is used for payment.  For currency pairs, these are both currencies: The listing for `BTC.USD` has a `baseFungible` of `Currencies.BTC` and a `quoteFungible` of `Currencies.USD`.  A listing for a Japan-based stock would have the `baseFungible` be the stock like `Stock.SNY` (stocks are not implemented) and the `quoteFungible` would again be `Currencies.JPY`
+A `Listing` has a symbol but is not related to a `Market`.  Generally, it represents a tradeable security like `BTC.USD` when there is no need to differentiate between the same security on different `Market`s.  Usually, you want to use `MarketListing` instead of just a `Listing`, unless you are creating an order which wants to trade a `Listing` without regard to the account or `Market` where the trading occurs.
+Every `Listing` has a `baseFungible` and a `quoteFungible`.  The `baseFungible` is what you are buying/selling and the `quoteFungible` is used for payment.  For currency pairs, these are both currencies: The `Listing` for `BTC.USD` has a `baseFungible` of `Currencies.BTC` and a `quoteFungible` of `Currencies.USD`.  A `Listing` for a Japan-based stock would have the `baseFungible` be the stock like `Stock.SNY` (stocks are not implemented) and the `quoteFungible` would be `Currencies.JPY`
 
 ## Market
-Any broker/dealer or exchange.  A place which holds and trades `Listing`s of `Fungible`s, 
+Any broker/dealer or exchange.  A place which trades `Listing`s of `Fungible`s, 
 
 ## MarketData
-`MarketData` is the parent class of `Trade`, `Book`, `Tick`, and `Bar`, and it represents any information which is joined to a `MarketListing`  In the future, for example, we could support news feeds by subclassing MarketData.  See `RemoteEvent` for notes on event timings.
+`MarketData` is the parent class of `Trade`, `Book`, `Tick`, and `Bar`, and it represents any information which is joined to a `MarketListing`  In the future, for example, we could support news feeds by subclassing `MarketData`.  See `RemoteEvent` for notes on event timings.
 
 ## MarketListing
-A `MarketListing` represents a `Listing` (BTC.USD) on a specific `Market` (BITSTAMP), and this is the primary class for tradeable securities.  Note that using `MarketListing` instead of just a `Listing` allows us to differentiate between prices for the same security on different exchanges, facilitating arbitrage.
+A `MarketListing` represents a `Listing` (BTC.USD) on a specific `Market` (BITSTAMP), and this is the primary class for tradeable securities.  Note that using `MarketListing` instead of just a `Listing` allows us to differentiate between prices for the same security on different markets, facilitating arbitrage.
 
 ## RemoteEvent
 Many `Event`s, like `MarketData`s, happen remotely.  `RemoteEvent` allows us to record the time we received an event separately from the time the event happened.  The standard `Event.getTime()` field returns the time the event originally occured, and additionally, `RemoteEvent.getTimeReceived()` records the first instant we heard about the event in the Coin Trader system.  This will help us to understand transmission and processing delays between the markets and our trading clients.
 
 ## Tick
-`Tick` reports instantaneous snapshots of the last trade price, current spread, and total volume during the `Tick`'s time window.  It is not a single `Trade` but a window in time when one or more `Trade`s may happen.  `Tick`s may be generated from a stream of `Trade`s and `Book`s, and `Tick`s are not collected from data providers.  To generate `Tick`s from `Trade` and `Book` data, attach the `tickwindow` module to your Esper.
+`Tick` reports instantaneous snapshots of the last trade price, current spread, and total volume during the `Tick`'s time window.  It is not a single `Trade` but a window in time when one or more `Trade`s may happen.  `Tick`s may be generated from a stream of `Trade`s and `Book`s, and `Tick`s are not collected from data providers.  To generate `Tick`s from `Trade` and `Book` data, attach the `tickwindow` module to your `Esper`.
 
 ## Trade
-This is the most useful kind of `MarketData` to generate.  It describes one transaction: the time, security, price, and volume.  
+This is the most useful kind of `MarketData` to generate.  It describes one transaction: the time, market listing, price, and volume.
 
 # Esper
 Esper is a Complex Event Processing system which allows you to write SQL-like statements that can select time series.  For example:
