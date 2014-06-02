@@ -1,12 +1,2 @@
-CONFIG
-use Config class to get apache commons Configuration instance.  file is "trader.properties" by default
-
-LOGGING
-use the slf4j API, which is bound to the logback framework in maven
-configuration is in src/main/resources/logback.xml
-
-trace: spammy debug
-debug: regular debug
-info: for notable infrequent events like connected to DB or data source
-warn: problems which can be recovered from.  notify human administrator
-error: problems which have no recovery.  notify human administrator immediately
+SEE THE DOCUMENTATION AT
+https://docs.google.com/document/d/1lj2Rdwo4rkkGbcyEFSoP3d0GoSspn79nwfyacfI9tg8/edit?usp=sharing
