@@ -35,7 +35,7 @@ and provides an event-based ([Esper](http://esper.codehaus.org/)) architecture f
   2. `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar ticker`
 10. If you get errors about "Unable to find valid certification path..." or com.sun.security.provider.certpath.SunCertPathBuilderException, it is because BTC-e uses an expired SSL cert.  To fix this problem, follow the instructions in `cointrader/src/main/config/install-cert.txt`  See also the [XChange project's SSL Cert documentation](https://github.com/timmolter/XChange/wiki/Installing-SSL-Certificates-into-TrustStore)
 
-###Basic Commands
+### Basic Commands
 For the below, `trader XXX` means `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar XXX`
 * Usage Help
  * `trader help`
@@ -53,38 +53,52 @@ For the below, `trader XXX` means `java -jar code/target/trader-0.2-SNAPSHOT-jar
 ## Schema
 [Schema Diagram](http://drive.google.com/open?id=0BwrtnwfeGzdDU3hpbkhjdGJoRHM)
 
+### Bar
+The common OHLC or open/high/low/close for a standard duration of time like one minute.  These can be generated from `Trade`s or `Tick`s and are not collected from data providers.
+
+### Book
+All the `Bid`s and `Ask`s for a `MarketListing` at a given point in time.  `Book`s are one of the two main types of `MarketData` we collect from the `Market`s, the other being `Trade`s.
+
+### Currency
+This class is used instead of java.util.Currency because the builtin Currency class cannot handle non-ISO currency
+codes like "DOGE" or "42".  Also, we track whether a Currency is fiat or crypto, and an accounting basis for the
+Currency is also stored (see DiscreteAmount)
+
+### DiscreteAmount
+This class is used to represent all prices and volumes.  It acts like an integer counter, except the base step-size is not necessarily 1.  A `DiscreteAmount` has both a `long count` and a `double basis`.  The `basis` is the "pip size" or what the minimum increment is, and the `count` is the number of increments in the value, so that the value of the DiscreteAmount is `count*basis`.  This sophistication is required to handle things like trading Swiss Francs, which are rounded to the nearest nickel (0.05).  To represent CHF 0.20 as a `DiscreteAmount`, we use `basis=0.05` and `count=4`, meaning we have four nickels or 0.20.  This approach is also used for trading volumes, so that we can understand the minimum trade amounts.  MarketListings record both a priceBasis and a volumeBasis which indicate
+the step sizes for trading a particular Listing on that Market.
+Operations on `DiscreteAmount`s may have remainders or rounding errors, which are optionally passed to a delegate `RemainderHandler`, which may apply the fractional amount to another account, ignore the remainder, etc. See Superman 2.
+
 ### EntityBase
 This is the root class for anything which can be persisted.  getId() gives a UUID, which is stored in the db as a `BINARY(16)`.
 
 ### Event
 A subtype of `EntityBase`, any subclass of `Event` may be published to Esper.
 
-### Market
-An exchange. place which holds and trades `Listing`s of `Fungible`s, 
-
-### Listing
-A `Listing` has a symbol and is related to a `Market`.  In our system, the BTC.LTC pair on BTC-e is a different `Listing` than BTC.LTC at BTC China.  A `Listing` has a base `Fungible` (the `Fungible` being bought) and a quote `Fungible` (the `Fungible` with which you pay)
-
-### MarketListing
-A `MarketListing` represents a `Listing` (BTC.USD) on a specific `Market` (BITSTAMP), and this is the primary class for tradeable securities.  Note that using `MarketListing` allows us to differentiate between prices for the same security on different exchanges, facilitating arbitrage.
-
 ### Fungible
 A `Fungible` is anything that can be traded for another similar item of the same type.  Fungibles include `Currency`, Stocks, Bonds, Options, etc.
+
+### Listing
+A `Listing` has a symbol but is not related to a `Market`.  Generally, it represents a tradeable security like BTC.USD when there is no need to differentiate between the same security on different Markets.  Usually, you want to use `MarketListing` instead, unless you are creating an order which wants to trade a Listing without regard to the account or Market where the trading occurs.
+
+### Market
+An exchange. place which holds and trades `Listing`s of `Fungible`s, 
 
 ### MarketData
 `MarketData` is the parent class of `Trade`, `Tick`, and `Bar`.  `MarketData` has a `getTimeReceived()` method.  The standard `Event.time` field should be set to the original instant the event (a `Trade`) occured at the remote server.  The `getTimeReceived()` field then records the *local time* the event was received and created.
 
-### Trade
-This is the most useful kind of `MarketData` to generate.  It describes one transaction: the time, security, price, and volume.  
+### MarketListing
+A `MarketListing` represents a `Listing` (BTC.USD) on a specific `Market` (BITSTAMP), and this is the primary class for tradeable securities.  Note that using `MarketListing` allows us to differentiate between prices for the same security on different exchanges, facilitating arbitrage.
+
+### RemoteEvent
+Many `Event`s, like `MarketData`s, happen remotely.  `RemoteEvent` allows us to record the time we received an event separately from the time the event happened.  The standard `Event.getTime()` field returns the time the event originally occured, and additionally, `RemoteEvent.getTimeReceived()` records the first instant we heard about the event in the Coin Trader system.  This will help us to understand transmission and processing delays between the markets and our trading clients.
 
 ### Tick
-This records the last trade price of a `Listing` at an instant in time.  It is not a `Trade`.  Tick is a time-based pulse which reports instantaneous snapshots of the last trade price.  These may be generated from a stream of `Trades`.
+This records the last trade price of a `Listing` at an instant in time.  It is not a `Trade`.  Tick is a time-based pulse which reports instantaneous snapshots of the last trade price and current spread.  Ticks may be generated from a stream of `Trade`s and are not collected from data providers.  To generate Ticks from Trade and Book data, attach the
+`tickwindow` module to your Esper.
 
-### Bar
-The common OHLC or open / high / low / close for a standard duration of time like one minute.  These can be generated from `Trade`s or `Tick`s
-
-### Book
-All the `Bid`s and `Ask`s for a `Listing` at a given point in time.
+### Trade
+This is the most useful kind of `MarketData` to generate.  It describes one transaction: the time, security, price, and volume.  
 
 ## Esper
 Esper is a Complex Event Processing system which allows you to write SQL-like statements that can select time series.  For example:
