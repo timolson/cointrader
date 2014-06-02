@@ -1,7 +1,7 @@
 cointrader
 ==========
 
-Bitcoin, Litecoin, and altcoin algorithmic trading platform based on Java, ([Esper](http://esper.codehaus.org/)), and [timmolter/XChange](https://github.com/timmolter/XChange)
+Bitcoin, Litecoin, and altcoin algorithmic trading platform based on Java, [Esper](http://esper.codehaus.org/), and [timmolter/XChange](https://github.com/timmolter/XChange)
 
 Features:
 Data collection, schema, persistence, event engine, csv dump, module architecture for trading algos
