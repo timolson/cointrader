@@ -95,22 +95,25 @@ Any file named `config.properties` will be loaded from the directory `src/main/j
 ### Java
 Any subclasses of `com.cryptocoinpartners.module.ModuleListenerBase` in the package `com.cryptocoinpartners.module.myModuleName` will be instantiated with the default constructor().  Then the `init(Esper e, Configuration c)` method will be called with the Esper it is attached to and the combined configuration as described in [Configuration].  After the init method is called, any method which uses the `com.cryptocoinpartners.module.@When` annotation will be triggered for every Event row which triggers that `@When` clause, like this:
 
-```public class MyListener extends ModuleListener {
+```
+public class MyListener extends ModuleListener {
   @When("select * from Trade")
   public void handleNewTrade(Trade t) { … }
-}```
+}
+```
 
 The method bodies may publish new events by using the Esper instance passed to the init method.
 
 ### Esper
 Any files named `*.epl` in the module directory will be loaded into the module’s Esper instance as EPL language files.  If an EPL file has the same base filename as a Java module listener, then any EPL statements which carry the `@IntoMethod` annotation will be bound to the module listener’s singleton method by the same name.  For example:
-
-```@IntoMethod("setAveragePrice")
-select avg(price), count(*), * from Tick```
-
+```
+@IntoMethod("setAveragePrice")
+select avg(price), count(*), * from Tick
+```
 Will invoke this method on the Java module listener of the same name:
-
-```public void setAveragePrice(BigDecimal price, int count, Tick tick);```
+```
+public void setAveragePrice(BigDecimal price, int count, Tick tick);
+```
 
 ## Main
 
@@ -130,15 +133,15 @@ We use [Apache Commons Configuration](http://commons.apache.org/proper/commons-c
 
 ### Logging
 We log using the slf4j api like this:
-
-```Logger log = LoggerFactory.getLogger(MyClass.class);
-log.debug("it works");```
-
+```
+Logger log = LoggerFactory.getLogger(MyClass.class);
+log.debug("it works");
+```
 The underlying log implementation is logback, and the config file is at `src/main/resources/logback.xml`
 
 #### Log Levels
-`trace`: spammy debug
-`debug`: regular debug
-`info`: for notable infrequent events like connected to DB or data source
-`warn`: problems which can be recovered from.  notify human administrator
-`error`: problems which have no recovery.  notify human administrator immediately
+* `trace`: spammy debug
+* `debug`: regular debug
+* `info`: for notable infrequent events like connected to DB or data source
+* `warn`: problems which can be recovered from.  notify human administrator
+* `error`: problems which have no recovery.  notify human administrator immediately
