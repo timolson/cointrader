@@ -108,11 +108,11 @@ The method bodies may publish new events by using the Esper instance passed to t
 Any files named `*.epl` in the module directory will be loaded into the module’s Esper instance as EPL language files.  If an EPL file has the same base filename as a Java module listener, then any EPL statements which carry the `@IntoMethod` annotation will be bound to the module listener’s singleton method by the same name.  For example:
 ```
 @IntoMethod("setAveragePrice")
-select avg(price), count(*), * from Tick
+select avg(priceAsDouble), count(*), * from Tick
 ```
 Will invoke this method on the Java module listener of the same name:
 ```
-public void setAveragePrice(BigDecimal price, int count, Tick tick);
+public void setAveragePrice(double price, int count, Tick tick);
 ```
 
 ## Main
