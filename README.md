@@ -20,7 +20,7 @@ and provides an event-based ([Esper](http://esper.codehaus.org/)) architecture f
 2. install Maven
 3. install MySql
  1. create a database
-  1. `mysql -u root -e ‘create database trader;’`
+  1. ```mysql -u root -e `create database trader;` ```
 4. `git clone https://github.com/timolson/cointrader.git`
 5. `cd cointrader`
 6. copy the `trader-default.properties `to `trader.properties`
