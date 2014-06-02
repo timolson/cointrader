@@ -4,7 +4,7 @@ cointrader
 Bitcoin, Litecoin, and altcoin algorithmic trading platform based on Java, [Esper](http://esper.codehaus.org/), and [timmolter/XChange](https://github.com/timmolter/XChange)
 
 Features:
-Data collection, schema, persistence, event engine, csv dump, module architecture for trading algos
+Data collection, schema, persistence, event engine, csv dump, modular architecture for trading algos
 
 Planned:
 accounting, order execution, backtesting
@@ -14,6 +14,9 @@ accounting, order execution, backtesting
 Coin Trader is a Java-based backend engine architecture for algorithmically trading cryptocurrencies.
 It integrates with [timmolter/XChange](https://github.com/timmolter/XChange) for market data and order execution, provides persistence, 
 and provides an event-based ([Esper](http://esper.codehaus.org/)) architecture for backtesting, algorithm design, and live trading.
+
+## Presentation
+Tim is presenting an introduction to Coin Trader at the San Francisco Bitcoin Devs meetup on June 23rd, 2014 at 20/Mission.  See http://www.meetup.com/SF-Bitcoin-Devs for more info.
 
 # Setup
 1. install Java
