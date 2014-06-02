@@ -37,6 +37,8 @@ and provides an event-based ([Esper](http://esper.codehaus.org/)) architecture f
 
 ###Basic Commands
 For the below, `trader XXX` means `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar XXX`
+* Usage Help
+ * `trader help`
 * Drop and Rebuild Database
  * `trader reset-database`
 * Collect Data
