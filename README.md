@@ -116,7 +116,7 @@ The Trader relies heavily on Esper as the hub of the architecture.  The com.ccp.
 WARNING: any object which has been published to Esper MUST NOT BE CHANGED after being published.  All events are "in the past" and should not be touched after creation. 
 
 ## Modules
-Modules contain Java code, EPL (Esper) files, and configuration files, which are automatically detected and loaded by ModuleLoader.  The `gatherdata` module invokes `MarketDataService.subscribeAll()` to begin collection of all available data.  The `savedata` module detects all `MarketData` events in Esper and persists them through `PersistUtil` (to Hibernate).
+Modules contain Java code, EPL (Esper) files, and configuration files, which are automatically detected and loaded by ModuleLoader.  The `xchangedata` module, for example, initializes the XChange framework and begins collection of all available data.  The `savedata` module detects all `MarketData` events published to Esper and persists them through `PersistUtil`.
 
 ### Configuration
 Any file named `config.properties` will be loaded from the directory `src/main/java/com/cryptocoinpartners/module/`*myModuleName* using [Apache Commons Configuration](http://commons.apache.org/proper/commons-configuration/).  It is then combined with any configuration from command-line, system properties, plus custom config from the module loader.  The combined `Configuration` object is then passed to any Java `ModuleListener` subclasses found in the module package (see [Java])
