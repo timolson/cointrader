@@ -90,28 +90,27 @@ WARNING: any object which has been published to Esper MUST NOT BE CHANGED after 
 Modules contain Java code, EPL (Esper) files, and configuration files, which are automatically detected and loaded by ModuleLoader.  The `gatherdata` module invokes `MarketDataService.subscribeAll()` to begin collection of all available data.  The `savedata` module detects all `MarketData` events in Esper and persists them through `PersistUtil` (to Hibernate).
 
 ### Configuration
-Any file named `config.properties` will be loaded from the directory `src/main/java/com/cryptocoinpartners/module/`*myModuleName* using [Apache Commons Configuration](http://commons.apache.org/proper/commons-configuration/).  It is then combined with any configuration from command-line, system properties, plus custom config from the module loader.  The combined `Configuration` object is then passed to any Java `ModuleListener` subclasses found in the module package (see [Java](#heading=h.i3bp28c1wdel))
+Any file named `config.properties` will be loaded from the directory `src/main/java/com/cryptocoinpartners/module/`*myModuleName* using [Apache Commons Configuration](http://commons.apache.org/proper/commons-configuration/).  It is then combined with any configuration from command-line, system properties, plus custom config from the module loader.  The combined `Configuration` object is then passed to any Java `ModuleListener` subclasses found in the module package (see [Java])
 
 ### Java
-Any subclasses of `com.cryptocoinpartners.module.ModuleListenerBase` in the package `com.cryptocoinpartners.module.`*myM**oduleName* will be instantiated with the default constructor().  Then the `init(Esper e, Configuration c)` method will be called with the Esper it is attached to and the combined configuration as described in [Configuration](#heading=h.brqzlpl67t5p).  After the init method is called, any method which uses the `com.cryptocoinpartners.module.@When` annotation will be triggered for every Event row which triggers that `@When` clause, like this:
+Any subclasses of `com.cryptocoinpartners.module.ModuleListenerBase` in the package `com.cryptocoinpartners.module.myModuleName` will be instantiated with the default constructor().  Then the `init(Esper e, Configuration c)` method will be called with the Esper it is attached to and the combined configuration as described in [Configuration].  After the init method is called, any method which uses the `com.cryptocoinpartners.module.@When` annotation will be triggered for every Event row which triggers that `@When` clause, like this:
 
-`public class MyListener extends ModuleListener {
+```public class MyListener extends ModuleListener {
   @When("select * from Trade")
   public void handleNewTrade(Trade t) { … }
-}`
+}```
 
 The method bodies may publish new events by using the Esper instance passed to the init method.
 
 ### Esper
 Any files named `*.epl` in the module directory will be loaded into the module’s Esper instance as EPL language files.  If an EPL file has the same base filename as a Java module listener, then any EPL statements which carry the `@IntoMethod` annotation will be bound to the module listener’s singleton method by the same name.  For example:
 
-`@IntoMethod("setAveragePrice")`
-
-`select avg(price), count(*), * from Tick`
+```@IntoMethod("setAveragePrice")
+select avg(price), count(*), * from Tick```
 
 Will invoke this method on the Java module listener of the same name:
 
-`public void setAveragePrice(BigDecimal price, int count, Tick tick);`
+```public void setAveragePrice(BigDecimal price, int count, Tick tick);```
 
 ## Main
 
@@ -120,8 +119,7 @@ Will invoke this method on the Java module listener of the same name:
 
 ### Create a New Command
 * Subclass `com.ccp.CommandBase` (or implement `com.ccp.Command`)
-* Specify the command name by putting a JCommander annotation above the class:
-`@Parameters( commandNames="ticker”)`
+* Specify the command name by putting this JCommander annotation above the class: `@Parameters( commandNames="ticker”)`
 * Use the singular @Parameter tag on any fields in your subclass to capture command-line info (see [JCommander](http://jcommander.org/) docs)
 * Implement the run() method
 
@@ -133,13 +131,12 @@ We use [Apache Commons Configuration](http://commons.apache.org/proper/commons-c
 ### Logging
 We log using the slf4j api like this:
 
-`Logger log = LoggerFactory.getLogger(MyClass.class);`
-`log.debug("it works");`
+```Logger log = LoggerFactory.getLogger(MyClass.class);
+log.debug("it works");```
 
 The underlying log implementation is logback, and the config file is at `src/main/resources/logback.xml`
 
 #### Log Levels
-
 `trace`: spammy debug
 `debug`: regular debug
 `info`: for notable infrequent events like connected to DB or data source
