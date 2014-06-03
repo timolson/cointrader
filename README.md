@@ -207,5 +207,6 @@ The underlying log implementation is logback, and the config file is at `src/mai
 * @yzernik
 
 ## Thanks
+* Tom Johnson
 * @timmolter
 * Juan Pineda
