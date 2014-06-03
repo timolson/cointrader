@@ -81,6 +81,9 @@ A subtype of `EntityBase`, any subclass of `Event` may be published to Esper.
 ## Fund
 `Fund`s may have many `Owner`s who each have a `Stake` in the `Fund`.  Every `Strategy` has a matching `Fund`, and `Owner`s may transfer `Position`s from their own `Fund` into a `Strategy`s `Fund`, thereby gaining a `Stake` in the `Strategy`'s `Fund` and participating in the `Strategy`
 
+## FundManager
+Every `Fund` has a `FundManager` who dictates the trading of the `Fund`'s `Position`s.  `Owner`s are the `FundManager`s of their deposit `Fund`, and every `Strategy` is a `FundManager` for the `Stategy`'s `Fund` whose positions it trades.
+
 ## Fungible
 A `Fungible` is anything that can be replaced by another similar item of the same type.  Fungibles include `Currency`, Stocks, Bonds, Options, etc.
 
@@ -99,6 +102,9 @@ A `MarketListing` represents a `Listing` (BTC.USD) on a specific `Market` (BITST
 
 ## Order
 A request from the trader system to buy or sell a `Listing` or `MarketListing`.  `Order`s are business objects which change state, and therefore they are not `Event`s which must be immutable.
+
+## Owner
+A simple way to identify the holders of internal funds.  `Owner`s are members or clients of this organization.  Each `Owner` has a deposit `Fund`, and the `Owner` may transfer positions from their deposit `Fund` to other `Funds`, receiving in exchange a `Stake`s in other `Fund`.  This is how `Owner`s may participate in various `Fund`s managed by `Strategy`s
 
 ## Position
 A Position is a `DiscreteAmount` of a `Fungible`.  All `Positions` have both an `Account` and a `Fund`.  The total of all `Position`s in an `Account` should match the external entity's records, while the internal ownership of the `Positions` is tracked through the `Fund` via `Stake`s and `Owner`s.
@@ -129,7 +135,7 @@ gives the average price over all `Trade`s occuring within the last 30 seconds.
 
 [EPL Language Introduction](http://esper.codehaus.org/esper-4.11.0/doc/reference/en-US/html/epl_clauses.html#epl-intro)
 
-The Trader relies heavily on Esper as the hub of the architecture.  The 'com.cryptocoinpartners.service.Esper` class manages Esper Engine configuration and supports module loading.
+The Trader relies heavily on Esper as the hub of the architecture.  The 'org.cryptocoinpartners.service.Esper` class manages Esper Engine configuration and supports module loading.
 
 WARNING: any object which has been published to Esper MUST NOT BE CHANGED after being published.  All events are "in the past" and should not be touched after creation. 
 
@@ -140,7 +146,7 @@ Modules contain Java code, EPL (Esper) files, and configuration files, which are
 Any file named `config.properties` will be loaded from the directory `src/main/java/com/cryptocoinpartners/module/`*myModuleName* using [Apache Commons Configuration](http://commons.apache.org/proper/commons-configuration/).  It is then combined with any configuration from command-line, system properties, plus custom config from the module loader.  The combined `Configuration` object is then passed to any Java `ModuleListener` subclasses found in the module package (see [Java])
 
 ## Java
-Any subclasses of `com.cryptocoinpartners.module.ModuleListenerBase` in the package `com.cryptocoinpartners.module.myModuleName` will be instantiated with the default constructor().  Then the `init(Esper e, Configuration c)` method will be called with the Esper it is attached to and the combined configuration as described in [Configuration].  After the init method is called, any method which uses the `com.cryptocoinpartners.module.@When` annotation will be triggered for every Event row which triggers that `@When` clause, like this:
+Any subclasses of `org.cryptocoinpartners.module.ModuleListenerBase` in the package `org.cryptocoinpartners.module.myModuleName` will be instantiated with the default constructor().  Then the `init(Esper e, Configuration c)` method will be called with the Esper it is attached to and the combined configuration as described in [Configuration].  After the init method is called, any method which uses the `org.cryptocoinpartners.module.@When` annotation will be triggered for every Event row which triggers that `@When` clause, like this:
 
 ```
 public class MyListener extends ModuleListener {
@@ -165,10 +171,10 @@ public void setAveragePrice(double price, int count, Tick tick);
 # Main
 
 ## Command Line Parsing
-[JCommander](http://jcommander.org/) is a command-line parser which makes it easy to attach command-line parameters to Java fields by using annotations.  The `Main` class automatically discovers any subclasses of `com.ccp.Command`, then instantiates them with the default constructor(), then registers them with JCommander.  After JCommander has parsed the command-line, `Main` then invokes the run() method of the chosen `Command`.
+[JCommander](http://jcommander.org/) is a command-line parser which makes it easy to attach command-line parameters to Java fields by using annotations.  The `Main` class automatically discovers any subclasses of `org.ccp.Command`, then instantiates them with the default constructor(), then registers them with JCommander.  After JCommander has parsed the command-line, `Main` then invokes the run() method of the chosen `Command`.
 
 ## Create a New Command
-* Subclass `com.ccp.CommandBase` (or implement `com.ccp.Command`)
+* Subclass `org.ccp.CommandBase` (or implement `org.ccp.Command`)
 * Specify the command name by putting this JCommander annotation above the class: `@Parameters( commandNames="ticker”)`
 * Use the singular @Parameter tag on any fields in your subclass to capture command-line info (see [JCommander](http://jcommander.org/) docs)
 * Implement the run() method
