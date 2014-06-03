@@ -146,26 +146,33 @@ Modules contain Java code, EPL (Esper) files, and configuration files, which are
 Any file named `config.properties` will be loaded from the directory `src/main/java/com/cryptocoinpartners/module/`*myModuleName* using [Apache Commons Configuration](http://commons.apache.org/proper/commons-configuration/).  It is then combined with any configuration from command-line, system properties, plus custom config from the module loader.  The combined `Configuration` object is then passed to any Java `ModuleListener` subclasses found in the module package (see [Java])
 
 ## Java
-Any subclasses of `org.cryptocoinpartners.module.ModuleListenerBase` in the package `org.cryptocoinpartners.module.myModuleName` will be instantiated with the default constructor().  Then the `init(Esper e, Configuration c)` method will be called with the Esper it is attached to and the combined configuration as described in [Configuration].  After the init method is called, any method which uses the `org.cryptocoinpartners.module.@When` annotation will be triggered for every Event row which triggers that `@When` clause, like this:
-
+Any subclasses of `ModuleListenerBase` in the package `org.cryptocoinpartners.module.myModuleName` will have a singleton instantiated using the default constructor().  Then the `init(Esper e, Configuration c)` method will be called, passing in the `Esper` the `ModuleListener` is attached to plus the combined configuration as described in [Configuration].  After the `init` method is called, any method which uses the `@When` annotation will be triggered for every `Event` row which triggers that `@When` clause, like this:
 ```
 public class MyListener extends ModuleListener {
+  public void initModule(Esper esper, Configuration config) {
+    super.initModule(esper, config); // important!  This sets the protected vars `esper` and `config`
+  }
+
   @When("select * from Trade")
-  public void handleNewTrade(Trade t) { … }
+  public void handleNewTrade(Trade t) {
+    MyEvent signal = computeSignal(t);
+    esper.publish(signal);
+  }
+
+  @When("select * from MyEvent")
+  public void handleCustomSignal(MyEvent signal) { … }
 }
 ```
 
-The method bodies may publish new events by using the Esper instance passed to the init method.
-
 ## Esper
-Any files named `*.epl` in the module directory will be loaded into the module’s Esper instance as EPL language files.  If an EPL file has the same base filename as a Java module listener, then any EPL statements which carry the `@IntoMethod` annotation will be bound to the module listener’s singleton method by the same name.  For example:
+Any files named `*.epl` in the module directory will be loaded into the module’s Esper instance as EPL language files.  If an EPL file has the same base filename as a Java subclass of `ModuleListener`, then any EPL statements which carry the `@IntoMethod` annotation will be bound to the `ModuleListener`’s singleton method by the same name.  For example:
 ```
 @IntoMethod("setAveragePrice")
-select avg(priceAsDouble), count(*), * from Tick
+select avg(priceAsDouble), count(*) from Tick
 ```
-Will invoke this method on the Java module listener of the same name:
+Will invoke this method on the Java `ModuleListener` of the same name:
 ```
-public void setAveragePrice(double price, int count, Tick tick);
+public void setAveragePrice(double price, int count);
 ```
 
 # Main
