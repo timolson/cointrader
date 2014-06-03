@@ -14,7 +14,7 @@ import javax.persistence.Transient;
  * @author Tim Olson
  */
 @Entity
-public class Tick extends Pricing implements Spread {
+public class Tick extends PriceData implements Spread {
 
 
     public Instant getStartInstant() { return startInstant; }

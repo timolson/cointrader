@@ -1,31 +1,34 @@
 package com.cryptocoinpartners.schema;
 
-import org.joda.time.Instant;
-
 import javax.persistence.*;
-import java.math.BigDecimal;
+import java.util.Collection;
 
 
 /**
  * @author Tim Olson
  */
 @Entity
-@Table(name="\"Order\"")
-// todo order is not a quote.  quote is market data
-public class Order extends Quote {
+@Table(name="\"Order\"") // This is required because ORDER is a SQL keyword and must be escaped
+@SuppressWarnings("JpaDataSourceORMInspection")
+public class Order extends EntityBase {
 
-    enum OrderType { MARKET, LIMIT }
-    
-    enum OrderStatus { NEW, PLACED, PARTFILLED, FILLED, CANCELLED }
+    public enum OrderType { MARKET, LIMIT }
 
 
-    public Order(Strategy strategy, OrderType orderType, Side side,
-                 MarketListing marketListing, Instant time, long priceCount, long volumeCount) {
-        super(side, marketListing, time, null, priceCount, volumeCount);
-        this.strategy = strategy;
-        this.orderType = orderType;
-        this.orderStatus = OrderStatus.NEW;
+    public enum FillType {
+        GOOD_TIL_CANCELLED, // Order stays open until explicitly cancelled or expired
+        GTC_OR_MARGIN_CAP, // Order stays open until explicitly cancelled, expired, or the order is filled to the capacity of the currently available Positions
+        CANCEL_REMAINDER, // This will cancel any remaining volume after a partial fill
     }
+
+
+    public enum MarginType {
+        USE_MARGIN, // trade up to the limit of credit in the quote fungible
+        CASH_ONLY, // do not trade more than the available cash-on-hand (quote fungible)
+    }
+
+
+    public enum OrderStatus { NEW, PLACED, PARTFILLED, FILLED, CANCELLING, CANCELLED, EXPIRED, REJECTED }
 
 
     @Enumerated(EnumType.STRING)
@@ -37,15 +40,27 @@ public class Order extends Quote {
     @ManyToOne(optional = false)
     public Strategy getStrategy() { return strategy; }
 
+    @OneToMany public Collection<Fill> getFills() { return fills; }
+
+    @Transient boolean isOpen() {
+        return orderStatus == OrderStatus.NEW ||
+                orderStatus == OrderStatus.PLACED ||
+                orderStatus == OrderStatus.PARTFILLED;
+    }
+
+    @Transient boolean hasFills() { return !getFills().isEmpty(); }
+
 
     // JPA
     protected Order() {}
     protected void setOrderType(OrderType orderType) { this.orderType = orderType; }
     protected void setOrderStatus(OrderStatus orderStatus) { this.orderStatus = orderStatus; }
     protected void setStrategy(Strategy strategy) { this.strategy = strategy; }
+    protected void setFills(Collection<Fill> fills) { this.fills = fills; }
 
 
     private OrderType orderType;
     private OrderStatus orderStatus;
     private Strategy strategy;
+    private Collection<Fill> fills;
 }

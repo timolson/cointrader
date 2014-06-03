@@ -5,24 +5,29 @@ import java.math.BigDecimal;
 
 
 /**
- * A Fund has many Positions.  A Position represents an amount of some Security.
+ * A Position represents an amount of some Fungible within an Account.  The Position is owned by a Fund
  *
  * @author Tim Olson
  */
 @Entity
 public class Position extends EntityBase {
 
-    public Position(Fund fund, Market market, Fungible fungible, BigDecimal amount) {
-        this.fund = fund;
+    public Position(Market market, Fungible fungible, DiscreteAmount amount) {
+        if( amount.getBasis() != fungible.getBasis() )
+            throw new IllegalArgumentException("Basis for amount must match basis for Fungible");
         this.market = market;
-        this.amount = amount;
+        this.amountCount = amount.getCount();
         this.fungible = fungible;
     }
 
 
     @ManyToOne(optional = false) public Fund getFund() { return fund; }
     @ManyToOne(optional = false) public Market getMarket() { return market; }
-    @Basic(optional = false) public BigDecimal getAmount() { return amount; }
+    @Transient public DiscreteAmount getAmount() {
+        if( amount == null )
+            amount = new DiscreteAmount(amountCount,fungible.getBasis());
+        return amount;
+    }
     @OneToOne(optional = false) public Fungible getFungible() { return fungible; }
 
 
@@ -30,12 +35,14 @@ public class Position extends EntityBase {
     protected Position() { }
     protected void setFund(Fund fund) { this.fund = fund; }
     protected void setMarket(Market market) { this.market = market; }
-    protected void setAmount(BigDecimal amount) { this.amount = amount; }
     protected void setFungible(Fungible fungible) { this.fungible = fungible; }
+    protected long getAmountCount() { return amount.getCount(); }
+    protected void setAmountCount(long amountCount) { this.amountCount = amountCount; }
 
 
     private Fund fund;
-    private BigDecimal amount;
+    private DiscreteAmount amount;
+    private long amountCount;
     private Fungible fungible;
     private Market market;
 }

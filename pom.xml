@@ -16,7 +16,7 @@
     </developers>
 
     <properties>
-        <xchange.version>2.0.1-SNAPSHOT</xchange.version>
+        <xchange.version>2.1.0-SNAPSHOT</xchange.version>
         <slf4j-api.version>1.7.5</slf4j-api.version>
         <hibernate.version>4.3.4.Final</hibernate.version>
     </properties>

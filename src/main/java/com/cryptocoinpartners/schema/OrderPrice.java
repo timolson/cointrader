@@ -4,37 +4,43 @@ package com.cryptocoinpartners.schema;
 import org.joda.time.Instant;
 
 import javax.annotation.Nullable;
+import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;
 import java.math.BigDecimal;
 
 
 /**
+ * Superclass for Orders and Fills which have a price and volume
+ *
  * @author Tim Olson
  */
 @MappedSuperclass
-public abstract class Pricing extends MarketData {
+public abstract class OrderPrice extends Temporal {
 
     /**
      * @param time when the pricing event originally occured
-     * @param remoteKey the exchange's unique ID for the pricing event (to prevent duplicates)
      * @param marketListing which MarketListing this pricing is for
      * @param priceCount relative to the MarketListing's quoteBasis
      * @param volumeCount relative to the MarketListing's volumeBasis
      */
-    public Pricing(Instant time, @Nullable String remoteKey, MarketListing marketListing,
-                   @Nullable Long priceCount, @Nullable Long volumeCount) {
-        super(time, remoteKey, marketListing);
+    public OrderPrice(Instant time, MarketListing marketListing,
+                      @Nullable Long priceCount, @Nullable Long volumeCount) {
+        super(time);
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
     }
 
 
-    public Pricing(Instant time, @Nullable String remoteKey, MarketListing marketListing,
-                   @Nullable BigDecimal price, @Nullable BigDecimal volume) {
-        super(time, remoteKey, marketListing);
+    public OrderPrice(Instant time, @Nullable String remoteKey, MarketListing marketListing,
+                      @Nullable BigDecimal price, @Nullable BigDecimal volume) {
+        super(time);
         this.priceCount = DiscreteAmount.countForValueRounded(price,marketListing.getPriceBasis());
     }
+
+
+    @ManyToOne
+    public MarketListing getMarketListing() { return marketListing; }
 
 
     public @Nullable Long getPriceCount() { return priceCount; }
@@ -78,13 +84,15 @@ public abstract class Pricing extends MarketData {
 
 
     // JPA
-    protected Pricing() { super(); }
+    protected OrderPrice() { super(); }
     protected void setPriceCount(Long priceCount) { this.priceCount = priceCount; }
     protected void setVolumeCount(Long volumeCount) { this.volumeCount = volumeCount; }
+    protected void setMarketListing(MarketListing marketListing) { this.marketListing = marketListing; }
 
 
     private DiscreteAmount price;
     private DiscreteAmount volume;
     private Long priceCount;
     private Long volumeCount;
+    private MarketListing marketListing;
 }

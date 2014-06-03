@@ -13,10 +13,15 @@ import java.math.MathContext;
  */
 public class DiscreteAmount {
 
+
     /**
      * This is a delegate interface which is called when there are remainders or errors in a calcualation.
      */
     public interface RemainderHandler {
+        /**
+         * @param result is the final DiscreteAmount produced by the operation
+         * @param remainder is a leftover amount x where |x| < basis
+         */
         public void handleRemainder(DiscreteAmount result, double remainder);
     }
 
@@ -77,9 +82,25 @@ public class DiscreteAmount {
     }
 
 
-    public DiscreteAmount toBasis( double newBasis, RemainderHandler remainderHandler ) {
+    public DiscreteAmount convertBasis(double newBasis, RemainderHandler remainderHandler) {
         return fromValuePrivate(asDouble(),newBasis,remainderHandler);
     }
+
+
+    /** adds one basis to the value by incrementing the count */
+    public void increment() { count++; }
+
+
+    /** adds to the value by incrementing the count by pips */
+    public void increment( long pips ) { count += pips; }
+
+
+    /** subtracts one basis from the value by decrementing the count */
+    public void decrement() { count++; }
+
+
+    /** adds to the value by decrementing the count by pips */
+    public void decrement( long pips ) { count -= pips; }
 
 
     private static DiscreteAmount fromValuePrivate( double value, double basis, RemainderHandler remainderHandler) {

@@ -5,14 +5,13 @@ import org.joda.time.Instant;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.MappedSuperclass;
-import java.math.BigDecimal;
 
 
 /**
  * @author Tim Olson
  */
 @MappedSuperclass
-public class Quote extends Pricing {
+public class Quote extends PriceData {
 
     public Quote(Side side, MarketListing marketListing, Instant time, String remoteKey,
                  Long priceCount, Long volumeCount) {

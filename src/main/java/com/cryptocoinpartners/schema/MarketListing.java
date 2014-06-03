@@ -3,6 +3,7 @@ package com.cryptocoinpartners.schema;
 import com.cryptocoinpartners.util.PersistUtil;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
 import java.util.Collection;
 
 
@@ -70,6 +71,12 @@ public class MarketListing extends EntityBase
 
     @Basic(optional = false)
     public double getVolumeBasis() { return volumeBasis; }
+
+
+    public DiscreteAmount discretePrice( double price ) { return DiscreteAmount.fromValueRounded(price,getPriceBasis()); }
+
+
+    public DiscreteAmount discreteVolume( double vol ) { return DiscreteAmount.fromValueRounded(vol, getVolumeBasis()); }
 
 
     /** @return true iff the Listing is currently traded at the Market.  The MarketListing could have been retired. */

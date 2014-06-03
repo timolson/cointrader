@@ -9,7 +9,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import javax.persistence.*;
 import java.math.BigDecimal;
-import java.util.List;
 
 
 /**
@@ -19,7 +18,7 @@ import java.util.List;
  */
 @Entity
 @Table(indexes = {@Index(columnList = "time"),@Index(columnList = "timeReceived"),@Index(columnList = "marketListing_id,remoteKey")})
-public class Trade extends Pricing {
+public class Trade extends PriceData {
 
     public static Trade fromDoubles( MarketListing marketListing, Instant time, @Nullable String remoteKey,
                                      double price, double volume) {
