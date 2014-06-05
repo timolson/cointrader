@@ -1,18 +1,20 @@
 cointrader
 ==========
 
-Coin Trader is a Java-based backend for trading cryptocurrencies.  It brings together:
+Coin Trader is a Java-based backend for trading cryptocurrencies, released under the Apache License.  It brings together:
 * [XChange](https://github.com/timmolter/XChange) for market data, order execution, and account information
 * [Esper](http://esper.codehaus.org/) for querying events
 * [JPA](http://www.oracle.com/technetwork/java/javaee/tech/persistence-jsp-140049.html)/[Hibernate](http://hibernate.org/) for persistence
 * [JCommander](http://jcommander.org) for command-line operation
+
 Coin Trader provides:
 * schema and persistence, see below (package schema)
 * csv output (not flexible yet, package module.savetickscsv)
 * ad-hoc ascii table reports (command `report-jpa` and `class AdHocJpaReportCommand`)
 * module loader to connect data emitters, persisters, replayers, signals, strategies, etc, to Esper (package module)
 * command pattern making new utilities easy to implement (package bin)
-Coin Trader's goals:
+
+Coin Trader's future:
 * order execution, basic routing
 * flexible data output
 * basic signals
@@ -40,6 +42,9 @@ Then, when any Trade market data arrives, your checkAverage() method is invoked,
 
 ## Presentation
 Tim is presenting an introduction to Coin Trader at the San Francisco Bitcoin Devs meetup on June 23rd, 2014 at 20/Mission.  See http://www.meetup.com/SF-Bitcoin-Devs for more info.
+
+## Cryptocoin Partners
+Coin Trader was originally intended to be a proprietary project of Cryptocoin Partners, but it's better for everybody if we share an open-source foundation.  The package names have been moved to the .org TLD but retain the original cryptocoinpartners package name, since cointrader.org is owned by someone else.
 
 # Setup
 1. install Java
@@ -69,9 +74,9 @@ For the below, `trader XXX` means `java -jar code/target/trader-0.2-SNAPSHOT-jar
  * `trader reset-database`
 * Collect Data
  * `trader save-data`
-* Report Data Rows
+* Report Data Count
  * `trader report-data`
-* Generate CSV File From All Data
+* Generate CSV file of 1-minute ticks
  * `trader dump-ticks <filename>`
 * Ad-Hoc JPA Queries
  * `trader report-jpa 'select t from Trade t'`
