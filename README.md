@@ -23,7 +23,8 @@ Coin Trader's future:
 * remoting: strategies may use their own jvm or exe
 
 To implement signals and strategies, you connect Esper event queries to Java code like this:
-```
+
+```java
 @When( "select avg(priceAsDouble) from Trade.win:time(30 sec)" )
 void checkMovingAverage( double avg )
 {
@@ -37,6 +38,7 @@ void enterTrade( MySignal s )
   placeMarketOrder( Listings.BTC_USD, 1.0 );
 }
 ```
+
 Then, when any `Trade` market data arrives, your `checkAverage()` method is invoked, which publishes your signal, which triggers the `enterTrade()` method.  Esper provides a rich and sophisticated language for querying the events published by Coin Trader.
 
 
@@ -82,7 +84,7 @@ For the below, `trader XXX` means `java -jar code/target/trader-0.2-SNAPSHOT-jar
  * `trader report-jpa 'select t from Trade t'`
 
 # Schema
-_new diagram coming soon_
+(https://raw.githubusercontent.com/timolson/cointrader/master/diagram.png)
 
 ## Account
 An `Account` differs from a `Fund` in a couple ways: `Account`s do not have an `Owner`, and they are reconciled 1-for-1 against external records (account data gathered from XChange). `Account`s generally relate to external holdings, but there may be `Account`s attached to `Markets.SELF`, meaning the account is internal to this organizition.
@@ -178,11 +180,13 @@ WARNING: any object which has been published to Esper MUST NOT BE CHANGED after 
 
 # Modules
 Modules are attached to Esper to perform any task which needs to publish or listen for events.  The `xchangedata` module, for example, initializes the XChange framework and begins collection of all available data.  The `savedata` module detects all `MarketData` events published to the `Esper` and persists them using `PersistUtil`.  The `save-data` command works like this:
-```
+
+```java
 Esper esper = new Esper();
 esper.loadModule("xchangedata");
 esper.loadModule("savedata");
 ```
+
 Modules are java packages which contain Java code, EPL (Esper) files, and configuration files, described below.
 
 ## Configuration
@@ -190,7 +194,8 @@ Any file named `config.properties` will be loaded from the directory `src/main/j
 
 ## Java
 Any subclasses of `ModuleListenerBase` in the package `org.cryptocoinpartners.module.myModuleName` will have a singleton instantiated using the default constructor().  Then the `init(Esper e, Configuration c)` method will be called, passing in the `Esper` the `ModuleListener` is attached to plus the combined configuration as described in [Configuration].  After the `init` method is called, any method which uses the `@When` annotation will be triggered for every `Event` row which triggers that `@When` clause, like this:
-```
+
+```java
 public class MyListener extends ModuleListener {
   public void initModule(Esper esper, Configuration config) {
     super.initModule(esper, config); // important!  This sets the protected vars `esper` and `config`
@@ -209,12 +214,15 @@ public class MyListener extends ModuleListener {
 
 ## Esper
 Any files named `*.epl` in the module directory will be loaded into the module’s Esper instance as EPL language files.  If an EPL file has the same base filename as a Java subclass of `ModuleListener`, then any EPL statements which carry the `@IntoMethod` annotation will be bound to the `ModuleListener`’s singleton method by the same name.  For example:
-```
+
+```java
 @IntoMethod("setAveragePrice")
 select avg(priceAsDouble), count(*) from Tick
 ```
+
 Will invoke this method on the Java `ModuleListener` of the same name:
-```
+
+```java
 public void setAveragePrice(double price, int count);
 ```
 
@@ -236,10 +244,12 @@ We use [Apache Commons Configuration](http://commons.apache.org/proper/commons-c
 
 ## Logging
 We log using the slf4j api like this:
-```
+
+```java
 Logger log = LoggerFactory.getLogger(MyClass.class);
 log.debug("it works");
 ```
+
 The underlying log implementation is logback, and the config file is at `src/main/resources/logback.xml`
 
 ### Log Levels
