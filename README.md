@@ -1,19 +1,42 @@
 cointrader
 ==========
 
-Bitcoin, Litecoin, and altcoin algorithmic trading platform based on Java, [Esper](http://esper.codehaus.org/), and [XChange](https://github.com/timmolter/XChange)
+Coin Trader is a Java-based backend for trading cryptocurrencies.  It brings together:
+* [XChange](https://github.com/timmolter/XChange) for market data, order execution, and account information
+* [Esper](http://esper.codehaus.org/) for querying events
+* [JPA](http://www.oracle.com/technetwork/java/javaee/tech/persistence-jsp-140049.html)/[Hibernate](http://hibernate.org/) for persistence
+* [JCommander](http://jcommander.org) for command-line operation
+Coin Trader provides:
+* schema and persistence, see below (package schema)
+* csv output (not flexible yet, package module.savetickscsv)
+* ad-hoc ascii table reports (command `report-jpa` and `class AdHocJpaReportCommand`)
+* module loader to connect data emitters, persisters, replayers, signals, strategies, etc, to Esper (package module)
+* command pattern making new utilities easy to implement (package bin)
+Coin Trader's goals:
+* order execution, basic routing
+* flexible data output
+* basic signals
+* accounting and reconciliation
+* backtesting
+* remoting: strategies may use their own jvm or exe
 
-Features:
-Data collection, schema, persistence, event engine, csv dump, modular architecture for trading algos
+To implement signals and strategies, you connect Esper event queries to Java code like this:
+```
+@When( "select avg(priceAsDouble) from Trade.win:time(30 sec)" )
+void checkAverage( double avg )
+{
+  if( avg > trigger )
+    esper.publish( new MySignal(5.31) );
+}
 
-Planned:
-accounting, order execution, backtesting
+@When( "select * from MySignal where mySignalValue > 5.0" )
+void enterTrade( MySignal s )
+{
+  placeMarketOrder( Listings.BTC_USD, 1.0 );
+}
+```
+Then, when any Trade market data arrives, your checkAverage() method is invoked, which publishes your signal, which triggers the enterTrade() method.  Esper provides an extremely rich and sophisticated language for querying time-series events.
 
-
-# Introduction
-Coin Trader is a Java-based backend engine architecture for algorithmically trading cryptocurrencies.
-It integrates with [XChange](https://github.com/timmolter/XChange) for market data and order execution, provides persistence,
-and provides an event-based ([Esper](http://esper.codehaus.org/)) architecture for backtesting, algorithm design, and live trading.
 
 ## Presentation
 Tim is presenting an introduction to Coin Trader at the San Francisco Bitcoin Devs meetup on June 23rd, 2014 at 20/Mission.  See http://www.meetup.com/SF-Bitcoin-Devs for more info.
@@ -54,7 +77,7 @@ For the below, `trader XXX` means `java -jar code/target/trader-0.2-SNAPSHOT-jar
  * `trader report-jpa 'select t from Trade t'`
 
 # Schema
-[Schema Diagram](http://drive.google.com/open?id=0BwrtnwfeGzdDU3hpbkhjdGJoRHM)
+_new diagram coming soon_
 
 ## Account
 An `Account` differs from a `Fund` in a couple ways: `Account`s do not have an `Owner`, and they are reconciled 1-for-1 against external records (account data gathered from XChange). `Account`s generally relate to external holdings, but there may be `Account`s attached to `Markets.SELF`, meaning the account is internal to this organizition.
@@ -65,11 +88,17 @@ The common OHLC or open/high/low/close for a standard duration of time like one 
 ## Book
 All the `Bid`s and `Ask`s for a `MarketListing` at a given point in time.  `Book`s are one of the two main types of `MarketData` we collect from the `Market`s, the other being `Trade`s.
 
+## Broker
+Subtype of `Market`
+
+## BrokerAccount
+A `BrokerAccount` represents an external deposit account with an entity who also serves as a `Market`
+
 ## Currency
 This class is used instead of `java.util.Currency` because the builtin `java.util.Currency` class cannot handle non-ISO currency codes like "DOGE" and "42".  We also track whether a `Currency` is fiat or crypto, and provide accounting basis for the `Currency` (see `DiscreteAmount`.)
 
 ## DiscreteAmount
-This class is used to represent all prices and volumes.  It acts like an integer counter, except the base step-size is not necessarily 1 (whole numbers).  A `DiscreteAmount` has both a `long count` and a `double basis`.  The `basis` is the "pip size" or what the minimum increment is, and the `count` is the number of increments in the value, so that the value of the `DiscreteAmount` is `count*basis`.  This sophistication is required to handle things like trading Swiss Francs, which are rounded to the nearest nickel (0.05).  To represent CHF 0.20 as a `DiscreteAmount`, we use `basis=0.05` and `count=4`, meaning we have four nickels or 0.20.  This approach is also used for trading volumes, so that we can understand the minimum trade amounts.  `MarketListing`s record both a `priceBasis` and a `volumeBasis` which indicate the step sizes for trading a particular `Listing` on that `Market`.
+This class is used to represent all prices and volumes.  It acts like an integer counter, except the base step-size is not necessarily 1 (whole numbers).  A `DiscreteAmount` has both a `long count` and a `double basis`.  The `basis` is the "pip size" or what the minimum increment is, and the `count` is the number of integer multiples of the value, so that the final value of the `DiscreteAmount` is `count*basis`.  The minimum increment is `(count+1)*basis`.  This sophistication is required to handle things like trading Swiss Francs, which are rounded to the nearest nickel (0.05).  To represent CHF 0.20 as a `DiscreteAmount`, we use `basis=0.05` and `count=4`, meaning we have four nickels or 0.20.  This approach is also used for trading volumes, so that we can understand the minimum trade amounts.  `MarketListing`s record both a `priceBasis` and a `volumeBasis` which indicate the step sizes for trading a particular `Listing` on that `Market`.
 Operations on `DiscreteAmount`s may have remainders or rounding errors, which are optionally passed to a delegate `RemainderHandler`, which may apply the fractional amount to another account, ignore the remainder, etc. See Superman 2.
 
 ## EntityBase
@@ -95,7 +124,7 @@ A `Listing` has a symbol but is not related to a `Market`.  Generally, it repres
 Every `Listing` has a `baseFungible` and a `quoteFungible`.  The `baseFungible` is what you are buying/selling and the `quoteFungible` is used for payment.  For currency pairs, these are both currencies: The `Listing` for `BTC.USD` has a `baseFungible` of `Currencies.BTC` and a `quoteFungible` of `Currencies.USD`.  A `Listing` for a Japan-based stock would have the `baseFungible` be the stock like `Stocks.SONY` (stocks are not implemented) and the `quoteFungible` would be `Currencies.JPY`
 
 ## Market
-Any broker/dealer or exchange.  A place which trades `MarketListing`s.
+Any broker/dealer or exchange.  A place which trades `Listing`s of `Fungible` pairs, also called `MarketListing`s
 
 ## MarketData
 `MarketData` is the parent class of `Trade`, `Book`, `Tick`, and `Bar`, and it represents any information which is joined to a `MarketListing`  In the future, for example, we could support news feeds by subclassing `MarketData`.  See `RemoteEvent` for notes on event timings.
@@ -143,7 +172,13 @@ The Trader relies heavily on Esper as the hub of the architecture.  The 'org.cry
 WARNING: any object which has been published to Esper MUST NOT BE CHANGED after being published.  All events are "in the past" and should not be touched after creation. 
 
 # Modules
-Modules contain Java code, EPL (Esper) files, and configuration files, which are automatically detected and loaded by ModuleLoader.  The `xchangedata` module, for example, initializes the XChange framework and begins collection of all available data.  The `savedata` module detects all `MarketData` events published to Esper and persists them through `PersistUtil`.
+Modules are attached to Esper to perform any task which needs to publish or listen for events.  The `xchangedata` module, for example, initializes the XChange framework and begins collection of all available data.  The `savedata` module detects all `MarketData` events published to the `Esper` and persists them using `PersistUtil`.  The `save-data` command works like this:
+```
+Esper esper = new Esper();
+esper.loadModule("xchangedata");
+esper.loadModule("savedata");
+```
+Modules are java packages which contain Java code, EPL (Esper) files, and configuration files, described below.
 
 ## Configuration
 Any file named `config.properties` will be loaded from the directory `src/main/java/com/cryptocoinpartners/module/`*myModuleName* using [Apache Commons Configuration](http://commons.apache.org/proper/commons-configuration/).  It is then combined with any configuration from command-line, system properties, plus custom config from the module loader.  The combined `Configuration` object is then passed to any Java `ModuleListener` subclasses found in the module package (see [Java])
