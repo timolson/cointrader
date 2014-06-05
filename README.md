@@ -4,7 +4,7 @@ cointrader
 Coin Trader is a Java-based backend for trading cryptocurrencies, released under the Apache License.  It brings together:
 * [XChange](https://github.com/timmolter/XChange) for market data, order execution, and account information
 * [Esper](http://esper.codehaus.org/) for querying events
-* [JPA](http://www.oracle.com/technetwork/java/javaee/tech/persistence-jsp-140049.html)/[Hibernate](http://hibernate.org/) for persistence
+* [JPA](http://www.oracle.com/technetwork/java/javaee/tech/persistence-jsp-140049.html) / [Hibernate](http://hibernate.org/) for persistence
 * [JCommander](http://jcommander.org) for command-line operation
 
 Coin Trader adds:
@@ -25,7 +25,7 @@ Coin Trader's future:
 To implement signals and strategies, you connect Esper event queries to Java code like this:
 ```
 @When( "select avg(priceAsDouble) from Trade.win:time(30 sec)" )
-void checkAverage( double avg )
+void checkMovingAverage( double avg )
 {
   if( avg > trigger )
     esper.publish( new MySignal(5.31) );
@@ -37,7 +37,7 @@ void enterTrade( MySignal s )
   placeMarketOrder( Listings.BTC_USD, 1.0 );
 }
 ```
-Then, when any Trade market data arrives, your checkAverage() method is invoked, which publishes your signal, which triggers the enterTrade() method.  Esper provides an extremely rich and sophisticated language for querying time-series events.
+Then, when any Trade market data arrives, your checkAverage() method is invoked, which publishes your signal, which triggers the enterTrade() method.  Esper provides a rich and sophisticated language for querying time-series events.
 
 
 ## Presentation
