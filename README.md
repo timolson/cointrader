@@ -37,7 +37,7 @@ void enterTrade( MySignal s )
   placeMarketOrder( Listings.BTC_USD, 1.0 );
 }
 ```
-Then, when any Trade market data arrives, your checkAverage() method is invoked, which publishes your signal, which triggers the enterTrade() method.  Esper provides a rich and sophisticated language for querying time-series events.
+Then, when any `Trade` market data arrives, your `checkAverage()` method is invoked, which publishes your signal, which triggers the `enterTrade()` method.  Esper provides a rich and sophisticated language for querying the events published by Coin Trader.
 
 
 ## Presentation
