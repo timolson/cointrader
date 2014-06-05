@@ -78,6 +78,9 @@ This is the base class for anything which can be persisted.  `getId()` gives a `
 ## Event
 A subtype of `EntityBase`, any subclass of `Event` may be published to Esper.
 
+## Exchange
+Exchange does not exist! See `Market`.  This is a deliberate terminology choice: none of the existing trading services are actually exchanges; they are all broker-dealers with deposit accounts.  The term `Market` is intended to encompass both broker-dealers and (hopefully in the future) exchanges (if any true exchanges do emerge)
+
 ## Fund
 `Fund`s may have many `Owner`s who each have a `Stake` in the `Fund`.  Every `Strategy` has a matching `Fund`, and `Owner`s may transfer `Position`s from their own `Fund` into a `Strategy`s `Fund`, thereby gaining a `Stake` in the `Strategy`'s `Fund` and participating in the `Strategy`
 
