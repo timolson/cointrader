@@ -189,10 +189,10 @@ esper.loadModule("savedata");
 
 Modules are java packages which contain Java code, EPL (Esper) files, and configuration files, described below.
 
-## Configuration
+## Module Configuration Files
 Any file named `config.properties` will be loaded from the directory `src/main/java/com/cryptocoinpartners/module/`*myModuleName* using [Apache Commons Configuration](http://commons.apache.org/proper/commons-configuration/).  It is then combined with any configuration from command-line, system properties, plus custom config from the module loader.  The combined `Configuration` object is then passed to any Java `ModuleListener` subclasses found in the module package (see [Java])
 
-## Java
+## Module Java Files
 Any subclasses of `ModuleListenerBase` in the package `org.cryptocoinpartners.module.myModuleName` will have a singleton instantiated using the default constructor().  Then the `init(Esper e, Configuration c)` method will be called, passing in the `Esper` the `ModuleListener` is attached to plus the combined configuration as described in [Configuration].  After the `init` method is called, any method which uses the `@When` annotation will be triggered for every `Event` row which triggers that `@When` clause, like this:
 
 ```java
@@ -220,7 +220,7 @@ public class MyListener extends ModuleListener {
 }
 ```
 
-## Esper
+## Module Esper Files
 Any files named `*.epl` in the module directory will be loaded into the module’s Esper instance as EPL language files.  If an EPL file has the same base filename as a Java subclass of `ModuleListener`, then any EPL statements which carry the `@IntoMethod` annotation will be bound to the `ModuleListener`’s singleton method by the same name.  For example:
 
 ```java
@@ -237,13 +237,13 @@ public void setAveragePrice(double price, int count);
 # Main
 
 ## Command Line Parsing
-[JCommander](http://jcommander.org/) is a command-line parser which makes it easy to attach command-line parameters to Java fields by using annotations.  The `Main` class automatically discovers any subclasses of `org.ccp.Command`, then instantiates them with the default constructor(), then registers them with JCommander.  After JCommander has parsed the command-line, `Main` then invokes the run() method of the chosen `Command`.
+[JCommander](http://jcommander.org/) is a command-line parser which makes it easy to attach command-line parameters to Java fields by using annotations.  The `Main` class automatically discovers any subclasses of `org.ccp.Command`, then instantiates them with the default constructor, then registers them with JCommander.  After JCommander has parsed the command-line, `Main` then invokes the `run()` method of the chosen `Command`.
 
-## Create a New Command
-* Subclass `org.ccp.CommandBase` (or implement `org.ccp.Command`)
-* Specify the command name by putting this JCommander annotation above the class: `@Parameters(commandNames="save-data”)`
-* Use the singular @Parameter tag on any fields in your subclass to capture command-line info (see [JCommander](http://jcommander.org/) docs)
-* Implement the run() method
+## How to Create a New Command
+1. Subclass `org.ccp.CommandBase` (or implement `org.ccp.Command`)
+2. Specify the command name by putting this JCommander annotation above the class: `@Parameters(commandNames="my-command”)`
+3. Use the singular `@Parameter` tag on any fields in your subclass to capture command-line info (see [JCommander](http://jcommander.org/) docs)
+4. Implement the `run()` method
 
 # Other Libs
 
@@ -266,6 +266,9 @@ The underlying log implementation is logback, and the config file is at `src/mai
 * `info`: for notable infrequent events like connected to DB or data source
 * `warn`: problems which can be recovered from.  notify human administrator
 * `error`: problems which have no recovery.  notify human administrator immediately
+
+## Joda Time
+The approach of [JodaTime](http://www.joda.org/joda-time/) is soon to be standard in Java.
 
 # Dev Credits
 * Tim Olson, lead
