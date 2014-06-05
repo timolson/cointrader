@@ -10,7 +10,7 @@ import org.cryptocoinpartners.util.ModuleLoaderError;
  * @author Tim Olson
  */
 @SuppressWarnings("UnusedDeclaration")
-@Parameters(commandNames = "backtest", commandDescription = "backtest a strategy")
+@Parameters(commandNames = "backtest", commandDescription = "backtest a strategy (not functional)")
 public class BacktestCommand extends Command {
 
     @Parameter(description = "Strategy name to load", arity = 1, required = true)

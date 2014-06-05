@@ -35,7 +35,7 @@ Tim is presenting an introduction to Coin Trader at the San Francisco Bitcoin De
 9. Run the system with:
  5. `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar <command>`
  6. for example, to run the data collector, invoke
-  2. `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar ticker`
+  2. `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar save-data`
 10. If you get errors about "sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target", it is because BTC-e uses an expired SSL cert.  To fix this problem, follow the instructions in `cointrader/src/main/config/install-cert.txt`  See also the [XChange project's SSL Cert documentation](https://github.com/timmolter/XChange/wiki/Installing-SSL-Certificates-into-TrustStore)
 
 ## Basic Commands
@@ -45,7 +45,7 @@ For the below, `trader XXX` means `java -jar code/target/trader-0.2-SNAPSHOT-jar
 * Drop and Rebuild Database
  * `trader reset-database`
 * Collect Data
- * `trader ticker`
+ * `trader save-data`
 * Report Data Rows
  * `trader report-data`
 * Generate CSV File From All Data
@@ -89,16 +89,16 @@ A `Fungible` is anything that can be replaced by another similar item of the sam
 
 ## Listing
 A `Listing` has a symbol but is not related to a `Market`.  Generally, it represents a tradeable security like `BTC.USD` when there is no need to differentiate between the same security on different `Market`s.  Usually, you want to use `MarketListing` instead of just a `Listing`, unless you are creating an order which wants to trade a `Listing` without regard to the `Account` or `Market` where the trading occurs.
-Every `Listing` has a `baseFungible` and a `quoteFungible`.  The `baseFungible` is what you are buying/selling and the `quoteFungible` is used for payment.  For currency pairs, these are both currencies: The `Listing` for `BTC.USD` has a `baseFungible` of `Currencies.BTC` and a `quoteFungible` of `Currencies.USD`.  A `Listing` for a Japan-based stock would have the `baseFungible` be the stock like `Stock.SNY` (stocks are not implemented) and the `quoteFungible` would be `Currencies.JPY`
+Every `Listing` has a `baseFungible` and a `quoteFungible`.  The `baseFungible` is what you are buying/selling and the `quoteFungible` is used for payment.  For currency pairs, these are both currencies: The `Listing` for `BTC.USD` has a `baseFungible` of `Currencies.BTC` and a `quoteFungible` of `Currencies.USD`.  A `Listing` for a Japan-based stock would have the `baseFungible` be the stock like `Stocks.SONY` (stocks are not implemented) and the `quoteFungible` would be `Currencies.JPY`
 
 ## Market
-Any broker/dealer or exchange.  A place which trades `Listing`s of `Fungible`s, 
+Any broker/dealer or exchange.  A place which trades `MarketListing`s.
 
 ## MarketData
 `MarketData` is the parent class of `Trade`, `Book`, `Tick`, and `Bar`, and it represents any information which is joined to a `MarketListing`  In the future, for example, we could support news feeds by subclassing `MarketData`.  See `RemoteEvent` for notes on event timings.
 
 ## MarketListing
-A `MarketListing` represents a `Listing` (BTC.USD) on a specific `Market` (BITSTAMP), and this is the primary class for tradeable securities.  Note that using `MarketListing` instead of just a `Listing` allows us to differentiate between prices for the same security on different markets, facilitating arbitrage.
+A `MarketListing` represents a `Listing` (BTC.USD) on a specific `Market` (BITSTAMP), and this is the primary class for tradeable securities.  Note that using `MarketListing` instead of just a `Listing` allows us to differentiate between prices for the same security on different `Market`s, facilitating arbitrage.
 
 ## Order
 A request from the trader system to buy or sell a `Listing` or `MarketListing`.  `Order`s are business objects which change state, and therefore they are not `Event`s which must be immutable.
@@ -182,7 +182,7 @@ public void setAveragePrice(double price, int count);
 
 ## Create a New Command
 * Subclass `org.ccp.CommandBase` (or implement `org.ccp.Command`)
-* Specify the command name by putting this JCommander annotation above the class: `@Parameters( commandNames="ticker”)`
+* Specify the command name by putting this JCommander annotation above the class: `@Parameters(commandNames="save-data”)`
 * Use the singular @Parameter tag on any fields in your subclass to capture command-line info (see [JCommander](http://jcommander.org/) docs)
 * Implement the run() method
 
