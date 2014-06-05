@@ -7,7 +7,7 @@ Coin Trader is a Java-based backend for trading cryptocurrencies, released under
 * [JPA](http://www.oracle.com/technetwork/java/javaee/tech/persistence-jsp-140049.html)/[Hibernate](http://hibernate.org/) for persistence
 * [JCommander](http://jcommander.org) for command-line operation
 
-Coin Trader provides:
+Coin Trader adds:
 * schema and persistence, see below (package schema)
 * csv output (not flexible yet, package module.savetickscsv)
 * ad-hoc ascii table reports (command `report-jpa` and `class AdHocJpaReportCommand`)
