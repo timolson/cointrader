@@ -197,18 +197,26 @@ Any subclasses of `ModuleListenerBase` in the package `org.cryptocoinpartners.mo
 
 ```java
 public class MyListener extends ModuleListener {
-  public void initModule(Esper esper, Configuration config) {
+
+  public void initModule( Esper esper, Configuration config ) 
+  {
     super.initModule(esper, config); // important!  This sets the protected vars `esper` and `config`
+    boolean myOption = config.getBoolean("key.from.config.file", false);
   }
 
-  @When("select * from Trade")
-  public void handleNewTrade(Trade t) {
+  @When( "select * from Trade" )
+  public void handleNewTrade( Trade t ) 
+  {
     MyEvent signal = computeSignal(t);
     esper.publish(signal);
   }
 
   @When("select * from MyEvent")
-  public void handleCustomSignal(MyEvent signal) { … }
+  public void handleCustomSignal(MyEvent signal)
+  {
+    /*...*/ 
+  }
+  
 }
 ```
 
