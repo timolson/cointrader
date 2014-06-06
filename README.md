@@ -81,7 +81,8 @@ For the below, `trader XXX` means `java -jar code/target/trader-0.2-SNAPSHOT-jar
  * `trader report-jpa 'select t from Trade t'`
 
 # Schema
-(https://raw.githubusercontent.com/timolson/cointrader/master/diagram.png)
+
+## [Diagram](https://raw.githubusercontent.com/timolson/cointrader/master/diagram.png)
 
 ## Account
 An `Account` differs from a `Fund` in a couple ways: `Account`s do not have an `Owner`, and they are reconciled 1-for-1 against external records (account data gathered from XChange). `Account`s generally relate to external holdings, but there may be `Account`s attached to `Markets.SELF`, meaning the account is internal to this organizition.
