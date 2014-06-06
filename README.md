@@ -1,5 +1,5 @@
-cointrader
-==========
+Coin Trader
+===========
 
 Coin Trader is a Java-based backend for trading cryptocurrencies, released under the Apache License.  It brings together:
 * [XChange](https://github.com/timmolter/XChange) for market data, order execution, and account information
@@ -45,9 +45,6 @@ Then, when any `Trade` market data arrives, your `checkAverage()` method is invo
 ## Presentation
 Tim is presenting an introduction to Coin Trader at the San Francisco Bitcoin Devs meetup on June 23rd, 2014 at 20/Mission.  See http://www.meetup.com/SF-Bitcoin-Devs for more info.
 
-## Cryptocoin Partners
-Coin Trader was originally intended to be a proprietary project of Cryptocoin Partners, but it's better for everybody if we share an open-source foundation.  The package names have been moved to the .org TLD but retain the original cryptocoinpartners package name, since cointrader.org is owned by someone else.
-
 # Setup
 1. install Java
 2. install Maven
@@ -84,7 +81,8 @@ For the below, `trader XXX` means `java -jar code/target/trader-0.2-SNAPSHOT-jar
  * `trader report-jpa 'select t from Trade t'`
 
 # Schema
-(https://raw.githubusercontent.com/timolson/cointrader/master/diagram.png)
+
+## [Diagram](https://raw.githubusercontent.com/timolson/cointrader/master/diagram.png)
 
 ## Account
 An `Account` differs from a `Fund` in a couple ways: `Account`s do not have an `Owner`, and they are reconciled 1-for-1 against external records (account data gathered from XChange). `Account`s generally relate to external holdings, but there may be `Account`s attached to `Markets.SELF`, meaning the account is internal to this organizition.
@@ -94,12 +92,6 @@ The common OHLC or open/high/low/close for a standard duration of time like one 
 
 ## Book
 All the `Bid`s and `Ask`s for a `MarketListing` at a given point in time.  `Book`s are one of the two main types of `MarketData` we collect from the `Market`s, the other being `Trade`s.
-
-## Broker
-Subtype of `Market`
-
-## BrokerAccount
-A `BrokerAccount` represents an external deposit account with an entity who also serves as a `Market`
 
 ## Currency
 This class is used instead of `java.util.Currency` because the builtin `java.util.Currency` class cannot handle non-ISO currency codes like "DOGE" and "42".  We also track whether a `Currency` is fiat or crypto, and provide accounting basis for the `Currency` (see `DiscreteAmount`.)
@@ -112,10 +104,10 @@ Operations on `DiscreteAmount`s may have remainders or rounding errors, which ar
 This is the base class for anything which can be persisted.  `getId()` gives a `UUID`, which is stored in the db as a `BINARY(16)`.
 
 ## Event
-A subtype of `EntityBase`, any subclass of `Event` may be published to Esper.
+A subtype of `EntityBase`. Any subclass of `Event` may be published to `Esper`.
 
 ## Exchange
-Exchange does not exist! See `Market`.  This is a deliberate terminology choice: none of the existing trading services are actually exchanges; they are all broker-dealers with deposit accounts.  The term `Market` is intended to encompass both broker-dealers and (hopefully in the future) exchanges (if any true exchanges do emerge)
+Coin Trader uses the term `Market`.  None of the existing trading services are actually exchanges; they are all broker-dealers with whom you have a deposit account.  The term `Market` is intended to encompass both broker-dealers and (hopefully in the future) exchanges (if any true matching services do emerge)
 
 ## Fund
 `Fund`s may have many `Owner`s who each have a `Stake` in the `Fund`.  Every `Strategy` has a matching `Fund`, and `Owner`s may transfer `Position`s from their own `Fund` into a `Strategy`s `Fund`, thereby gaining a `Stake` in the `Strategy`'s `Fund` and participating in the `Strategy`
@@ -131,7 +123,7 @@ A `Listing` has a symbol but is not related to a `Market`.  Generally, it repres
 Every `Listing` has a `baseFungible` and a `quoteFungible`.  The `baseFungible` is what you are buying/selling and the `quoteFungible` is used for payment.  For currency pairs, these are both currencies: The `Listing` for `BTC.USD` has a `baseFungible` of `Currencies.BTC` and a `quoteFungible` of `Currencies.USD`.  A `Listing` for a Japan-based stock would have the `baseFungible` be the stock like `Stocks.SONY` (stocks are not implemented) and the `quoteFungible` would be `Currencies.JPY`
 
 ## Market
-Any broker/dealer or exchange.  A place which trades `Listing`s of `Fungible` pairs, also called `MarketListing`s
+Any broker/dealer or exchange.  A place which trades `Listing`s of `Fungible` pairs, aka `MarketListing`s
 
 ## MarketData
 `MarketData` is the parent class of `Trade`, `Book`, `Tick`, and `Bar`, and it represents any information which is joined to a `MarketListing`  In the future, for example, we could support news feeds by subclassing `MarketData`.  See `RemoteEvent` for notes on event timings.
@@ -161,7 +153,7 @@ Represents an approach to trading.  Every `Strategy` has a corresponding `Fund` 
 `Tick` reports instantaneous snapshots of the last trade price, current spread, and total volume during the `Tick`'s time window.  It is not a single `Trade` but a window in time when one or more `Trade`s may happen.  `Tick`s may be generated from a stream of `Trade`s and `Book`s, and `Tick`s are not collected from data providers.  To generate `Tick`s from `Trade` and `Book` data, attach the `tickwindow` module to your `Esper`.
 
 ## Trade
-This is the most useful kind of `MarketData` to generate.  It describes one transaction: the time, market listing, price, and volume.
+This is the most useful kind of `MarketData` to generate.  It describes a single transaction: the time, `MarketListing`, price, and volume.
 
 # Esper
 Esper is a Complex Event Processing system which allows you to write SQL-like statements that can select time series.  For example:
@@ -268,9 +260,13 @@ The underlying log implementation is logback, and the config file is at `src/mai
 * `error`: problems which have no recovery.  notify human administrator immediately
 
 ## Joda Time
-The approach of [JodaTime](http://www.joda.org/joda-time/) is soon to be standard in Java.
+The date and time classes of [JodaTime](http://www.joda.org/joda-time/) are the basis for a new standard in Java.  Coin Trader primarily uses `Instant`s to record event times at millisecond resolution locally, but second resolution from most of the markets.
 
-# Dev Credits
+# Credits
+## Cryptocoin Partners
+Coin Trader was originally intended to be a proprietary project of Cryptocoin Partners, but it's better for everybody if we share an open-source foundation.  The package names have been moved to the .org TLD but retain the original cryptocoinpartners package name, since cointrader.org is owned by someone else.  Cryptocoin Partners will pursue its own strategies and trade its own accounts, but is committed to making the Coin Trader platform transparent and robust.
+
+## Developers
 * Tim Olson, lead
 * Mike Olson
 * Philip Chen
