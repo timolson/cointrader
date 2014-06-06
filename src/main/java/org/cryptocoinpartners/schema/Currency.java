@@ -3,7 +3,8 @@ package org.cryptocoinpartners.schema;
 
 import org.cryptocoinpartners.util.PersistUtil;
 
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.NoResultException;
 
 
 /**

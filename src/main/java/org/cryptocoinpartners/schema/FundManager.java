@@ -1,7 +1,6 @@
 package org.cryptocoinpartners.schema;
 
-import javax.persistence.MappedSuperclass;
-import javax.persistence.OneToOne;
+import javax.persistence.*;
 
 
 /**
@@ -9,16 +8,20 @@ import javax.persistence.OneToOne;
  *
  * @author Tim Olson
  */
-@MappedSuperclass
+@Entity
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public class FundManager extends EntityBase {
 
     @OneToOne
     public Fund getFund() { return fund; }
 
 
+    /** for subclasses */
+    protected FundManager(Fund fund) { this.fund = fund; }
+
+
     // JPA
     protected FundManager() { }
-    protected FundManager(String fundName) { this.fund = new Fund(fundName); }
     protected void setFund(Fund fund) { this.fund = fund; }
 
 

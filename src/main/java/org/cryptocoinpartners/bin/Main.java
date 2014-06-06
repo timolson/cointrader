@@ -32,7 +32,7 @@ public class Main
         String propertiesFilename = DEFAULT_PROPERTIES_FILENAME;
 
         @DynamicParameter( names = {"-D"}, description = "use the -D flag to set configuration properties \"-Ddb.username=dbuser\"" )
-        Map<String,String> definitions = new HashMap<String, String>();
+        Map<String,String> definitions = new HashMap<>();
     }
 
 
@@ -42,7 +42,7 @@ public class Main
         parameterParser.setProgramName(Main.class.getName());
 
         // find the commands, register with the parameter parser, and put them into the commandLookup map
-        Map<String,Command> commandLookup = new HashMap<String,Command>();
+        Map<String,Command> commandLookup = new HashMap<>();
         Set<Class<? extends Command>> commands = ReflectionUtil.getSubtypesOf(Command.class);
         for( Class<? extends Command> commandType : commands ) {
             if( Modifier.isAbstract(commandType.getModifiers()))

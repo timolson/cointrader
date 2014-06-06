@@ -196,21 +196,24 @@ public class PersistUtil {
     }
 
 
+    public static <T extends EntityBase> T findById(Class<T> resultType, UUID id) throws NoResultException {
+        return queryOne(resultType, "select x from " + resultType.getSimpleName() + " x where x.id = ?1", id);
+    }
+
+
     public static EntityManager createEntityManager() {
         init(false);
         return entityManagerFactory.createEntityManager();
     }
 
 
-    /*
-    static {
-        MarketListing.class.getClass();
-    }
-    */
-
-
     public static void resetDatabase() {
         init(true);
+    }
+
+
+    public static void init() {
+        init(false);
     }
 
 
@@ -233,7 +236,7 @@ public class PersistUtil {
         }
         else
             log.info("initializing persistence");
-        Map<String, String> properties = new HashMap<String, String>();
+        Map<String, String> properties = new HashMap<>();
         String createMode;
         if( resetDatabase )
             createMode = "create";

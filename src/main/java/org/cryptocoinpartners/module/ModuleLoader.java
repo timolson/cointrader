@@ -20,7 +20,6 @@ import java.util.regex.Pattern;
 
 
 /**
- * todo make ModuleLoader use a module path rather than hardcoded org/cryptocoinpartners/module          <br/>
  * Modules are subpackages of org.cryptocoinpartners.module, and any files/classes in this package are loaded/executed
  * according to their type:
  * <ol>
@@ -76,6 +75,8 @@ public class ModuleLoader {
         if( c != null )
             moduleConfigs.add(c);
 
+        // todo make ModuleLoader use a module path rather than hardcoded org/cryptocoinpartners/module
+
         // then add the package-specific props file
         String packageName = "org/cryptocoinpartners/module/"+name+"/"+name+".properties";
         URL resource = classLoader.getResource(packageName);
@@ -116,6 +117,7 @@ public class ModuleLoader {
 
 
     private static void loadEsperFiles(Esper esper, String name) throws Exception {
+        // todo make ModuleLoader use a module path rather than hardcoded org/cryptocoinpartners/module
         String path = "org/cryptocoinpartners/module/" + name;
         File[] files = new File(path).listFiles();
         if( files != null ) {
@@ -133,6 +135,7 @@ public class ModuleLoader {
         if( moduleListenerClasses != null )
             return;
         moduleListenerClasses = new HashMap<>();
+        // todo make ModuleLoader use a module path rather than hardcoded org/cryptocoinpartners/module
         Pattern pattern = Pattern.compile("org\\.cryptocoinpartners\\.module\\.([^\\.]+)\\..+");
         Set<Class<? extends ModuleListener>> subs = ReflectionUtil.getSubtypesOf(ModuleListener.class);
         for( Class<? extends ModuleListener> subclass : subs ) {
@@ -140,6 +143,7 @@ public class ModuleLoader {
                 continue;
             Matcher matcher = pattern.matcher(subclass.getName());
             if( !matcher.matches() ) {
+                // todo this is BS who cares.  load from anywhere
                 log.warn("ignoring "+subclass.getName()+" because it is not in a subpackage of org.cryptocoinpartners.module");
             }
             else {

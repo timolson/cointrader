@@ -4,7 +4,8 @@ package org.cryptocoinpartners.schema;
 import org.joda.time.Instant;
 
 import javax.annotation.Nullable;
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.ManyToOne;
 
 
 /**

@@ -7,7 +7,9 @@ import org.joda.time.Instant;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.Index;
+import javax.persistence.Table;
 import java.math.BigDecimal;
 
 

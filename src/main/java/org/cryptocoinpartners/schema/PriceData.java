@@ -69,7 +69,7 @@ public abstract class PriceData extends MarketData {
             return null;
         if( volume == null )
             volume = new DiscreteAmount(volumeCount,getMarketListing().getVolumeBasis());
-        return price;
+        return volume;
     }
 
 

@@ -4,6 +4,7 @@ import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.marketdata.Trades;
 
 
+@SuppressWarnings("UnusedDeclaration")
 public class BitfinexHelper extends XchangeDataHelperBase
 {
     /** Send the lastTradeTime in millis as the first parameter to getTrades() */
@@ -13,5 +14,5 @@ public class BitfinexHelper extends XchangeDataHelperBase
     }
 
 
-    public void handleTrades( Trades tradeSpec ) { }
+    public void handleTrades( Trades xchangeTrades ) { }
 }

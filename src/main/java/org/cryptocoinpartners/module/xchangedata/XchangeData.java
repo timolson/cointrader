@@ -37,7 +37,7 @@ public class XchangeData extends ModuleListenerBase {
 
         // find all the config keys starting with "xchange." and collect their second groups after the dot
         final Iterator xchangeConfigKeys = config.getKeys(configPrefix);
-        Set<String> exchangeTags = new HashSet<String>();
+        Set<String> exchangeTags = new HashSet<>();
         final Pattern configPattern = Pattern.compile(configPrefix+"\\.([^\\.]+)\\..+");
         while( xchangeConfigKeys.hasNext() ) {
             String key = (String) xchangeConfigKeys.next();
@@ -102,11 +102,7 @@ public class XchangeData extends ModuleListenerBase {
                 try {
                     helper = (Helper) helperClass.newInstance();
                 }
-                catch( InstantiationException e ) {
-                    log.error("Could not initialize XchanngeData "+exchangeClassName+" because helper class "+helperClassName+" could not be instantiated ",e);
-                    return;
-                }
-                catch( IllegalAccessException e ) {
+                catch( InstantiationException | IllegalAccessException e ) {
                     log.error("Could not initialize XchanngeData "+exchangeClassName+" because helper class "+helperClassName+" could not be instantiated ",e);
                     return;
                 }
@@ -122,7 +118,7 @@ public class XchangeData extends ModuleListenerBase {
         }
         PollingMarketDataService dataService = exchange.getPollingMarketDataService();
         RateLimiter rateLimiter = new RateLimiter(queries, per);
-        Collection<MarketListing> marketListings = new ArrayList<MarketListing>(listings.size());
+        Collection<MarketListing> marketListings = new ArrayList<>(listings.size());
         for( Object listingSymbol : listings ) {
             Listing listing = Listing.forSymbol(listingSymbol.toString().toUpperCase());
             final MarketListing marketListing = MarketListing.findOrCreate(market, listing);
@@ -159,6 +155,7 @@ public class XchangeData extends ModuleListenerBase {
                     long millis = trade.getTime().getMillis();
                     if( millis > lastTradeTime )
                         lastTradeTime = millis;
+                    // todo this is broken and assumes an increasing integer remote key
                     Long remoteId = Long.valueOf(trade.getRemoteKey());
                     if( remoteId > lastTradeId )
                         lastTradeId = remoteId;
@@ -226,12 +223,13 @@ public class XchangeData extends ModuleListenerBase {
                 final OrderBook orderBook = dataService.getOrderBook(pair, params);
                 if( helper != null )
                     helper.handleOrderBook(orderBook);
-                final Book.BookBuilder builder = Book.builder(new Instant(orderBook.getTimeStamp()), null, marketListing);
+                bookBuilder.start(new Instant(orderBook.getTimeStamp()), null, marketListing);
                 for( LimitOrder limitOrder : orderBook.getBids() )
-                    builder.addBid(limitOrder.getLimitPrice(),limitOrder.getTradableAmount());
+                    bookBuilder.addBid(limitOrder.getLimitPrice(),limitOrder.getTradableAmount());
                 for( LimitOrder limitOrder : orderBook.getAsks() )
-                    builder.addAsk(limitOrder.getLimitPrice(), limitOrder.getTradableAmount());
-                esper.publish(builder.build());
+                    bookBuilder.addAsk(limitOrder.getLimitPrice(), limitOrder.getTradableAmount());
+                Book book = bookBuilder.build();
+                esper.publish(book);
             }
             catch( IOException e ) {
                 log.warn("Could not get book for " + marketListing, e);
@@ -240,6 +238,7 @@ public class XchangeData extends ModuleListenerBase {
         }
 
 
+        private Book.BookBuilder bookBuilder = new Book.BookBuilder();
         private boolean getTradesNext = true;
         private PollingMarketDataService dataService;
         private RateLimiter rateLimiter;
