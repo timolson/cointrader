@@ -273,6 +273,9 @@ Coin Trader was originally intended to be a proprietary project of Cryptocoin Pa
 * Tsung-Yao Hsu
 * @yzernik
 
+## Donations
+1LfA1vKzCuH8ajbTWywTM5R6rjGshimTQr
+
 ## Thanks
 * Tom Johnson
 * @timmolter
