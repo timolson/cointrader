@@ -1,7 +1,5 @@
 package org.cryptocoinpartners.schema;
 
-import org.apache.commons.configuration.ConfigurationException;
-import org.cryptocoinpartners.util.Config;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Visitor;
 import org.joda.time.Instant;
@@ -147,7 +145,7 @@ public class Book extends MarketData implements Spread {
     /** BookBuilder remembers the previous Book it built, allowing for diffs to be saved in the db */
     public static class BookBuilder {
 
-        public BookBuilder() { this.book = Book.create(null); }
+        public BookBuilder() { this.book = Book.create(); }
 
 
         public void start( Instant time, String remoteKey, MarketListing marketListing ) {
@@ -177,27 +175,48 @@ public class Book extends MarketData implements Spread {
 
         public Book build()
         {
-            Book result = book;
-            result.sortBook();
+            book.sortBook();
 
-            // now prepare a child book for building
-            Book parentBook;
-            if( chainLength == MAX_PARENT_CHAIN_LENGTH ) {
-                parentBook = null;
-                chainLength = 0;
+            // look for a Chain of Books of the same MarketListing
+            String marketListingSymbol = book.getMarketListing().getSymbol();
+            Chain chain = chains.get(marketListingSymbol);
+            if( chain == null ) {
+                // no chain exists for the MarketListing, so create one
+                chain = new Chain();
+                chain.previousBook = book;
+                chains.put(marketListingSymbol,chain);
             }
             else {
-                parentBook = book;
-                chainLength++;
+                // a parent Book exists in the chain
+                Book parentBook;
+                if( chain.chainLength == MAX_PARENT_CHAIN_LENGTH ) {
+                    // reached max chain length.  set parent to null and reset the chain length count
+                    parentBook = null;
+                    chain.chainLength = 0;
+                }
+                else {
+                    // the chain is not too long.  use the previous book in the chain as a parent
+                    parentBook = chain.previousBook;
+                    chain.chainLength++;
+                }
+                book.setParent(parentBook);
+                chain.previousBook = book;
             }
-            book = Book.create(parentBook);
 
+            Book result = book;
+            book = Book.create();
             return result;
         }
 
 
-        private int chainLength;
+        private static class Chain {
+            private int chainLength;
+            private Book previousBook;
+            private String marketListingSymbol;
+        }
+
         private Book book;
+        private Map<String,Chain> chains = new HashMap<>();
     }
 
 
@@ -252,11 +271,10 @@ public class Book extends MarketData implements Spread {
 
 
     // this is separate from the empty JPA constructor.  it allows BookBuilder to start with a minimally initialized Book
-    private static Book create(Book parentBook) {
+    private static Book create() {
         Book result = new Book();
         result.bids = new ArrayList<>();
         result.asks = new ArrayList<>();
-        result.parent = parentBook;
         return result;
     }
 
@@ -491,13 +509,6 @@ public class Book extends MarketData implements Spread {
     }
 
 
-    private Book(Book parentBook, Instant time, String remoteKey, MarketListing marketListing ) {
-        parent = parentBook;
-        bids = new LinkedList<>();
-        asks = new LinkedList<>();
-    }
-
-
     private List<Bid> bids;
     private List<Ask> asks;
     private Book parent; // if this is not null, then the Book is persisted as a diff against the parent Book
@@ -506,70 +517,4 @@ public class Book extends MarketData implements Spread {
     private byte[] bidInsertionsBlob;
     private byte[] askInsertionsBlob;
     private boolean needToResolveDiff;
-
-
-    public static void main(String[] args) throws ConfigurationException {
-        Config.init("trader.properties", Collections.<String, String>emptyMap());
-        PersistUtil.init();
-
-        String id = "38639703-408c-485d-b6b8-ce9e8bba8b36";
-        try {
-            Book book = PersistUtil.findById(Book.class, UUID.fromString(id));
-            System.out.println("found "+id+":\n"+book);
-        }
-        catch( NoResultException e ) {
-            System.out.println(id+" not found");
-        }
-
-
-        BookBuilder b = new BookBuilder();
-
-        b.start(Instant.now(), null, MarketListing.findOrCreate(Markets.BITSTAMP, Listing.forSymbol("BTC.USD")));
-        b.addBid(new BigDecimal("2.1"), new BigDecimal("1.04"));
-        b.addBid(new BigDecimal("2.2"), new BigDecimal("1.03"));
-        b.addBid(new BigDecimal("2.3"), new BigDecimal("1.02"));
-        b.addBid(new BigDecimal("2.4"), new BigDecimal("1.01"));
-        b.addAsk(new BigDecimal("2.5"), new BigDecimal("1.01"));
-        b.addAsk(new BigDecimal("2.6"), new BigDecimal("1.02"));
-        b.addAsk(new BigDecimal("2.7"), new BigDecimal("1.03"));
-        b.addAsk(new BigDecimal("2.8"), new BigDecimal("1.04"));
-        Book parent = b.build();
-
-        PersistUtil.insert(parent);
-        System.out.println("saved parent "+parent.getId());
-
-        b.start(Instant.now(), null, MarketListing.findOrCreate(Markets.BITSTAMP, Listing.forSymbol("BTC.USD")));
-        b.addBid(new BigDecimal("2.1"), new BigDecimal("1.04"));
-        b.addBid(new BigDecimal("2.2"), new BigDecimal("1.03"));
-        //b.addBid(new BigDecimal("2.3"), new BigDecimal("1.02"));
-        b.addBid(new BigDecimal("2.4"), new BigDecimal("1.01"));
-        //b.addAsk(new BigDecimal("2.5"), new BigDecimal("1.01"));
-        b.addAsk(new BigDecimal("2.52"), new BigDecimal("1.01"));
-        b.addAsk(new BigDecimal("2.6"), new BigDecimal("1.02"));
-        b.addAsk(new BigDecimal("2.7"), new BigDecimal("1.03"));
-        b.addAsk(new BigDecimal("2.8"), new BigDecimal("1.04"));
-        b.addAsk(new BigDecimal("2.82"), new BigDecimal("1.05"));
-        Book child = b.build();
-        PersistUtil.insert(child);
-
-
-        b.start(Instant.now(), null, MarketListing.findOrCreate(Markets.BITSTAMP, Listing.forSymbol("BTC.USD")));
-        b.addBid(new BigDecimal("2.1"), new BigDecimal("1.04"));
-        b.addBid(new BigDecimal("2.2"), new BigDecimal("1.03"));
-        b.addBid(new BigDecimal("2.25"), new BigDecimal("1.02"));
-        //b.addBid(new BigDecimal("2.3"), new BigDecimal("1.02"));
-        b.addBid(new BigDecimal("2.4"), new BigDecimal("1.01"));
-        //b.addAsk(new BigDecimal("2.5"), new BigDecimal("1.01"));
-        b.addAsk(new BigDecimal("2.52"), new BigDecimal("1.01"));
-        b.addAsk(new BigDecimal("2.6"), new BigDecimal("1.02"));
-        b.addAsk(new BigDecimal("2.7"), new BigDecimal("1.03"));
-        b.addAsk(new BigDecimal("2.75"), new BigDecimal("1.035"));
-        b.addAsk(new BigDecimal("2.8"), new BigDecimal("1.04"));
-        //b.addAsk(new BigDecimal("2.82"), new BigDecimal("1.05"));
-        child = b.build();
-
-        PersistUtil.insert(child);
-        System.out.println("saved super child " + child.getId());
-        PersistUtil.shutdown();
-    }
 }

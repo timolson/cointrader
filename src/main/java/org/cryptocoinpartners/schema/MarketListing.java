@@ -91,7 +91,7 @@ public class MarketListing extends EntityBase
 
 
     @Transient
-    private String getSymbol() { return market.toString()+':'+listing.toString(); }
+    public String getSymbol() { return market.toString()+':'+listing.toString(); }
 
 
     public String toString() { return getSymbol(); }
