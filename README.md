@@ -268,7 +268,7 @@ The underlying log implementation is logback, and the config file is at `src/mai
 * `error`: problems which have no recovery.  notify human administrator immediately
 
 ## Joda Time
-The approach of [JodaTime](http://www.joda.org/joda-time/) is soon to be standard in Java.
+The date and time classes of [JodaTime](http://www.joda.org/joda-time/) are the basis for a new standard in Java.  Coin Trader primarily uses `Instant`s to record event times at millisecond resolution locally, but second resolution from most of the markets.
 
 # Dev Credits
 * Tim Olson, lead
