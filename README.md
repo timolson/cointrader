@@ -104,7 +104,7 @@ Operations on `DiscreteAmount`s may have remainders or rounding errors, which ar
 This is the base class for anything which can be persisted.  `getId()` gives a `UUID`, which is stored in the db as a `BINARY(16)`.
 
 ## Event
-A subtype of `EntityBase`, any subclass of `Event` may be published to Esper.
+A subtype of `EntityBase`. Any subclass of `Event` may be published to `Esper`.
 
 ## Exchange
 Coin Trader uses the term `Market`.  None of the existing trading services are actually exchanges; they are all broker-dealers with whom you have a deposit account.  The term `Market` is intended to encompass both broker-dealers and (hopefully in the future) exchanges (if any true matching services do emerge)
