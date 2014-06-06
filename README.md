@@ -1,5 +1,5 @@
-cointrader
-==========
+Coin Trader
+===========
 
 Coin Trader is a Java-based backend for trading cryptocurrencies, released under the Apache License.  It brings together:
 * [XChange](https://github.com/timmolter/XChange) for market data, order execution, and account information
