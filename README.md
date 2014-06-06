@@ -274,7 +274,9 @@ Coin Trader was originally intended to be a proprietary project of Cryptocoin Pa
 * @yzernik
 
 ## Donations
-1LfA1vKzCuH8ajbTWywTM5R6rjGshimTQr
+BTC: `1LfA1vKzCuH8ajbTWywTM5R6rjGshimTQr`
+
+All proceeds will be used to support this open-source project with hosting, historical trade records, etc.
 
 ## Thanks
 * Tom Johnson
