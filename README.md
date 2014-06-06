@@ -45,9 +45,6 @@ Then, when any `Trade` market data arrives, your `checkAverage()` method is invo
 ## Presentation
 Tim is presenting an introduction to Coin Trader at the San Francisco Bitcoin Devs meetup on June 23rd, 2014 at 20/Mission.  See http://www.meetup.com/SF-Bitcoin-Devs for more info.
 
-## Cryptocoin Partners
-Coin Trader was originally intended to be a proprietary project of Cryptocoin Partners, but it's better for everybody if we share an open-source foundation.  The package names have been moved to the .org TLD but retain the original cryptocoinpartners package name, since cointrader.org is owned by someone else.
-
 # Setup
 1. install Java
 2. install Maven
@@ -270,7 +267,11 @@ The underlying log implementation is logback, and the config file is at `src/mai
 ## Joda Time
 The date and time classes of [JodaTime](http://www.joda.org/joda-time/) are the basis for a new standard in Java.  Coin Trader primarily uses `Instant`s to record event times at millisecond resolution locally, but second resolution from most of the markets.
 
-# Dev Credits
+# Credits
+## Cryptocoin Partners
+Coin Trader was originally intended to be a proprietary project of Cryptocoin Partners, but it's better for everybody if we share an open-source foundation.  The package names have been moved to the .org TLD but retain the original cryptocoinpartners package name, since cointrader.org is owned by someone else.  Cryptocoin Partners will pursue its own strategies and trade its own accounts, but is committed to making the Coin Trader platform transparent and robust.
+
+## Developers
 * Tim Olson, lead
 * Mike Olson
 * Philip Chen
