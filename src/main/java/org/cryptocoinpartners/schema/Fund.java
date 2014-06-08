@@ -50,8 +50,8 @@ public class Fund extends EntityBase {
     }
 
 
-    public static Order createOrder(
-        Listing listing,
+    public Order createOrder(
+        MarketListing listing,
         double amount,
         double limit,          // (null [default] or specify a limit price relative to the quote fungible)
         double stop,           // (null [default] or specify the quote price at which this order is activated)
@@ -62,7 +62,7 @@ public class Fund extends EntityBase {
         boolean force,          // (null [default] or allow this order to override various types of panic)
         boolean emulation   // ("allow order type emulation" [default] or "only use exchange's native functionality")
     ) {
-        // todo
+        // TODO: see Order.OrderBuilder
         return null;
     }
 
