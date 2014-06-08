@@ -1,9 +1,12 @@
 package org.cryptocoinpartners.schema;
 
 import org.cryptocoinpartners.util.PersistUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.persistence.Basic;
 import javax.persistence.Entity;
+import javax.persistence.NoResultException;
 
 
 /**
@@ -17,7 +20,13 @@ public abstract class Fungible extends EntityBase {
 
     public static Fungible forSymbol( String symbol )
     {
-        return PersistUtil.queryOne(Fungible.class,"select f from Fungible f where symbol=?1",symbol);
+        try {
+            return PersistUtil.queryOne(Fungible.class,"select f from Fungible f where symbol=?1",symbol);
+        }
+        catch( NoResultException e ) {
+            log.error("Could not find Fungible for symbol "+symbol);
+            return null;
+        }
     }
 
 
@@ -44,4 +53,5 @@ public abstract class Fungible extends EntityBase {
     private String symbol;
     private double basis;
 
+    private static Logger log = LoggerFactory.getLogger(Fungible.class);
 }
