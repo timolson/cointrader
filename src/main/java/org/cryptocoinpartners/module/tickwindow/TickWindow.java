@@ -66,7 +66,7 @@ public class TickWindow extends ModuleListenerBase {
 
     private static class AccumulatingTick extends Tick {
         private AccumulatingTick( MarketListing ml ) {
-            super(ml, null, null, null, 0L, null, null);
+            super(ml, null, null, null, 0L, null);
         }
 
 
@@ -81,10 +81,7 @@ public class TickWindow extends ModuleListenerBase {
         }
 
 
-        private void updateBook( Book b ) {
-            setBestBid(b.getBestBid());
-            setBestAsk(b.getBestAsk());
-        }
+        private void updateBook( Book b ) { setLastBook(b); }
 
 
         private Tick flushTick( long now )
@@ -93,7 +90,7 @@ public class TickWindow extends ModuleListenerBase {
             final Instant endInstant = new Instant(now);
             final long amount = getVolumeCount() == null ? 0 : getVolumeCount();
             Tick tick = new Tick( getMarketListing(), new Instant(startTime), endInstant,
-                                  getPriceCount(), amount, getBestBid(), getBestAsk());
+                                  getPriceCount(), amount, getLastBook() );
             setStartInstant(endInstant);
             setVolumeCount(0L);
             return tick;

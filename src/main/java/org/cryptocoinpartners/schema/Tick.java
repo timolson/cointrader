@@ -5,11 +5,12 @@ import org.joda.time.Instant;
 import javax.annotation.Nullable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 
 /**
- * A Tick is a point-in-time snapshot of a MarketListing's last price, volume and spread
+ * A Tick is a point-in-time snapshot of a MarketListing's last price, volume and most recent Book
  *
  * @author Tim Olson
  */
@@ -24,27 +25,26 @@ public class Tick extends PriceData implements Spread {
     public Instant getEndInstant() { return getTime(); }
 
 
-    /**
-     @return null if no book was found prior to the window
-     */
     @ManyToOne
-    public @Nullable Bid getBestBid() { return bestBid; }
+    public Book getLastBook() { return lastBook; }
 
 
-    /**
-     @return null if no book was found prior to the window
-     */
-    @ManyToOne
-    public @Nullable Ask getBestAsk() { return bestAsk; }
+    /** @return null if no book was found prior to the window */
+    @Transient
+    public @Nullable Bid getBestBid() { return lastBook == null ? null : lastBook.getBestBid(); }
+
+
+    /** @return null if no book was found prior to the window */
+    @Transient
+    public @Nullable Ask getBestAsk() { return lastBook == null ? null : lastBook.getBestAsk(); }
 
 
     public Tick( MarketListing marketListing, Instant startInstant, Instant endInstant,
-                 @Nullable Long lastPriceCount, @Nullable Long volumeCount, Bid bestBid, Ask bestAsk )
+                 @Nullable Long lastPriceCount, @Nullable Long volumeCount, Book lastBook )
     {
         super(endInstant,null,marketListing,lastPriceCount,volumeCount);
         this.startInstant = startInstant;
-        this.bestBid = bestBid;
-        this.bestAsk = bestAsk;
+        this.lastBook = lastBook;
     }
 
 
@@ -58,11 +58,9 @@ public class Tick extends PriceData implements Spread {
     // JPA
     protected Tick() {}
     protected void setStartInstant( Instant startInstant ) { this.startInstant = startInstant; }
-    protected void setBestBid( Bid bestBid ) { this.bestBid = bestBid; }
-    protected void setBestAsk( Ask bestAsk ) { this.bestAsk = bestAsk; }
+    protected void setLastBook(Book lastBook) { this.lastBook = lastBook; }
 
 
     private Instant startInstant;
-    private Bid bestBid;
-    private Ask bestAsk;
+    private Book lastBook;
 }

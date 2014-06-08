@@ -5,22 +5,23 @@ import org.cryptocoinpartners.module.ConfigurationError;
 import org.cryptocoinpartners.module.Esper;
 import org.cryptocoinpartners.module.ModuleListenerBase;
 import org.cryptocoinpartners.module.When;
-import org.cryptocoinpartners.schema.Fungible;
-import org.cryptocoinpartners.schema.MarketListing;
-import org.cryptocoinpartners.schema.Tick;
+import org.cryptocoinpartners.schema.*;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 
 @SuppressWarnings("UnusedDeclaration")
 public class SaveTicksCsv extends ModuleListenerBase
 {
 
-    public static String[] headers = new String[] { "listing", "market", "base", "quote", "time", "last", "vol", "bid", "bidvol", "ask", "askvol" };
+    public static List<String> headers = new ArrayList<>(Arrays.asList(new String[]{ "listing", "market", "base", "quote", "time", "last", "vol"}));
 
 
     public void initModule( Esper esper, Configuration config )
@@ -39,9 +40,18 @@ public class SaveTicksCsv extends ModuleListenerBase
         catch( IllegalArgumentException e ) {
             throw new ConfigurationError("The format is invalid: savetickscsv.timeFormat="+timeFormatStr+"\n"+e.getMessage());
         }
+        bookDepth = config.getInt("savetickscsv.bookDepth",100);
+        for( int i = 0; i < bookDepth; i++ ) {
+            int num = i+1;
+            headers.add("bidprice"+num);
+            headers.add("bidvol"+num);
+            headers.add("askprice"+num);
+            headers.add("askvol"+num);
+        }
         try {
             writer = new CSVWriter(new FileWriter(filename));
-            writer.writeNext(headers);
+            String[] row = new String[headers.size()];
+            writer.writeNext(headers.toArray(row));
             writer.flush();
         }
         catch( IOException e ) {
@@ -54,8 +64,7 @@ public class SaveTicksCsv extends ModuleListenerBase
     @When("select * from Tick")
     public void saveTick( Tick t ) {
         if( !allowNa ) {
-            if( t.getBestAsk() == null && t.getBestBid() == null
-                        || t.getPriceCount() == null )
+            if( t.getLastBook() == null )
                 return;
         }
 
@@ -64,30 +73,45 @@ public class SaveTicksCsv extends ModuleListenerBase
         final Fungible base = listing.getBase();
         final Fungible quote = listing.getQuote();
         final String timeStr = timeFormat.format(t.getTime().toDate());
-        final String bid = t.getBestBid() == null ? "" : String.valueOf(t.getBestBid().getPriceAsDouble());
-        final String bidVol = t.getBestBid() == null ? "" : String.valueOf(t.getBestBid().getVolumeAsDouble());
-        final String ask = t.getBestAsk() == null ? "" : String.valueOf(t.getBestAsk().getPriceAsDouble());
-        final String askVol = t.getBestAsk() == null ? "" : String.valueOf(t.getBestAsk().getVolumeAsDouble());
         if( t.getPriceCount() != null ) {
-            writer.writeNext(new String[] {
-                                     listing.toString(),
-                                     market,
-                                     base.getSymbol(),
-                                     quote.getSymbol(),
-                                     timeStr,
-                                     String.valueOf(t.getPriceAsDouble()),
-                                     String.valueOf(t.getVolumeAsDouble()),
-                                     bid,
-                                     bidVol,
-                                     ask,
-                                     askVol
-                             }
-            );
+            ArrayList<String> row = new ArrayList<>(Arrays.asList(listing.toString(), market, base.getSymbol(),
+                                                                  quote.getSymbol(), timeStr,
+                                                                  String.valueOf(t.getPriceAsDouble()),
+                                                                  String.valueOf(t.getVolumeAsDouble())));
+            addBookToRow(t, row);
+            writer.writeNext(row.toArray(new String[row.size()]));
             try {
                 writer.flush();
             }
             catch( IOException e ) {
                 log.warn(e.getMessage(), e);
+            }
+        }
+    }
+
+
+    private void addBookToRow(Tick t, ArrayList<String> row) {
+        Book book = t.getLastBook();
+        List<Bid> bids = book.getBids();
+        List<Ask> asks = book.getAsks();
+        for( int i = 0; i < bookDepth; i++ ) {
+            if( bids.size() > i ) {
+                Bid bid = bids.get(i);
+                row.add(String.valueOf(bid.getPriceAsDouble()));
+                row.add(String.valueOf(bid.getVolumeAsDouble()));
+            }
+            else {
+                row.add("");
+                row.add("");
+            }
+            if( asks.size() > i ) {
+                Ask ask = asks.get(i);
+                row.add(String.valueOf(ask.getPriceAsDouble()));
+                row.add(String.valueOf(ask.getVolumeAsDouble()));
+            }
+            else {
+                row.add("");
+                row.add("");
             }
         }
     }
@@ -105,6 +129,7 @@ public class SaveTicksCsv extends ModuleListenerBase
     }
 
 
+    private int bookDepth;
     private SimpleDateFormat timeFormat;
     private CSVWriter writer;
     private boolean allowNa;
