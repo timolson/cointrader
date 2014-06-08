@@ -16,19 +16,23 @@ import java.util.*;
 
 
 /**
+ * This class generates Ticks by listening for Trades and Books
+ *
  * @author Tim Olson
  */
+@SuppressWarnings("UnusedDeclaration")
 public class TickWindow extends ModuleListenerBase {
 
 
     public void initModule( Esper esper, Configuration config )
     {
         super.initModule(esper, config);
-        accumulatingTickMap = new HashMap<UUID, AccumulatingTick>();
+        accumulatingTickMap = new HashMap<>();
     }
 
 
-    @When("select current_timestamp() from pattern [every timer:interval(60 sec)]")
+    // Every minute at five seconds after the minute
+    @When("select current_timestamp() from pattern [every timer:at(*, *, *, *, *, 5)]")
     public void publishTick(long now) {
         for( AccumulatingTick accumulatingTick : accumulatingTickMap.values() ) {
             Tick tick = accumulatingTick.flushTick(now);

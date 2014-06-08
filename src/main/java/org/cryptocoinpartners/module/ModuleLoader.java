@@ -2,17 +2,22 @@ package org.cryptocoinpartners.module;
 
 import com.espertech.esper.client.deploy.DeploymentException;
 import com.espertech.esper.client.deploy.ParseException;
-import org.apache.commons.configuration.*;
+import org.apache.commons.configuration.AbstractConfiguration;
+import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.cryptocoinpartners.util.Config;
 import org.cryptocoinpartners.util.ModuleLoaderError;
-import org.cryptocoinpartners.util.ReflectionUtil;
+import org.reflections.Reflections;
+import org.reflections.scanners.SubTypesScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -52,12 +57,13 @@ public class ModuleLoader {
                     log.debug("skipping loaded module " + name);
                     break;
                 }
-                log.info("loading module "+name);
-                Configuration fullConfiguration = buildConfig(name,config);
+                String modulePackageName = findModule(name);
+                log.info("loading module "+modulePackageName);
+                Configuration fullConfiguration = buildConfig(name,modulePackageName,config);
                 Collection<ModuleListener> lifecycles = initListenerClasses(esper,name);
                 for( ModuleListener lifecycle : lifecycles )
                     lifecycle.initModule(esper,fullConfiguration);
-                loadEsperFiles(esper, name);
+                loadEsperFiles(esper, modulePackageName);
             }
         }
         catch( Throwable e ) {
@@ -66,7 +72,7 @@ public class ModuleLoader {
     }
 
 
-    private static AbstractConfiguration buildConfig(String name, @Nullable AbstractConfiguration c)
+    private static AbstractConfiguration buildConfig(String name, String modulePackageName, @Nullable AbstractConfiguration c)
             throws ConfigurationException {
         final ClassLoader classLoader = ModuleLoader.class.getClassLoader();
         final ArrayList<AbstractConfiguration> moduleConfigs = new ArrayList<>();
@@ -75,19 +81,18 @@ public class ModuleLoader {
         if( c != null )
             moduleConfigs.add(c);
 
-        // todo make ModuleLoader use a module path rather than hardcoded org/cryptocoinpartners/module
-
         // then add the package-specific props file
-        String packageName = "org/cryptocoinpartners/module/"+name+"/"+name+".properties";
-        URL resource = classLoader.getResource(packageName);
+        String slashPackage = modulePackageName.replaceAll("\\.", "/");
+        String propsFilePath = slashPackage +"/"+name+".properties";
+        URL resource = classLoader.getResource(propsFilePath);
         if (resource != null) {
             PropertiesConfiguration packageConfig = new PropertiesConfiguration(resource);
             moduleConfigs.add(packageConfig);
         }
 
         // then the more generic config.properties
-        packageName = "org/cryptocoinpartners/module/"+name+"/config.properties";
-        resource = classLoader.getResource(packageName);
+        propsFilePath = slashPackage+"/config.properties";
+        resource = classLoader.getResource(propsFilePath);
         if (resource != null) {
             PropertiesConfiguration packageConfig = new PropertiesConfiguration(resource);
             moduleConfigs.add(packageConfig);
@@ -116,9 +121,8 @@ public class ModuleLoader {
     }
 
 
-    private static void loadEsperFiles(Esper esper, String name) throws Exception {
-        // todo make ModuleLoader use a module path rather than hardcoded org/cryptocoinpartners/module
-        String path = "org/cryptocoinpartners/module/" + name;
+    private static void loadEsperFiles(Esper esper, String modulePackageName) throws Exception {
+        String path = modulePackageName.replaceAll("\\.","/");
         File[] files = new File(path).listFiles();
         if( files != null ) {
             for( File file : files ) {
@@ -135,18 +139,16 @@ public class ModuleLoader {
         if( moduleListenerClasses != null )
             return;
         moduleListenerClasses = new HashMap<>();
-        // todo make ModuleLoader use a module path rather than hardcoded org/cryptocoinpartners/module
-        Pattern pattern = Pattern.compile("org\\.cryptocoinpartners\\.module\\.([^\\.]+)\\..+");
-        Set<Class<? extends ModuleListener>> subs = ReflectionUtil.getSubtypesOf(ModuleListener.class);
-        for( Class<? extends ModuleListener> subclass : subs ) {
-            if( subclass.equals(ModuleListenerBase.class) )
-                continue;
-            Matcher matcher = pattern.matcher(subclass.getName());
-            if( !matcher.matches() ) {
-                // todo this is BS who cares.  load from anywhere
-                log.warn("ignoring "+subclass.getName()+" because it is not in a subpackage of org.cryptocoinpartners.module");
-            }
-            else {
+
+        for( String modulePath : getModulePathList() ) {
+            Reflections reflections = new Reflections(modulePath, new SubTypesScanner());
+            Set<Class<? extends ModuleListener>> subs = reflections.getSubTypesOf(ModuleListener.class);
+            for( Class<? extends ModuleListener> subclass : subs ) {
+                if( Modifier.isAbstract(subclass.getModifiers()) )
+                    continue;
+                String packageName = subclass.getPackage().getName();
+                Matcher matcher = Pattern.compile("(?:^|\\.)([^\\.]+)$").matcher(packageName);
+                matcher.find();
                 String moduleName = matcher.group(1);
                 Collection<Class<? extends ModuleListener>> listeners = moduleListenerClasses.get(moduleName);
                 if( listeners == null ) {
@@ -156,6 +158,26 @@ public class ModuleLoader {
                 listeners.add(subclass);
             }
         }
+    }
+
+
+    /** searches the module.path for the given module name and returns the complete package name where the module was found */
+    private static String findModule( String name ) {
+        for( String path : getModulePathList() ) {
+            String packageName = path + "." + name;
+            if( Package.getPackage(packageName) != null )
+                return packageName;
+        }
+        return null;
+    }
+
+
+    private static List<String> getModulePathList() {
+        String modulePath = Config.combined().getString("module.path", "");
+        List<String> paths = new ArrayList<>(Arrays.asList(modulePath.split(":")));
+        paths.add("org.cryptocoinpartners.module");
+        paths.remove("");
+        return paths;
     }
 
 

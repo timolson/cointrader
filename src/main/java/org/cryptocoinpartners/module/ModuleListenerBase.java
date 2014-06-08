@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Tim Olson
  */
-public class ModuleListenerBase implements ModuleListener {
+public abstract class ModuleListenerBase implements ModuleListener {
 
 
     public void initModule(Esper esper, Configuration config) {
