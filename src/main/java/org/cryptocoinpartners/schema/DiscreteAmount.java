@@ -7,7 +7,8 @@ import java.math.MathContext;
 /**
  * DiscreteAmount acts like an integer except the amounts do not need to be whole values.  The value is stored as a
  * long count of double basis count. It is useful for both money and volume amount calculations.  For example, the
- * Swiss Franc rounds to nickels, so CHF 0.20 would be represented as a DiscreteAmount with count=4 and basis=0.05
+ * Swiss Franc rounds to nickels, so CHF 0.20 would be represented as a DiscreteAmount with count=4 and basis=0.05.
+ * Internally, DiscreteAmount stores 1/basis as a long integer.
  *
  * @author Tim Olson
  */
