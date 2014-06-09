@@ -11,6 +11,7 @@ import java.math.MathContext;
  *
  * @author Tim Olson
  */
+@SuppressWarnings("UnusedDeclaration")
 public class DiscreteAmount {
 
 
@@ -54,31 +55,34 @@ public class DiscreteAmount {
     }
 
 
-    /**
-     *
-     * @param count
-     * @param basis
-     */
     public DiscreteAmount(long count, double basis) {
         this.count = count;
-        this.basis = basis;
+        this.invertedBasis = Math.round(1/basis);
     }
 
 
     public long getCount() { return count; }
 
 
-    public double getBasis() { return basis; }
+    public double getBasis() { return 1d/invertedBasis; }
+
+
+    /**
+     * The invertedBasis is 1/basis, which is what DiscreteAmount stores internally.  This is done because we can then
+     * use a long integer instead of double, knowing that all bases must be integral factors of 1.<br/>
+     * Example inverted bases: quarters=4, dimes=10, nickels=20, pennies=100, satoshis=1e8
+     */
+    public long getInvertedBasis() { return invertedBasis; }
 
 
     /** This should be used for display purposes only, not calculation! */
     public double asDouble() {
-        return count*basis;
+        return ((double) count)/invertedBasis;
     }
 
 
     public BigDecimal asBigDecimal() {
-        return new BigDecimal(count).multiply(new BigDecimal(basis));
+        return new BigDecimal(count).divide(new BigDecimal(invertedBasis));
     }
 
 
@@ -104,6 +108,7 @@ public class DiscreteAmount {
 
 
     private static DiscreteAmount fromValuePrivate( double value, double basis, RemainderHandler remainderHandler) {
+        long iBasis = Math.round(1/basis);
         double countD = value/basis;
         long count = (long) countD;
         DiscreteAmount result = new DiscreteAmount(count, basis);
@@ -113,5 +118,10 @@ public class DiscreteAmount {
 
 
     private long count;
-    private double basis;
+    /**
+     * The invertedBasis is 1/basis.  This is done because we can then use a long integer instead of double, knowing
+     * that all bases must be integral factors of 1.<br/>
+     * Example inverted bases: quarters=4, dimes=10, nickels=20, pennies=100, satoshis=1e8
+     */
+    private long invertedBasis;
 }
