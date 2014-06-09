@@ -85,7 +85,8 @@ For the below, `trader XXX` means `java -jar code/target/trader-0.2-SNAPSHOT-jar
 ## [Diagram](https://raw.githubusercontent.com/timolson/cointrader/master/diagram.png)
 
 ## Account
-An `Account` differs from a `Fund` in a couple ways: `Account`s do not have an `Owner`, and they are reconciled 1-for-1 against external records (account data gathered from XChange). `Account`s generally relate to external holdings, but there may be `Account`s attached to `Markets.SELF`, meaning the account is internal to this organizition.
+An `Account` represents _external_ accounting: an `Account` is held with a `Market` 
+differs from a `Fund` in a couple ways: `Account`s do not have an `Owner`, and they are reconciled 1-for-1 against external records (account data gathered from XChange). `Account`s generally relate to external holdings, but there may be `Account`s attached to `Markets.SELF`, meaning the account is internal to this organizition.
 
 ## Bar
 The common OHLC or open/high/low/close for a standard duration of time like one minute.  These can be generated from `Trade`s or `Tick`s and are not collected from data providers.
@@ -94,7 +95,7 @@ The common OHLC or open/high/low/close for a standard duration of time like one 
 All the `Bid`s and `Ask`s for a `MarketListing` at a given point in time.  `Book`s are one of the two main types of `MarketData` we collect from the `Market`s, the other being `Trade`s.
 
 ## Currency
-This class is used instead of `java.util.Currency` because the builtin `java.util.Currency` class cannot handle non-ISO currency codes like "DOGE" and "42".  We also track whether a `Currency` is fiat or crypto, and provide accounting basis for the `Currency` (see `DiscreteAmount`.)
+This class is used instead of `java.util.Currency` because the builtin `java.util.Currency` class cannot handle non-ISO currency codes like "DOGE" and "42".  We also track whether a `Currency` is fiat or crypto, and define the smallest unit of settlement, called the basis (see `DiscreteAmount`.)
 
 ## DiscreteAmount
 This class is used to represent all prices and volumes.  It acts like an integer counter, except the base step-size is not necessarily 1 (whole numbers).  A `DiscreteAmount` has both a `long count` and a `double basis`.  The `basis` is the "pip size" or what the minimum increment is, and the `count` is the number of integer multiples of the value, so that the final value of the `DiscreteAmount` is `count*basis`.  The minimum increment is `(count+1)*basis`.  This sophistication is required to handle things like trading Swiss Francs, which are rounded to the nearest nickel (0.05).  To represent CHF 0.20 as a `DiscreteAmount`, we use `basis=0.05` and `count=4`, meaning we have four nickels or 0.20.  This approach is also used for trading volumes, so that we can understand the minimum trade amounts.  `MarketListing`s record both a `priceBasis` and a `volumeBasis` which indicate the step sizes for trading a particular `Listing` on that `Market`.
@@ -107,10 +108,10 @@ This is the base class for anything which can be persisted.  `getId()` gives a `
 A subtype of `EntityBase`. Any subclass of `Event` may be published to `Esper`.
 
 ## Exchange
-Coin Trader uses the term `Market`.  None of the existing trading services are actually exchanges; they are all broker-dealers with whom you have a deposit account.  The term `Market` is intended to encompass both broker-dealers and (hopefully in the future) exchanges (if any true matching services do emerge)
+Coin Trader uses the term `Market` instead of exchange.  Technically, none of the existing trading services are exchanges; they are all broker-dealers with whom you have a deposit account.  The term `Market` is intended to encompass both broker-dealers and (hopefully in the future) exchanges (if any true matching services do emerge)
 
 ## Fund
-`Fund`s may have many `Owner`s who each have a `Stake` in the `Fund`.  Every `Strategy` has a matching `Fund`, and `Owner`s may transfer `Position`s from their own `Fund` into a `Strategy`s `Fund`, thereby gaining a `Stake` in the `Strategy`'s `Fund` and participating in the `Strategy`
+`Fund`s are _internal_ accounting if you have multiple `Owner`s participating in the same Coin Trader deployment.  Each `Owner` has a `Stake` in the `Fund` representing their share.  Every `Strategy` has a matching `Fund`, and `Owner`s may participate in the `Strategy` by transferring a `Position`s from their own deposit `Fund` into a `Strategy`s `Fund` in exchange for a `Stake` in the `Strategy`'s `Fund`.  The price of the `Stake` is marked-to-market at the time of transaction, using the best currently available data.
 
 ## FundManager
 Every `Fund` has a `FundManager` who dictates the trading of the `Fund`'s `Position`s.  `Owner`s are the `FundManager`s of their deposit `Fund`, and every `Strategy` is a `FundManager` for the `Stategy`'s `Fund` whose positions it trades.
@@ -277,6 +278,11 @@ Coin Trader was originally intended to be a proprietary project of Cryptocoin Pa
 * Tom Johnson
 * @timmolter
 * YOU!
+
+# Contribute
+
+## Code
+An easy way to help is to add more `Market`s, `Listing`s, and `Currency`s.  `Currency`s are easy; we just need to know the symbol and the smallest settlement unit (e.g. satoshis are 1e-8 and pennies are 0.01).  Adding `Market`s is not difficult either; it is mostly just editing a properties file.  See the Wiki for instructions.  Maintaining the `Listing`s available on each `Market` is also easy; just edit the xchangedata.properties file.
 
 ## Donations
 BTC: `1LfA1vKzCuH8ajbTWywTM5R6rjGshimTQr`
