@@ -35,7 +35,7 @@ public class Strategy extends FundManager implements ModuleListener {
 
     /** This is what you use to place orders:
      * <pre>
-     * order.buy(Listing.BTC_USD,1.00).withLimit(651.538).place();
+     * order.create(Listing.BTC_USD,1.00).withLimit(651.538).place();
      * </pre>
      */
     protected OrderBuilder order;

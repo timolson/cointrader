@@ -7,8 +7,8 @@ import java.math.BigDecimal;
 
 
 /**
-* @author Tim Olson
-*/
+ * @author Tim Olson
+ */
 @SuppressWarnings("UnusedDeclaration")
 public class OrderBuilder {
 
@@ -24,43 +24,27 @@ public class OrderBuilder {
     }
 
 
-    public GeneralOrderBuilder buy( Listing listing, double amount ) {
+    /** @param amount to create a sell order, use a negative amount */
+    public GeneralOrderBuilder create(Listing listing, double amount) {
         return new GeneralOrderBuilder(listing,amount);
     }
 
 
-    public GeneralOrderBuilder buy( Listing listing, BigDecimal amount ) {
+    /** @param amount to create a sell order, use a negative amount */
+    public GeneralOrderBuilder create(Listing listing, BigDecimal amount) {
         return new GeneralOrderBuilder(listing,amount);
     }
 
 
-    public SpecificOrderBuilder buy( MarketListing marketListing, double amount ) {
+    /** @param amount to create a sell order, use a negative amount */
+    public SpecificOrderBuilder create( MarketListing marketListing, double amount ) {
         return new SpecificOrderBuilder(marketListing,amount);
     }
 
 
-    public SpecificOrderBuilder buy( MarketListing marketListing, DiscreteAmount amount ) {
+    /** @param amount to create a sell order, use a negative amount */
+    public SpecificOrderBuilder create( MarketListing marketListing, DiscreteAmount amount ) {
         return new SpecificOrderBuilder(marketListing,amount);
-    }
-
-
-    public GeneralOrderBuilder sell( Listing listing, double amount ) {
-        return new GeneralOrderBuilder(listing,amount);
-    }
-
-
-    public GeneralOrderBuilder sell( Listing listing, BigDecimal amount ) {
-        return new GeneralOrderBuilder(listing,amount.negate());
-    }
-
-
-    public SpecificOrderBuilder sell( MarketListing marketListing, double amount ) {
-        return new SpecificOrderBuilder(marketListing,-amount);
-    }
-
-
-    public SpecificOrderBuilder sell( MarketListing marketListing, DiscreteAmount amount ) {
-        return new SpecificOrderBuilder(marketListing,amount.negate());
     }
 
 
