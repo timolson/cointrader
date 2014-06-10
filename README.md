@@ -45,7 +45,7 @@ Then, when any `Trade` market data arrives, your `checkAverage()` method is invo
 
 
 ## Presentation
-Tim is presenting an introduction to Coin Trader at the San Francisco Bitcoin Devs meetup on June 23rd, 2014 at 20/Mission.  See http://www.meetup.com/SF-Bitcoin-Devs for more info.
+Tim is presenting an introduction to Coin Trader at the San Francisco Bitcoin Devs meetup on June 23rd, 2014 at 20/Mission.  See the [event page](http://www.meetup.com/SF-Bitcoin-Devs/events/187096772/) for more info.
 
 # Setup
 1. [Install Java](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
