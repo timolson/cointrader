@@ -46,24 +46,23 @@ Then, when any `Trade` market data arrives, your `checkAverage()` method is invo
 Tim is presenting an introduction to Coin Trader at the San Francisco Bitcoin Devs meetup on June 23rd, 2014 at 20/Mission.  See http://www.meetup.com/SF-Bitcoin-Devs for more info.
 
 # Setup
-1. install Java
-2. install Maven
-3. install MySql
- 1. create a database
-  1. ```mysql -u root -e `create database trader;` ```
+1. [Install Java](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
+2. [Install Maven](http://maven.apache.org/download.cgi)
+3. [Install MySql](http://dev.mysql.com/downloads/mysql/)
+ 1. Create a database
+  1. ```mysql -u root -e `create database trader;` ``` _this is mysql root not system root_
 4. `git clone https://github.com/timolson/cointrader.git`
 5. `cd cointrader`
-6. copy the `trader-default.properties `to `trader.properties`
- 2. if you have a database password or use a different user than `root`, edit the `trader.properties` file
-7. Build with maven (the default goal is `package`):
- 3. `mvn`
+6. Build with maven (the default goal is `package`):
+ 1. `mvn`
+7. OPTIONAL: Create a file `trader.properties` in the current directory.  You may configure additional settings here, like a database username and password.  See trader-default.properties for information.
 8. Initialize the database with:
- 4. `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar reset-database`
+ 1. `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar reset-database`
 9. Run the system with:
- 5. `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar <command>`
- 6. for example, to run the data collector, invoke
-  2. `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar save-data`
-10. If you get errors about "sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target", it is because BTC-e uses an expired SSL cert.  To fix this problem, follow the instructions in `cointrader/src/main/config/install-cert.txt`  See also the [XChange project's SSL Cert documentation](https://github.com/timmolter/XChange/wiki/Installing-SSL-Certificates-into-TrustStore)
+ 1. `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar <command>`
+ 2. for example, to run the data collector, invoke
+  1. `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar save-data`
+10. If you get errors about "sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target", it is because BTC-e uses an expired SSL cert.  To fix this problem, follow the instructions in [XChange project's SSL Cert documentation](https://github.com/timmolter/XChange/wiki/Installing-SSL-Certificates-into-TrustStore).  If you do not care about BTC-e data, create a blank listings property in trader.properties: `xchange.btce.listings=`
 
 ## Basic Commands
 For the below, `trader XXX` means `java -jar code/target/trader-0.2-SNAPSHOT-jar-with-dependencies.jar XXX`
@@ -84,76 +83,79 @@ For the below, `trader XXX` means `java -jar code/target/trader-0.2-SNAPSHOT-jar
 
 ## [Diagram](https://raw.githubusercontent.com/timolson/cointrader/master/diagram.png)
 
-## Account
+## `Account`
 An `Account` represents _external_ accounting: an `Account` is held with a `Market` 
 differs from a `Fund` in a couple ways: `Account`s do not have an `Owner`, and they are reconciled 1-for-1 against external records (account data gathered from XChange). `Account`s generally relate to external holdings, but there may be `Account`s attached to `Markets.SELF`, meaning the account is internal to this organizition.
 
-## Bar
+## `Bar`
 The common OHLC or open/high/low/close for a standard duration of time like one minute.  These can be generated from `Trade`s or `Tick`s and are not collected from data providers.
 
-## Book
+## `Book`
 All the `Bid`s and `Ask`s for a `MarketListing` at a given point in time.  `Book`s are one of the two main types of `MarketData` we collect from the `Market`s, the other being `Trade`s.
 
-## Currency
+## `Currency`
 This class is used instead of `java.util.Currency` because the builtin `java.util.Currency` class cannot handle non-ISO currency codes like "DOGE" and "42".  We also track whether a `Currency` is fiat or crypto, and define the smallest unit of settlement, called the basis (see `DiscreteAmount`.)
 
-## DiscreteAmount
+## `DiscreteAmount`
 This class is used to represent all prices and volumes.  It acts like an integer counter, except the base step-size is not necessarily 1 (whole numbers).  A `DiscreteAmount` has both a `long count` and a `double basis`.  The `basis` is the "pip size" or what the minimum increment is, and the `count` is the number of integer multiples of the value, so that the final value of the `DiscreteAmount` is `count*basis`.  The minimum increment is `(count+1)*basis`.  This sophistication is required to handle things like trading Swiss Francs, which are rounded to the nearest nickel (0.05).  To represent CHF 0.20 as a `DiscreteAmount`, we use `basis=0.05` and `count=4`, meaning we have four nickels or 0.20.  This approach is also used for trading volumes, so that we can understand the minimum trade amounts.  `MarketListing`s record both a `priceBasis` and a `volumeBasis` which indicate the step sizes for trading a particular `Listing` on that `Market`.
 Operations on `DiscreteAmount`s may have remainders or rounding errors, which are optionally passed to a delegate `RemainderHandler`, which may apply the fractional amount to another account, ignore the remainder, etc. See Superman 2.
 
-## EntityBase
+## `EntityBase`
 This is the base class for anything which can be persisted.  `getId()` gives a `UUID`, which is stored in the db as a `BINARY(16)`.
 
-## Event
+## `Event`
 A subtype of `EntityBase`. Any subclass of `Event` may be published to `Esper`.
 
-## Exchange
+## `Exchange`
 Coin Trader uses the term `Market` instead of exchange.  Technically, none of the existing trading services are exchanges; they are all broker-dealers with whom you have a deposit account.  The term `Market` is intended to encompass both broker-dealers and (hopefully in the future) exchanges (if any true matching services do emerge)
 
-## Fund
-`Fund`s are _internal_ accounting if you have multiple `Owner`s participating in the same Coin Trader deployment.  Each `Owner` has a `Stake` in the `Fund` representing their share.  Every `Strategy` has a matching `Fund`, and `Owner`s may participate in the `Strategy` by transferring a `Position`s from their own deposit `Fund` into a `Strategy`s `Fund` in exchange for a `Stake` in the `Strategy`'s `Fund`.  The price of the `Stake` is marked-to-market at the time of transaction, using the best currently available data.
+## `Fund`
+`Fund`s are _internal_ accounting if you have multiple `Owner`s participating in the same Coin Trader deployment.  Each `Owner` has a `Stake` in the `Fund` representing their share.  Every `Strategy` has a matching `Fund`, and `Owner`s may participate in the `Strategy` by transferring a `Position` from their own deposit `Fund` into a `Strategy`'s `Fund`, in exchange for a `Stake` in the `Strategy`'s `Fund`.  The price of the `Stake` is marked-to-market at the time of transaction, using the best currently available data.
 
-## FundManager
+## `FundManager`
 Every `Fund` has a `FundManager` who dictates the trading of the `Fund`'s `Position`s.  `Owner`s are the `FundManager`s of their deposit `Fund`, and every `Strategy` is a `FundManager` for the `Stategy`'s `Fund` whose positions it trades.
 
-## Fungible
+## `Fungible`
 A `Fungible` is anything that can be replaced by another similar item of the same type.  Fungibles include `Currency`, Stocks, Bonds, Options, etc.
 
-## Listing
+## `Listing`
 A `Listing` has a symbol but is not related to a `Market`.  Generally, it represents a tradeable security like `BTC.USD` when there is no need to differentiate between the same security on different `Market`s.  Usually, you want to use `MarketListing` instead of just a `Listing`, unless you are creating an order which wants to trade a `Listing` without regard to the `Account` or `Market` where the trading occurs.
 Every `Listing` has a `baseFungible` and a `quoteFungible`.  The `baseFungible` is what you are buying/selling and the `quoteFungible` is used for payment.  For currency pairs, these are both currencies: The `Listing` for `BTC.USD` has a `baseFungible` of `Currencies.BTC` and a `quoteFungible` of `Currencies.USD`.  A `Listing` for a Japan-based stock would have the `baseFungible` be the stock like `Stocks.SONY` (stocks are not implemented) and the `quoteFungible` would be `Currencies.JPY`
 
-## Market
+## `Market`
 Any broker/dealer or exchange.  A place which trades `Listing`s of `Fungible` pairs, aka `MarketListing`s
 
-## MarketData
+## `MarketData`
 `MarketData` is the parent class of `Trade`, `Book`, `Tick`, and `Bar`, and it represents any information which is joined to a `MarketListing`  In the future, for example, we could support news feeds by subclassing `MarketData`.  See `RemoteEvent` for notes on event timings.
 
-## MarketListing
+## `MarketListing`
 A `MarketListing` represents a `Listing` (BTC.USD) on a specific `Market` (BITSTAMP), and this is the primary class for tradeable securities.  Note that using `MarketListing` instead of just a `Listing` allows us to differentiate between prices for the same security on different `Market`s, facilitating arbitrage.
 
-## Order
-A request from the trader system to buy or sell a `Listing` or `MarketListing`.  `Order`s are business objects which change state, and therefore they are not `Event`s which must be immutable.
+## `GeneralOrder`
+A `GeneralOrder` specifies an amount and a `Listing` but does not specify a `Market`.  `GeneralOrder`s are intended to be routed and cleared in a "best effort" attempt by an order execution algorithm.  See `SpecificOrder`
 
-## Owner
+## `Owner`
 A simple way to identify the holders of internal funds.  `Owner`s are members or clients of this organization.  Each `Owner` has a deposit `Fund`, and the `Owner` may transfer positions from their deposit `Fund` to other `Funds`, receiving in exchange a `Stake`s in other `Fund`.  This is how `Owner`s may participate in various `Fund`s managed by `Strategy`s
 
-## Position
+## `Position`
 A Position is a `DiscreteAmount` of a `Fungible`.  All `Positions` have both an `Account` and a `Fund`.  The total of all `Position`s in an `Account` should match the external entity's records, while the internal ownership of the `Positions` is tracked through the `Fund` via `Stake`s and `Owner`s.
 
-## RemoteEvent
+## `RemoteEvent`
 Many `Event`s, like `MarketData`s, happen remotely.  `RemoteEvent` allows us to record the time we received an event separately from the time the event happened.  The standard `Event.getTime()` field returns the time the event originally occured, and additionally, `RemoteEvent.getTimeReceived()` records the first instant we heard about the event in the Coin Trader system.  This will help us to understand transmission and processing delays between the markets and our trading clients.
 
-## Stake
+## `SpecificOrder`
+A `SpecificOrder` specifies a `MarketListing` and an amount, and may optionally specify a price limit (stop and stop-limit orders are not supported yet).  `SpecificOrder`s carry the intent of immediate placement as-is, without breaking the order apart or routing it to alternative `Market`s.  See `GeneralOrder`
+
+## `Stake`
 `Stake`s record ownership in a `Fund` by an `Owner`
 
-## Strategy
+## `Strategy`
 Represents an approach to trading.  Every `Strategy` has a corresponding `Fund` which holds the `Position`s the `Strategy` is allowed to trade.
 
-## Tick
+## `Tick`
 `Tick` reports instantaneous snapshots of the last trade price, current spread, and total volume during the `Tick`'s time window.  It is not a single `Trade` but a window in time when one or more `Trade`s may happen.  `Tick`s may be generated from a stream of `Trade`s and `Book`s, and `Tick`s are not collected from data providers.  To generate `Tick`s from `Trade` and `Book` data, attach the `tickwindow` module to your `Esper`.
 
-## Trade
+## `Trade`
 This is the most useful kind of `MarketData` to generate.  It describes a single transaction: the time, `MarketListing`, price, and volume.
 
 # Esper
