@@ -1,17 +1,18 @@
 package org.cryptocoinpartners.module.xchangedata;
 
-import org.cryptocoinpartners.module.Esper;
-import org.cryptocoinpartners.module.ModuleListenerBase;
-import org.cryptocoinpartners.util.PersistUtil;
-import org.cryptocoinpartners.util.RateLimiter;
 import com.xeiam.xchange.Exchange;
-import com.xeiam.xchange.ExchangeFactory;
 import com.xeiam.xchange.currency.CurrencyPair;
-import com.xeiam.xchange.dto.marketdata.*;
+import com.xeiam.xchange.dto.marketdata.OrderBook;
+import com.xeiam.xchange.dto.marketdata.Trades;
 import com.xeiam.xchange.dto.trade.LimitOrder;
 import com.xeiam.xchange.service.polling.PollingMarketDataService;
-import org.apache.commons.configuration.*;
+import org.apache.commons.configuration.Configuration;
+import org.cryptocoinpartners.module.Esper;
+import org.cryptocoinpartners.module.ModuleListenerBase;
 import org.cryptocoinpartners.schema.*;
+import org.cryptocoinpartners.util.PersistUtil;
+import org.cryptocoinpartners.util.RateLimiter;
+import org.cryptocoinpartners.util.XchangeUtil;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 
@@ -19,9 +20,10 @@ import javax.annotation.Nullable;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import java.io.IOException;
-import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 
 
 /**
@@ -34,17 +36,7 @@ public class XchangeData extends ModuleListenerBase {
         super.initModule(esper, config);
 
         final String configPrefix = "xchange";
-
-        // find all the config keys starting with "xchange." and collect their second groups after the dot
-        final Iterator xchangeConfigKeys = config.getKeys(configPrefix);
-        Set<String> exchangeTags = new HashSet<>();
-        final Pattern configPattern = Pattern.compile(configPrefix+"\\.([^\\.]+)\\..+");
-        while( xchangeConfigKeys.hasNext() ) {
-            String key = (String) xchangeConfigKeys.next();
-            final Matcher matcher = configPattern.matcher(key);
-            if( matcher.matches() )
-                exchangeTags.add(matcher.group(1));
-        }
+        Set<String> exchangeTags = XchangeUtil.getExchangeTags();
 
 
         // now we have all the exchange tags.  process each config group
@@ -53,15 +45,15 @@ public class XchangeData extends ModuleListenerBase {
             // .class the full classname of the Xchange implementation
             // .rate.queries rate limit the number of queries to this many (default: 1)
             // .rate.period rate limit the number of queries during this period of time (default: 1 second)
-            Market market = Market.forSymbol(tag.toUpperCase());
+            // .listings identifies which Listings should be fetched from this exchange
+            Market market = XchangeUtil.getMarketForExchangeTag(tag);
             if( market != null ) {
                 String prefix = configPrefix+"." + tag + '.';
-                final String exchangeClassName = config.getString(prefix + "class");
                 final String helperClassName = config.getString(prefix + "helper.class", null);
                 int queries = config.getInt(prefix + "rate.queries", 1);
                 Duration period = Duration.millis((long) (1000 * config.getDouble(prefix + "rate.period", 1))); // rate.period in seconds
                 final List listings = config.getList(prefix + "listings");
-                initExchange(exchangeClassName, helperClassName, queries, period, market, listings);
+                initExchange(helperClassName, queries, period, market, listings);
             }
             else {
                 log.warn("Could not find Market for property \"xchange." + tag + ".*\"");
@@ -89,10 +81,10 @@ public class XchangeData extends ModuleListenerBase {
     }
 
 
-    private void initExchange( String exchangeClassName, @Nullable String helperClassName, int queries, Duration per,
+    private void initExchange( @Nullable String helperClassName, int queries, Duration per,
                                Market market, List listings )
     {
-        Exchange exchange = ExchangeFactory.INSTANCE.createExchange(exchangeClassName);
+        Exchange exchange = XchangeUtil.getExchangeForMarket(market);
         Helper helper = null;
         if( helperClassName != null && !helperClassName.isEmpty() ) {
             if( helperClassName.indexOf('.') == -1 )
@@ -103,16 +95,16 @@ public class XchangeData extends ModuleListenerBase {
                     helper = (Helper) helperClass.newInstance();
                 }
                 catch( InstantiationException | IllegalAccessException e ) {
-                    log.error("Could not initialize XchanngeData "+exchangeClassName+" because helper class "+helperClassName+" could not be instantiated ",e);
+                    log.error("Could not initialize XchangeData because helper class "+helperClassName+" could not be instantiated ",e);
                     return;
                 }
                 catch( ClassCastException e ) {
-                    log.error("Could not initialize XchanngeData "+exchangeClassName+" because helper class "+helperClassName+" does not implement "+Helper.class);
+                    log.error("Could not initialize XchangeData because helper class "+helperClassName+" does not implement "+Helper.class);
                     return;
                 }
             }
             catch( ClassNotFoundException e ) {
-                log.error("Could not initialize XchanngeData "+exchangeClassName+" because helper class "+helperClassName+" was not found");
+                log.error("Could not initialize XchangeData because helper class "+helperClassName+" was not found");
                 return;
             }
         }
@@ -143,7 +135,7 @@ public class XchangeData extends ModuleListenerBase {
             this.rateLimiter = rateLimiter;
             this.dataService = dataService;
             this.helper = helper;
-            pair = new CurrencyPair(marketListing.getBase().getSymbol(), marketListing.getQuote().getSymbol());
+            pair = XchangeUtil.getCurrencyPairForListing(marketListing.getListing());
             lastTradeTime = 0;
             lastTradeId = 0;
             EntityManager entityManager = PersistUtil.createEntityManager();
@@ -238,7 +230,7 @@ public class XchangeData extends ModuleListenerBase {
         }
 
 
-        private Book.BookBuilder bookBuilder = new Book.BookBuilder();
+        private Book.Builder bookBuilder = new Book.Builder();
         private boolean getTradesNext = true;
         private PollingMarketDataService dataService;
         private RateLimiter rateLimiter;

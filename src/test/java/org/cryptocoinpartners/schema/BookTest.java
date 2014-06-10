@@ -27,7 +27,7 @@ public class BookTest {
         }
 
 
-        Book.BookBuilder b = new Book.BookBuilder();
+        Book.Builder b = new Book.Builder();
 
         b.start(Instant.now(), null, MarketListing.findOrCreate(Markets.BITSTAMP, Listing.forSymbol("BTC.USD")));
         b.addBid(new BigDecimal("2.1"), new BigDecimal("1.04"));

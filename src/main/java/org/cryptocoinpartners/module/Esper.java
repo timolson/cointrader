@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.module;
 
 import org.cryptocoinpartners.schema.Event;
+import org.cryptocoinpartners.service.Service;
 import org.cryptocoinpartners.util.ModuleLoaderError;
 import org.cryptocoinpartners.util.ReflectionUtil;
 import com.espertech.esper.client.*;
@@ -26,6 +27,7 @@ import java.util.*;
  *
  * @author Tim Olson
  */
+@SuppressWarnings("UnusedDeclaration")
 public class Esper {
 
 
@@ -47,10 +49,6 @@ public class Esper {
     }
 
 
-    /**
-     @param useInternalTimer if true, Esper's internal timer is disabled and time is only advanced when an Event is
-                             published or the advanceTime() method is called.
-     */
     public Esper( TimeProvider timeProvider )
     {
         this.timeProvider = timeProvider;
@@ -78,7 +76,8 @@ public class Esper {
      * name.  If a module is already loaded, it will be skipped.
      * For details, see ModuleLoader
      *
-     @param moduleName
+     @param moduleName the simple, undotted name of the package in which the module files reside.  this simple name will
+                       be searched for under the module.path
      @param config a series of key-value pairs; the array must have even length.  keys must be strings and values will
                    have toString() called on them.  the k-v pairs are put into a configuration map and passed as
                    module configuration to the ModuleLoader
@@ -185,6 +184,21 @@ public class Esper {
                 subscribe(listener, method, statement);
             }
         }
+        if( listener instanceof Service ) {
+            Service service = (Service) listener;
+            services.add(service);
+        }
+    }
+
+
+    /** Returns the first instance of the given Service subtype attached to this Esper */
+    @SuppressWarnings("unchecked")
+    public <T extends Service> T getService( Class<T> serviceType ) {
+        for( Service service : services ) {
+            if( serviceType.isAssignableFrom(service.getClass()) )
+                return (T) service;
+        }
+        return null;
     }
 
 
@@ -263,9 +277,10 @@ public class Esper {
 
     private static Logger log = LoggerFactory.getLogger(Esper.class);
 
+    private List<Service> services = new ArrayList<>();
     private TimeProvider timeProvider;
     private Instant lastTime = null;
-    private Set<String> loaded = new HashSet<String>();
+    private Set<String> loaded = new HashSet<>();
     private EPServiceProvider epService;
     private EPRuntime epRuntime;
     private EPAdministrator epAdministrator;

@@ -7,6 +7,7 @@ import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
+import org.cryptocoinpartners.service.Service;
 import org.cryptocoinpartners.util.Config;
 import org.cryptocoinpartners.util.ModuleLoaderError;
 import org.reflections.Reflections;
@@ -17,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.*;
@@ -109,10 +111,31 @@ public class ModuleLoader {
         for( Class<? extends ModuleListener> listenerClass : listenerClasses ) {
             log.debug("instantiating ModuleListener "+listenerClass.getSimpleName());
             ModuleListener listener = listenerClass.newInstance();
+            bindServices(esper,listener);
             listeners.add(listener);
             esper.subscribe(listener);
         }
         return listeners;
+    }
+
+
+    private static void bindServices(Esper esper, ModuleListener listener) {
+        for( Field field : listener.getClass().getDeclaredFields() ) {
+            if( Service.class.isAssignableFrom(field.getType()) ) {
+                // the field has a Service type
+                @SuppressWarnings("unchecked")
+                Service service = esper.getService((Class<Service>) field.getType());
+                if( service == null )
+                    throw new ModuleLoaderError("No "+field.getType().getSimpleName()+" service found attached to the Esper.  Make sure to load dependent Services before loading "+listener.getClass().getName());
+                try {
+                    field.set(listener,service);
+                }
+                catch( IllegalAccessException e ) {
+                    throw new ModuleLoaderError("Could not bind service "+field.getType()+" "+field.getName(),e);
+                }
+            }
+        }
+
     }
 
 

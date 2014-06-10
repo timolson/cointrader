@@ -32,7 +32,7 @@ public class TickWindow extends ModuleListenerBase {
 
 
     // Every minute at five seconds after the minute
-    @When("select current_timestamp() from pattern [every timer:at(*, *, *, *, *, 5)]")
+    @When("select current_timestamp() from pattern [every timer:at(*, *, *, *, *, 0)]")
     public void publishTick(long now) {
         for( AccumulatingTick accumulatingTick : accumulatingTickMap.values() ) {
             Tick tick = accumulatingTick.flushTick(now);

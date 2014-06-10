@@ -142,6 +142,12 @@
                     <exclude>**/*.java</exclude>
                 </excludes>
             </resource>
+            <resource>
+                <directory>.</directory>
+                <includes>
+                    <include>trader-default.properties</include>
+                </includes>
+            </resource>
         </resources>
         <plugins>
             <plugin>

@@ -7,14 +7,16 @@ import java.util.Collection;
 
 
 /**
+ * This is the base class for GeneralOrder and SpecificOrder.  To create orders, see OrderBuilder or Strategy.order
+ *
+ * @author Mike Olson
  * @author Tim Olson
  */
 @Entity
 @Table(name="\"Order\"") // This is required because ORDER is a SQL keyword and must be escaped
-@SuppressWarnings("JpaDataSourceORMInspection")
-public class Order extends Event {
-
-    public enum OrderType { MARKET, LIMIT }
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@SuppressWarnings({"JpaDataSourceORMInspection", "UnusedDeclaration"})
+public abstract class Order extends Event {
 
 
     public enum FillType {
@@ -29,141 +31,58 @@ public class Order extends Event {
         CASH_ONLY, // do not trade more than the available cash-on-hand (quote fungible)
     }
 
-    // TODO: extract OrderStatus into a new class that inherits from Event and is tied to Order
-    public enum OrderStatus { NEW, PLACED, PARTFILLED, FILLED, CANCELLING, CANCELLED, EXPIRED, REJECTED }
-
-
-    @Enumerated(EnumType.STRING)
-    public OrderType getOrderType() { return orderType; }
-
-    @Enumerated(EnumType.STRING)
-    public OrderStatus getOrderStatus() { return orderStatus; }
 
     @ManyToOne(optional = false)
-    public FundManager getManager() { return manager; }
+    public Fund getFund() { return fund; } 
 
-    // TODO: fill in getters for the remaining data members and set relationships
+    
+    public FillType getFillType() { return fillType; }
 
-    @OneToMany public Collection<Fill> getFills() { return fills; }
 
-    @ManyToOne(optional = false)
-    public Listing getListing() {
-        return listing;
-    }
+    public MarginType getMarginType() { return marginType; }
 
-    @Transient boolean isOpen() {
-        return orderStatus == OrderStatus.NEW ||
-                orderStatus == OrderStatus.PLACED ||
-                orderStatus == OrderStatus.PARTFILLED;
-    }
 
-    @Transient boolean hasFills() { return !getFills().isEmpty(); }
+    public Instant getExpiration() { return expiration; }
 
-    // OrderBuilder
-    public static class OrderBuilder {
-        public OrderBuilder(FundManager manager, MarketListing listing) {
-            this.order = new Order();
-            this.order.setOrderType(OrderType.MARKET);
-            this.order.setOrderStatus(OrderStatus.NEW);
-            this.order.setManager(manager);
-            this.order.setListing(listing.getListing());
-            this.order.setMarket(listing.getMarket());
-        }
 
-        public OrderBuilder setAmount(long amount /* units in basis of market listing's base fungible */) {
-            this.order.setAmount(amount);
-            return this;
-        }
+    public boolean getPanicForce() { return force; }
 
-        public OrderBuilder setAmount(double amount) {
-            // TODO: think about how we want to round this; for now we drop remainders
-            this.order.setAmount((long)(amount / this.order.getListing().getBase().getBasis()));
-            return this;
-        }
 
-        public OrderBuilder setLimit(long price /* units in basis of market listing's quote fungible */) {
-            this.order.setLimit(price);
-            return this;
-        }
+    public boolean setPanicForce() { return force; }
 
-        public OrderBuilder setLimit(double price) {
-            // TODO: change rounding to "best price" based on buy/sell side; for now we drop remainders
-            this.order.setLimit((long) (price / this.order.getListing().getQuote().getBasis()));
-            return this;
-        }
 
-        public OrderBuilder setStop(long price /* units in basis of market listing's quote fungible */) {
-            this.order.setStop(price);
-            return this;
-        }
+    public boolean isEmulation() { return emulation; }
 
-        public OrderBuilder setStop(double price) {
-            // TODO: change rounding to nearest price; for now we drop remainders
-            this.order.setStop((long) (price / this.order.getListing().getQuote().getBasis()));
-            return this;
-        }
 
-        public OrderBuilder setFillType(FillType fillType) {
-            this.order.setFillType(fillType);
-            return this;
-        }
+    @OneToMany
+    public Collection<Fill> getFills() { return fills; }
 
-        public OrderBuilder setMarginType(MarginType marginType) {
-            this.order.setMarginType(marginType);
-            return this;
-        }
+    
+    @Transient
+    public boolean hasFills() { return !getFills().isEmpty(); }
 
-        public OrderBuilder setExpiration(Instant expiration) {
-            this.order.setExpiration(expiration);
-            return this;
-        }
 
-        public OrderBuilder setForce(boolean force) {
-            this.order.setForce(force);
-            return this;
-        }
+    @Transient
+    public abstract boolean isBid();
 
-        public OrderBuilder setEmulation(boolean emulation) {
-            this.order.setEmulation(emulation);
-            return this;
-        }
 
-        public Order build() {
-            // todo: save to database?
-            // todo: place order?
-            // todo: add to esper?
-            return this.order;
-        }
+    @Transient
+    public boolean isAsk() { return !isBid(); }
 
-        private Order order;
-    }
 
     // JPA
     protected Order() {}
-    protected void setOrderType(OrderType orderType) { this.orderType = orderType; }
-    protected void setOrderStatus(OrderStatus orderStatus) { this.orderStatus = orderStatus; }
-    protected void setManager(FundManager manager) { this.manager = manager; }
     protected void setFills(Collection<Fill> fills) { this.fills = fills; }
-    protected void setMarket(Market market) { this.market = market; }
-    protected void setListing(Listing listing) { this.listing = listing; }
-    protected void setAmount(long amount) { this.amount = amount; }
-    protected void setLimit(long limit) { this.limit = limit; }
-    protected void setStop(long stop) { this.stop = stop; }
     protected void setFillType(FillType fillType) { this.fillType = fillType; }
     protected void setMarginType(MarginType marginType) { this.marginType = marginType; }
     protected void setExpiration(Instant expiration) { this.expiration = expiration; }
-    protected void setForce(boolean force) { this.force = force; }
+    protected void setPanicForce(boolean force) { this.force = force; }
     protected void setEmulation(boolean emulation) { this.emulation = emulation; }
+    protected void setFund(Fund fund) { this.fund = fund; } 
 
-    private OrderType orderType;
-    private OrderStatus orderStatus;
-    private FundManager manager;
+    
+    private Fund fund;
     private Collection<Fill> fills;
-    private Market market;
-    private Listing listing;
-    private long amount;
-    private long limit;
-    private long stop;
     private FillType fillType;
     private MarginType marginType;
     private Instant expiration;

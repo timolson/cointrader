@@ -1,13 +1,9 @@
 package org.cryptocoinpartners.schema;
 
-import org.joda.time.Instant;
-
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
-import javax.persistence.Transient;
 import java.util.Collection;
-import java.util.Collections;
 
 
 /**
@@ -18,6 +14,7 @@ import java.util.Collections;
  */
 @Entity
 public class Fund extends EntityBase {
+
 
     public @OneToMany Collection<Position> getPositions() { return positions; }
 
@@ -34,37 +31,6 @@ public class Fund extends EntityBase {
 
     @ManyToOne
     public FundManager getManager() { return manager; }
-
-
-    // get open orders
-    @Transient
-    Collection<Order> getOpenOrders() {
-        // todo
-        return Collections.emptyList();
-    }
-
-
-    // returns the execution price of the Order's Fills weighted by volume.
-    @Transient double getAverageFillPrice() {
-        return Double.NaN; // todo
-    }
-
-
-    public Order createOrder(
-        MarketListing listing,
-        double amount,
-        double limit,          // (null [default] or specify a limit price relative to the quote fungible)
-        double stop,           // (null [default] or specify the quote price at which this order is activated)
-        Order.FillType fill,             // ("good until cancel or filled to margin limit" [default], "good until cancel", or "cancel any remainder")
-        Order.MarginType marginType,     // ("do not use margin" [default] or "margin allowed")
-        Instant expiration,       // (null [default] or time on or after which this order will be automatically canceled)
-        Market market,             // (null [default] or specify the exchange on which to make the trade)
-        boolean force,          // (null [default] or allow this order to override various types of panic)
-        boolean emulation   // ("allow order type emulation" [default] or "only use exchange's native functionality")
-    ) {
-        // TODO: see Order.OrderBuilder
-        return null;
-    }
 
 
     // JPA

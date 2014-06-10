@@ -142,10 +142,10 @@ public class Book extends MarketData implements Spread {
     }
 
 
-    /** BookBuilder remembers the previous Book it built, allowing for diffs to be saved in the db */
-    public static class BookBuilder {
+    /** Book.Builder remembers the previous Book it built, allowing for diffs to be saved in the db */
+    public static class Builder {
 
-        public BookBuilder() { this.book = Book.create(); }
+        public Builder() { this.book = Book.create(); }
 
 
         public void start( Instant time, String remoteKey, MarketListing marketListing ) {
@@ -155,7 +155,7 @@ public class Book extends MarketData implements Spread {
         }
 
 
-        public BookBuilder addBid( BigDecimal price, BigDecimal amount ) {
+        public Builder addBid( BigDecimal price, BigDecimal amount ) {
             MarketListing ml = book.getMarketListing();
             book.bids.add(new Bid(ml, book.getTime(), book.getTimeReceived(),
                                   DiscreteAmount.countForValueRounded(price,ml.getPriceBasis()),
@@ -164,7 +164,7 @@ public class Book extends MarketData implements Spread {
         }
 
 
-        public BookBuilder addAsk( BigDecimal price, BigDecimal amount ) {
+        public Builder addAsk( BigDecimal price, BigDecimal amount ) {
             MarketListing ml = book.getMarketListing();
             book.asks.add(new Ask(ml,book.getTime(),book.getTimeReceived(),
                                   DiscreteAmount.countForValueRounded(price,ml.getPriceBasis()),
@@ -270,7 +270,7 @@ public class Book extends MarketData implements Spread {
     protected void setAskAmountAsDouble(@SuppressWarnings("UnusedParameters") Double ignored) {}
 
 
-    // this is separate from the empty JPA constructor.  it allows BookBuilder to start with a minimally initialized Book
+    // this is separate from the empty JPA constructor.  it allows Book.Builder to start with a minimally initialized Book
     private static Book create() {
         Book result = new Book();
         result.bids = new ArrayList<>();

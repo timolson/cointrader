@@ -7,7 +7,7 @@ import javax.persistence.Transient;
 
 
 /**
- * A Position represents an amount of some Fungible within an Account.  The Position is owned by a Fund
+ * A Position represents an withAmount of some Fungible within an Account.  The Position is owned by a Fund
  *
  * @author Tim Olson
  */

@@ -16,7 +16,7 @@ public @interface When {
      * See http://esper.codehaus.org/esper-4.11.0/doc/reference/en-US/html_single/index.html#api-admin-subscriber
      * <p/>
      * Example:<br/>
-     * public @When("select price, amount from Tick") handleNewTick( BigDecimal price, BigDecimal amount ) {...}
+     * public @When("select price, withAmount from Tick") handleNewTick( BigDecimal price, BigDecimal withAmount ) {...}
      */
     public String value();
 }

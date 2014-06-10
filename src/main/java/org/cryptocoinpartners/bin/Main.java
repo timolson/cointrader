@@ -87,6 +87,7 @@ public class Main
             }
             catch( ConfigurationException x ) {
                 System.err.println("Could not load "+DEFAULT_PROPERTIES_FILENAME+" or "+FALLBACK_PROPERTIES_FILENAME);
+                x.printStackTrace(System.err);
                 System.exit(1);
             }
         }

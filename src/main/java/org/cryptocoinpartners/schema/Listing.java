@@ -5,6 +5,7 @@ import org.cryptocoinpartners.util.PersistUtil;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.NoResultException;
+import javax.persistence.Transient;
 
 
 /**
@@ -47,10 +48,11 @@ public class Listing extends EntityBase
     }
 
 
-    public String toString()
-    {
-        return base.getSymbol()+'.'+quote.getSymbol();
-    }
+    public String toString() { return getSymbol(); }
+
+
+    @Transient
+    public String getSymbol() { return base.getSymbol()+'.'+quote.getSymbol(); }
 
 
     // JPA

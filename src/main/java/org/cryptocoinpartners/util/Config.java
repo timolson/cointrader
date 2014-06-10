@@ -11,10 +11,12 @@ import java.util.Map;
 /**
  * @author Tim Olson
  */
+@SuppressWarnings("UnusedDeclaration")
 public class Config {
 
     public static CombinedConfiguration combined() { return combined; }
 
+    public static PropertiesConfiguration defaults() { return defaultConfig; }
     public static PropertiesConfiguration application() { return appConfig; }
     public static SystemConfiguration system() { return sysConfig; }
     public static MapConfiguration commandLine() { return clConfig; }
@@ -26,10 +28,12 @@ public class Config {
         clConfig = new MapConfiguration(commandLine);
         sysConfig = new SystemConfiguration();
         appConfig = new PropertiesConfiguration(filename);
+        defaultConfig = new PropertiesConfiguration(Config.class.getResource("/trader-default.properties"));
         combined = new CombinedConfiguration(new OverrideCombiner());
         combined.addConfiguration(clConfig);
         combined.addConfiguration(sysConfig);
         combined.addConfiguration(appConfig);
+        combined.addConfiguration(defaultConfig);
     }
 
 
@@ -44,6 +48,7 @@ public class Config {
     }
 
 
+    private static PropertiesConfiguration defaultConfig;
     private static PropertiesConfiguration appConfig;
     private static MapConfiguration clConfig;
     private static SystemConfiguration sysConfig;
