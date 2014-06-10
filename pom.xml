@@ -77,6 +77,11 @@
             <artifactId>xchange-btce</artifactId>
             <version>${xchange.version}</version>
         </dependency>
+		<dependency>
+            <groupId>com.xeiam.xchange</groupId>
+            <artifactId>xchange-cryptsy</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
         <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>
