@@ -35,7 +35,7 @@ void checkMovingAverage( double avg )
 @When( "select * from MySignal where mySignalValue > 5.0" )
 void enterTrade( MySignal s )
 {
-  placeMarketOrder( Listings.BTC_USD, 1.0 );
+  orders.buy( Listings.BTC_USD, 1.0 );
 }
 ```
 
