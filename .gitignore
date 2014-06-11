@@ -1,11 +1,16 @@
 trader.iml
+cointrader.iml
 trader.log
+cointrader.log
 target
 .idea
 .project
 .settings
 .classpath
 tmp.txt
+cointrader.properties
 trader.properties
+cointrader.jar
 trader.jar
 *.csv
+.DS_Store
