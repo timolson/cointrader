@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 
 
 /**
- * Connects an Owner to a Fund by an withAmount
+ * Connects an Owner to a Fund
  *
  * @author Tim Olson
  */

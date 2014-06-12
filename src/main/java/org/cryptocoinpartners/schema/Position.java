@@ -16,22 +16,22 @@ public class Position extends EntityBase {
 
 
     // todo is Account one-to-one with Exchange?  Should we pass in the Account here instead?
-    public Position(Fund fund, Exchange exchange, Fungible fungible, DiscreteAmount amount) {
-        if( amount.getBasis() != fungible.getBasis() )
-            throw new IllegalArgumentException("Basis for amount must match basis for Fungible");
+    public Position(Fund fund, Exchange exchange, Fungible fungible, DiscreteAmount volume) {
+        if( volume.getBasis() != fungible.getBasis() )
+            throw new IllegalArgumentException("Basis for volume must match basis for Fungible");
         this.fund = fund;
         this.exchange = exchange;
-        this.amountCount = amount.getCount();
+        this.volumeCount = volume.getCount();
         this.fungible = fungible;
     }
 
 
     @ManyToOne(optional = false) public Fund getFund() { return fund; }
     @ManyToOne(optional = false) public Exchange getExchange() { return exchange; }
-    @Transient public DiscreteAmount getAmount() {
-        if( amount == null )
-            amount = new DiscreteAmount(amountCount,fungible.getBasis());
-        return amount;
+    @Transient public DiscreteAmount getVolume() {
+        if( volume == null )
+            volume = new DiscreteAmount(volumeCount,fungible.getBasis());
+        return volume;
     }
     @OneToOne(optional = false) public Fungible getFungible() { return fungible; }
 
@@ -41,13 +41,13 @@ public class Position extends EntityBase {
     protected void setFund(Fund fund) { this.fund = fund; }
     protected void setExchange(Exchange exchange) { this.exchange = exchange; }
     protected void setFungible(Fungible fungible) { this.fungible = fungible; }
-    protected long getAmountCount() { return amount.getCount(); }
-    protected void setAmountCount(long amountCount) { this.amountCount = amountCount; }
+    protected long getVolumeCount() { return volume.getCount(); }
+    protected void setVolumeCount(long volumeCount) { this.volumeCount = volumeCount; this.volume = null; }
 
 
     private Fund fund;
     private Exchange exchange;
-    private DiscreteAmount amount;
-    private long amountCount;
+    private DiscreteAmount volume;
+    private long volumeCount;
     private Fungible fungible;
 }

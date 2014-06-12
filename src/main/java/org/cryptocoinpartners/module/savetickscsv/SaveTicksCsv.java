@@ -92,11 +92,11 @@ public class SaveTicksCsv extends ModuleListenerBase
 
     private void addBookToRow(Tick t, ArrayList<String> row) {
         Book book = t.getLastBook();
-        List<Bid> bids = book.getBids();
-        List<Ask> asks = book.getAsks();
+        List<Offer> bids = book.getBids();
+        List<Offer> asks = book.getAsks();
         for( int i = 0; i < bookDepth; i++ ) {
             if( bids.size() > i ) {
-                Bid bid = bids.get(i);
+                Offer bid = bids.get(i);
                 row.add(String.valueOf(bid.getPriceAsDouble()));
                 row.add(String.valueOf(bid.getVolumeAsDouble()));
             }
@@ -105,7 +105,7 @@ public class SaveTicksCsv extends ModuleListenerBase
                 row.add("");
             }
             if( asks.size() > i ) {
-                Ask ask = asks.get(i);
+                Offer ask = asks.get(i);
                 row.add(String.valueOf(ask.getPriceAsDouble()));
                 row.add(String.valueOf(ask.getVolumeAsDouble()));
             }

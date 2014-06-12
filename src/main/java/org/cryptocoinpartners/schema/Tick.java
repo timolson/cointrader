@@ -30,12 +30,12 @@ public class Tick extends PriceData implements Spread {
 
     /** @return null if no book was found prior to the window */
     @Transient
-    public @Nullable Bid getBestBid() { return lastBook == null ? null : lastBook.getBestBid(); }
+    public @Nullable Offer getBestBid() { return lastBook == null ? null : lastBook.getBestBid(); }
 
 
     /** @return null if no book was found prior to the window */
     @Transient
-    public @Nullable Ask getBestAsk() { return lastBook == null ? null : lastBook.getBestAsk(); }
+    public @Nullable Offer getBestAsk() { return lastBook == null ? null : lastBook.getBestAsk(); }
 
 
     public Tick( Market market, Instant startInstant, Instant endInstant,

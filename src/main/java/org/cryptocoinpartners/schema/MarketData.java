@@ -16,7 +16,12 @@ public abstract class MarketData extends RemoteEvent {
 
 
     protected MarketData(Instant time, @Nullable String remoteKey, Market market) {
-        super(time,remoteKey);
+        this(time,Instant.now(),remoteKey,market);
+    }
+
+
+    protected MarketData(Instant time, Instant timeReceived, String remoteKey, Market market) {
+        super(time, timeReceived, remoteKey);
         this.market = market;
     }
 

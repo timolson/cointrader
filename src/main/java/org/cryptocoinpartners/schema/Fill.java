@@ -4,6 +4,7 @@ import org.joda.time.Instant;
 
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
+import javax.persistence.Transient;
 
 
 /**
@@ -16,28 +17,51 @@ import javax.persistence.ManyToOne;
 public class Fill extends RemoteEvent {
 
 
-    public Fill(Order order, Instant time, Market market, long priceCount, long amountCount ) {
+    public Fill(SpecificOrder order, Instant time, Market market, long priceCount, long volumeCount ) {
         super(time,null);
         this.order = order;
         this.market = market;
         this.priceCount = priceCount;
-        this.amountCount = amountCount;
+        this.volumeCount = volumeCount;
     }
 
 
     public @ManyToOne Order getOrder() { return order; }
 
 
+    @ManyToOne
+    public Market getMarket() { return market; }
+
+
+    @Transient
+    public DiscreteAmount getPrice() { return new DiscreteAmount(priceCount,market.getPriceBasis()); }
+    public long getPriceCount() { return priceCount; }
+
+    @Transient
+    public DiscreteAmount getVolume() { return new DiscreteAmount(volumeCount,market.getVolumeBasis()); }
+    public long getVolumeCount() { return volumeCount; }
+
+
+    public String toString() {
+        return "Fill{" +
+                       "order=" + order.getId() +
+                       ", market=" + market +
+                       ", priceCount=" + priceCount +
+                       ", volumeCount=" + volumeCount +
+                       '}';
+    }
+
+
     // JPA
     protected Fill() {}
-    protected void setOrder(Order order) { this.order = order; }
+    protected void setOrder(SpecificOrder order) { this.order = order; }
     protected void setMarket(Market market) { this.market = market; }
     protected void setPriceCount(long priceCount) { this.priceCount = priceCount; }
-    protected void setAmountCount(long amountCount) { this.amountCount = amountCount; }
+    protected void setvolumeCount(long volumeCount) { this.volumeCount = volumeCount; }
 
 
-    private Order order;
+    private SpecificOrder order;
     private Market market;
     private long priceCount;
-    private long amountCount;
+    private long volumeCount;
 }

@@ -131,7 +131,7 @@ A `Market` represents a `Listing` (BTC.USD) on a specific `Exchange` (BITSTAMP),
 `MarketData` is the parent class of `Trade`, `Book`, `Tick`, and `Bar`, and it represents any information which is joined to a `Market`  In the future, for example, we could support news feeds by subclassing `MarketData`.  See `RemoteEvent` for notes on event timings.
 
 ## `GeneralOrder`
-A `GeneralOrder` specifies an amount and a `Listing` but does not specify an `Exchange`.  `GeneralOrder`s are intended to be routed and cleared in a "best effort" attempt by an order execution algorithm.  See `SpecificOrder`
+A `GeneralOrder` specifies a volume and a `Listing` but does not specify an `Exchange`.  `GeneralOrder`s are intended to be routed and cleared in a "best effort" attempt by an order execution algorithm.  See `SpecificOrder`
 
 ## `Owner`
 A simple way to identify the holders of internal funds.  `Owner`s are members or clients of this organization.  Each `Owner` has a deposit `Fund`, and the `Owner` may transfer positions from their deposit `Fund` to other `Funds`, receiving in exchange a `Stake`s in other `Fund`.  This is how `Owner`s may participate in various `Fund`s managed by `Strategy`s
@@ -143,7 +143,7 @@ A Position is a `DiscreteAmount` of a `Fungible`.  All `Positions` have both an 
 Many `Event`s, like `MarketData`s, happen remotely.  `RemoteEvent` allows us to record the time we received an event separately from the time the event happened.  The standard `Event.getTime()` field returns the time the event originally occured, and additionally, `RemoteEvent.getTimeReceived()` records the first instant we heard about the event in the Coin Trader system.  This will help us to understand transmission and processing delays between the markets and our trading clients.
 
 ## `SpecificOrder`
-A `SpecificOrder` specifies a `Market` and an amount, and may optionally specify a price limit (stop and stop-limit orders are not supported yet).  `SpecificOrder`s carry the intent of immediate placement as-is, without breaking the order apart or routing it to alternative `Market`s.  See `GeneralOrder`
+A `SpecificOrder` specifies a `Market` and a volume, and may optionally specify a price limit (stop and stop-limit orders are not supported yet).  `SpecificOrder`s carry the intent of immediate placement as-is, without breaking the order apart or routing it to alternative `Market`s.  See `GeneralOrder`
 
 ## `Stake`
 `Stake`s record ownership in a `Fund` by an `Owner`

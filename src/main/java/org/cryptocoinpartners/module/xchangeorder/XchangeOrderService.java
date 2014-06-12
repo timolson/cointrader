@@ -30,12 +30,12 @@ public class XchangeOrderService extends BaseOrderService {
         if( specificOrder.getLimitPriceCount() != 0 && specificOrder.getStopPriceCount() != 0 )
             reject(specificOrder,"Stop-limit orders are not supported");
         Order.OrderType orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
-        BigDecimal tradableAmount = specificOrder.getAmount().asBigDecimal();
+        BigDecimal tradeableVolume = specificOrder.getVolume().asBigDecimal();
         CurrencyPair currencyPair = XchangeUtil.getCurrencyPairForListing(specificOrder.getMarket().getListing());
         String id = specificOrder.getId().toString();
         Date timestamp = specificOrder.getTime().toDate();
         if( specificOrder.getLimitPriceCount() != 0 ) {
-            LimitOrder limitOrder = new LimitOrder(orderType, tradableAmount, currencyPair, id, timestamp,
+            LimitOrder limitOrder = new LimitOrder(orderType, tradeableVolume, currencyPair, id, timestamp,
                                                    specificOrder.getLimitPrice().asBigDecimal() );
             // todo put on a queue
             try {
@@ -48,7 +48,7 @@ public class XchangeOrderService extends BaseOrderService {
             }
         }
         else {
-            MarketOrder marketOrder = new MarketOrder(orderType,tradableAmount,currencyPair,id,timestamp);
+            MarketOrder marketOrder = new MarketOrder(orderType,tradeableVolume,currencyPair,id,timestamp);
             // todo put on a queue
             try {
                 tradeService.placeMarketOrder(marketOrder);

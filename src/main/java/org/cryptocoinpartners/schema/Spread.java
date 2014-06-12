@@ -7,6 +7,6 @@ public interface Spread
 {
     public Instant getTime();
     public Market getMarket();
-    public Bid getBestBid();
-    public Ask getBestAsk();
+    public Offer getBestBid();
+    public Offer getBestAsk();
 }

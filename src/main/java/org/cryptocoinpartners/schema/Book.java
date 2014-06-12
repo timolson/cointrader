@@ -37,22 +37,22 @@ public class Book extends MarketData implements Spread {
     }
 
 
-    @Transient public List<Bid> getBids() { resolveDiff(); return bids; }
-    @Transient public List<Ask> getAsks() { resolveDiff(); return asks; }
+    @Transient public List<Offer> getBids() { resolveDiff(); return bids; }
+    @Transient public List<Offer> getAsks() { resolveDiff(); return asks; }
 
 
     @Transient
-    public Bid getBestBid() {
+    public Offer getBestBid() {
         if( getBids().isEmpty() )
-            return new Bid(getMarket(),getTime(),getTimeReceived(),0,0);
+            return new Offer(getMarket(),getTime(),getTimeReceived(),0L,0L);
         return getBids().get(0);
     }
 
 
     @Transient
-    public Ask getBestAsk() {
+    public Offer getBestAsk() {
         if( getAsks().isEmpty() ) {
-            return new Ask(getMarket(),getTime(),getTimeReceived(), Long.MAX_VALUE, 0);
+            return new Offer(getMarket(),getTime(),getTimeReceived(), Long.MAX_VALUE, 0L);
         }
         return getAsks().get(0);
     }
@@ -69,7 +69,7 @@ public class Book extends MarketData implements Spread {
     
     @Nullable
     @Transient
-    public DiscreteAmount getBidAmount() {
+    public DiscreteAmount getBidVolume() {
         if( getBids().isEmpty() )
             return new DiscreteAmount(0, getMarket().getVolumeBasis());
         return getBids().get(0).getVolume();
@@ -85,7 +85,7 @@ public class Book extends MarketData implements Spread {
 
 
     @Nullable
-    public Double getBidAmountAsDouble() {
+    public Double getBidVolumeAsDouble() {
         if( getBids().isEmpty() )
             return 0d;
         return getBids().get(0).getVolumeAsDouble();
@@ -103,7 +103,7 @@ public class Book extends MarketData implements Spread {
 
     @Nullable
     @Transient
-    public DiscreteAmount getAskAmount() {
+    public DiscreteAmount getAskVolume() {
         if( getAsks().isEmpty() )
             return new DiscreteAmount(0, getMarket().getVolumeBasis());
         return getAsks().get(0).getVolume();
@@ -121,7 +121,7 @@ public class Book extends MarketData implements Spread {
 
     /** saved to the db for query convenience */
     @Nullable
-    public Double getAskAmountAsDouble() {
+    public Double getAskVolumeAsDouble() {
         if( getAsks().isEmpty() )
             return 0d;
         return getAsks().get(0).getVolumeAsDouble();
@@ -129,8 +129,8 @@ public class Book extends MarketData implements Spread {
 
 
     public static class DiffResult {
-        Collection<Quote> newQuotes = new ArrayList<>();
-        Collection<Quote> removedQuotes = new ArrayList<>();
+        Collection<Offer> newOffers = new ArrayList<>();
+        Collection<Offer> removedOffers = new ArrayList<>();
     }
 
 
@@ -150,25 +150,26 @@ public class Book extends MarketData implements Spread {
 
         public void start( Instant time, String remoteKey, Market market) {
             book.setTime(time);
+            book.setTimeReceived(Instant.now());
             book.setRemoteKey(remoteKey);
             book.setMarket(market);
         }
 
 
-        public Builder addBid( BigDecimal price, BigDecimal amount ) {
-            Market ml = book.getMarket();
-            book.bids.add(new Bid(ml, book.getTime(), book.getTimeReceived(),
-                                  DiscreteAmount.countForValueRounded(price,ml.getPriceBasis()),
-                                  DiscreteAmount.countForValueRounded(amount,ml.getVolumeBasis())));
+        public Builder addBid( BigDecimal price, BigDecimal volume ) {
+            Market market = book.getMarket();
+            book.bids.add(Offer.bid(market, book.getTime(), book.getTimeReceived(),
+                                    DiscreteAmount.countForValueRounded(price, market.getPriceBasis()),
+                                    DiscreteAmount.countForValueRounded(volume, market.getVolumeBasis())));
             return this;
         }
 
 
-        public Builder addAsk( BigDecimal price, BigDecimal amount ) {
-            Market ml = book.getMarket();
-            book.asks.add(new Ask(ml,book.getTime(),book.getTimeReceived(),
-                                  DiscreteAmount.countForValueRounded(price,ml.getPriceBasis()),
-                                  DiscreteAmount.countForValueRounded(amount,ml.getVolumeBasis())));
+        public Builder addAsk( BigDecimal price, BigDecimal volume ) {
+            Market market = book.getMarket();
+            book.asks.add(Offer.ask(market, book.getTime(), book.getTimeReceived(),
+                                    DiscreteAmount.countForValueRounded(price, market.getPriceBasis()),
+                                    DiscreteAmount.countForValueRounded(volume, market.getVolumeBasis())));
             return this;
         }
 
@@ -224,7 +225,7 @@ public class Book extends MarketData implements Spread {
     {
         StringBuilder sb = new StringBuilder(getMarket().toString() + " Book at "+getTime()+" bids={");
         boolean first = true;
-        for( Bid bid : getBids() ) {
+        for( Offer bid : getBids() ) {
             if( first )
                 first = false;
             else
@@ -235,7 +236,7 @@ public class Book extends MarketData implements Spread {
         }
         sb.append("} asks={");
         first = true;
-        for( Ask ask : getAsks() ) {
+        for( Offer ask : getAsks() ) {
             if( first )
                 first = false;
             else
@@ -265,9 +266,9 @@ public class Book extends MarketData implements Spread {
 
     // these fields are derived from the blobs
     protected void setBidPriceAsDouble(@SuppressWarnings("UnusedParameters") Double ignored) {}
-    protected void setBidAmountAsDouble(@SuppressWarnings("UnusedParameters") Double ignored) {}
+    protected void setBidVolumeAsDouble(@SuppressWarnings("UnusedParameters") Double ignored) {}
     protected void setAskPriceAsDouble(@SuppressWarnings("UnusedParameters") Double ignored) {}
-    protected void setAskAmountAsDouble(@SuppressWarnings("UnusedParameters") Double ignored) {}
+    protected void setAskVolumeAsDouble(@SuppressWarnings("UnusedParameters") Double ignored) {}
 
 
     // this is separate from the empty JPA constructor.  it allows Book.Builder to start with a minimally initialized Book
@@ -299,12 +300,12 @@ public class Book extends MarketData implements Spread {
 
 
     @SuppressWarnings("ConstantConditions")
-    private boolean hasQuote(List<? extends Quote> list, Quote quote )
+    private boolean hasQuote(List<? extends Offer> list, Offer offer)
     {
-        for( Quote item : list )
+        for( Offer item : list )
         {
-            if( Long.compare(item.getPriceCount(),quote.getPriceCount()) == 0 &&
-                        Long.compare(item.getVolumeCount(),quote.getVolumeCount()) == 0  )
+            if( Long.compare(item.getPriceCount(), offer.getPriceCount()) == 0 &&
+                        Long.compare(item.getVolumeCount(), offer.getVolumeCount()) == 0  )
                 return true;
         }
         return false;
@@ -319,8 +320,8 @@ public class Book extends MarketData implements Spread {
 
     @PostLoad
     private void postLoad() {
-        bids = convertDatabaseBlobToQuoteList(bidInsertionsBlob, new BidCreator());
-        asks = convertDatabaseBlobToQuoteList(askInsertionsBlob, new AskCreator());
+        bids = convertDatabaseBlobToQuoteList(bidInsertionsBlob);
+        asks = convertDatabaseBlobToQuoteList(askInsertionsBlob);
         if( parent != null )
             needToResolveDiff = true;
     }
@@ -331,13 +332,13 @@ public class Book extends MarketData implements Spread {
             return;
         // add any non-deleted entries from the parent
         List<Integer> bidDeletionIndexes = convertDatabaseBlobToIndexList(bidDeletionsBlob); // these should be already sorted
-        List<Bid> parentBids = parent.getBids();
+        List<Offer> parentBids = parent.getBids();
         for( int i = 0; i < parentBids.size(); i++ ) {
             if( !bidDeletionIndexes.contains(i) )
                 bids.add(parentBids.get(i));
         }
         List<Integer> askDeletionIndexes = convertDatabaseBlobToIndexList(askDeletionsBlob); // these should be already sorted
-        List<Ask> parentAsks = parent.getAsks();
+        List<Offer> parentAsks = parent.getAsks();
         for( int i = 0; i < parentAsks.size(); i++ ) {
             if( !askDeletionIndexes.contains(i) )
                 asks.add(parentAsks.get(i));
@@ -357,7 +358,7 @@ public class Book extends MarketData implements Spread {
 
 
     @SuppressWarnings("ConstantConditions")
-    private static <T extends Quote> byte[] convertQuotesToDatabaseBlob(List<T> quotes) {
+    private static <T extends Offer> byte[] convertQuotesToDatabaseBlob(List<T> quotes) {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try {
             ObjectOutputStream out = new ObjectOutputStream(bos);
@@ -376,8 +377,8 @@ public class Book extends MarketData implements Spread {
     }
 
 
-    private static <T> List<T> convertDatabaseBlobToQuoteList(byte[] bytes, QuoteCreator<T> quoteCreator) {
-        List<T> result = new ArrayList<>();
+    private List<Offer> convertDatabaseBlobToQuoteList(byte[] bytes) {
+        List<Offer> result = new ArrayList<>();
         ByteArrayInputStream bin = new ByteArrayInputStream(bytes);
         //noinspection EmptyCatchBlock
         try {
@@ -385,8 +386,8 @@ public class Book extends MarketData implements Spread {
             int size = in.readInt();
             for( int i = 0; i < size; i++ ) {
                 long price = in.readLong();
-                long amount = in.readLong();
-                result.add(quoteCreator.create(price, amount));
+                long volume = in.readLong();
+                result.add(new Offer(getMarket(),getTime(),getTimeReceived(),price,volume));
             }
             in.close();
             bin.close();
@@ -434,34 +435,15 @@ public class Book extends MarketData implements Spread {
     }
 
 
-    private static interface QuoteCreator<T> {
-        T create( long price, long amount );
-    }
-    
-    
-    private class BidCreator implements QuoteCreator<Bid> {
-        public Bid create(long price, long amount) {
-            return new Bid(getMarket(),getTime(),getTimeReceived(),price,amount);
-        }
-    }
-
-
-    private class AskCreator implements QuoteCreator<Ask> {
-        public Ask create(long price, long amount) {
-            return new Ask(getMarket(),getTime(),getTimeReceived(),price,amount);
-        }
-    }
-
-
     /** this implements the public diff() */
-    private void diff( DiffResult result, List<? extends Quote> childQuotes, List<? extends Quote> parentQuotes ) {
-        for( Quote childQuote : childQuotes ) {
-            if( !hasQuote(parentQuotes,childQuote) )
-                result.newQuotes.add(childQuote);
+    private void diff( DiffResult result, List<? extends Offer> childQuotes, List<? extends Offer> parentQuotes ) {
+        for( Offer childOffer : childQuotes ) {
+            if( !hasQuote(parentQuotes, childOffer) )
+                result.newOffers.add(childOffer);
         }
-        for( Quote parentQuote : parentQuotes ) {
-            if( !hasQuote(childQuotes,parentQuote) )
-                result.removedQuotes.add(parentQuote);
+        for( Offer parentOffer : parentQuotes ) {
+            if( !hasQuote(childQuotes, parentOffer) )
+                result.removedOffers.add(parentOffer);
         }
     }
 
@@ -473,17 +455,17 @@ public class Book extends MarketData implements Spread {
 
 
     /** this is separate from the public diff for efficiency */
-    private DiffBlobs diff(List<? extends Quote> parentQuotes, List<? extends Quote> childQuotes) {
-        List<Quote> insertions = new ArrayList<>();
-        for( Quote childQuote : childQuotes ) {
-            if( !hasQuote(parentQuotes,childQuote) )
-                insertions.add(childQuote);
+    private DiffBlobs diff(List<? extends Offer> parentQuotes, List<? extends Offer> childQuotes) {
+        List<Offer> insertions = new ArrayList<>();
+        for( Offer childOffer : childQuotes ) {
+            if( !hasQuote(parentQuotes, childOffer) )
+                insertions.add(childOffer);
         }
 
         List<Integer> deletionIndexes = new ArrayList<>();
         for( int i = 0; i < parentQuotes.size(); i++ ) {
-            Quote quote = parentQuotes.get(i);
-            if( !hasQuote(childQuotes,quote) )
+            Offer offer = parentQuotes.get(i);
+            if( !hasQuote(childQuotes, offer) )
                 deletionIndexes.add(i);
         }
         DiffBlobs result = new DiffBlobs();
@@ -494,23 +476,23 @@ public class Book extends MarketData implements Spread {
 
 
     private void sortBook() {
-        Collections.sort(bids, new Comparator<Bid>() {
+        Collections.sort(bids, new Comparator<Offer>() {
             @SuppressWarnings("ConstantConditions")
-            public int compare(Bid bid, Bid bid2) {
+            public int compare(Offer bid, Offer bid2) {
                 return - bid.getPriceCount().compareTo(bid2.getPriceCount()); // high to low
             }
         });
-        Collections.sort(asks, new Comparator<Ask>() {
+        Collections.sort(asks, new Comparator<Offer>() {
             @SuppressWarnings("ConstantConditions")
-            public int compare(Ask ask, Ask ask2) {
+            public int compare(Offer ask, Offer ask2) {
                 return ask.getPriceCount().compareTo(ask2.getPriceCount()); // low to high
             }
         });
     }
 
 
-    private List<Bid> bids;
-    private List<Ask> asks;
+    private List<Offer> bids;
+    private List<Offer> asks;
     private Book parent; // if this is not null, then the Book is persisted as a diff against the parent Book
     private byte[] bidDeletionsBlob;
     private byte[] askDeletionsBlob;

@@ -63,6 +63,10 @@ public abstract class Order extends Event {
 
 
     @Transient
+    public abstract boolean isFilled();
+
+
+    @Transient
     public abstract boolean isBid();
 
 

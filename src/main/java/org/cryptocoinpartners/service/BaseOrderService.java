@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.service;
 
+import org.cryptocoinpartners.module.When;
 import org.cryptocoinpartners.schema.*;
 
 import java.math.BigDecimal;
@@ -29,6 +30,33 @@ public abstract class BaseOrderService extends BaseService implements OrderServi
     }
 
 
+    public OrderState getOrderState(Order o) {
+        OrderState state = orderStateMap.get(o);
+        if( state == null )
+            throw new IllegalStateException("Untracked order "+o);
+        return state;
+    }
+
+
+    @When("select * from Fill")
+    void handleFill( Fill fill ) {
+        Order order = fill.getOrder();
+        if( log.isInfoEnabled() )
+            log.info("Received Fill "+fill);
+        OrderState state = orderStateMap.get(order);
+        if( state == null ) {
+            log.warn("Untracked order "+order);
+            state = OrderState.PLACED;
+        }
+        if( state == OrderState.NEW )
+            log.warn("Fill received for Order in NEW state: skipping PLACED state");
+        if( state.isOpen() ) {
+            OrderState newState = order.isFilled() ? OrderState.FILLED : OrderState.PARTFILLED;
+            updateOrderState(order,newState);
+        }
+    }
+
+
     protected void handleGeneralOrder(GeneralOrder generalOrder) {
         Book b = generalOrder.isBid() ? quotes.getBestBidForListing(generalOrder.getListing())
                                       : quotes.getBestAskForListing(generalOrder.getListing());
@@ -46,10 +74,10 @@ public abstract class BaseOrderService extends BaseService implements OrderServi
 
 
     private SpecificOrder convertGeneralOrderToSpecific(GeneralOrder generalOrder, Market market) {
-        DiscreteAmount amount = DiscreteAmount.fromValue(generalOrder.getAmount(), market.getVolumeBasis(),
+        DiscreteAmount volume = DiscreteAmount.fromValue(generalOrder.getVolume(), market.getVolumeBasis(),
                                                          Remainder.DISCARD);
-        // the amount will already be negative for a sell order
-        OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(generalOrder.getFund()).create(market, amount);
+        // the volume will already be negative for a sell order
+        OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(generalOrder.getFund()).create(market, volume);
 
         DiscreteAmount.RemainderHandler priceRemainderHandler = generalOrder.isBid() ? buyHandler : sellHandler;
         final BigDecimal limitPrice = generalOrder.getLimitPrice();
@@ -76,14 +104,6 @@ public abstract class BaseOrderService extends BaseService implements OrderServi
 
 
     protected abstract void handleSpecificOrder(SpecificOrder specificOrder);
-
-
-    public OrderState getOrderState(Order o) {
-        OrderState state = orderStateMap.get(o);
-        if( state == null )
-            throw new IllegalStateException("Untracked order "+o);
-        return state;
-    }
 
 
     protected void updateOrderState(Order order, OrderState state) {

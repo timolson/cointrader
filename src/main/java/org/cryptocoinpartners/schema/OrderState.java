@@ -27,6 +27,7 @@ public enum OrderState
     REJECTED;
 
 
+    /** return true iff NEW || PLACED || PARTFILLED */
     public boolean isOpen() {
         return this == OrderState.NEW || this == OrderState.PLACED || this == OrderState.PARTFILLED;
     }

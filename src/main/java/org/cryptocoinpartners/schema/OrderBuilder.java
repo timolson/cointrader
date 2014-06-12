@@ -24,27 +24,27 @@ public class OrderBuilder {
     }
 
 
-    /** @param amount to create a sell order, use a negative amount */
-    public GeneralOrderBuilder create(Listing listing, double amount) {
-        return new GeneralOrderBuilder(listing,amount);
+    /** @param volume to create a sell order, use a negative volume */
+    public GeneralOrderBuilder create(Listing listing, double volume) {
+        return new GeneralOrderBuilder(listing,volume);
     }
 
 
-    /** @param amount to create a sell order, use a negative amount */
-    public GeneralOrderBuilder create(Listing listing, BigDecimal amount) {
-        return new GeneralOrderBuilder(listing,amount);
+    /** @param volume to create a sell order, use a negative volume */
+    public GeneralOrderBuilder create(Listing listing, BigDecimal volume) {
+        return new GeneralOrderBuilder(listing,volume);
     }
 
 
-    /** @param amount to create a sell order, use a negative amount */
-    public SpecificOrderBuilder create( Market market, double amount ) {
-        return new SpecificOrderBuilder(market,amount);
+    /** @param volume to create a sell order, use a negative volume */
+    public SpecificOrderBuilder create( Market market, double volume ) {
+        return new SpecificOrderBuilder(market,volume);
     }
 
 
-    /** @param amount to create a sell order, use a negative amount */
-    public SpecificOrderBuilder create( Market market, DiscreteAmount amount ) {
-        return new SpecificOrderBuilder(market,amount);
+    /** @param volume to create a sell order, use a negative volume */
+    public SpecificOrderBuilder create( Market market, DiscreteAmount volume ) {
+        return new SpecificOrderBuilder(market,volume);
     }
 
 
@@ -97,13 +97,13 @@ public class OrderBuilder {
 
     public class GeneralOrderBuilder extends CommonOrderBuilder<GeneralOrderBuilder> {
 
-        public GeneralOrderBuilder(Listing listing, BigDecimal amount) {
-            order = new GeneralOrder(listing,amount);
+        public GeneralOrderBuilder(Listing listing, BigDecimal volume) {
+            order = new GeneralOrder(listing,volume);
         }
 
 
-        public GeneralOrderBuilder(Listing listing, double amount) {
-            order = new GeneralOrder(listing,amount);
+        public GeneralOrderBuilder(Listing listing, double volume) {
+            order = new GeneralOrder(listing,volume);
         }
 
 
@@ -128,13 +128,13 @@ public class OrderBuilder {
 
     public class SpecificOrderBuilder extends CommonOrderBuilder<SpecificOrderBuilder> {
         
-        public SpecificOrderBuilder(Market market, double amount) {
-            order = new SpecificOrder(market,amount);
+        public SpecificOrderBuilder(Market market, double volume) {
+            order = new SpecificOrder(market,volume);
         }
 
 
-        public SpecificOrderBuilder(Market market, DiscreteAmount amount) {
-            order = new SpecificOrder(market,amount);
+        public SpecificOrderBuilder(Market market, DiscreteAmount volume) {
+            order = new SpecificOrder(market,volume);
         }
 
 

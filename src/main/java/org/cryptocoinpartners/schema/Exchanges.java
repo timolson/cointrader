@@ -4,7 +4,7 @@ package org.cryptocoinpartners.schema;
 public class Exchanges
 {
     /** An imaginary Exchange used for testing */
-    public static final Exchange FAKEMARKET = Exchange.forSymbol("FAKEMARKET");
+    public static final Exchange MOCK = Exchange.forSymbol("MOCK");
 
     /** Our own "Exchange".  Internal Accounts have this as their Exchange */
     public static final Exchange SELF = Exchange.forSymbol("SELF");

@@ -7,25 +7,26 @@ import java.math.BigDecimal;
 
 /**
  * A GeneralOrder only specifies a Listing but not an Exchange.  The GeneralOrder must be processed and broken down into
- * a series of SpecificOrders before it can be placed on Markets.  GeneralOrders express their amounts and prices using
+ * a series of SpecificOrders before it can be placed on Markets.  GeneralOrders express their volumes and prices using
  * BigDecimal, since the trading basis at each Exchange may be different, thus a DiscreteAmount cannot be used.
  *
  * @author Tim Olson
  */
+@SuppressWarnings("UnusedDeclaration")
 @Entity
 public class GeneralOrder extends Order {
 
-    public GeneralOrder(Listing listing, BigDecimal amount)
+    public GeneralOrder(Listing listing, BigDecimal volume)
     {
         this.listing = listing;
-        this.amount = amount;
+        this.volume = volume;
     }
 
 
-    public GeneralOrder(Listing listing, double amount)
+    public GeneralOrder(Listing listing, double volume)
     {
         this.listing = listing;
-        this.amount = BigDecimal.valueOf(amount);
+        this.volume = BigDecimal.valueOf(volume);
     }
 
 
@@ -35,7 +36,7 @@ public class GeneralOrder extends Order {
 
     @Column(precision = 65, scale = 30)
     @Basic(optional = false)
-    public BigDecimal getAmount() { return amount; }
+    public BigDecimal getVolume() { return volume; }
 
 
     @Column(precision = 65, scale = 30)
@@ -48,19 +49,33 @@ public class GeneralOrder extends Order {
     public BigDecimal getStopPrice() { return stopPrice; }
 
 
+    @Transient BigDecimal getUnfilledVolume() {
+        BigDecimal filled = BigDecimal.ZERO;
+        for( Fill fill : getFills() )
+            filled = filled.add(fill.getVolume().asBigDecimal());
+        return filled;
+    }
+
+
     @Transient
-    public boolean isBid() { return amount.compareTo(BigDecimal.ZERO) > 0; }
+    public boolean isFilled() {
+        return getUnfilledVolume().equals(BigDecimal.ZERO);
+    }
+
+
+    @Transient
+    public boolean isBid() { return volume.compareTo(BigDecimal.ZERO) > 0; }
 
 
     protected GeneralOrder() { }
-    protected void setAmount(BigDecimal amount) { this.amount = amount; }
+    protected void setVolume(BigDecimal volume) { this.volume = volume; }
     protected void setLimitPrice(BigDecimal limit) { this.limitPrice = limit; }
     protected void setStopPrice(BigDecimal stopPrice) { this.stopPrice = stopPrice; }
     protected void setListing(Listing listing) { this.listing = listing; }
 
 
     private Listing listing;
-    private BigDecimal amount;
+    private BigDecimal volume;
     private BigDecimal limitPrice;
     private BigDecimal stopPrice;
 }

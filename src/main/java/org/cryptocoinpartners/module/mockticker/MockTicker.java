@@ -1,4 +1,4 @@
-package org.cryptocoinpartners.module.faketicker;
+package org.cryptocoinpartners.module.mockticker;
 
 
 import org.cryptocoinpartners.module.ConfigurationError;
@@ -18,13 +18,13 @@ import java.util.Random;
  * @author Tim Olson
  */
 @SuppressWarnings("FieldCanBeLocal")
-public class FakeTicker extends ModuleListenerBase {
+public class MockTicker extends ModuleListenerBase {
 
     public void initModule(Esper esper, Configuration config) {
         super.initModule(esper, config);
         String marketStr = config.getString("faketicker.exchange");
         if( marketStr == null )
-            throw new ConfigurationError("FakeTicker must be configured with the \"faketicker.exchange\" property");
+            throw new ConfigurationError("MockTicker must be configured with the \"mockticker.exchange\" property");
         for( String marketName : marketStr.toUpperCase().split(",") ) {
             String upperMarket = marketName.toUpperCase();
             Exchange exchange = Exchange.forSymbol(upperMarket);

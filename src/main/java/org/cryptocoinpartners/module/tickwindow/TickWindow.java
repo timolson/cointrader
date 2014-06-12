@@ -73,11 +73,11 @@ public class TickWindow extends ModuleListenerBase {
         @SuppressWarnings("ConstantConditions")
         private void updateTrade( Trade t ) {
             setPriceCount(t.getPriceCount());
-            final Long oldAmount = getVolumeCount();
-            if( oldAmount == null )
+            final Long oldVolume = getVolumeCount();
+            if( oldVolume == null )
                 setVolumeCount(t.getVolumeCount());
             else
-                setVolumeCount(oldAmount+t.getVolumeCount());
+                setVolumeCount(oldVolume+t.getVolumeCount());
         }
 
 
@@ -88,9 +88,9 @@ public class TickWindow extends ModuleListenerBase {
         {
             long startTime = getTime() == null ? now : getTime().getMillis();
             final Instant endInstant = new Instant(now);
-            final long amount = getVolumeCount() == null ? 0 : getVolumeCount();
+            final long volume = getVolumeCount() == null ? 0 : getVolumeCount();
             Tick tick = new Tick( getMarket(), new Instant(startTime), endInstant,
-                                  getPriceCount(), amount, getLastBook() );
+                                  getPriceCount(), volume, getLastBook() );
             setStartInstant(endInstant);
             setVolumeCount(0L);
             return tick;

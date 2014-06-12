@@ -73,7 +73,7 @@ public class BasicQuoteService extends BaseService implements QuoteService {
         if( lastBookForMarket == null || lastBookForMarket.getTime().isBefore(b.getTime()) )
             lastBookByMarket.put(marketSymbol,b);
 
-        Bid bestBid = b.getBestBid();
+        Offer bestBid = b.getBestBid();
         Book lastBestBidBook = bestBidByMarket.get(marketSymbol);
         //noinspection ConstantConditions
         if( bestBid != null &&
@@ -81,7 +81,7 @@ public class BasicQuoteService extends BaseService implements QuoteService {
           )
             bestBidByMarket.put(marketSymbol,b);
 
-        Ask bestAsk = b.getBestAsk();
+        Offer bestAsk = b.getBestAsk();
         Book lastBestAskBook = bestAskByMarket.get(marketSymbol);
         //noinspection ConstantConditions
         if( bestAsk != null &&
