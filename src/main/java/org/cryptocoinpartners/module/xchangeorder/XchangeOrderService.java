@@ -25,13 +25,13 @@ public class XchangeOrderService extends BaseOrderService {
 
 
     protected void handleSpecificOrder(SpecificOrder specificOrder) {
-        Exchange exchange = XchangeUtil.getExchangeForMarket(specificOrder.getMarketListing().getMarket());
+        Exchange exchange = XchangeUtil.getExchangeForMarket(specificOrder.getMarket().getExchange());
         PollingTradeService tradeService = exchange.getPollingTradeService();
         if( specificOrder.getLimitPriceCount() != 0 && specificOrder.getStopPriceCount() != 0 )
             reject(specificOrder,"Stop-limit orders are not supported");
         Order.OrderType orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
         BigDecimal tradableAmount = specificOrder.getAmount().asBigDecimal();
-        CurrencyPair currencyPair = XchangeUtil.getCurrencyPairForListing(specificOrder.getMarketListing().getListing());
+        CurrencyPair currencyPair = XchangeUtil.getCurrencyPairForListing(specificOrder.getMarket().getListing());
         String id = specificOrder.getId().toString();
         Date timestamp = specificOrder.getTime().toDate();
         if( specificOrder.getLimitPriceCount() != 0 ) {

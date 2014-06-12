@@ -10,8 +10,8 @@ import javax.persistence.Entity;
  */
 @Entity
 public class Ask extends Quote {
-    public Ask( MarketListing marketListing, Instant time, Instant timeReceived, long priceCount, long volumeCount) {
-        super(Side.SELL, marketListing, time, null, priceCount, volumeCount);
+    public Ask( Market market, Instant time, Instant timeReceived, long priceCount, long volumeCount) {
+        super(Side.SELL, market, time, null, priceCount, volumeCount);
         setTimeReceived(timeReceived);
     }
 

@@ -2,4 +2,4 @@ BTC-e is currently using an invalid, revoked certificate (saved as btc-e.cer).  
 this certificate to Java's trust store.
 
 cd $JAVA_HOME/jre/lib/security
-sudo ../../bin/keytool -import -alias ca -keystore cacerts -storepass changeit -file /path/to/trader/src/main/config/btc-e.cer
+sudo ../../bin/keytool -import -alias ca -keystore cacerts -storepass changeit -file /path/to/cointrader/src/main/config/btc-e.cer

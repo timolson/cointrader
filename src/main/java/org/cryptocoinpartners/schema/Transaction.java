@@ -6,7 +6,7 @@ import javax.persistence.Entity;
 
 
 /**
- * A Transaction represents the modification of multiple Positions, whether it is the purchase of a MarketListing or transfer
+ * A Transaction represents the modification of multiple Positions, whether it is the purchase of a Market or transfer
  * of funds between Accounts
  * @author Tim Olson
  */

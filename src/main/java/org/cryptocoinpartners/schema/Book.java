@@ -13,7 +13,7 @@ import java.util.*;
 
 
 /**
- * Book represents a snapshot of all the limit orders for a MarketListing.  Book has a "compact" database representation
+ * Book represents a snapshot of all the limit orders for a Market.  Book has a "compact" database representation
  *
  * @author Tim Olson
  */
@@ -44,7 +44,7 @@ public class Book extends MarketData implements Spread {
     @Transient
     public Bid getBestBid() {
         if( getBids().isEmpty() )
-            return new Bid(getMarketListing(),getTime(),getTimeReceived(),0,0);
+            return new Bid(getMarket(),getTime(),getTimeReceived(),0,0);
         return getBids().get(0);
     }
 
@@ -52,7 +52,7 @@ public class Book extends MarketData implements Spread {
     @Transient
     public Ask getBestAsk() {
         if( getAsks().isEmpty() ) {
-            return new Ask(getMarketListing(),getTime(),getTimeReceived(), Long.MAX_VALUE, 0);
+            return new Ask(getMarket(),getTime(),getTimeReceived(), Long.MAX_VALUE, 0);
         }
         return getAsks().get(0);
     }
@@ -62,7 +62,7 @@ public class Book extends MarketData implements Spread {
     @Transient
     public DiscreteAmount getBidPrice() {
         if( getBids().isEmpty() )
-            return new DiscreteAmount(0,getMarketListing().getPriceBasis());
+            return new DiscreteAmount(0, getMarket().getPriceBasis());
         return getBids().get(0).getPrice();
     }
     
@@ -71,7 +71,7 @@ public class Book extends MarketData implements Spread {
     @Transient
     public DiscreteAmount getBidAmount() {
         if( getBids().isEmpty() )
-            return new DiscreteAmount(0,getMarketListing().getVolumeBasis());
+            return new DiscreteAmount(0, getMarket().getVolumeBasis());
         return getBids().get(0).getVolume();
     }
     
@@ -96,7 +96,7 @@ public class Book extends MarketData implements Spread {
     @Transient
     public DiscreteAmount getAskPrice() {
         if( getAsks().isEmpty() )
-            return new DiscreteAmount(Long.MAX_VALUE,getMarketListing().getPriceBasis());
+            return new DiscreteAmount(Long.MAX_VALUE, getMarket().getPriceBasis());
         return getAsks().get(0).getPrice();
     }
     
@@ -105,7 +105,7 @@ public class Book extends MarketData implements Spread {
     @Transient
     public DiscreteAmount getAskAmount() {
         if( getAsks().isEmpty() )
-            return new DiscreteAmount(0,getMarketListing().getVolumeBasis());
+            return new DiscreteAmount(0, getMarket().getVolumeBasis());
         return getAsks().get(0).getVolume();
     }
 
@@ -148,15 +148,15 @@ public class Book extends MarketData implements Spread {
         public Builder() { this.book = Book.create(); }
 
 
-        public void start( Instant time, String remoteKey, MarketListing marketListing ) {
+        public void start( Instant time, String remoteKey, Market market) {
             book.setTime(time);
             book.setRemoteKey(remoteKey);
-            book.setMarketListing(marketListing);
+            book.setMarket(market);
         }
 
 
         public Builder addBid( BigDecimal price, BigDecimal amount ) {
-            MarketListing ml = book.getMarketListing();
+            Market ml = book.getMarket();
             book.bids.add(new Bid(ml, book.getTime(), book.getTimeReceived(),
                                   DiscreteAmount.countForValueRounded(price,ml.getPriceBasis()),
                                   DiscreteAmount.countForValueRounded(amount,ml.getVolumeBasis())));
@@ -165,7 +165,7 @@ public class Book extends MarketData implements Spread {
 
 
         public Builder addAsk( BigDecimal price, BigDecimal amount ) {
-            MarketListing ml = book.getMarketListing();
+            Market ml = book.getMarket();
             book.asks.add(new Ask(ml,book.getTime(),book.getTimeReceived(),
                                   DiscreteAmount.countForValueRounded(price,ml.getPriceBasis()),
                                   DiscreteAmount.countForValueRounded(amount,ml.getVolumeBasis())));
@@ -177,14 +177,14 @@ public class Book extends MarketData implements Spread {
         {
             book.sortBook();
 
-            // look for a Chain of Books of the same MarketListing
-            String marketListingSymbol = book.getMarketListing().getSymbol();
-            Chain chain = chains.get(marketListingSymbol);
+            // look for a Chain of Books of the same Market
+            String marketSymbol = book.getMarket().getSymbol();
+            Chain chain = chains.get(marketSymbol);
             if( chain == null ) {
-                // no chain exists for the MarketListing, so create one
+                // no chain exists for the Market, so create one
                 chain = new Chain();
                 chain.previousBook = book;
-                chains.put(marketListingSymbol,chain);
+                chains.put(marketSymbol,chain);
             }
             else {
                 // a parent Book exists in the chain
@@ -212,7 +212,7 @@ public class Book extends MarketData implements Spread {
         private static class Chain {
             private int chainLength;
             private Book previousBook;
-            private String marketListingSymbol;
+            private String marketSymbol;
         }
 
         private Book book;
@@ -222,7 +222,7 @@ public class Book extends MarketData implements Spread {
 
     public String toString()
     {
-        StringBuilder sb = new StringBuilder(getMarketListing().toString() + " Book at "+getTime()+" bids={");
+        StringBuilder sb = new StringBuilder(getMarket().toString() + " Book at "+getTime()+" bids={");
         boolean first = true;
         for( Bid bid : getBids() ) {
             if( first )
@@ -441,14 +441,14 @@ public class Book extends MarketData implements Spread {
     
     private class BidCreator implements QuoteCreator<Bid> {
         public Bid create(long price, long amount) {
-            return new Bid(getMarketListing(),getTime(),getTimeReceived(),price,amount);
+            return new Bid(getMarket(),getTime(),getTimeReceived(),price,amount);
         }
     }
 
 
     private class AskCreator implements QuoteCreator<Ask> {
         public Ask create(long price, long amount) {
-            return new Ask(getMarketListing(),getTime(),getTimeReceived(),price,amount);
+            return new Ask(getMarket(),getTime(),getTimeReceived(),price,amount);
         }
     }
 

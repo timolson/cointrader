@@ -14,38 +14,38 @@ import java.math.BigDecimal;
 
 
 /**
- * Trade represents a single known transaction of a MarketListing
+ * Trade represents a single known transaction of a Market
  *
  * @author Tim Olson
  */
 @Entity
-@Table(indexes = {@Index(columnList = "time"),@Index(columnList = "timeReceived"),@Index(columnList = "marketListing_id,remoteKey")})
+@Table(indexes = {@Index(columnList = "time"),@Index(columnList = "timeReceived"),@Index(columnList = "market_id,remoteKey")})
 public class Trade extends PriceData {
 
-    public static Trade fromDoubles( MarketListing marketListing, Instant time, @Nullable String remoteKey,
+    public static Trade fromDoubles( Market market, Instant time, @Nullable String remoteKey,
                                      double price, double volume) {
-        long priceCount = Math.round(price/marketListing.getPriceBasis());
-        long volumeCount = Math.round(volume/marketListing.getVolumeBasis());
-        return new Trade(marketListing,time,remoteKey,priceCount,volumeCount);
+        long priceCount = Math.round(price/market.getPriceBasis());
+        long volumeCount = Math.round(volume/market.getVolumeBasis());
+        return new Trade(market,time,remoteKey,priceCount,volumeCount);
     }
 
 
     /**
-     * @param marketListing what MarketListing was traded
+     * @param market what Market was traded
      * @param time when the trade originally occured
      * @param remoteKey the unique key assigned by the market data provider to this trade.  helps prevent duplication of market data
-     * @param priceCount the trade price as a count of "pips," where the size of the pip is the marketListing's priceBasis()
-     * @param volumeCount the trade price as a count of "pips," where the size of the pip is the marketListing's volumeBasis()
+     * @param priceCount the trade price as a count of "pips," where the size of the pip is the market's priceBasis()
+     * @param volumeCount the trade price as a count of "pips," where the size of the pip is the market's volumeBasis()
      */
-    public Trade( MarketListing marketListing, Instant time, @Nullable String remoteKey,
+    public Trade( Market market, Instant time, @Nullable String remoteKey,
                   long priceCount, long volumeCount) {
-        super(time, remoteKey, marketListing, priceCount, volumeCount);
+        super(time, remoteKey, market, priceCount, volumeCount);
     }
 
 
-    public Trade( MarketListing marketListing, Instant time, @Nullable String remoteKey,
+    public Trade( Market market, Instant time, @Nullable String remoteKey,
                   BigDecimal price, BigDecimal volume ) {
-        super(time, remoteKey, marketListing, price, volume);
+        super(time, remoteKey, market, price, volume);
     }
 
 

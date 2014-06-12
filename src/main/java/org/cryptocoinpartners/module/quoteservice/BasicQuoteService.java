@@ -17,7 +17,7 @@ import java.util.*;
 @SuppressWarnings("UnusedDeclaration")
 public class BasicQuoteService extends BaseService implements QuoteService {
     
-    public Trade getLastTrade(MarketListing marketListing) {
+    public Trade getLastTrade(Market market) {
         return null;
     }
 
@@ -27,7 +27,7 @@ public class BasicQuoteService extends BaseService implements QuoteService {
     }
 
 
-    public Book getLastBook(MarketListing marketListing) {
+    public Book getLastBook(Market market) {
         return null;
     }
 
@@ -37,9 +37,9 @@ public class BasicQuoteService extends BaseService implements QuoteService {
     }
 
 
-    public Set<MarketListing> getMarketListingsForListing( Listing listing ) {
-        Set<MarketListing> result = marketListingsByListing.get(listing.getSymbol());
-        return result == null ? Collections.<MarketListing>emptySet() : result;
+    public Set<Market> getMarketsForListing(Listing listing) {
+        Set<Market> result = marketsByListing.get(listing.getSymbol());
+        return result == null ? Collections.<Market>emptySet() : result;
     }
 
 
@@ -47,7 +47,7 @@ public class BasicQuoteService extends BaseService implements QuoteService {
      * @return null if no Books for the given listing have been received yet
      */
     public @Nullable Book getBestBidForListing( Listing listing ) {
-        return bestBidByMarketListing.get(listing.getSymbol());
+        return bestBidByMarket.get(listing.getSymbol());
     }
     
     
@@ -55,78 +55,78 @@ public class BasicQuoteService extends BaseService implements QuoteService {
      * @return null if no Books for the given listing have been received yet
      */
     public @Nullable Book getBestAskForListing( Listing listing ) {
-        return bestAskByMarketListing.get(listing.getSymbol());
+        return bestAskByMarket.get(listing.getSymbol());
     }
     
     
     @When("select * from Book")
     void recordBook( Book b ) {
-        MarketListing marketListing = b.getMarketListing();
+        Market market = b.getMarket();
         
-        String listingSymbol = marketListing.getListing().getSymbol();
+        String listingSymbol = market.getListing().getSymbol();
         Book lastBookForListing = lastBookByListing.get(listingSymbol);
         if( lastBookForListing == null || lastBookForListing.getTime().isBefore(b.getTime()) )
             lastBookByListing.put(listingSymbol,b);
 
-        String marketListingSymbol = marketListing.getSymbol();
-        Book lastBookForMarketListing = lastBookByMarketListing.get(marketListingSymbol);
-        if( lastBookForMarketListing == null || lastBookForMarketListing.getTime().isBefore(b.getTime()) )
-            lastBookByMarketListing.put(marketListingSymbol,b);
+        String marketSymbol = market.getSymbol();
+        Book lastBookForMarket = lastBookByMarket.get(marketSymbol);
+        if( lastBookForMarket == null || lastBookForMarket.getTime().isBefore(b.getTime()) )
+            lastBookByMarket.put(marketSymbol,b);
 
         Bid bestBid = b.getBestBid();
-        Book lastBestBidBook = bestBidByMarketListing.get(marketListingSymbol);
+        Book lastBestBidBook = bestBidByMarket.get(marketSymbol);
         //noinspection ConstantConditions
         if( bestBid != null &&
                 ( lastBestBidBook == null || bestBid.getPrice().compareTo(lastBestBidBook.getBestBid().getPrice()) > 0 )
           )
-            bestBidByMarketListing.put(marketListingSymbol,b);
+            bestBidByMarket.put(marketSymbol,b);
 
         Ask bestAsk = b.getBestAsk();
-        Book lastBestAskBook = bestAskByMarketListing.get(marketListingSymbol);
+        Book lastBestAskBook = bestAskByMarket.get(marketSymbol);
         //noinspection ConstantConditions
         if( bestAsk != null &&
                 ( lastBestAskBook == null || bestAsk.getPrice().compareTo(lastBestAskBook.getBestAsk().getPrice()) < 0 )
           )
-            bestAskByMarketListing.put(marketListingSymbol,b);
+            bestAskByMarket.put(marketSymbol,b);
     }
 
 
     @When("select * from Trade")
     void recordTrade( Trade t ) {
-        MarketListing marketListing = t.getMarketListing();
-        handleMarketListing(marketListing);
+        Market market = t.getMarket();
+        handleMarket(market);
         
-        String listingSymbol = marketListing.getListing().getSymbol();
+        String listingSymbol = market.getListing().getSymbol();
         Trade lastTradeForListing = lastTradeByListing.get(listingSymbol);
         if( lastTradeForListing == null || lastTradeForListing.getTime().isBefore(t.getTime()) )
             lastTradeByListing.put(listingSymbol,t);
 
-        String marketListingSymbol = marketListing.getSymbol();
-        Trade lastTradeForMarketListing = lastTradeByMarketListing.get(marketListingSymbol);
-        if( lastTradeForMarketListing == null || lastTradeForMarketListing.getTime().isBefore(t.getTime()) )
-            lastTradeByMarketListing.put(marketListingSymbol,t);
+        String marketSymbol = market.getSymbol();
+        Trade lastTradeForMarket = lastTradeByMarket.get(marketSymbol);
+        if( lastTradeForMarket == null || lastTradeForMarket.getTime().isBefore(t.getTime()) )
+            lastTradeByMarket.put(marketSymbol,t);
     }
 
 
-    private void handleMarketListing(MarketListing marketListing) {
-        final Listing listing = marketListing.getListing();
+    private void handleMarket(Market market) {
+        final Listing listing = market.getListing();
         final String listingSymbol = listing.getSymbol();
-        Set<MarketListing> marketListings = marketListingsByListing.get(listingSymbol);
-        if( marketListings == null ) {
-            marketListings = new HashSet<>();
-            marketListings.add(marketListing);
-            marketListingsByListing.put(listingSymbol, marketListings);
+        Set<Market> markets = marketsByListing.get(listingSymbol);
+        if( markets == null ) {
+            markets = new HashSet<>();
+            markets.add(market);
+            marketsByListing.put(listingSymbol, markets);
         }
         else
-            marketListings.add(marketListing);
+            markets.add(market);
     }
 
 
     private Map<String,Trade> lastTradeByListing = new HashMap<>();
     private Map<String,Book> lastBookByListing = new HashMap<>();
-    private Map<String,Trade> lastTradeByMarketListing = new HashMap<>();
-    private Map<String,Book> lastBookByMarketListing = new HashMap<>();
-    private Map<String,Book> bestBidByMarketListing = new HashMap<>();
-    private Map<String,Book> bestAskByMarketListing = new HashMap<>();
-    private Map<String,Set<MarketListing>> marketListingsByListing = new HashMap<>();
+    private Map<String,Trade> lastTradeByMarket = new HashMap<>();
+    private Map<String,Book> lastBookByMarket = new HashMap<>();
+    private Map<String,Book> bestBidByMarket = new HashMap<>();
+    private Map<String,Book> bestAskByMarket = new HashMap<>();
+    private Map<String,Set<Market>> marketsByListing = new HashMap<>();
 }

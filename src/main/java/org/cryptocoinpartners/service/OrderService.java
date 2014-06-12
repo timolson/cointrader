@@ -13,8 +13,8 @@ public interface OrderService extends Service {
         // if paper trade... then replace order interface with paper simulator
         // if simulation... then replace both data and order interfaces with simulator
         //
-        // if market is specified...
-        //     send to market using order interface
+        // if exchange is specified...
+        //     send to exchange using order interface
         // otherwise...
         //     use data interface to look at current order book for each market that has the listing
         //     guess at how much might fill on each market at what price

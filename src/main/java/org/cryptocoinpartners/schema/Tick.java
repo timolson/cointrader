@@ -5,12 +5,11 @@ import org.joda.time.Instant;
 import javax.annotation.Nullable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 
 /**
- * A Tick is a point-in-time snapshot of a MarketListing's last price, volume and most recent Book
+ * A Tick is a point-in-time snapshot of a Market's last price, volume and most recent Book
  *
  * @author Tim Olson
  */
@@ -39,10 +38,10 @@ public class Tick extends PriceData implements Spread {
     public @Nullable Ask getBestAsk() { return lastBook == null ? null : lastBook.getBestAsk(); }
 
 
-    public Tick( MarketListing marketListing, Instant startInstant, Instant endInstant,
+    public Tick( Market market, Instant startInstant, Instant endInstant,
                  @Nullable Long lastPriceCount, @Nullable Long volumeCount, Book lastBook )
     {
-        super(endInstant,null,marketListing,lastPriceCount,volumeCount);
+        super(endInstant,null, market,lastPriceCount,volumeCount);
         this.startInstant = startInstant;
         this.lastBook = lastBook;
     }
@@ -51,7 +50,7 @@ public class Tick extends PriceData implements Spread {
     public String toString()
     {
         return String.format("Tick{%s last:%g@%g bid:%s ask:%s}",
-                             getMarketListing(), getVolumeAsDouble(), getPriceAsDouble(), getBestBid(), getBestAsk() );
+                             getMarket(), getVolumeAsDouble(), getPriceAsDouble(), getBestBid(), getBestAsk() );
     }
 
 

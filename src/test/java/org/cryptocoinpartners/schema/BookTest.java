@@ -29,7 +29,7 @@ public class BookTest {
 
         Book.Builder b = new Book.Builder();
 
-        b.start(Instant.now(), null, MarketListing.findOrCreate(Markets.BITSTAMP, Listing.forSymbol("BTC.USD")));
+        b.start(Instant.now(), null, Market.findOrCreate(Markets.BITSTAMP, Listing.forSymbol("BTC.USD")));
         b.addBid(new BigDecimal("2.1"), new BigDecimal("1.04"));
         b.addBid(new BigDecimal("2.2"), new BigDecimal("1.03"));
         b.addBid(new BigDecimal("2.3"), new BigDecimal("1.02"));
@@ -43,7 +43,7 @@ public class BookTest {
         PersistUtil.insert(parent);
         System.out.println("saved parent "+parent.getId());
 
-        b.start(Instant.now(), null, MarketListing.findOrCreate(Markets.BITSTAMP, Listing.forSymbol("BTC.USD")));
+        b.start(Instant.now(), null, Market.findOrCreate(Markets.BITSTAMP, Listing.forSymbol("BTC.USD")));
         b.addBid(new BigDecimal("2.1"), new BigDecimal("1.04"));
         b.addBid(new BigDecimal("2.2"), new BigDecimal("1.03"));
         //b.addBid(new BigDecimal("2.3"), new BigDecimal("1.02"));
@@ -59,7 +59,7 @@ public class BookTest {
         System.out.println("saved child " + child.getId());
 
 
-        b.start(Instant.now(), null, MarketListing.findOrCreate(Markets.BITSTAMP, Listing.forSymbol("BTC.USD")));
+        b.start(Instant.now(), null, Market.findOrCreate(Markets.BITSTAMP, Listing.forSymbol("BTC.USD")));
         b.addBid(new BigDecimal("2.1"), new BigDecimal("1.04"));
         b.addBid(new BigDecimal("2.2"), new BigDecimal("1.03"));
         b.addBid(new BigDecimal("2.25"), new BigDecimal("1.02"));
@@ -82,7 +82,7 @@ public class BookTest {
 
     /** something like this will be required for all test cases to be initialized */
     public static void init() throws ConfigurationException {
-        Config.init("trader.properties", Collections.<String, String>emptyMap());
+        Config.init("cointrader.properties", Collections.<String, String>emptyMap());
         PersistUtil.init();
     }
 

@@ -37,29 +37,29 @@ public abstract class BaseOrderService extends BaseService implements OrderServi
             reject(generalOrder, "Stop-limit orders are not supported");
         }
         @SuppressWarnings("ConstantConditions")
-        MarketListing marketListing = b.getMarketListing();
+        Market market = b.getMarket();
         @SuppressWarnings("ConstantConditions")
-        SpecificOrder specificOrder = convertGeneralOrderToSpecific(generalOrder, marketListing);
-        log.info("Routing order "+generalOrder+" to "+marketListing.getMarket().getSymbol());
+        SpecificOrder specificOrder = convertGeneralOrderToSpecific(generalOrder, market);
+        log.info("Routing order "+generalOrder+" to "+ market.getExchange().getSymbol());
         handleSpecificOrder(specificOrder);
     }
 
 
-    private SpecificOrder convertGeneralOrderToSpecific(GeneralOrder generalOrder, MarketListing marketListing) {
-        DiscreteAmount amount = DiscreteAmount.fromValue(generalOrder.getAmount(), marketListing.getVolumeBasis(),
+    private SpecificOrder convertGeneralOrderToSpecific(GeneralOrder generalOrder, Market market) {
+        DiscreteAmount amount = DiscreteAmount.fromValue(generalOrder.getAmount(), market.getVolumeBasis(),
                                                          Remainder.DISCARD);
         // the amount will already be negative for a sell order
-        OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(generalOrder.getFund()).buy(marketListing, amount);
+        OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(generalOrder.getFund()).create(market, amount);
 
         DiscreteAmount.RemainderHandler priceRemainderHandler = generalOrder.isBid() ? buyHandler : sellHandler;
         final BigDecimal limitPrice = generalOrder.getLimitPrice();
         if( limitPrice != null ) {
-            DiscreteAmount price = DiscreteAmount.fromValue(limitPrice,marketListing.getPriceBasis(),priceRemainderHandler);
+            DiscreteAmount price = DiscreteAmount.fromValue(limitPrice, market.getPriceBasis(),priceRemainderHandler);
             builder.withLimitPriceCount(price.getCount());
         }
         final BigDecimal stopPrice = generalOrder.getStopPrice();
         if( stopPrice != null ) {
-            DiscreteAmount price = DiscreteAmount.fromValue(stopPrice,marketListing.getPriceBasis(),priceRemainderHandler);
+            DiscreteAmount price = DiscreteAmount.fromValue(stopPrice, market.getPriceBasis(),priceRemainderHandler);
             builder.withStopPriceCount(price.getCount());
         }
         SpecificOrder specificOrder = builder.getOrder();

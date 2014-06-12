@@ -16,23 +16,23 @@ import java.util.Collection;
  */
 public class Account {
 
-    public Account(Market market) {
-        this.market = market;
+    public Account(Exchange exchange) {
+        this.exchange = exchange;
         this.positions = new ArrayList<>();
     }
 
 
     public Collection<Position> getPositions() { return positions; }
-    public Market getMarket() { return market; }
+    public Exchange getExchange() { return exchange; }
 
 
     // JPA only
     protected Account() { }
     protected void setPositions(Collection<Position> positions) { this.positions = positions; }
-    protected void setMarket(Market market) { this.market = market; }
+    protected void setExchange(Exchange exchange) { this.exchange = exchange; }
 
 
     private Collection<Position> positions;
     private Owner owner;
-    private Market market;
+    private Exchange exchange;
 }

@@ -5,7 +5,7 @@ import org.cryptocoinpartners.module.Esper;
 import org.cryptocoinpartners.module.ModuleListenerBase;
 import org.cryptocoinpartners.module.When;
 import org.cryptocoinpartners.schema.Book;
-import org.cryptocoinpartners.schema.MarketListing;
+import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Tick;
 import org.cryptocoinpartners.schema.Trade;
 import org.joda.time.Instant;
@@ -44,17 +44,17 @@ public class TickWindow extends ModuleListenerBase {
 
     @When("select * from Trade")
     public void handleTrade(Trade t) {
-        getAccumulatingTick(t.getMarketListing()).updateTrade(t);
+        getAccumulatingTick(t.getMarket()).updateTrade(t);
     }
 
 
     @When("select * from Book")
     public void handleBook(Book b) {
-        getAccumulatingTick(b.getMarketListing()).updateBook(b);
+        getAccumulatingTick(b.getMarket()).updateBook(b);
     }
 
 
-    private AccumulatingTick getAccumulatingTick( MarketListing ml ) {
+    private AccumulatingTick getAccumulatingTick( Market ml ) {
         AccumulatingTick at = accumulatingTickMap.get(ml.getId());
         if( at == null ) {
             at = new AccumulatingTick(ml);
@@ -65,7 +65,7 @@ public class TickWindow extends ModuleListenerBase {
 
 
     private static class AccumulatingTick extends Tick {
-        private AccumulatingTick( MarketListing ml ) {
+        private AccumulatingTick( Market ml ) {
             super(ml, null, null, null, 0L, null);
         }
 
@@ -89,7 +89,7 @@ public class TickWindow extends ModuleListenerBase {
             long startTime = getTime() == null ? now : getTime().getMillis();
             final Instant endInstant = new Instant(now);
             final long amount = getVolumeCount() == null ? 0 : getVolumeCount();
-            Tick tick = new Tick( getMarketListing(), new Instant(startTime), endInstant,
+            Tick tick = new Tick( getMarket(), new Instant(startTime), endInstant,
                                   getPriceCount(), amount, getLastBook() );
             setStartInstant(endInstant);
             setVolumeCount(0L);

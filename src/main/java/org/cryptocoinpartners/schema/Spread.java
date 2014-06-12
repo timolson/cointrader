@@ -6,7 +6,7 @@ import org.joda.time.Instant;
 public interface Spread
 {
     public Instant getTime();
-    public MarketListing getMarketListing();
+    public Market getMarket();
     public Bid getBestBid();
     public Ask getBestAsk();
 }

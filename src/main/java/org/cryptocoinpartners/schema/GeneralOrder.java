@@ -6,9 +6,9 @@ import java.math.BigDecimal;
 
 
 /**
- * A GeneralOrder only specifies a Listing but not a Market.  The GeneralOrder must be processed and broken down into
+ * A GeneralOrder only specifies a Listing but not an Exchange.  The GeneralOrder must be processed and broken down into
  * a series of SpecificOrders before it can be placed on Markets.  GeneralOrders express their amounts and prices using
- * BigDecimal, since the trading basis at each Market may be different, thus a DiscreteAmount cannot be used.
+ * BigDecimal, since the trading basis at each Exchange may be different, thus a DiscreteAmount cannot be used.
  *
  * @author Tim Olson
  */

@@ -7,7 +7,7 @@
     </appender>
 
     <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>trader.log</file>
+        <file>cointrader.log</file>
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
@@ -18,9 +18,11 @@
         <appender-ref ref="FILE"/>
     </root>
 
-    <logger name="org.cryptocoinpartners" level="info"/>
-    <logger name="org.cryptocoinpartners.module" level="debug"/>
     <logger name="org.hibernate.ejb.HibernatePersistence" level="error"/>
+
+    <logger name="org.cryptocoinpartners" level="info"/>
+    <!--<logger name="org.cryptocoinpartners.module" level="debug"/>-->
     <!--<logger name="org.hibernate.tool.hbm2ddl.SchemaExport" level="off"/>-->
+    <!--<logger name="org.cryptocoinpartners.util.Config" level="debug"/>-->
 
 </configuration>

@@ -15,19 +15,19 @@ import javax.persistence.Transient;
 public class Position extends EntityBase {
 
 
-    // todo is Account one-to-one with Market?  Should we pass in the Account here instead?
-    public Position(Fund fund, Market market, Fungible fungible, DiscreteAmount amount) {
+    // todo is Account one-to-one with Exchange?  Should we pass in the Account here instead?
+    public Position(Fund fund, Exchange exchange, Fungible fungible, DiscreteAmount amount) {
         if( amount.getBasis() != fungible.getBasis() )
             throw new IllegalArgumentException("Basis for amount must match basis for Fungible");
         this.fund = fund;
-        this.market = market;
+        this.exchange = exchange;
         this.amountCount = amount.getCount();
         this.fungible = fungible;
     }
 
 
     @ManyToOne(optional = false) public Fund getFund() { return fund; }
-    @ManyToOne(optional = false) public Market getMarket() { return market; }
+    @ManyToOne(optional = false) public Exchange getExchange() { return exchange; }
     @Transient public DiscreteAmount getAmount() {
         if( amount == null )
             amount = new DiscreteAmount(amountCount,fungible.getBasis());
@@ -39,14 +39,14 @@ public class Position extends EntityBase {
     // JPA
     protected Position() { }
     protected void setFund(Fund fund) { this.fund = fund; }
-    protected void setMarket(Market market) { this.market = market; }
+    protected void setExchange(Exchange exchange) { this.exchange = exchange; }
     protected void setFungible(Fungible fungible) { this.fungible = fungible; }
     protected long getAmountCount() { return amount.getCount(); }
     protected void setAmountCount(long amountCount) { this.amountCount = amountCount; }
 
 
     private Fund fund;
-    private Market market;
+    private Exchange exchange;
     private DiscreteAmount amount;
     private long amountCount;
     private Fungible fungible;

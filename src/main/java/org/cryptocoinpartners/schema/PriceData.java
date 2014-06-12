@@ -20,23 +20,23 @@ public abstract class PriceData extends MarketData {
     /**
      * @param time when the pricing event originally occured
      * @param remoteKey the exchange's unique ID for the pricing event (to prevent duplicates)
-     * @param marketListing which MarketListing this pricing is for
-     * @param priceCount relative to the MarketListing's quoteBasis
-     * @param volumeCount relative to the MarketListing's volumeBasis
+     * @param market which Market this pricing is for
+     * @param priceCount relative to the Market's quoteBasis
+     * @param volumeCount relative to the Market's volumeBasis
      */
-    public PriceData(Instant time, @Nullable String remoteKey, MarketListing marketListing,
+    public PriceData(Instant time, @Nullable String remoteKey, Market market,
                      @Nullable Long priceCount, @Nullable Long volumeCount) {
-        super(time, remoteKey, marketListing);
+        super(time, remoteKey, market);
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
     }
 
 
-    public PriceData(Instant time, @Nullable String remoteKey, MarketListing marketListing,
+    public PriceData(Instant time, @Nullable String remoteKey, Market market,
                      @Nullable BigDecimal price, @Nullable BigDecimal volume) {
-        super(time, remoteKey, marketListing);
-        this.priceCount = DiscreteAmount.countForValueRounded(price,marketListing.getPriceBasis());
-        this.volumeCount = DiscreteAmount.countForValueRounded(volume,marketListing.getVolumeBasis());
+        super(time, remoteKey, market);
+        this.priceCount = DiscreteAmount.countForValueRounded(price, market.getPriceBasis());
+        this.volumeCount = DiscreteAmount.countForValueRounded(volume, market.getVolumeBasis());
     }
 
 
@@ -51,7 +51,7 @@ public abstract class PriceData extends MarketData {
         if( priceCount == null )
             return null;
         if( price == null )
-            price = new DiscreteAmount(priceCount,getMarketListing().getPriceBasis());
+            price = new DiscreteAmount(priceCount, getMarket().getPriceBasis());
         return price;
     }
 
@@ -68,7 +68,7 @@ public abstract class PriceData extends MarketData {
         if( volumeCount == null )
             return null;
         if( volume == null )
-            volume = new DiscreteAmount(volumeCount,getMarketListing().getVolumeBasis());
+            volume = new DiscreteAmount(volumeCount, getMarket().getVolumeBasis());
         return volume;
     }
 

@@ -16,10 +16,10 @@ import javax.persistence.ManyToOne;
 public class Fill extends RemoteEvent {
 
 
-    public Fill(Order order, Instant time, MarketListing marketListing, long priceCount, long amountCount ) {
+    public Fill(Order order, Instant time, Market market, long priceCount, long amountCount ) {
         super(time,null);
         this.order = order;
-        this.marketListing = marketListing;
+        this.market = market;
         this.priceCount = priceCount;
         this.amountCount = amountCount;
     }
@@ -31,13 +31,13 @@ public class Fill extends RemoteEvent {
     // JPA
     protected Fill() {}
     protected void setOrder(Order order) { this.order = order; }
-    protected void setMarketListing(MarketListing marketListing) { this.marketListing = marketListing; }
+    protected void setMarket(Market market) { this.market = market; }
     protected void setPriceCount(long priceCount) { this.priceCount = priceCount; }
     protected void setAmountCount(long amountCount) { this.amountCount = amountCount; }
 
 
     private Order order;
-    private MarketListing marketListing;
+    private Market market;
     private long priceCount;
     private long amountCount;
 }

@@ -18,14 +18,14 @@ import javax.persistence.Entity;
 public class MarketDataGapError extends MarketDataError {
 
 
-    public MarketDataGapError(MarketListing marketListing, Duration gapDuration) {
-        super(marketListing);
+    public MarketDataGapError(Market market, Duration gapDuration) {
+        super(market);
         gapInterval = new Interval(Instant.now(),Instant.now().withDurationAdded(gapDuration,1));
     }
 
 
-    public MarketDataGapError(MarketListing marketListing, Duration gapDuration, @Nullable Exception exception) {
-        super(marketListing, exception);
+    public MarketDataGapError(Market market, Duration gapDuration, @Nullable Exception exception) {
+        super(market, exception);
         gapInterval = new Interval(Instant.now(),Instant.now().withDurationAdded(gapDuration,1));
     }
 

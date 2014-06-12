@@ -4,7 +4,7 @@ package org.cryptocoinpartners.module.faketicker;
 import org.cryptocoinpartners.module.ConfigurationError;
 import org.cryptocoinpartners.module.Esper;
 import org.cryptocoinpartners.module.ModuleListenerBase;
-import org.cryptocoinpartners.schema.MarketListing;
+import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.util.MathUtil;
 import org.apache.commons.configuration.Configuration;
@@ -22,16 +22,16 @@ public class FakeTicker extends ModuleListenerBase {
 
     public void initModule(Esper esper, Configuration config) {
         super.initModule(esper, config);
-        String marketStr = config.getString("faketicker.market");
+        String marketStr = config.getString("faketicker.exchange");
         if( marketStr == null )
-            throw new ConfigurationError("FakeTicker must be configured with the \"faketicker.market\" property");
+            throw new ConfigurationError("FakeTicker must be configured with the \"faketicker.exchange\" property");
         for( String marketName : marketStr.toUpperCase().split(",") ) {
             String upperMarket = marketName.toUpperCase();
-            Market market = Market.forSymbol(upperMarket);
-            if( market == null )
-                throw new ConfigurationError("Could not find Market with symbol \""+ upperMarket +"\"");
-            for( MarketListing marketListing : MarketListing.find(market) ) {
-                new PoissonTickerThread(marketListing).start();
+            Exchange exchange = Exchange.forSymbol(upperMarket);
+            if( exchange == null )
+                throw new ConfigurationError("Could not find Exchange with symbol \""+ upperMarket +"\"");
+            for( Market market : Market.find(exchange) ) {
+                new PoissonTickerThread(market).start();
             }
         }
     }
@@ -71,19 +71,19 @@ public class FakeTicker extends ModuleListenerBase {
                 }
                 if( !running )
                     break;
-                Trade trade = Trade.fromDoubles(marketListing, Instant.now(), null, nextPrice(), nextVolume());
+                Trade trade = Trade.fromDoubles(market, Instant.now(), null, nextPrice(), nextVolume());
                 esper.publish(trade);
             }
         }
 
 
-        private PoissonTickerThread(MarketListing marketListing ) {
+        private PoissonTickerThread(Market market) {
             setDaemon(true);
-            this.marketListing = marketListing;
+            this.market = market;
         }
 
 
-        private final MarketListing marketListing;
+        private final Market market;
     }
 
 

@@ -40,7 +40,7 @@ public class Strategy extends FundManager implements ModuleListener {
      */
     protected OrderBuilder order;
 
-    /** You may use this service to query the most recent Trades and Books for all Listings and MarketListings */
+    /** You may use this service to query the most recent Trades and Books for all Listings and Markets */
     protected QuoteService quotes;
 
     private OrderService orderService;

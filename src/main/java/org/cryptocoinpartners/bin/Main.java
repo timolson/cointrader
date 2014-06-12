@@ -19,8 +19,8 @@ import java.util.*;
  */
 public class Main
 {
-    static final String DEFAULT_PROPERTIES_FILENAME = "trader.properties";
-    static final String FALLBACK_PROPERTIES_FILENAME = "trader-default.properties";
+    static final String DEFAULT_PROPERTIES_FILENAME = "cointrader.properties";
+    static final String FALLBACK_PROPERTIES_FILENAME = "cointrader-default.properties";
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
     static class MainParams {
@@ -28,7 +28,7 @@ public class Main
         @Parameter(names = {"h","help","-h","-H","-help","--help"}, help = true, description = "Show this usage help")
         boolean help;
 
-        @Parameter(names = {"-f","-properties-file"}, description = "location of the trader.properties config file")
+        @Parameter(names = {"-f","-properties-file"}, description = "location of the cointrader.properties config file")
         String propertiesFilename = DEFAULT_PROPERTIES_FILENAME;
 
         @DynamicParameter( names = {"-D"}, description = "use the -D flag to set configuration properties \"-Ddb.username=dbuser\"" )
@@ -79,17 +79,9 @@ public class Main
             Config.init(mainParams.propertiesFilename, mainParams.definitions);
         }
         catch( ConfigurationException e ) {
-            if( !mainParams.propertiesFilename.equals(DEFAULT_PROPERTIES_FILENAME) )
-                throw e;
-            try {
-                Config.init(FALLBACK_PROPERTIES_FILENAME, mainParams.definitions);
-                log.info(DEFAULT_PROPERTIES_FILENAME + " not found.  Using " + FALLBACK_PROPERTIES_FILENAME + " instead.");
-            }
-            catch( ConfigurationException x ) {
-                System.err.println("Could not load "+DEFAULT_PROPERTIES_FILENAME+" or "+FALLBACK_PROPERTIES_FILENAME);
-                x.printStackTrace(System.err);
-                System.exit(1);
-            }
+            System.err.println("Could not load properties");
+            e.printStackTrace(System.err);
+            System.exit(1);
         }
         try {
             command.run();

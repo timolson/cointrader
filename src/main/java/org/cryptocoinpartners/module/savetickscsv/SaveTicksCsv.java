@@ -21,7 +21,7 @@ import java.util.List;
 public class SaveTicksCsv extends ModuleListenerBase
 {
 
-    public static List<String> headers = new ArrayList<>(Arrays.asList(new String[]{ "listing", "market", "base", "quote", "time", "last", "vol"}));
+    public static List<String> headers = new ArrayList<>(Arrays.asList(new String[]{ "listing", "exchange", "base", "quote", "time", "last", "vol"}));
 
 
     public void initModule( Esper esper, Configuration config )
@@ -68,13 +68,13 @@ public class SaveTicksCsv extends ModuleListenerBase
                 return;
         }
 
-        final MarketListing listing = t.getMarketListing();
-        final String market = listing.getMarket().getSymbol();
+        final Market listing = t.getMarket();
+        final String exchange = listing.getExchange().getSymbol();
         final Fungible base = listing.getBase();
         final Fungible quote = listing.getQuote();
         final String timeStr = timeFormat.format(t.getTime().toDate());
         if( t.getPriceCount() != null ) {
-            ArrayList<String> row = new ArrayList<>(Arrays.asList(listing.toString(), market, base.getSymbol(),
+            ArrayList<String> row = new ArrayList<>(Arrays.asList(listing.toString(), exchange, base.getSymbol(),
                                                                   quote.getSymbol(), timeStr,
                                                                   String.valueOf(t.getPriceAsDouble()),
                                                                   String.valueOf(t.getVolumeAsDouble())));

@@ -37,14 +37,14 @@ public class OrderBuilder {
 
 
     /** @param amount to create a sell order, use a negative amount */
-    public SpecificOrderBuilder create( MarketListing marketListing, double amount ) {
-        return new SpecificOrderBuilder(marketListing,amount);
+    public SpecificOrderBuilder create( Market market, double amount ) {
+        return new SpecificOrderBuilder(market,amount);
     }
 
 
     /** @param amount to create a sell order, use a negative amount */
-    public SpecificOrderBuilder create( MarketListing marketListing, DiscreteAmount amount ) {
-        return new SpecificOrderBuilder(marketListing,amount);
+    public SpecificOrderBuilder create( Market market, DiscreteAmount amount ) {
+        return new SpecificOrderBuilder(market,amount);
     }
 
 
@@ -128,23 +128,23 @@ public class OrderBuilder {
 
     public class SpecificOrderBuilder extends CommonOrderBuilder<SpecificOrderBuilder> {
         
-        public SpecificOrderBuilder(MarketListing marketListing, double amount) {
-            order = new SpecificOrder(marketListing,amount);
+        public SpecificOrderBuilder(Market market, double amount) {
+            order = new SpecificOrder(market,amount);
         }
 
 
-        public SpecificOrderBuilder(MarketListing marketListing, DiscreteAmount amount) {
-            order = new SpecificOrder(marketListing,amount);
+        public SpecificOrderBuilder(Market market, DiscreteAmount amount) {
+            order = new SpecificOrder(market,amount);
         }
 
 
-        public SpecificOrderBuilder withLimitPriceCount(long price /* units in basis of market listing's quote fungible */) {
+        public SpecificOrderBuilder withLimitPriceCount(long price /* units in basis of Market's quote fungible */) {
             order.setLimitPriceCount(price);
             return this;
         }
 
 
-        public SpecificOrderBuilder withStopPriceCount(long price /* units in basis of market listing's quote fungible */) {
+        public SpecificOrderBuilder withStopPriceCount(long price /* units in basis of Market's quote fungible */) {
             order.setStopPriceCount(price);
             return this;
         }

@@ -1,11 +1,10 @@
 package org.cryptocoinpartners.util;
 
-import com.xeiam.xchange.Exchange;
 import com.xeiam.xchange.ExchangeFactory;
 import com.xeiam.xchange.currency.CurrencyPair;
 import org.apache.commons.configuration.CombinedConfiguration;
 import org.cryptocoinpartners.schema.Listing;
-import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.Exchange;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -18,17 +17,17 @@ import java.util.regex.Pattern;
 public class XchangeUtil {
 
 
-    public static Market getMarketForExchangeTag(String tag) { return Market.forSymbol(tag.toUpperCase()); }
+    public static Exchange getMarketForExchangeTag(String tag) { return Exchange.forSymbol(tag.toUpperCase()); }
 
 
     public static Set<String> getExchangeTags() { return exchangeTags; }
 
 
-    public static Exchange getExchangeForMarket(Market market) {
-        Exchange exchange = exchangesByMarket.get(market);
-        if( exchange == null )
-            throw new Error("Could not get Exchange for Market "+market);
-        return exchange;
+    public static com.xeiam.xchange.Exchange getExchangeForMarket(Exchange coinTraderExchange) {
+        com.xeiam.xchange.Exchange xchangeExchange = exchangesByMarket.get(coinTraderExchange);
+        if( xchangeExchange == null )
+            throw new Error("Could not get XChange Exchange for Coin Trader Exchange "+coinTraderExchange);
+        return xchangeExchange;
     }
 
 
@@ -38,7 +37,7 @@ public class XchangeUtil {
     }
 
 
-    private static Map<Market,Exchange> exchangesByMarket;
+    private static Map<Exchange, com.xeiam.xchange.Exchange> exchangesByMarket;
     private static Set<String> exchangeTags;
 
 
@@ -61,8 +60,8 @@ public class XchangeUtil {
             String key = "xchange." + exchangeTag + ".class";
             String exchangeClassName = config.getString(key);
             if( exchangeClassName == null )
-                throw new Error("Property "+key+" is not set.  Please edit trader-default.properties to specify the correct XChange adapter class.");
-            Exchange exchange = ExchangeFactory.INSTANCE.createExchange(exchangeClassName);
+                throw new Error("Property "+key+" is not set.  Please edit cointrader-default.properties to specify the correct XChange adapter class.");
+            com.xeiam.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(exchangeClassName);
             exchangesByMarket.put(getMarketForExchangeTag(exchangeTag),exchange);
         }
     }

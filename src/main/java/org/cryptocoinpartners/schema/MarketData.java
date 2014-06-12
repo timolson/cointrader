@@ -15,14 +15,14 @@ import javax.persistence.ManyToOne;
 public abstract class MarketData extends RemoteEvent {
 
 
-    protected MarketData(Instant time, @Nullable String remoteKey, MarketListing marketListing ) {
+    protected MarketData(Instant time, @Nullable String remoteKey, Market market) {
         super(time,remoteKey);
-        this.marketListing = marketListing;
+        this.market = market;
     }
 
 
     @ManyToOne(optional = false)
-    public MarketListing getMarketListing() { return marketListing; }
+    public Market getMarket() { return market; }
 
 
     // JPA
@@ -30,8 +30,8 @@ public abstract class MarketData extends RemoteEvent {
         super();
     }
 
-    protected void setMarketListing(MarketListing marketListing ) { this.marketListing = marketListing; }
+    protected void setMarket(Market market) { this.market = market; }
 
 
-    private MarketListing marketListing;
+    private Market market;
 }

@@ -13,7 +13,7 @@ import java.math.BigDecimal;
  */
 public class Bar extends Event {
 
-    public Bar( Instant time, MarketListing marketListing,
+    public Bar( Instant time, Market market,
                 BigDecimal open, BigDecimal high, BigDecimal low, BigDecimal close, @Nullable BigDecimal volume ) {
         this.open = open;
         this.high = high;

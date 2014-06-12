@@ -6,8 +6,8 @@ import javax.persistence.Transient;
 
 
 /**
- * SpecificOrders are bound to a MarketListing and express their prices and amounts in DiscreteAmounts with the correct
- * basis for the MarketListing.  A SpecificOrder may be immediately passed to a Market for execution without any further
+ * SpecificOrders are bound to a Market and express their prices and amounts in DiscreteAmounts with the correct
+ * basis for the Market.  A SpecificOrder may be immediately passed to a Exchange for execution without any further
  * reduction or processing.
  *
  * @author Tim Olson
@@ -17,45 +17,45 @@ import javax.persistence.Transient;
 public class SpecificOrder extends Order {
 
 
-    public SpecificOrder(MarketListing marketListing, long amountCount) {
-        this.marketListing = marketListing;
+    public SpecificOrder(Market market, long amountCount) {
+        this.market = market;
         this.amountCount = amountCount;
     }
 
 
-    public SpecificOrder(MarketListing marketListing, double amount) {
-        this.marketListing = marketListing;
-        this.amountCount = DiscreteAmount.countForValueRounded(amount,marketListing.getVolumeBasis());
+    public SpecificOrder(Market market, double amount) {
+        this.market = market;
+        this.amountCount = DiscreteAmount.countForValueRounded(amount, market.getVolumeBasis());
     }
 
 
-    public SpecificOrder(MarketListing marketListing, DiscreteAmount amount) {
-        amount.assertBasis(marketListing.getVolumeBasis());
-        this.marketListing = marketListing;
+    public SpecificOrder(Market market, DiscreteAmount amount) {
+        amount.assertBasis(market.getVolumeBasis());
+        this.market = market;
         this.amountCount = amount.getCount();
     }
 
 
     @ManyToOne(optional = false)
-    public MarketListing getMarketListing() { return marketListing; }
+    public Market getMarket() { return market; }
 
 
     @Transient
-    public DiscreteAmount getAmount() { return new DiscreteAmount(amountCount,marketListing.getVolumeBasis()); }
+    public DiscreteAmount getAmount() { return new DiscreteAmount(amountCount, market.getVolumeBasis()); }
 
 
     public long getAmountCount() { return amountCount; }
 
 
     @Transient
-    public DiscreteAmount getLimitPrice() { return new DiscreteAmount(limitPriceCount,marketListing.getPriceBasis()); }
+    public DiscreteAmount getLimitPrice() { return new DiscreteAmount(limitPriceCount, market.getPriceBasis()); }
 
 
     public long getLimitPriceCount() { return limitPriceCount; }
 
 
     @Transient
-    public DiscreteAmount getStopPrice() { return new DiscreteAmount(stopPriceCount,marketListing.getPriceBasis()); }
+    public DiscreteAmount getStopPrice() { return new DiscreteAmount(stopPriceCount, market.getPriceBasis()); }
 
 
     public long getStopPriceCount() { return stopPriceCount; }
@@ -78,7 +78,7 @@ public class SpecificOrder extends Order {
 
 
     protected SpecificOrder() { }
-    protected void setMarketListing(MarketListing marketListing) { this.marketListing = marketListing; }
+    protected void setMarket(Market market) { this.market = market; }
     protected void setAmountCount(long amountCount) { this.amountCount = amountCount; }
     protected void setLimitPriceCount(long limitPriceCount) { this.limitPriceCount = limitPriceCount; }
     protected void setStopPriceCount(long stopPriceCount) { this.stopPriceCount = stopPriceCount; }
@@ -86,7 +86,7 @@ public class SpecificOrder extends Order {
 
 
     private GeneralOrder parentOrder;
-    private MarketListing marketListing;
+    private Market market;
     private long amountCount;
     private long limitPriceCount;
     private long stopPriceCount;

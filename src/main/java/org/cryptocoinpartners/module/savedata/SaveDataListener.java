@@ -17,8 +17,8 @@ public class SaveDataListener extends ModuleListenerBase {
         if( m instanceof Trade ) {
             Trade trade = (Trade) m;
             final Trade duplicate = PersistUtil.queryZeroOne(Trade.class,
-                                                      "select t from Trade t where marketListing=?1 and remoteKey=?2",
-                                                      trade.getMarketListing(), trade.getRemoteKey());
+                                                      "select t from Trade t where market=?1 and remoteKey=?2",
+                                                      trade.getMarket(), trade.getRemoteKey());
             if( duplicate == null )
                 PersistUtil.insert(m);
             else

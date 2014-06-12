@@ -13,9 +13,9 @@ import javax.persistence.MappedSuperclass;
 @MappedSuperclass
 public class Quote extends PriceData {
 
-    public Quote(Side side, MarketListing marketListing, Instant time, String remoteKey,
+    public Quote(Side side, Market market, Instant time, String remoteKey,
                  Long priceCount, Long volumeCount) {
-        super(time, remoteKey, marketListing, priceCount, volumeCount);
+        super(time, remoteKey, market, priceCount, volumeCount);
         this.side = side;
     }
 

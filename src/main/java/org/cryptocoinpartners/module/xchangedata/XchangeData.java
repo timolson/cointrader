@@ -1,6 +1,5 @@
 package org.cryptocoinpartners.module.xchangedata;
 
-import com.xeiam.xchange.Exchange;
 import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.marketdata.OrderBook;
 import com.xeiam.xchange.dto.marketdata.Trades;
@@ -46,17 +45,17 @@ public class XchangeData extends ModuleListenerBase {
             // .rate.queries rate limit the number of queries to this many (default: 1)
             // .rate.period rate limit the number of queries during this period of time (default: 1 second)
             // .listings identifies which Listings should be fetched from this exchange
-            Market market = XchangeUtil.getMarketForExchangeTag(tag);
-            if( market != null ) {
+            Exchange exchange = XchangeUtil.getMarketForExchangeTag(tag);
+            if( exchange != null ) {
                 String prefix = configPrefix+"." + tag + '.';
                 final String helperClassName = config.getString(prefix + "helper.class", null);
                 int queries = config.getInt(prefix + "rate.queries", 1);
                 Duration period = Duration.millis((long) (1000 * config.getDouble(prefix + "rate.period", 1))); // rate.period in seconds
                 final List listings = config.getList(prefix + "listings");
-                initExchange(helperClassName, queries, period, market, listings);
+                initExchange(helperClassName, queries, period, exchange, listings);
             }
             else {
-                log.warn("Could not find Market for property \"xchange." + tag + ".*\"");
+                log.warn("Could not find Exchange for property \"xchange." + tag + ".*\"");
             }
         }
     }
@@ -82,9 +81,9 @@ public class XchangeData extends ModuleListenerBase {
 
 
     private void initExchange( @Nullable String helperClassName, int queries, Duration per,
-                               Market market, List listings )
+                               Exchange coinTraderExchange, List listings )
     {
-        Exchange exchange = XchangeUtil.getExchangeForMarket(market);
+        com.xeiam.xchange.Exchange xchangeExchange = XchangeUtil.getExchangeForMarket(coinTraderExchange);
         Helper helper = null;
         if( helperClassName != null && !helperClassName.isEmpty() ) {
             if( helperClassName.indexOf('.') == -1 )
@@ -108,16 +107,16 @@ public class XchangeData extends ModuleListenerBase {
                 return;
             }
         }
-        PollingMarketDataService dataService = exchange.getPollingMarketDataService();
+        PollingMarketDataService dataService = xchangeExchange.getPollingMarketDataService();
         RateLimiter rateLimiter = new RateLimiter(queries, per);
-        Collection<MarketListing> marketListings = new ArrayList<>(listings.size());
+        Collection<Market> markets = new ArrayList<>(listings.size());
         for( Object listingSymbol : listings ) {
             Listing listing = Listing.forSymbol(listingSymbol.toString().toUpperCase());
-            final MarketListing marketListing = MarketListing.findOrCreate(market, listing);
-            marketListings.add(marketListing);
+            final Market market = Market.findOrCreate(coinTraderExchange, listing);
+            markets.add(market);
         }
-        for( final MarketListing marketListing : marketListings ) {
-            rateLimiter.execute(new FetchTradesRunnable(esper, marketListing, rateLimiter, dataService, helper));
+        for( final Market market : markets ) {
+            rateLimiter.execute(new FetchTradesRunnable(esper, market, rateLimiter, dataService, helper));
         }
     }
 
@@ -128,21 +127,21 @@ public class XchangeData extends ModuleListenerBase {
         private final Helper helper;
 
 
-        public FetchTradesRunnable(Esper esper, MarketListing marketListing, RateLimiter rateLimiter,
+        public FetchTradesRunnable(Esper esper, Market market, RateLimiter rateLimiter,
                                    PollingMarketDataService dataService, @Nullable Helper helper ) {
             this.esper = esper;
-            this.marketListing = marketListing;
+            this.market = market;
             this.rateLimiter = rateLimiter;
             this.dataService = dataService;
             this.helper = helper;
-            pair = XchangeUtil.getCurrencyPairForListing(marketListing.getListing());
+            pair = XchangeUtil.getCurrencyPairForListing(market.getListing());
             lastTradeTime = 0;
             lastTradeId = 0;
             EntityManager entityManager = PersistUtil.createEntityManager();
             try {
-                TypedQuery<org.cryptocoinpartners.schema.Trade> query = entityManager.createQuery("select t from Trade t where marketListing=?1 and time=(select max(time) from Trade where marketListing=?1)",
+                TypedQuery<org.cryptocoinpartners.schema.Trade> query = entityManager.createQuery("select t from Trade t where market=?1 and time=(select max(time) from Trade where market=?1)",
                                                                     org.cryptocoinpartners.schema.Trade.class);
-                query.setParameter(1, marketListing);
+                query.setParameter(1, market);
                 for( org.cryptocoinpartners.schema.Trade trade : query.getResultList() ) {
                     long millis = trade.getTime().getMillis();
                     if( millis > lastTradeTime )
@@ -189,7 +188,7 @@ public class XchangeData extends ModuleListenerBase {
                     long remoteId = Long.valueOf(trade.getId());
                     if( remoteId > lastTradeId ) {
                         Instant tradeInstant = new Instant(trade.getTimestamp());
-                        org.cryptocoinpartners.schema.Trade ourTrade = new org.cryptocoinpartners.schema.Trade(marketListing, tradeInstant, trade.getId(),
+                        org.cryptocoinpartners.schema.Trade ourTrade = new org.cryptocoinpartners.schema.Trade(market, tradeInstant, trade.getId(),
                                                    trade.getPrice(), trade.getTradableAmount());
                         esper.publish(ourTrade);
                         lastTradeTime = tradeInstant.getMillis();
@@ -198,8 +197,8 @@ public class XchangeData extends ModuleListenerBase {
                 }
             }
             catch( IOException e ) {
-                log.warn("Could not get trades for " + marketListing, e);
-                esper.publish(new MarketDataError(marketListing, e));
+                log.warn("Could not get trades for " + market, e);
+                esper.publish(new MarketDataError(market, e));
             }
         }
 
@@ -215,7 +214,7 @@ public class XchangeData extends ModuleListenerBase {
                 final OrderBook orderBook = dataService.getOrderBook(pair, params);
                 if( helper != null )
                     helper.handleOrderBook(orderBook);
-                bookBuilder.start(new Instant(orderBook.getTimeStamp()), null, marketListing);
+                bookBuilder.start(new Instant(orderBook.getTimeStamp()), null, market);
                 for( LimitOrder limitOrder : orderBook.getBids() )
                     bookBuilder.addBid(limitOrder.getLimitPrice(),limitOrder.getTradableAmount());
                 for( LimitOrder limitOrder : orderBook.getAsks() )
@@ -224,8 +223,8 @@ public class XchangeData extends ModuleListenerBase {
                 esper.publish(book);
             }
             catch( IOException e ) {
-                log.warn("Could not get book for " + marketListing, e);
-                esper.publish(new MarketDataError(marketListing, e));
+                log.warn("Could not get book for " + market, e);
+                esper.publish(new MarketDataError(market, e));
             }
         }
 
@@ -235,7 +234,7 @@ public class XchangeData extends ModuleListenerBase {
         private PollingMarketDataService dataService;
         private RateLimiter rateLimiter;
         private final Esper esper;
-        private final MarketListing marketListing;
+        private final Market market;
         private CurrencyPair pair;
         private long lastTradeTime;
         private long lastTradeId;

@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.cryptocoinpartners</groupId>
-    <artifactId>trader</artifactId>
+    <artifactId>cointrader</artifactId>
     <version>0.2.0-SNAPSHOT</version>
 
     <developers>
@@ -150,7 +150,7 @@
             <resource>
                 <directory>.</directory>
                 <includes>
-                    <include>trader-default.properties</include>
+                    <include>cointrader-default.properties</include>
                 </includes>
             </resource>
         </resources>

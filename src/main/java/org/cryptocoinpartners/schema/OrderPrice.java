@@ -20,11 +20,11 @@ public abstract class OrderPrice extends Temporal {
 
     /**
      * @param time when the pricing event originally occured
-     * @param marketListing which MarketListing this pricing is for
-     * @param priceCount relative to the MarketListing's quoteBasis
-     * @param volumeCount relative to the MarketListing's volumeBasis
+     * @param market which Market this pricing is for
+     * @param priceCount relative to the Market's quoteBasis
+     * @param volumeCount relative to the Market's volumeBasis
      */
-    public OrderPrice(Instant time, MarketListing marketListing,
+    public OrderPrice(Instant time, Market market,
                       @Nullable Long priceCount, @Nullable Long volumeCount) {
         super(time);
         this.priceCount = priceCount;
@@ -32,15 +32,15 @@ public abstract class OrderPrice extends Temporal {
     }
 
 
-    public OrderPrice(Instant time, @Nullable String remoteKey, MarketListing marketListing,
+    public OrderPrice(Instant time, @Nullable String remoteKey, Market market,
                       @Nullable BigDecimal price, @Nullable BigDecimal volume) {
         super(time);
-        this.priceCount = DiscreteAmount.countForValueRounded(price,marketListing.getPriceBasis());
+        this.priceCount = DiscreteAmount.countForValueRounded(price, market.getPriceBasis());
     }
 
 
     @ManyToOne
-    public MarketListing getMarketListing() { return marketListing; }
+    public Market getMarket() { return market; }
 
 
     public @Nullable Long getPriceCount() { return priceCount; }
@@ -54,7 +54,7 @@ public abstract class OrderPrice extends Temporal {
         if( priceCount == null )
             return null;
         if( price == null )
-            price = new DiscreteAmount(priceCount,getMarketListing().getPriceBasis());
+            price = new DiscreteAmount(priceCount, getMarket().getPriceBasis());
         return price;
     }
 
@@ -71,7 +71,7 @@ public abstract class OrderPrice extends Temporal {
         if( volumeCount == null )
             return null;
         if( volume == null )
-            volume = new DiscreteAmount(volumeCount,getMarketListing().getVolumeBasis());
+            volume = new DiscreteAmount(volumeCount, getMarket().getVolumeBasis());
         return price;
     }
 
@@ -87,12 +87,12 @@ public abstract class OrderPrice extends Temporal {
     protected OrderPrice() { super(); }
     protected void setPriceCount(Long priceCount) { this.priceCount = priceCount; }
     protected void setVolumeCount(Long volumeCount) { this.volumeCount = volumeCount; }
-    protected void setMarketListing(MarketListing marketListing) { this.marketListing = marketListing; }
+    protected void setMarket(Market market) { this.market = market; }
 
 
     private DiscreteAmount price;
     private DiscreteAmount volume;
     private Long priceCount;
     private Long volumeCount;
-    private MarketListing marketListing;
+    private Market market;
 }
