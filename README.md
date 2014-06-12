@@ -35,7 +35,9 @@ void checkMovingAverage( double avg )
 @When( "select * from MySignal where mySignalValue > 5.0" )
 void enterTrade( MySignal s )
 {
-  orders.buy( Listings.BTC_USD, 1.0 ).withLimit( 650.25 ).place();
+  orders.create( Listings.BTC_USD, 1.0 )
+        .withLimit( 650.25 )
+        .place();
 }
 ```
 
@@ -43,7 +45,7 @@ Then, when any `Trade` market data arrives, your `checkAverage()` method is invo
 
 
 ## Presentation
-Tim is presenting an introduction to Coin Trader at the San Francisco Bitcoin Devs meetup on June 23rd, 2014 at 20/Mission.  See http://www.meetup.com/SF-Bitcoin-Devs for more info.
+Tim is presenting an introduction to Coin Trader at the San Francisco Bitcoin Devs meetup on June 23rd, 2014 at 20/Mission.  See the [event page](http://www.meetup.com/SF-Bitcoin-Devs/events/187096772/) for more info.
 
 # Setup
 1. [Install Java](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
