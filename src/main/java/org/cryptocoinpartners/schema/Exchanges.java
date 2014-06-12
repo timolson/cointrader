@@ -1,7 +1,7 @@
 package org.cryptocoinpartners.schema;
 
 
-public class Markets
+public class Exchanges
 {
     /** An imaginary Exchange used for testing */
     public static final Exchange FAKEMARKET = Exchange.forSymbol("FAKEMARKET");

@@ -7,7 +7,7 @@ import java.util.Collection;
 /**
  * An `Account` differs from a `Fund` in a couple ways: `Account`s do not have any `Owner`, and they are
  * reconciled 1-for-1 against external records (account data gathered from XChange).  `Account`s generally relate to
- * external holdings, but there may be `Account`s attached to `Markets.SELF`, meaning the account is internal to this
+ * external holdings, but there may be `Account`s attached to `Exchanges.SELF`, meaning the account is internal to this
  * organizition.  All `Positions` have both an `Account` and a `Fund`.  The total of all `Position`s in an `Account`
  * should match the external entity's records, while the internal ownership of the `Positions` is tracked through the
  * `Fund` via `Stake`s and `Owner`s.

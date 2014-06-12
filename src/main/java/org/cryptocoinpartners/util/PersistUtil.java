@@ -2,7 +2,7 @@ package org.cryptocoinpartners.util;
 
 import org.cryptocoinpartners.schema.Currencies;
 import org.cryptocoinpartners.schema.EntityBase;
-import org.cryptocoinpartners.schema.Markets;
+import org.cryptocoinpartners.schema.Exchanges;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -266,7 +266,7 @@ public class PersistUtil {
     private static void ensureSingletonsExist() {
         // Touch the singleton holders
         Currencies.BTC.getSymbol(); // this should load all the singletons in Currencies
-        Markets.BITFINEX.getSymbol();  // this should load all the singletons in Markets
+        Exchanges.BITFINEX.getSymbol();  // this should load all the singletons in Exchanges
     }
 
 
