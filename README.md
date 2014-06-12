@@ -86,8 +86,8 @@ For the below, `cointrader XXX` means `java -jar code/target/cointrader-0.2-SNAP
 ## [Diagram](https://raw.githubusercontent.com/timolson/cointrader/master/diagram.png)
 
 ## `Account`
-An `Account` represents _external_ accounting: an `Account` is held with a `Market` 
-differs from a `Fund` in a couple ways: `Account`s do not have an `Owner`, and they are reconciled 1-for-1 against external records (account data gathered from XChange). `Account`s generally relate to external holdings, but there may be `Account`s attached to `Markets.SELF`, meaning the account is internal to this organizition.
+An `Account` represents _external_ accounting: an `Account` is held with an `Exchange` 
+differs from a `Fund` in a couple ways: `Account`s do not have an `Owner`, and they are reconciled 1-for-1 against external records (account data gathered from XChange). `Account`s generally relate to external holdings, but there may be `Account`s attached to `Exchanges.SELF`, meaning the account is internal to this organizition.
 
 ## `Bar`
 The common OHLC or open/high/low/close for a standard duration of time like one minute.  These can be generated from `Trade`s or `Tick`s and are not collected from data providers.
@@ -121,7 +121,7 @@ Every `Fund` has a `FundManager` who dictates the trading of the `Fund`'s `Posit
 A `Fungible` is anything that can be replaced by another similar item of the same type.  Fungibles include `Currency`, Stocks, Bonds, Options, etc.
 
 ## `Listing`
-A `Listing` has a symbol but is not related to a `Market`.  Generally, it represents a tradeable security like `BTC.USD` when there is no need to differentiate between the same security on different `Market`s.  Usually, you want to use `Market` instead of just a `Listing`, unless you are creating an order which wants to trade a `Listing` without regard to the `Account` or `Market` where the trading occurs.
+A `Listing` has a symbol but is not related to an `Exchange`.  Generally, it represents a tradeable security like `BTC.USD` when there is no need to differentiate between the same security on different `Exchange`s.  Usually, you want to use `Market` instead of just a `Listing`, unless you are creating an order which wants to trade a `Listing` without regard to the `Account` or `Exchange` where the trading occurs.
 Every `Listing` has a `baseFungible` and a `quoteFungible`.  The `baseFungible` is what you are buying/selling and the `quoteFungible` is used for payment.  For currency pairs, these are both currencies: The `Listing` for `BTC.USD` has a `baseFungible` of `Currencies.BTC` and a `quoteFungible` of `Currencies.USD`.  A `Listing` for a Japan-based stock would have the `baseFungible` be the stock like `Stocks.SONY` (stocks are not implemented) and the `quoteFungible` would be `Currencies.JPY`
 
 ## `Market`
