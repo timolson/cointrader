@@ -25,6 +25,14 @@ public class Currencies
 	public static final Currency BTC = crypto("BTC",1e-8);
 	public static final Currency LTC = crypto("LTC",1e-8);
 	public static final Currency XPM = crypto("XPM",1e-8);
+	public static final Currency DOGE = crypto("DOGE",1e-8);
+	public static final Currency FTC = crypto("FTC",1e-8);
+	public static final Currency MOON = crypto("MOON",1e-8);
+	public static final Currency MEM = crypto("MEM",1e-8);
+	public static final Currency AUR = crypto("AUR",1e-8);
+	public static final Currency NMC = crypto("NMC",1e-8);
+	public static final Currency DRK = crypto("DRK",1e-8);
+	
 
     // Altcoins
     /* these need currency basis research
@@ -37,9 +45,7 @@ public class Currencies
 	public static final Currency BTB = crypto("BTB");
 	public static final Currency FST = crypto("FST");
 	public static final Currency CASH = crypto("CASH");
-	public static final Currency DOGE = crypto("DOGE");
 	public static final Currency IXC = crypto("IXC");
-	public static final Currency FTC = crypto("FTC");
 	public static final Currency KGC = crypto("KGC");
 	public static final Currency XJO = crypto("XJO");
 	public static final Currency SPT = crypto("SPT");
@@ -52,7 +58,6 @@ public class Currencies
 	public static final Currency MNC = crypto("MNC");
 	public static final Currency COL = crypto("COL");
 	public static final Currency PXC = crypto("PXC");
-	public static final Currency MOON = crypto("MOON");
 	public static final Currency ZCC = crypto("ZCC");
 	public static final Currency CLR = crypto("CLR");
 	public static final Currency TRC = crypto("TRC");
@@ -79,7 +84,6 @@ public class Currencies
 	public static final Currency GLX = crypto("GLX");
 	public static final Currency WDC = crypto("WDC");
 	public static final Currency DVC = crypto("DVC");
-	public static final Currency MEM = crypto("MEM");
 	public static final Currency RPC = crypto("RPC");
 	public static final Currency CNC = crypto("CNC");
 	public static final Currency MEC = crypto("MEC");
@@ -91,7 +95,6 @@ public class Currencies
 	public static final Currency NAN = crypto("NAN");
 	public static final Currency ZET = crypto("ZET");
 	public static final Currency NBL = crypto("NBL");
-	public static final Currency AUR = crypto("AUR");
 	public static final Currency OSC = crypto("OSC");
 	public static final Currency YBC = crypto("YBC");
 	public static final Currency QRK = crypto("QRK");
@@ -121,7 +124,6 @@ public class Currencies
 	public static final Currency CPR = crypto("CPR");
 	public static final Currency SXC = crypto("SXC");
 	public static final Currency FRC = crypto("FRC");
-	public static final Currency NMC = crypto("NMC");
 	public static final Currency TAK = crypto("TAK");
 	public static final Currency BQC = crypto("BQC");
 	public static final Currency PTS = crypto("PTS");
@@ -132,7 +134,6 @@ public class Currencies
 	public static final Currency NET = crypto("NET");
 	public static final Currency ORB = crypto("ORB");
 	public static final Currency DBL = crypto("DBL");
-	public static final Currency DRK = crypto("DRK");
 	public static final Currency TGC = crypto("TGC");
 	public static final Currency XNC = crypto("XNC");
 	public static final Currency NEC = crypto("NEC");
