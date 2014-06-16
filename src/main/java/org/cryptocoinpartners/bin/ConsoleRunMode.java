@@ -99,6 +99,7 @@ public class ConsoleRunMode extends RunMode {
             }
         });
         out = new ConsoleWriter(console);
+        context.attach(ConsoleWriter.class,out);
         context.attach(PrintWriter.class,out);
     }
 

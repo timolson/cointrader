@@ -13,9 +13,9 @@
         </encoder>
     </appender>
 
-    <root level="ERROR">
+    <root level="DEBUG">
         <appender-ref ref="FILE"/>
-        <appender-ref ref="CONSOLE"/>
+        <!--<appender-ref ref="CONSOLE"/>-->
     </root>
 
     <logger name="org.hibernate.ejb.HibernatePersistence" level="error"/>

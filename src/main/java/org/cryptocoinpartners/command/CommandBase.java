@@ -1,10 +1,10 @@
 package org.cryptocoinpartners.command;
 
-import com.google.inject.Injector;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.util.ReflectionUtil;
 import org.reflections.Reflections;
 
+import javax.inject.Inject;
 import java.lang.reflect.Modifier;
 import java.util.*;
 
@@ -43,7 +43,9 @@ public abstract class CommandBase implements Command {
 
 
     // these 2 are injected by ConsoleRunMode
+    @Inject
     public Context context;
+    @Inject
     public ConsoleWriter out;
 
     private String commandName;

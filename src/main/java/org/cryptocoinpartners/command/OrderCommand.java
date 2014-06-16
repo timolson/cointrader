@@ -21,7 +21,8 @@ public abstract class OrderCommand extends AntlrCommandBase {
         out.println();
         out.println("\tPlaces an order for the given volume on the specified exchange.");
         out.println("\tIf a limit price is supplied, a limit order will be generated.");
-        out.println("\tStop and stop-limit orders are not currently supported but no error will be given.");
+        out.println("\tStop and stop-limit orders are not currently supported but no ");
+        out.println("\terror will be given.");
         if(isSell)
             out.println("Selling is the same as buying with a negative volume.");
     }
