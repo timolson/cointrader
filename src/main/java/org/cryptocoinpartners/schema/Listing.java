@@ -13,7 +13,7 @@ import javax.persistence.Transient;
  */
 @SuppressWarnings( "UnusedDeclaration" )
 @Entity
-public class Listing extends EntityBase
+public class Listing extends BaseEntity
 {
     @ManyToOne(optional = false)
     public Fungible getBase() { return base; }

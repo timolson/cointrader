@@ -14,6 +14,7 @@ import java.util.Set;
  * 
  * @author Tim Olson
  */
+@Service
 public interface QuoteService {
 
     /** returns the most recent Trade of the specified Market */

@@ -1,7 +1,6 @@
 package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.*;
-import org.cryptocoinpartners.bin.command.Command;
 import org.apache.commons.configuration.ConfigurationException;
 import org.cryptocoinpartners.util.Config;
 import org.cryptocoinpartners.util.PersistUtil;
@@ -42,21 +41,21 @@ public class Main
         parameterParser.setProgramName(Main.class.getName());
 
         // find the commands, register with the parameter parser, and put them into the commandLookup map
-        Map<String,Command> commandLookup = new HashMap<>();
-        Set<Class<? extends Command>> commands = ReflectionUtil.getSubtypesOf(Command.class);
-        for( Class<? extends Command> commandType : commands ) {
+        Map<String,RunMode> commandLookup = new HashMap<>();
+        Set<Class<? extends RunMode>> commands = ReflectionUtil.getSubtypesOf(RunMode.class);
+        for( Class<? extends RunMode> commandType : commands ) {
             if( Modifier.isAbstract(commandType.getModifiers()))
                 continue;
-            Command command = commandType.newInstance();
-            Parameters annotation = command.getClass().getAnnotation(Parameters.class);
+            RunMode runMode = commandType.newInstance();
+            Parameters annotation = runMode.getClass().getAnnotation(Parameters.class);
             if( annotation == null ) {
-                System.err.println("The command class "+ command.getClass()+" must have the com.beust.jcommander.Parameters annotation.");
+                System.err.println("The RunMode subclass "+ runMode.getClass()+" must have the com.beust.jcommander.Parameters annotation.");
                 System.exit(1);
             }
             for( String commandName : annotation.commandNames() ) {
-                commandLookup.put(commandName,command);
+                commandLookup.put(commandName, runMode);
             }
-            parameterParser.addCommand(command);
+            parameterParser.addCommand(runMode);
         }
 
         // now parse the commandline
@@ -69,9 +68,9 @@ public class Main
             System.exit(7002);
         }
         String commandName = parameterParser.getParsedCommand();
-        // find the command, if any
-        Command command = commandLookup.get(commandName);
-        if( command == null || mainParams.help ) {
+        // find the runmode, if any
+        RunMode runMode = commandLookup.get(commandName);
+        if( runMode == null || mainParams.help ) {
             parameterParser.usage();
             System.exit(7001);
         }
@@ -84,10 +83,10 @@ public class Main
             System.exit(1);
         }
         try {
-            command.run();
+            runMode.run();
         }
         catch( Throwable t ) {
-            log.error("Uncaught error while running "+command.getClass().getSimpleName(),t);
+            log.error("Uncaught error while running "+ runMode.getClass().getSimpleName(),t);
         }
         finally {
             PersistUtil.shutdown();

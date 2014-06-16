@@ -10,9 +10,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.URL;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
+import java.util.*;
 
 
 /**
@@ -49,11 +47,36 @@ public class Config {
     }
 
 
+    public static CombinedConfiguration module( Object... keyValuePairs ) {
+        if( keyValuePairs.length % 2 != 0 )
+            throw new Error("Configuration parameters must be key-value pairs.  Found an odd number.");
+        HashMap<String,Object> map = new HashMap<>();
+        for( int i = 0; i < keyValuePairs.length; i++ )
+            map.put(keyValuePairs[i++].toString(),keyValuePairs[i]);
+        return Config.module(Collections.singletonList(new MapConfiguration(map)));
+    }
+
+
     public static CombinedConfiguration module( Collection<? extends AbstractConfiguration> moduleConfigs ) {
         CombinedConfiguration result = buildConfig(moduleConfigs);
         if( log.isDebugEnabled() )
             log.debug("Module Configuration:\n"+configAsString(result));
         return result;
+    }
+
+
+    public static List<String> getPathProperty(String pathProperty) {
+        CombinedConfiguration config = combined();
+        return getPathProperty(config, pathProperty);
+    }
+
+
+    public static List<String> getPathProperty(CombinedConfiguration config, String pathProperty) {
+        String modulePath = config.getString(pathProperty, "");
+        List<String> paths = new ArrayList<>(Arrays.asList(modulePath.split(":")));
+        paths.add("org.cryptocoinpartners.module");
+        paths.remove("");
+        return paths;
     }
 
 

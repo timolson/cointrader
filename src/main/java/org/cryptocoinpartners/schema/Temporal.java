@@ -10,7 +10,7 @@ import javax.persistence.MappedSuperclass;
  * @author Tim Olson
  */
 @MappedSuperclass
-public class Temporal extends EntityBase {
+public class Temporal extends BaseEntity {
 
     public Temporal(Instant time) {
         super();

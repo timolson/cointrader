@@ -11,7 +11,7 @@ import javax.persistence.Entity;
  * @author Tim Olson
  */
 @Entity
-public class Transaction extends EntityBase {
+public class Transaction extends BaseEntity {
 
 
     enum TransactionStatus { OFFERED, ACCEPTED, CLOSED, SETTLED, CANCELLED }

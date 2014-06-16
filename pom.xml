@@ -6,7 +6,7 @@
 
     <groupId>org.cryptocoinpartners</groupId>
     <artifactId>cointrader</artifactId>
-    <version>0.2.0-SNAPSHOT</version>
+    <version>0.3.0-SNAPSHOT</version>
 
     <developers>
         <developer>
@@ -16,12 +16,20 @@
     </developers>
 
     <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <xchange.version>2.1.0-SNAPSHOT</xchange.version>
         <slf4j-api.version>1.7.5</slf4j-api.version>
         <hibernate.version>4.3.4.Final</hibernate.version>
+        <antlr.version>4.2.2</antlr.version>
     </properties>
 
     <dependencies>
+        <dependency>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+          <version>4.11</version>
+          <scope>test</scope>
+        </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
@@ -51,6 +59,11 @@
             <groupId>com.beust</groupId>
             <artifactId>jcommander</artifactId>
             <version>1.30</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
+            <version>4.0-beta4</version>
         </dependency>
         <dependency>
             <groupId>com.xeiam.xchange</groupId>
@@ -110,7 +123,7 @@
         <dependency>
             <groupId>org.reflections</groupId>
             <artifactId>reflections</artifactId>
-            <version>0.9.8</version>
+            <version>0.9.9-RC1</version>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
@@ -131,6 +144,16 @@
             <groupId>com.clutch.dates</groupId>
             <artifactId>stringtotime</artifactId>
             <version>1.0.6</version>
+        </dependency>
+        <dependency>
+          <groupId>org.antlr</groupId>
+          <artifactId>antlr4-runtime</artifactId>
+          <version>${antlr.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>jline</groupId>
+            <artifactId>jline</artifactId>
+            <version>0.9.94</version>
         </dependency>
     </dependencies>
 
@@ -178,11 +201,37 @@
             </plugin>
             <plugin>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
+                <version>3.1</version>
                 <configuration>
                     <source>1.7</source>
                     <target>1.7</target>
                 </configuration>
+            </plugin>
+            <!--
+            <plugin>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>jetty-maven-plugin</artifactId>
+                <version>9.2.1.v20140609</version>
+                <configuration>
+                    <scanIntervalSeconds>10</scanIntervalSeconds>
+                    <webApp>
+                        <contextPath>/test</contextPath>
+                    </webApp>
+                </configuration>
+            </plugin>
+            -->
+            <plugin>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr4-maven-plugin</artifactId>
+                <version>${antlr.version}</version>
+                <executions>
+                  <execution>
+                    <id>antlr</id>
+                    <goals>
+                      <goal>antlr4</goal>
+                    </goals>
+                  </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

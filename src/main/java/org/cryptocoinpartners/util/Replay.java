@@ -1,6 +1,6 @@
 package org.cryptocoinpartners.util;
 
-import org.cryptocoinpartners.module.Esper;
+import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.Event;
 import org.cryptocoinpartners.schema.RemoteEvent;
@@ -11,7 +11,7 @@ import java.util.*;
 
 
 /**
- Manages a Esper into which Trades and Books from the database are replayed.  The Esper time is also managed by this
+ Manages a Context into which Trades and Books from the database are replayed.  The Context time is also managed by this
  class as it advances through the events.
  */
 public class Replay
@@ -45,23 +45,23 @@ public class Replay
 
     public Replay( Interval replayTimeInterval ) {
         this.replayTimeInterval = replayTimeInterval;
-        this.esper = new Esper(new EventTimeManager());
+        this.context = new Context(new EventTimeManager());
     }
 
 
-    public Esper getEsper() { return esper; }
+    public Context getContext() { return context; }
 
 
     /**
      queries the database for all Books and Trades which have start <= time <= stop, then publishes those
-     Events in order of time to this Replay's Esper
+     Events in order of time to this Replay's Context
      @param start
      @param stop
      */
     public void run() {
         final Instant start = replayTimeInterval.getStart().toInstant();
         final Instant end = replayTimeInterval.getEnd().toInstant();
-        esper.advanceTime(start);
+        context.advanceTime(start);
         if( replayTimeInterval.toDuration().isLongerThan(timeStep) ) {
             for( Instant now = start; !now.isAfter(end); ) {
                 final Instant stepEnd = now.plus(timeStep);
@@ -77,8 +77,8 @@ public class Replay
     private void replayStep( Instant start, Instant stop )
     {
         for( RemoteEvent event : queryEvents(start, stop) )
-            esper.publish(event);
-        esper.advanceTime(stop);
+            context.publish(event);
+        context.advanceTime(stop);
     }
 
 
@@ -138,7 +138,7 @@ public class Replay
     };
 
 
-    public class EventTimeManager implements Esper.TimeProvider
+    public class EventTimeManager implements Context.TimeProvider
     {
 
         public Instant getInitialTime()
@@ -155,6 +155,6 @@ public class Replay
 
 
     private final Interval replayTimeInterval;
-    private final Esper esper;
+    private final Context context;
     private static final Duration timeStep = Duration.standardMinutes(1); // how many rows from the DB to gather in one batch
 }

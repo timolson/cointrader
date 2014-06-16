@@ -11,11 +11,11 @@ import org.apache.commons.configuration.Configuration;
  * methods must have the form
  * void methodName( EventSubtype y )
  * or
- * void methodName( Esper x, EventSubtype y )
+ * void methodName( Context x, EventSubtype y )
  *
  * @author Tim Olson
  */
 public interface ModuleListener {
-    void initModule(Esper esper,Configuration config);
+    void initModule(Context context,Configuration config);
     void destroyModule();
 }

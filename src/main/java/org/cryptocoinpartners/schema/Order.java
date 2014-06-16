@@ -7,7 +7,7 @@ import java.util.Collection;
 
 
 /**
- * This is the base class for GeneralOrder and SpecificOrder.  To create orders, see OrderBuilder or Strategy.order
+ * This is the base class for GeneralOrder and SpecificOrder.  To create orders, see OrderBuilder or BaseStrategy.order
  *
  * @author Mike Olson
  * @author Tim Olson

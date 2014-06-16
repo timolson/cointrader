@@ -4,6 +4,7 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.cryptocoinpartners.util.Config;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.joda.time.Instant;
+import org.junit.Ignore;
 
 import javax.persistence.NoResultException;
 import java.math.BigDecimal;
@@ -12,6 +13,7 @@ import java.util.UUID;
 
 
 /** This is not yet a real JUnit test case */
+@Ignore
 public class BookTest {
 
     public static void main(String[] args) throws ConfigurationException {

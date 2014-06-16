@@ -12,12 +12,12 @@ import java.util.Collection;
  * @author Tim Olson
  */
 @Entity
-public class Market extends EntityBase
+public class Market extends BaseEntity
 {
 
     public static Collection<Market> findAll()
     {
-        return PersistUtil.queryList(Market.class, "select ml from Market");
+        return PersistUtil.queryList(Market.class, "select m from Market m");
     }
 
 
@@ -96,6 +96,15 @@ public class Market extends EntityBase
 
 
     public String toString() { return getSymbol(); }
+
+
+    public static Market forSymbol(String marketSymbol) {
+        for( Market market : findAll() ) {
+            if( market.getSymbol().equalsIgnoreCase(marketSymbol) )
+                return market;
+        }
+        return null;
+    }
 
 
     // JPA

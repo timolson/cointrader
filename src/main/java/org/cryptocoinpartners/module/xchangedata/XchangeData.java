@@ -6,16 +6,17 @@ import com.xeiam.xchange.dto.marketdata.Trades;
 import com.xeiam.xchange.dto.trade.LimitOrder;
 import com.xeiam.xchange.service.polling.PollingMarketDataService;
 import org.apache.commons.configuration.Configuration;
-import org.cryptocoinpartners.module.Esper;
-import org.cryptocoinpartners.module.ModuleListenerBase;
+import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.schema.*;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.RateLimiter;
 import org.cryptocoinpartners.util.XchangeUtil;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
+import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import java.io.IOException;
@@ -28,12 +29,12 @@ import java.util.Set;
 /**
  * @author Tim Olson
  */
-public class XchangeData extends ModuleListenerBase {
+public class XchangeData {
 
 
-    public void initModule(final Esper esper, Configuration config) {
-        super.initModule(esper, config);
-
+    @Inject
+    public XchangeData( Context context, Configuration config ) {
+        this.context = context;
         final String configPrefix = "xchange";
         Set<String> exchangeTags = XchangeUtil.getExchangeTags();
 
@@ -58,11 +59,6 @@ public class XchangeData extends ModuleListenerBase {
                 log.warn("Could not find Exchange for property \"xchange." + tag + ".*\"");
             }
         }
-    }
-
-
-    public void destroyModule() {
-        super.destroyModule();
     }
 
 
@@ -116,7 +112,7 @@ public class XchangeData extends ModuleListenerBase {
             markets.add(market);
         }
         for( final Market market : markets ) {
-            rateLimiter.execute(new FetchTradesRunnable(esper, market, rateLimiter, dataService, helper));
+            rateLimiter.execute(new FetchTradesRunnable(context, market, rateLimiter, dataService, helper));
         }
     }
 
@@ -127,9 +123,9 @@ public class XchangeData extends ModuleListenerBase {
         private final Helper helper;
 
 
-        public FetchTradesRunnable(Esper esper, Market market, RateLimiter rateLimiter,
+        public FetchTradesRunnable(Context context, Market market, RateLimiter rateLimiter,
                                    PollingMarketDataService dataService, @Nullable Helper helper ) {
-            this.esper = esper;
+            this.context = context;
             this.market = market;
             this.rateLimiter = rateLimiter;
             this.dataService = dataService;
@@ -190,7 +186,7 @@ public class XchangeData extends ModuleListenerBase {
                         Instant tradeInstant = new Instant(trade.getTimestamp());
                         org.cryptocoinpartners.schema.Trade ourTrade = new org.cryptocoinpartners.schema.Trade(market, tradeInstant, trade.getId(),
                                                    trade.getPrice(), trade.getTradableAmount());
-                        esper.publish(ourTrade);
+                        context.publish(ourTrade);
                         lastTradeTime = tradeInstant.getMillis();
                         lastTradeId = remoteId;
                     }
@@ -198,7 +194,7 @@ public class XchangeData extends ModuleListenerBase {
             }
             catch( IOException e ) {
                 log.warn("Could not get trades for " + market, e);
-                esper.publish(new MarketDataError(market, e));
+                context.publish(new MarketDataError(market, e));
             }
         }
 
@@ -220,11 +216,11 @@ public class XchangeData extends ModuleListenerBase {
                 for( LimitOrder limitOrder : orderBook.getAsks() )
                     bookBuilder.addAsk(limitOrder.getLimitPrice(), limitOrder.getTradableAmount());
                 Book book = bookBuilder.build();
-                esper.publish(book);
+                context.publish(book);
             }
             catch( IOException e ) {
                 log.warn("Could not get book for " + market, e);
-                esper.publish(new MarketDataError(market, e));
+                context.publish(new MarketDataError(market, e));
             }
         }
 
@@ -233,7 +229,7 @@ public class XchangeData extends ModuleListenerBase {
         private boolean getTradesNext = true;
         private PollingMarketDataService dataService;
         private RateLimiter rateLimiter;
-        private final Esper esper;
+        private final Context context;
         private final Market market;
         private CurrencyPair pair;
         private long lastTradeTime;
@@ -241,4 +237,6 @@ public class XchangeData extends ModuleListenerBase {
     }
 
 
+    private Logger log;
+    private final Context context;
 }

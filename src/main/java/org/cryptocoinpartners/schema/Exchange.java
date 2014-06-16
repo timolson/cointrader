@@ -11,7 +11,7 @@ import javax.persistence.Entity;
  * @author Tim Olson
  */
 @Entity
-public class Exchange extends EntityBase {
+public class Exchange extends BaseEntity {
 
 
     public static Exchange forSymbol( String symbol ) {

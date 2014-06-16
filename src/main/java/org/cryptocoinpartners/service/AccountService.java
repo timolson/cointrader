@@ -5,6 +5,7 @@ package org.cryptocoinpartners.service;
  *
  * @author Tim Olson
  */
-public interface AccountService extends Service {
+@Service
+public interface AccountService {
     // todo
 }

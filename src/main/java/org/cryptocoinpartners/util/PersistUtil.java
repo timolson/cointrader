@@ -1,7 +1,7 @@
 package org.cryptocoinpartners.util;
 
+import org.cryptocoinpartners.schema.BaseEntity;
 import org.cryptocoinpartners.schema.Currencies;
-import org.cryptocoinpartners.schema.EntityBase;
 import org.cryptocoinpartners.schema.Exchanges;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,14 +18,14 @@ public class PersistUtil {
     private static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
 
 
-    public static void insert(EntityBase... entities) {
+    public static void insert(BaseEntity... entities) {
         EntityManager em = null;
         try {
             em = createEntityManager();
             EntityTransaction transaction = em.getTransaction();
             transaction.begin();
             try {
-                for( EntityBase entity : entities )
+                for( BaseEntity entity : entities )
                     em.persist(entity);
                 transaction.commit();
             }
@@ -196,7 +196,7 @@ public class PersistUtil {
     }
 
 
-    public static <T extends EntityBase> T findById(Class<T> resultType, UUID id) throws NoResultException {
+    public static <T extends BaseEntity> T findById(Class<T> resultType, UUID id) throws NoResultException {
         return queryOne(resultType, "select x from " + resultType.getSimpleName() + " x where x.id = ?1", id);
     }
 

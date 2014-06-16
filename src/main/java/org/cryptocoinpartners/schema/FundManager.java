@@ -13,7 +13,7 @@ import javax.persistence.OneToOne;
  */
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-public class FundManager extends EntityBase {
+public class FundManager extends BaseEntity {
 
     @OneToOne
     public Fund getFund() { return fund; }

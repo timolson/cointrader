@@ -15,7 +15,7 @@ import javax.persistence.NoResultException;
  * @author Tim Olson
  */
 @Entity
-public abstract class Fungible extends EntityBase {
+public abstract class Fungible extends BaseEntity {
 
 
     public static Fungible forSymbol( String symbol )

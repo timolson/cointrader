@@ -37,8 +37,14 @@ public class OrderBuilder {
 
 
     /** @param volume to create a sell order, use a negative volume */
-    public SpecificOrderBuilder create( Market market, double volume ) {
+    public SpecificOrderBuilder create( Market market, BigDecimal volume ) {
         return new SpecificOrderBuilder(market,volume);
+    }
+
+
+    /** @param volumeCount to create a sell order, use a negative volumeCount */
+    public SpecificOrderBuilder create( Market market, long volumeCount ) {
+        return new SpecificOrderBuilder(market,volumeCount);
     }
 
 
@@ -91,7 +97,7 @@ public class OrderBuilder {
         public Order build() { return getOrder(); }
 
 
-        protected abstract Order getOrder();
+        public abstract Order getOrder();
     }
     
 
@@ -119,7 +125,7 @@ public class OrderBuilder {
         }
 
 
-        protected GeneralOrder getOrder() { return order; }
+        public GeneralOrder getOrder() { return order; }
         
         
         private GeneralOrder order;
@@ -128,13 +134,18 @@ public class OrderBuilder {
 
     public class SpecificOrderBuilder extends CommonOrderBuilder<SpecificOrderBuilder> {
         
-        public SpecificOrderBuilder(Market market, double volume) {
+        public SpecificOrderBuilder(Market market, BigDecimal volume) {
             order = new SpecificOrder(market,volume);
         }
 
 
         public SpecificOrderBuilder(Market market, DiscreteAmount volume) {
             order = new SpecificOrder(market,volume);
+        }
+
+
+        public SpecificOrderBuilder(Market market, long volumeCount) {
+            order = new SpecificOrder(market,volumeCount);
         }
 
 

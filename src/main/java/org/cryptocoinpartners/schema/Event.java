@@ -6,7 +6,7 @@ import javax.persistence.MappedSuperclass;
 
 
 /**
- * Subclasses of Event may be posted to Esper
+ * Subclasses of Event may be posted to Context
  *
  * @author Tim Olson
  */

@@ -3,7 +3,8 @@ package org.cryptocoinpartners.service;
 import org.cryptocoinpartners.schema.*;
 
 
-public interface OrderService extends Service {
+@Service
+public interface OrderService {
 
     // send new Order events to the correct market
     public void placeOrder(Order order);

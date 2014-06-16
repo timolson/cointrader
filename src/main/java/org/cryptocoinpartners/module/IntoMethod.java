@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
  * <p/>
  *
  * @author Tim Olson
- * @see ModuleLoader
+ * @see Context
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

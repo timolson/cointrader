@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
+import java.math.BigDecimal;
 
 
 /**
@@ -33,6 +34,12 @@ public class SpecificOrder extends Order {
         volume.assertBasis(market.getVolumeBasis());
         this.market = market;
         this.volumeCount = volume.getCount();
+    }
+
+
+    public SpecificOrder(Market market, BigDecimal volume) {
+        this.market = market;
+        this.volumeCount = DiscreteAmount.fromValue(volume, market.getVolumeBasis(), Remainder.DISCARD).getCount();
     }
 
 
