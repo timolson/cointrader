@@ -39,8 +39,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.configuration.ConfigurationException;
-
 
 /**
  * This is a wrapper around Esper with dependency injection functionality as well.
@@ -105,6 +103,7 @@ public class Context {
         Class<?> c = findModuleClass(name);
         if( c == null )
             throw new Error("Could not find service implementation named "+name);
+        //noinspection RedundantCast
         return attach(c, (Configuration) null);
     }
 
@@ -403,16 +402,16 @@ public class Context {
 
 
     private void construct() {
-        com.espertech.esper.client.Configuration config = new com.espertech.esper.client.Configuration();
-        config.addEventType(Event.class);
+        final com.espertech.esper.client.Configuration esperConfig = new com.espertech.esper.client.Configuration();
+        esperConfig.addEventType(Event.class);
         Set<Class<? extends Event>> eventTypes = ReflectionUtil.getSubtypesOf(Event.class);
         for( Class<? extends Event> eventType : eventTypes )
-            config.addEventType(eventType);
-        config.addImport(IntoMethod.class);
+            esperConfig.addEventType(eventType);
+        esperConfig.addImport(IntoMethod.class);
         if( timeProvider != null ) {
-            config.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
+            esperConfig.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
         }
-        epService = EPServiceProviderManager.getDefaultProvider(config);
+        epService = EPServiceProviderManager.getDefaultProvider(esperConfig);
         if( timeProvider != null ) {
             lastTime = timeProvider.getInitialTime();
             final EPServiceProviderImpl epService1 = (EPServiceProviderImpl) epService;
@@ -420,11 +419,15 @@ public class Context {
         }
         epRuntime = epService.getEPRuntime();
         epAdministrator = epService.getEPAdministrator();
+        config = Config.combined();
         injector = Guice.createInjector(new Module() {
             public void configure(Binder binder) {
 
                 // bind this Context
                 binder.bind(Context.class).toInstance(Context.this);
+
+                // bind config
+                binder.bind(Configuration.class).toInstance(Context.this.config);
 
                 // listen for any new instances and subscribe them to the esper
                 binder.bindListener(Matchers.any(),new ProvisionListener() {
