@@ -22,6 +22,7 @@ import org.cryptocoinpartners.schema.Event;
 import org.cryptocoinpartners.schema.StrategyFundManager;
 import org.cryptocoinpartners.service.Service;
 import org.cryptocoinpartners.util.Config;
+import org.cryptocoinpartners.util.LogInjector;
 import org.cryptocoinpartners.util.ReflectionUtil;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
@@ -420,53 +421,24 @@ public class Context {
         epRuntime = epService.getEPRuntime();
         epAdministrator = epService.getEPAdministrator();
         config = Config.combined();
-        injector = Guice.createInjector(new Module() {
-            public void configure(Binder binder) {
-
-                // bind this Context
-                binder.bind(Context.class).toInstance(Context.this);
-
-                // bind config
-                binder.bind(Configuration.class).toInstance(Context.this.config);
-
-                // listen for any new instances and subscribe them to the esper
-                binder.bindListener(Matchers.any(),new ProvisionListener() {
-                    public <T> void onProvision(ProvisionInvocation<T> tProvisionInvocation) {
-                        T provision = tProvisionInvocation.provision();
-                        subscribe(provision);
-                    }
-                });
-
-                // SLF4J logger injection
-                binder.bindListener(Matchers.any(), new TypeListener() {
-                    public <I> void hear(TypeLiteral<I> typeLiteral, TypeEncounter<I> typeEncounter) {
-                        for (Class<?> c = typeLiteral.getRawType(); c != Object.class; c = c.getSuperclass())
-                        {
-                            for( final Field field : c.getDeclaredFields() )
-                            {
-                                if( field.getType().isAssignableFrom(Logger.class) ) {
-                                    typeEncounter.register(new MembersInjector<I>() {
-                                        public void injectMembers(I i) {
-                                            try {
-                                                boolean wasAccessible = field.isAccessible();
-                                                field.setAccessible(true);
-                                                if( field.get(i) == null ) {
-                                                    field.set(i, LoggerFactory.getLogger(field.getDeclaringClass()));
-                                                }
-                                                field.setAccessible(wasAccessible);
-                                            }
-                                            catch( IllegalAccessException e ) {
-                                                e.printStackTrace();
-                                            }
-                                        }
-                                    });
-                                }
-                            }
+        injector = Guice.createInjector(
+            new LogInjector(),
+            new Module() {
+                public void configure(Binder binder) {
+                    // bind this Context
+                    binder.bind(Context.class).toInstance(Context.this);
+                    // bind config
+                    binder.bind(Configuration.class).toInstance(Context.this.config);
+                    // listen for any new instances and subscribe them to the esper
+                    binder.bindListener(Matchers.any(),new ProvisionListener() {
+                        public <T> void onProvision(ProvisionInvocation<T> provisionInvocation) {
+                            T provision = provisionInvocation.provision();
+                            subscribe(provision);
                         }
-                    }
-                });
+                    });
+                }
             }
-        });
+        );
     }
 
 

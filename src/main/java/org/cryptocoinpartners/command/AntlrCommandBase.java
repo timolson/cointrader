@@ -71,14 +71,7 @@ public abstract class AntlrCommandBase extends CommandBase {
 
 
     @SuppressWarnings("UnusedDeclaration")
-    protected AntlrCommandBase(String commandName) {
-        autoSetGrammarPath();
-        setCommandName(commandName);
-    }
-
-
-    protected AntlrCommandBase(String commandName, String grammarPath) {
-        setCommandName(commandName);
+    protected AntlrCommandBase(String grammarPath) {
         this.grammarPath = grammarPath;
     }
 
@@ -95,7 +88,6 @@ public abstract class AntlrCommandBase extends CommandBase {
             throw new Error("If the name of your subclass of AntlrCommandBase doesn't end with \"Command\" then you need to use the AntlrCommandBase(Parser) constructor to pass in your command's Antlr Parser");
         }
         String baseClassName = name.substring(0,name.length() - "Command".length());
-        setCommandName(baseClassName.toLowerCase());
         grammarPath = cls.getPackage().getName() + "." + baseClassName;
     }
 

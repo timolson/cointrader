@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.command;
 
+import com.google.inject.Injector;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.util.ReflectionUtil;
 import org.reflections.Reflections;
@@ -15,40 +16,16 @@ import java.util.*;
 public abstract class CommandBase implements Command {
 
 
-    public String getCommandName() {
-        return commandName;
-    }
-
     public void parse(String commandArguments) { }
-
-    protected void setCommandName(String commandName) {
-        this.commandName = commandName;
-    }
-
-    @SuppressWarnings("UnusedDeclaration")
-    protected CommandBase(String commandName) {
-        setCommandName(commandName);
-    }
-
-
-    /** This constructor will infer the command name from the naming of your subclass: e.g. BuyCommand has a commandName
-     *  of "buy" */
-    protected CommandBase() {
-        String name = getClass().getSimpleName();
-        if( !name.endsWith("Command") ) {
-            throw new Error("If the name of your subclass of AntlrCommandBase doesn't end with \"Command\" then you need to use the AntlrCommandBase(String) constructor to pass in the name of your command");
-        }
-        setCommandName(name.substring(0,name.length() - "Command".length()).toLowerCase());
-    }
 
 
     // these 2 are injected by ConsoleRunMode
     @Inject
-    public Context context;
+    protected Context context;
     @Inject
-    public ConsoleWriter out;
-
-    private String commandName;
+    protected ConsoleWriter out;
+    @Inject
+    protected Injector injector;
 
 
     public static List<String> allCommandNames() {
@@ -77,14 +54,23 @@ public abstract class CommandBase implements Command {
             int modifiers = commandClass.getModifiers();
             if( Modifier.isAbstract(modifiers) || Modifier.isInterface(modifiers) )
                 continue;
-            try {
-                commandClassesByName.put(commandClass.newInstance().getCommandName().toLowerCase(),commandClass);
+
+            String[] commandNames;
+            String className;
+            CommandName commandNameAnn = commandClass.getAnnotation(CommandName.class);
+            if( commandNameAnn != null ) {
+                commandNames = commandNameAnn.value();
             }
-            catch( InstantiationException | IllegalAccessException e ) {
-                throw new Error("Could not instantiate command "+commandClass,e);
+            else {
+                className = commandClass.getSimpleName();
+                if( !className.endsWith("Command") ) {
+                    throw new Error("If the name of your subclass of AntlrCommandBase doesn't end with \"Command\" then you need to use the AntlrCommandBase(String) constructor to pass in the name of your command");
+                }
+                commandNames = new String[]{className.substring(0,className.length() - "Command".length()).toLowerCase()};
             }
+
+            for( String commandName : commandNames )
+                commandClassesByName.put(commandName.toLowerCase(),commandClass);
         }
     }
-
-
 }

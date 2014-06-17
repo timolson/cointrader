@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.util;
 
 import com.xeiam.xchange.ExchangeFactory;
+import com.xeiam.xchange.ExchangeSpecification;
 import com.xeiam.xchange.currency.CurrencyPair;
 import org.apache.commons.configuration.CombinedConfiguration;
 import org.cryptocoinpartners.schema.Listing;
@@ -17,7 +18,7 @@ import java.util.regex.Pattern;
 public class XchangeUtil {
 
 
-    public static Exchange getMarketForExchangeTag(String tag) { return Exchange.forSymbol(tag.toUpperCase()); }
+    public static Exchange getExchangeForTag(String tag) { return Exchange.forSymbol(tag.toUpperCase()); }
 
 
     public static Set<String> getExchangeTags() { return exchangeTags; }
@@ -57,12 +58,18 @@ public class XchangeUtil {
 
         exchangesByMarket = new HashMap<>();
         for( String exchangeTag : exchangeTags ) {
-            String key = "xchange." + exchangeTag + ".class";
+            String baseKey = "xchange." + exchangeTag + ".";
+            String key = baseKey + "class";
             String exchangeClassName = config.getString(key);
             if( exchangeClassName == null )
                 throw new Error("Property "+key+" is not set.  Please edit cointrader-default.properties to specify the correct XChange adapter class.");
-            com.xeiam.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(exchangeClassName);
-            exchangesByMarket.put(getMarketForExchangeTag(exchangeTag),exchange);
+            ExchangeSpecification spec = new ExchangeSpecification(exchangeClassName);
+            spec.setUserName(config.getString(baseKey+"username",null));
+            spec.setPassword(config.getString(baseKey+"password",null));
+            spec.setApiKey(config.getString(baseKey+"apikey",null));
+            spec.setSecretKey(config.getString(baseKey+"apisecret",null));
+            com.xeiam.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
+            exchangesByMarket.put(getExchangeForTag(exchangeTag),exchange);
         }
     }
 

@@ -46,7 +46,15 @@ public class ConsoleRunMode extends RunMode {
                     continue;
                 }
                 String commandName = matcher.group(1);
-                Command command = CommandBase.commandForName(commandName,context);
+                Command command;
+                try {
+                    command = CommandBase.commandForName(commandName, context);
+                }
+                catch( Throwable e ) {
+                    log.warn("Could not create command "+commandName,e);
+                    internalError();
+                    continue;
+                }
                 if( command == null ) {
                     out.println("Unknown command " + commandName + ".  Available commands:");
                     out.printList(CommandBase.allCommandNames());
@@ -69,13 +77,18 @@ public class ConsoleRunMode extends RunMode {
                 }
                 catch( Throwable e ) {
                     log.warn("Could not run command "+commandName,e);
-                    out.println("Internal error: see cointrader.log");
+                    internalError();
                 }
             }
         }
         catch( IOException e ) {
             throw new Error("Console exception",e);
         }
+    }
+
+
+    private void internalError() {
+        out.println("Internal error: see cointrader.log");
     }
 
 

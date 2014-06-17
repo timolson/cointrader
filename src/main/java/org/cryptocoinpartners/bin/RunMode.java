@@ -1,8 +1,10 @@
 package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.Parameters;
+import com.google.inject.Injector;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
 
 
 /**
@@ -26,5 +28,9 @@ public abstract class RunMode implements Runnable {
 //      System.exit(404);
 //  }
 
-    protected Logger log = LoggerFactory.getLogger(getClass());
+
+    @Inject
+    protected Injector injector;
+    @Inject
+    protected Logger log;
 }

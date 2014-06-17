@@ -1,8 +1,11 @@
 package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.*;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import org.apache.commons.configuration.ConfigurationException;
 import org.cryptocoinpartners.util.Config;
+import org.cryptocoinpartners.util.LogInjector;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.ReflectionUtil;
 import org.slf4j.Logger;
@@ -19,7 +22,6 @@ import java.util.*;
 public class Main
 {
     static final String DEFAULT_PROPERTIES_FILENAME = "cointrader.properties";
-    static final String FALLBACK_PROPERTIES_FILENAME = "cointrader-default.properties";
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
     static class MainParams {
@@ -40,13 +42,14 @@ public class Main
         JCommander parameterParser = new JCommander(mainParams);
         parameterParser.setProgramName(Main.class.getName());
 
+        Injector injector = Guice.createInjector(new LogInjector());
         // find the commands, register with the parameter parser, and put them into the commandLookup map
         Map<String,RunMode> commandLookup = new HashMap<>();
         Set<Class<? extends RunMode>> commands = ReflectionUtil.getSubtypesOf(RunMode.class);
         for( Class<? extends RunMode> commandType : commands ) {
             if( Modifier.isAbstract(commandType.getModifiers()))
                 continue;
-            RunMode runMode = commandType.newInstance();
+            RunMode runMode = injector.getInstance(commandType);
             Parameters annotation = runMode.getClass().getAnnotation(Parameters.class);
             if( annotation == null ) {
                 System.err.println("The RunMode subclass "+ runMode.getClass()+" must have the com.beust.jcommander.Parameters annotation.");

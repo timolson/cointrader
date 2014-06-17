@@ -1,10 +1,10 @@
 package org.cryptocoinpartners.command;
 
 
-import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.schema.*;
 import org.cryptocoinpartners.service.OrderService;
 
+import javax.inject.Inject;
 import java.math.BigDecimal;
 
 
@@ -29,9 +29,6 @@ public abstract class OrderCommand extends AntlrCommandBase {
 
 
     public void run() {
-        // todo tim fix
-        //OrderService orderService = context.getService(OrderService.class);
-        OrderService orderService = null;
         OrderBuilder.SpecificOrderBuilder builder =
                 new OrderBuilder(fund, orderService).create(market, volume);
         if( limit != null ) {
@@ -55,7 +52,6 @@ public abstract class OrderCommand extends AntlrCommandBase {
 
 
     protected OrderCommand(boolean isSell) {
-        super(isSell ? "sell" : "buy","org.cryptocoinpartners.command.Order");
         this.isSell = isSell;
     }
 
@@ -79,7 +75,8 @@ public abstract class OrderCommand extends AntlrCommandBase {
     public void setSell(boolean isSell) { this.isSell = isSell; }
 
 
-    public Context context; // injected
+    @Inject
+    OrderService orderService;
     private Fund fund;
     private BigDecimal volume;
     private Market market;

@@ -46,7 +46,7 @@ public class XchangeData {
             // .rate.queries rate limit the number of queries to this many (default: 1)
             // .rate.period rate limit the number of queries during this period of time (default: 1 second)
             // .listings identifies which Listings should be fetched from this exchange
-            Exchange exchange = XchangeUtil.getMarketForExchangeTag(tag);
+            Exchange exchange = XchangeUtil.getExchangeForTag(tag);
             if( exchange != null ) {
                 String prefix = configPrefix+"." + tag + '.';
                 final String helperClassName = config.getString(prefix + "helper.class", null);

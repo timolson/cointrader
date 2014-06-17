@@ -13,14 +13,14 @@
         </encoder>
     </appender>
 
-    <root level="DEBUG">
+    <root level="INFO">
         <appender-ref ref="FILE"/>
         <!--<appender-ref ref="CONSOLE"/>-->
     </root>
 
     <logger name="org.hibernate.ejb.HibernatePersistence" level="error"/>
 
-    <logger name="org.cryptocoinpartners" level="info"/>
+    <logger name="org.cryptocoinpartners" level="debug"/>
     <!--<logger name="org.cryptocoinpartners.module" level="debug"/>-->
     <!--<logger name="org.hibernate.tool.hbm2ddl.SchemaExport" level="off"/>-->
     <!--<logger name="org.cryptocoinpartners.util.Config" level="debug"/>-->
