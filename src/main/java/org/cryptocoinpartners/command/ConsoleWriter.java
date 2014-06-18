@@ -1,7 +1,7 @@
 package org.cryptocoinpartners.command;
 
-import jline.ConsoleReader;
 
+import jline.console.ConsoleReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
@@ -29,7 +29,7 @@ public class ConsoleWriter extends PrintWriter {
         public void write(char[] cbuf, int off, int len) throws IOException {
             String output = new String(cbuf, off, len);
             try {
-                console.printString(output);
+                console.print(output);
             }
             catch( IOException e ) {
                 throw new Error("Could not write to console",e);
@@ -37,13 +37,12 @@ public class ConsoleWriter extends PrintWriter {
         }
 
 
-        public void flush() throws IOException {
-            console.flushConsole();
-        }
-        public void close() throws IOException {
-            console.flushConsole();
-        }
+        public void flush() throws IOException { console.flush(); }
+        public void close() throws IOException { console.flush(); }
+
+
         private ConsolePrintWriter(ConsoleReader console) { this.console = console; }
+
 
         private ConsoleReader console;
     }

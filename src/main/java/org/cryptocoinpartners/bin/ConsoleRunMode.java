@@ -1,25 +1,26 @@
 package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.Parameters;
-import jline.Completor;
-import jline.ConsoleReader;
-import jline.History;
+import jline.TerminalFactory;
+import jline.console.ConsoleReader;
+import jline.console.KeyMap;
+import jline.console.history.MemoryHistory;
+import jline.Terminal;
 import org.apache.commons.lang.StringUtils;
 import org.cryptocoinpartners.command.Command;
 import org.cryptocoinpartners.command.CommandBase;
 import org.cryptocoinpartners.command.ConsoleWriter;
 import org.cryptocoinpartners.command.ParseError;
-import org.cryptocoinpartners.module.Context;
-import org.cryptocoinpartners.module.BasicAccountService;
-import org.cryptocoinpartners.module.MockOrderService;
-import org.cryptocoinpartners.module.BasicQuoteService;
-import org.cryptocoinpartners.module.TickWindow;
+import org.cryptocoinpartners.module.*;
 import org.cryptocoinpartners.module.xchangedata.XchangeData;
 import org.cryptocoinpartners.schema.Fund;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.FileDescriptor;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -73,7 +74,7 @@ public class ConsoleRunMode extends RunMode {
                 }
                 try {
                     command.run();
-                    history.addToHistory(line);
+                    history.add(line);
                 }
                 catch( Throwable e ) {
                     log.warn("Could not run command "+commandName,e);
@@ -101,13 +102,23 @@ public class ConsoleRunMode extends RunMode {
         context.attach(BasicAccountService.class);
         context.attach(MockOrderService.class);
 
+        Terminal terminal = TerminalFactory.get();
+        try {
+            terminal.init();
+        }
+        catch( Exception e ) {
+            throw new Error("Could not initialize terminal",e);
+        }
+        terminal.setEchoEnabled(false);
+
         console = new ConsoleReader();
-        String prompt = config.getString("console.cursor","ct>");
-        console.setDefaultPrompt(prompt);
-        history = new History();
-        history.setMaxSize(config.getInt("console.hisory.size",100));
+        String prompt = config.getString("console.cursor","ct>")+" ";
+        console.setPrompt(prompt);
+        history = new MemoryHistory();
+        history.setMaxSize(config.getInt("console.hisory.size", 100));
         console.setHistory(history);
-        console.setUseHistory(true);
+        console.setHistoryEnabled(true);
+        console.setKeyMap(KeyMap.EMACS);
         out = new ConsoleWriter(console);
         context.attach(ConsoleWriter.class,out);
         context.attach(PrintWriter.class,out);
@@ -119,5 +130,5 @@ public class ConsoleRunMode extends RunMode {
     private Context context;
     private ConsoleReader console;
     private ConsoleWriter out;
-    private History history;
+    private MemoryHistory history;
 }
