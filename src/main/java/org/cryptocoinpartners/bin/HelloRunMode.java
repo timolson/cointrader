@@ -13,7 +13,7 @@ import org.cryptocoinpartners.schema.Panic;
 @Parameters(commandNames = "hello",commandDescription = "Example runmode which says hello to the world and to you")
 public class HelloRunMode extends RunMode {
     public void run() {
-        Context context = new Context();
+        Context context = Context.create();
         context.attach(HelloWorld.class);
         context.publish(new Panic());
     }

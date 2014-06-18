@@ -3,6 +3,7 @@ package org.cryptocoinpartners.command;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.Provider;
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
@@ -107,14 +108,27 @@ public abstract class AntlrCommandBase extends CommandBase {
         listenerSubclass = (Class<? extends ParseTreeListener>) listenerSubtypes.iterator().next();
         Injector listenerInjector = context.getInjector().createChildInjector(new Module() {
             public void configure(Binder binder) {
-                binder.bind(Command.class).toInstance(AntlrCommandBase.this);
+                final Provider selfProvider = new SelfProvider();
+                binder.bind(Command.class).toProvider(selfProvider);
+                binder.bind(getClass()).toProvider(selfProvider);
             }
         });
+        listenerInjector = getListenerInjector(listenerInjector);
         listener = listenerInjector.getInstance(listenerSubclass);
     }
 
 
+    protected Injector getListenerInjector(Injector parentInjector) { return parentInjector; }
+
+
     protected void setListener(ParseTreeListener listener) { this.listener = listener; }
+
+
+    private class SelfProvider implements Provider {
+        public Object get() {
+            return AntlrCommandBase.this;
+        }
+    }
 
 
     private ParseTreeListener listener;

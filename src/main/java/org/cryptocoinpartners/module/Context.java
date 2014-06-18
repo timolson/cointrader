@@ -8,11 +8,12 @@ import com.espertech.esper.client.deploy.ParseException;
 import com.espertech.esper.client.time.CurrentTimeEvent;
 import com.espertech.esper.client.time.CurrentTimeSpanEvent;
 import com.espertech.esper.core.service.EPServiceProviderImpl;
-import com.google.inject.*;
+import com.google.inject.Binder;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.matcher.Matchers;
 import com.google.inject.spi.ProvisionListener;
-import com.google.inject.spi.TypeEncounter;
-import com.google.inject.spi.TypeListener;
 import org.apache.commons.configuration.AbstractConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
@@ -32,7 +33,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -49,10 +49,18 @@ import java.util.Set;
 @SuppressWarnings("UnusedDeclaration")
 public class Context {
 
+    /**
+     * Contexts are not created through injection, because they are injection contexts themselves.  Use this static
+     * method for construction.
+     */
+    public static Context create() { return new Context(null); }
 
-    public Context() {
-        construct();
-    }
+
+    /**
+     * Use a TimeProvider when you do not want real wall-clock time to drive the Context; for example, during replay
+     * of historical events.
+     */
+    public static Context create( TimeProvider timeProvider ) { return new Context(null); }
 
 
     public interface TimeProvider {
@@ -65,13 +73,6 @@ public class Context {
          @param event The event to be published after the time is advanced
          */
         Instant nextTime(Event event);
-    }
-
-
-    public Context(TimeProvider timeProvider)
-    {
-        this.timeProvider = timeProvider;
-        construct();
     }
 
 
@@ -402,7 +403,8 @@ public class Context {
     }
 
 
-    private void construct() {
+    private Context( TimeProvider timeProvider ) {
+        this.timeProvider = timeProvider;
         final com.espertech.esper.client.Configuration esperConfig = new com.espertech.esper.client.Configuration();
         esperConfig.addEventType(Event.class);
         Set<Class<? extends Event>> eventTypes = ReflectionUtil.getSubtypesOf(Event.class);

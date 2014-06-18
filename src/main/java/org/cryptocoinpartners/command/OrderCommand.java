@@ -1,6 +1,10 @@
 package org.cryptocoinpartners.command;
 
 
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.Provider;
 import org.cryptocoinpartners.schema.*;
 import org.cryptocoinpartners.service.OrderService;
 
@@ -52,7 +56,21 @@ public abstract class OrderCommand extends AntlrCommandBase {
 
 
     protected OrderCommand(boolean isSell) {
+        super("org.cryptocoinpartners.command.Order");
         this.isSell = isSell;
+    }
+
+
+    protected Injector getListenerInjector(Injector parentInjector) {
+        return parentInjector.createChildInjector(new Module() {
+            public void configure(Binder binder) {
+                binder.bind(OrderCommand.class).toProvider(new Provider<OrderCommand>() {
+                    public OrderCommand get() {
+                        return OrderCommand.this;
+                    }
+                });
+            }
+        });
     }
 
 

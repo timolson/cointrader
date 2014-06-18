@@ -23,6 +23,7 @@ public class Config {
 
     public static PropertiesConfiguration defaults() { return defaultConfig; }
     public static PropertiesConfiguration user() { return userConfig; }
+    public static PropertiesConfiguration buildtime() { return buildtimeConfig; }
     public static SystemConfiguration system() { return sysConfig; }
     public static MapConfiguration commandLine() { return clConfig; }
 
@@ -41,6 +42,10 @@ public class Config {
         if( defaultProps == null )
             throw new ConfigurationException("Could not load cointrader-default.properties");
         defaultConfig = new PropertiesConfiguration(defaultProps);
+        URL buildtimeProps = Config.class.getResource("/org/cryptocoinpartners/buildtime.properties");
+        if( buildtimeProps == null )
+            throw new ConfigurationException("Could not load buildtime.properties");
+        buildtimeConfig = new PropertiesConfiguration(buildtimeProps);
         combined = buildConfig(Collections.<AbstractConfiguration>emptyList());
         if( log.isDebugEnabled() )
             log.debug("Combined Configuration:\n"+ configAsString(combined));
@@ -82,6 +87,7 @@ public class Config {
 
     private static CombinedConfiguration buildConfig(Collection<? extends AbstractConfiguration> intermediateConfigs) {
         final CombinedConfiguration result = new CombinedConfiguration(new OverrideCombiner());
+        result.addConfiguration(buildtimeConfig); // buildtime config cannot be overridden
         result.addConfiguration(clConfig);
         result.addConfiguration(sysConfig);
         for( AbstractConfiguration moduleConfig : intermediateConfigs )
@@ -109,6 +115,7 @@ public class Config {
 
 
     private static PropertiesConfiguration defaultConfig;
+    private static PropertiesConfiguration buildtimeConfig;
     private static PropertiesConfiguration userConfig;
     private static MapConfiguration clConfig;
     private static SystemConfiguration sysConfig;

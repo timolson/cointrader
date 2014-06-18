@@ -2,6 +2,8 @@ package org.cryptocoinpartners.command;
 
 import org.antlr.v4.runtime.misc.NotNull;
 
+import javax.inject.Inject;
+
 import static org.cryptocoinpartners.command.Parse.amount;
 import static org.cryptocoinpartners.command.Parse.market;
 
@@ -31,5 +33,6 @@ public class OrderArgsListener extends OrderBaseListener {
     }
 
 
+    @Inject
     public OrderCommand command; // this will get injected by AntlrCommandBase.  it must be public
 }

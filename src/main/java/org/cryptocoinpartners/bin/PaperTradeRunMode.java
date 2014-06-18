@@ -20,7 +20,7 @@ import java.util.List;
 public class PaperTradeRunMode extends RunMode {
 
     public void run() {
-        Context context = new Context();
+        Context context = Context.create();
         context.attach(BasicAccountService.class);
         context.attach(BasicQuoteService.class);
         context.attach(MockOrderService.class);

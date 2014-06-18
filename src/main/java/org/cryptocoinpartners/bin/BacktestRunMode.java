@@ -3,7 +3,6 @@ package org.cryptocoinpartners.bin;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import org.cryptocoinpartners.module.Context;
-import org.cryptocoinpartners.util.ModuleLoaderError;
 
 
 /**
@@ -17,7 +16,7 @@ public class BacktestRunMode extends RunMode {
     public String strategyName;
 
     public void run() {
-        Context context = new Context();
+        Context context = Context.create();
         // todo set time manager
         // todo load data producing module
     }

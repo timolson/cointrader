@@ -108,7 +108,7 @@ public class SpecificOrder extends Order {
     public String toString() {
         return "SpecificOrder{" +
                        "id=" + getId() +
-                       "parentOrder=" + parentOrder.getId() +
+                       ", parentOrder=" + (parentOrder == null ? "null" : parentOrder.getId()) +
                        ", market=" + market +
                        ", volumeCount=" + volumeCount +
                        ", limitPriceCount=" + limitPriceCount +

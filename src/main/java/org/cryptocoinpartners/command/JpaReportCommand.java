@@ -19,7 +19,6 @@ public class JpaReportCommand extends ReportCommand {
     }
 
 
-
     public void parse(String commandArguments) {
         queryStr = commandArguments;
     }

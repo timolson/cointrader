@@ -4,10 +4,7 @@ import com.beust.jcommander.*;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.apache.commons.configuration.ConfigurationException;
-import org.cryptocoinpartners.util.Config;
-import org.cryptocoinpartners.util.LogInjector;
-import org.cryptocoinpartners.util.PersistUtil;
-import org.cryptocoinpartners.util.ReflectionUtil;
+import org.cryptocoinpartners.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +18,8 @@ import java.util.*;
  */
 public class Main
 {
+
+
     static final String DEFAULT_PROPERTIES_FILENAME = "cointrader.properties";
     private static final Logger log = LoggerFactory.getLogger(Main.class);
 
@@ -37,27 +36,45 @@ public class Main
     }
 
 
-    public static void main( String[] args ) throws ConfigurationException, IllegalAccessException, InstantiationException {
-        MainParams mainParams = new MainParams();
-        JCommander parameterParser = new JCommander(mainParams);
-        parameterParser.setProgramName(Main.class.getName());
+    static class MainParamsOnly extends MainParams {
+        @Parameter
+        List<String> everythingElseIgnored;
+    }
 
-        Injector injector = Guice.createInjector(new LogInjector());
+
+    public static void main( String[] args ) throws ConfigurationException, IllegalAccessException, InstantiationException {
+        // first, parse only the MainParams to get the properties file location and initialize Config and rootInjector
+        MainParamsOnly mainParamsOnly = new MainParamsOnly();
+        JCommander parameterParser = new JCommander(mainParamsOnly);
+        parameterParser.setProgramName(Main.class.getName());
+        try {
+            parameterParser.parse();
+        }
+        catch( Throwable t ) {
+            t.printStackTrace();
+            System.exit(1);
+        }
+        Config.init(mainParamsOnly.propertiesFilename,mainParamsOnly.definitions);
+        Injector rootInjector = Guice.createInjector(new LogInjector(),new CombinedConfigInjector());
+
+        // now parse the full command line
+        MainParams mainParams = new MainParams();
+        parameterParser = new JCommander(mainParams);
+
         // find the commands, register with the parameter parser, and put them into the commandLookup map
-        Map<String,RunMode> commandLookup = new HashMap<>();
-        Set<Class<? extends RunMode>> commands = ReflectionUtil.getSubtypesOf(RunMode.class);
-        for( Class<? extends RunMode> commandType : commands ) {
-            if( Modifier.isAbstract(commandType.getModifiers()))
+        Map<String,RunMode> runModesByName = new HashMap<>();
+        Set<Class<? extends RunMode>> runModeClasses = ReflectionUtil.getSubtypesOf(RunMode.class);
+        for( Class<? extends RunMode> runModeClass : runModeClasses ) {
+            if( Modifier.isAbstract(runModeClass.getModifiers()))
                 continue;
-            RunMode runMode = injector.getInstance(commandType);
-            Parameters annotation = runMode.getClass().getAnnotation(Parameters.class);
+            Parameters annotation = runModeClass.getAnnotation(Parameters.class);
             if( annotation == null ) {
-                System.err.println("The RunMode subclass "+ runMode.getClass()+" must have the com.beust.jcommander.Parameters annotation.");
+                System.err.println("The RunMode subclass "+ runModeClass +" must have the com.beust.jcommander.Parameters annotation.");
                 System.exit(1);
             }
-            for( String commandName : annotation.commandNames() ) {
-                commandLookup.put(commandName, runMode);
-            }
+            RunMode runMode = rootInjector.getInstance(runModeClass);
+            for( String commandName : annotation.commandNames() )
+                runModesByName.put(commandName, runMode);
             parameterParser.addCommand(runMode);
         }
 
@@ -72,18 +89,10 @@ public class Main
         }
         String commandName = parameterParser.getParsedCommand();
         // find the runmode, if any
-        RunMode runMode = commandLookup.get(commandName);
+        RunMode runMode = runModesByName.get(commandName);
         if( runMode == null || mainParams.help ) {
             parameterParser.usage();
             System.exit(7001);
-        }
-        try {
-            Config.init(mainParams.propertiesFilename, mainParams.definitions);
-        }
-        catch( ConfigurationException e ) {
-            System.err.println("Could not load properties");
-            e.printStackTrace(System.err);
-            System.exit(1);
         }
         try {
             runMode.run();

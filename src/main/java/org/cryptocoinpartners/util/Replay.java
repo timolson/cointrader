@@ -5,9 +5,14 @@ import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.Event;
 import org.cryptocoinpartners.schema.RemoteEvent;
 import org.cryptocoinpartners.schema.Trade;
-import org.joda.time.*;
+import org.joda.time.Duration;
+import org.joda.time.Instant;
+import org.joda.time.Interval;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 
 /**
@@ -17,35 +22,36 @@ import java.util.*;
 public class Replay
 {
 
-    public static Replay all() {
-        return during(new Interval(getEventsStart(),getEventsEnd()));
+    public static Replay all(boolean orderByTimeReceived) {
+        return during(new Interval(getEventsStart(orderByTimeReceived),getEventsEnd(orderByTimeReceived)),orderByTimeReceived);
     }
 
 
-    public static Replay since( Instant start )
+    public static Replay since( Instant start, boolean orderByTimeReceived )
     {
-        return during(new Interval(start,getEventsEnd()));
+        return during(new Interval(start,getEventsEnd(orderByTimeReceived)),orderByTimeReceived);
     }
 
 
-    public static Replay until( Instant end ) {
-        return during(new Interval(getEventsStart(),end));
+    public static Replay until( Instant end, boolean orderByTimeReceived ) {
+        return during(new Interval(getEventsStart(orderByTimeReceived),end),orderByTimeReceived);
     }
 
 
-    public static Replay between( Instant start, Instant end ) {
-        return during(new Interval(start,end));
+    public static Replay between( Instant start, Instant end, boolean orderByTimeReceived ) {
+        return during(new Interval(start,end),orderByTimeReceived);
     }
 
 
-    public static Replay during( Interval interval ) {
-        return new Replay(interval);
+    public static Replay during( Interval interval, boolean orderByTimeReceived ) {
+        return new Replay(interval,orderByTimeReceived);
     }
 
 
-    public Replay( Interval replayTimeInterval ) {
+    public Replay( Interval replayTimeInterval, boolean orderByTimeReceived ) {
         this.replayTimeInterval = replayTimeInterval;
-        this.context = new Context(new EventTimeManager());
+        this.context = Context.create(new EventTimeManager());
+        this.orderByTimeReceived = orderByTimeReceived;
     }
 
 
@@ -55,8 +61,6 @@ public class Replay
     /**
      queries the database for all Books and Trades which have start <= time <= stop, then publishes those
      Events in order of time to this Replay's Context
-     @param start
-     @param stop
      */
     public void run() {
         final Instant start = replayTimeInterval.getStart().toInstant();
@@ -83,19 +87,21 @@ public class Replay
 
 
     private List<RemoteEvent> queryEvents( Instant start, Instant stop ) {
-        final String tradeQuery = "select t from Trade t where time >= ?1 and time <= ?2";
-        final String bookQuery = "select b from Book b where time >= ?1 and time <= ?2";
-        final List<RemoteEvent> events = new ArrayList<RemoteEvent>();
+        final String timeField = timeFieldForOrdering(orderByTimeReceived);
+        final String tradeQuery = "select t from Trade t where "+timeField+" >= ?1 and "+timeField+" <= ?2";
+        final String bookQuery = "select b from Book b where "+timeField+" >= ?1 and "+timeField+" <= ?2";
+        final List<RemoteEvent> events = new ArrayList<>();
         events.addAll(PersistUtil.queryList(Trade.class, tradeQuery, start, stop));
         events.addAll(PersistUtil.queryList(Book.class, bookQuery, start, stop));
-        Collections.sort(events, timeComparator);
+        Collections.sort(events, orderByTimeReceived ? timeReceivedComparator : timeHappenedComparator );
         return events;
     }
-    
-    
-    private static Instant getEventsStart() {
-        Instant bookStart = PersistUtil.queryOne(Instant.class,"select min(time) from Book");
-        Instant tradeStart = PersistUtil.queryOne(Instant.class,"select min(time) from Trade");
+
+
+    private static Instant getEventsStart( boolean orderByRemoteTime ) {
+        String timeField = timeFieldForOrdering(orderByRemoteTime);
+        Instant bookStart = PersistUtil.queryOne(Instant.class,"select min("+timeField+" from Book");
+        Instant tradeStart = PersistUtil.queryOne(Instant.class,"select min("+timeField+") from Trade");
         if( bookStart == null && tradeStart == null )
             return null;
         if( bookStart == null )
@@ -106,10 +112,11 @@ public class Replay
     }
 
 
-    private static Instant getEventsEnd() {
+    private static Instant getEventsEnd(boolean orderByTimeReceived) {
+        final String timeField = timeFieldForOrdering(orderByTimeReceived);
         // queries use max(time)+1 because the end of a range is exclusive, and we want to include the last event
-        Instant bookEnd = PersistUtil.queryOne(Instant.class,"select max(time) from Book");
-        Instant tradeEnd = PersistUtil.queryOne(Instant.class,"select max(time) from Trade");
+        Instant bookEnd = PersistUtil.queryOne(Instant.class,"select max("+timeField+") from Book");
+        Instant tradeEnd = PersistUtil.queryOne(Instant.class,"select max("+timeField+") from Trade");
         if( bookEnd == null && tradeEnd == null )
             return null;
         if( bookEnd == null )
@@ -117,6 +124,11 @@ public class Replay
         if( tradeEnd == null )
             return bookEnd;
         return tradeEnd.isAfter(bookEnd) ? tradeEnd : bookEnd;
+    }
+
+
+    private static String timeFieldForOrdering(boolean orderByTimeReceived) {
+        return orderByTimeReceived ? "timeReceived" : "time";
     }
 
 
@@ -129,7 +141,7 @@ public class Replay
     };
 
 
-    private static final Comparator<RemoteEvent> timeComparator = new Comparator<RemoteEvent>()
+    private static final Comparator<RemoteEvent> timeHappenedComparator = new Comparator<RemoteEvent>()
     {
         public int compare( RemoteEvent event, RemoteEvent event2 )
         {
@@ -157,4 +169,5 @@ public class Replay
     private final Interval replayTimeInterval;
     private final Context context;
     private static final Duration timeStep = Duration.standardMinutes(1); // how many rows from the DB to gather in one batch
+    private final boolean orderByTimeReceived;
 }

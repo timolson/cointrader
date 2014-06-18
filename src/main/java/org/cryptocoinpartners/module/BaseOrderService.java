@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 
 import javax.inject.Inject;
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.Map;
 
 
@@ -142,8 +143,11 @@ public abstract class BaseOrderService implements OrderService {
     };
 
 
+    @Inject
     protected Context context;
+    @Inject
     private Logger log;
-    private Map<Order, OrderState> orderStateMap;
+    private Map<Order, OrderState> orderStateMap = new HashMap<>();
+    @Inject
     private QuoteService quotes;
 }

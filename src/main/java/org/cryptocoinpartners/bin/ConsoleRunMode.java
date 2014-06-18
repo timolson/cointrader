@@ -16,7 +16,6 @@ import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.TickWindow;
 import org.cryptocoinpartners.module.xchangedata.XchangeData;
 import org.cryptocoinpartners.schema.Fund;
-import org.cryptocoinpartners.util.Config;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -74,6 +73,7 @@ public class ConsoleRunMode extends RunMode {
                 }
                 try {
                     command.run();
+                    history.addToHistory(line);
                 }
                 catch( Throwable e ) {
                     log.warn("Could not run command "+commandName,e);
@@ -93,7 +93,7 @@ public class ConsoleRunMode extends RunMode {
 
 
     private void init() throws IOException {
-        context = new Context();
+        context = Context.create();
 
         context.attach(XchangeData.class);
         context.attach(TickWindow.class);
@@ -102,18 +102,16 @@ public class ConsoleRunMode extends RunMode {
         context.attach(MockOrderService.class);
 
         console = new ConsoleReader();
-        String prompt = Config.combined().getString("console.cursor","ct>");
+        String prompt = config.getString("console.cursor","ct>");
         console.setDefaultPrompt(prompt);
-        console.setHistory(new History());
+        history = new History();
+        history.setMaxSize(config.getInt("console.hisory.size",100));
+        console.setHistory(history);
         console.setUseHistory(true);
-        console.addCompletor(new Completor() {
-            public int complete(String s, int i, List list) {
-                return 0;
-            }
-        });
         out = new ConsoleWriter(console);
         context.attach(ConsoleWriter.class,out);
         context.attach(PrintWriter.class,out);
+        out.println("Coin Trader Console "+config.getString("project.version"));
     }
 
 
@@ -121,4 +119,5 @@ public class ConsoleRunMode extends RunMode {
     private Context context;
     private ConsoleReader console;
     private ConsoleWriter out;
+    private History history;
 }

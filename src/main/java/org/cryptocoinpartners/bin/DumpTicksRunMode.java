@@ -49,14 +49,14 @@ public class DumpTicksRunMode extends RunMode
         Replay replay;
         if( start == null ) {
             if( end == null )
-                replay = Replay.all();
+                replay = Replay.all(false);
             else
-                replay = Replay.until(new Instant(end));
+                replay = Replay.until(new Instant(end),false);
         }
         else if( end == null )
-            replay = Replay.since(new Instant(start));
+            replay = Replay.since(new Instant(start),false);
         else
-            replay = Replay.between(new Instant(start), new Instant(end));
+            replay = Replay.between(new Instant(start), new Instant(end),false);
 
 
         Context context = replay.getContext();

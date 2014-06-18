@@ -13,7 +13,7 @@ import org.cryptocoinpartners.module.SaveData;
 @Parameters(commandNames = "mockticker", commandDescription = "Launch a test ticker and save bogus data to the database")
 public class FakeTickerRunMode extends RunMode {
     public void run() {
-        Context context = new Context();
+        Context context = Context.create();
         context.attach(MockTicker.class);
         context.attach(SaveData.class);
     }

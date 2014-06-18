@@ -2,6 +2,7 @@ package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.Parameters;
 import com.google.inject.Injector;
+import org.apache.commons.configuration.Configuration;
 import org.slf4j.Logger;
 
 import javax.inject.Inject;
@@ -9,10 +10,7 @@ import javax.inject.Inject;
 
 /**
  * Each subclass of RunMode must be annotated with the JCommander @Parameters tag.  Main will
- * create a parameter object then give it to an instance of the subclass via run(Object param)
- *
- * will be instantiated with its default constructor, then getName() and get will be called followed
- * by
+ * create an instance of the RunMode using injection, and JCommander will populate any fields annotated with @Parameter.
  *
  * @author Tim Olson
  * @see Parameters
@@ -31,6 +29,8 @@ public abstract class RunMode implements Runnable {
 
     @Inject
     protected Injector injector;
+    @Inject
+    protected Configuration config;
     @Inject
     protected Logger log;
 }

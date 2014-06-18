@@ -13,7 +13,7 @@ import org.cryptocoinpartners.module.xchangedata.XchangeData;
 @Parameters(commandNames = {"save-data","ticker"}, commandDescription = "Launch a data gathering node")
 public class SaveDataRunMode extends RunMode {
     public void run() {
-        Context context = new Context();
+        Context context = Context.create();
         context.attach(XchangeData.class);
         context.attach(SaveData.class);
     }
