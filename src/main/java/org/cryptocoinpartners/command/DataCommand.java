@@ -10,10 +10,13 @@ import org.cryptocoinpartners.report.Report;
 public class DataCommand extends ReportCommand {
 
 
-    public void printHelp() {
-        out.println("data [summary]");
-        out.println();
-        out.println("\tPrints a count of Trade and Book entries for each Market");
+    public String getUsageHelp() {
+        return "data [summary]";
+    }
+
+
+    public String getExtraHelp() {
+        return "Prints a count of Trade and Book entries for each Market";
     }
 
 

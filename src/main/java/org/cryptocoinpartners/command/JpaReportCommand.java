@@ -11,11 +11,13 @@ import org.cryptocoinpartners.report.TableOutput;
 @CommandName("jpa")
 public class JpaReportCommand extends ReportCommand {
 
-    public void printHelp() {
-        out.println("jpa {jpa_query}");
-        out.println();
-        out.println("\tRuns the specified ad-hoc query against the database and prints");
-        out.println("\tthe result as a table");
+    public String getUsageHelp() {
+        return "jpa {jpa_query}";
+    }
+
+
+    public String getExtraHelp() {
+        return "Runs the specified ad-hoc query against the database and prints the result as a table";
     }
 
 

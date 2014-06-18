@@ -17,7 +17,7 @@ import java.math.BigDecimal;
 public class Parse {
 
 
-    public static BigDecimal amount(TerminalNode node) {
+    public static BigDecimal amount(TerminalNode node) throws ParseError {
         String text = text(node);
         if( StringUtils.isBlank(text) )
             throw new ParseError("Expected an amount");
@@ -30,7 +30,7 @@ public class Parse {
     }
 
 
-    public static Currency currency(TerminalNode node) {
+    public static Currency currency(TerminalNode node) throws ParseError {
         String text = text(node);
         Currency currency = Currency.forSymbol(text);
         if( currency == null )
@@ -39,7 +39,7 @@ public class Parse {
     }
 
 
-    public static Listing listing(TerminalNode node) {
+    public static Listing listing(TerminalNode node) throws ParseError {
         String text = text(node);
         Listing listing = Listing.forSymbol(text);
         if( listing == null )
@@ -48,7 +48,7 @@ public class Parse {
     }
 
 
-    public static Market market(TerminalNode node) {
+    public static Market market(TerminalNode node) throws ParseError {
         String text = text(node);
         Market market = Market.forSymbol(text);
         if( market == null )

@@ -12,13 +12,6 @@ import java.util.*;
 @SuppressWarnings("UnusedDeclaration")
 public class ListingsCommand extends CommandBase {
 
-    public void printHelp() {
-        out.println("listings");
-        out.println();
-        out.println("\tprints all listings available on at least one exchange");
-    }
-
-
     public void run() {
         Set<String> symbols = new HashSet<>();
         for( Market market : Market.findAll() )
@@ -28,4 +21,7 @@ public class ListingsCommand extends CommandBase {
         out.printList(symbols);
     }
 
+
+    public String getUsageHelp() { return "listings"; }
+    public String getExtraHelp() { return "prints all listings available on at least one exchange"; }
 }

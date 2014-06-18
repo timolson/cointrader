@@ -19,16 +19,19 @@ import java.math.BigDecimal;
 public abstract class OrderCommand extends AntlrCommandBase {
 
 
-    public void printHelp() {
-        out.print(isSell?"sell":"buy");
-        out.println(" {volume} {exchange}:{base}.{quote} [limit {price}] [stop {price}]");
-        out.println();
-        out.println("\tPlaces an order for the given volume on the specified exchange.");
-        out.println("\tIf a limit price is supplied, a limit order will be generated.");
-        out.println("\tStop and stop-limit orders are not currently supported but no ");
-        out.println("\terror will be given.");
+    public String getUsageHelp() {
+        return (isSell?"sell":"buy") + " {volume} {exchange}:{base}.{quote} [limit {price}] [stop {price}]";
+    }
+
+
+    public String getExtraHelp() {
+        String help = "Places an order for the given volume on the specified exchange."+
+                      "If a limit price is supplied, a limit order will be generated." +
+                      "Stop and stop-limit orders are not currently supported but no " +
+                      "error will be given.";
         if(isSell)
-            out.println("Selling is the same as buying with a negative volume.");
+            help += "Selling is the same as buying with a negative volume.";
+        return help;
     }
 
 

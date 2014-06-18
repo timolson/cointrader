@@ -1,6 +1,8 @@
 package org.cryptocoinpartners.command;
 
 import com.google.inject.Injector;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.WordUtils;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.util.ReflectionUtil;
 import org.reflections.Reflections;
@@ -14,6 +16,8 @@ import java.util.*;
  * @author Tim Olson
  */
 public abstract class CommandBase implements Command {
+
+    public String getUsageHelp() { return null; }
 
 
     public void parse(String commandArguments) { }

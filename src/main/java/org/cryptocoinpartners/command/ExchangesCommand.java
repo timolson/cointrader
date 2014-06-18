@@ -11,11 +11,8 @@ import java.util.*;
 @SuppressWarnings("UnusedDeclaration")
 public class ExchangesCommand extends CommandBase {
 
-    public void printHelp() {
-        out.println("exchanges");
-        out.println();
-        out.println("\tprints all exchanges available");
-    }
+    public String getUsageHelp() { return "exchanges"; }
+    public String getExtraHelp() { return "prints all exchanges available"; }
 
 
     public void run() {
@@ -26,5 +23,6 @@ public class ExchangesCommand extends CommandBase {
         Collections.sort(sorted);
         out.printList(sorted);
     }
+
 
 }

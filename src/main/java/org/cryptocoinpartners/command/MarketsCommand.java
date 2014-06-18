@@ -13,11 +13,8 @@ import java.util.List;
 @SuppressWarnings("UnusedDeclaration")
 public class MarketsCommand extends CommandBase {
 
-    public void printHelp() {
-        out.println("markets");
-        out.println();
-        out.println("\tprints a list of all available exchanges and listings");
-    }
+    public String getUsageHelp() { return "markets"; }
+    public String getExtraHelp() { return "prints a list of all available exchanges and listings"; }
 
 
     public void run() {
@@ -27,5 +24,6 @@ public class MarketsCommand extends CommandBase {
         Collections.sort(symbols);
         out.printList(symbols);
     }
+
 
 }

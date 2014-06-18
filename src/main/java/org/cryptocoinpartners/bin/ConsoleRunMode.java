@@ -68,18 +68,23 @@ public class ConsoleRunMode extends RunMode {
                 }
                 catch( ParseError e ) {
                     out.println(e.getMessage());
+                    String usageHelp = command.getUsageHelp();
+                    out.println(usageHelp==null?commandName:usageHelp);
+                    continue;
                 }
                 catch( Throwable e ) {
                     log.warn("Could not parse command " + commandName, e);
+                    continue;
                 }
                 try {
                     command.run();
-                    history.add(line);
                 }
                 catch( Throwable e ) {
                     log.warn("Could not run command "+commandName,e);
                     internalError();
+                    continue;
                 }
+                history.add(line);
             }
         }
         catch( IOException e ) {
@@ -121,8 +126,8 @@ public class ConsoleRunMode extends RunMode {
         console.setKeyMap(KeyMap.EMACS);
         out = new ConsoleWriter(console);
         context.attach(ConsoleWriter.class,out);
-        context.attach(PrintWriter.class,out);
-        out.println("Coin Trader Console "+config.getString("project.version"));
+        context.attach(PrintWriter.class, out);
+        console.println("Coin Trader Console "+config.getString("project.version"));
     }
 
 
