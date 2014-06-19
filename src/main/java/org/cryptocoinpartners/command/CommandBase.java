@@ -1,9 +1,7 @@
 package org.cryptocoinpartners.command;
 
-import com.google.inject.Injector;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.WordUtils;
 import org.cryptocoinpartners.module.Context;
+import org.cryptocoinpartners.util.Injector;
 import org.cryptocoinpartners.util.ReflectionUtil;
 import org.reflections.Reflections;
 

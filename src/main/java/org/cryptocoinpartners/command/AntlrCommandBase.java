@@ -1,7 +1,6 @@
 package org.cryptocoinpartners.command;
 
 import com.google.inject.Binder;
-import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provider;
 import org.antlr.v4.runtime.*;
@@ -10,8 +9,10 @@ import org.antlr.v4.runtime.tree.ParseTreeListener;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.apache.commons.lang.StringUtils;
 import org.cryptocoinpartners.util.Config;
+import org.cryptocoinpartners.util.Injector;
 import org.cryptocoinpartners.util.ReflectionUtil;
 
+import javax.inject.Inject;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Set;
@@ -109,11 +110,11 @@ public abstract class AntlrCommandBase extends CommandBase {
         if( listenerSubtypes.isEmpty() )
             throw new Error("Could not find any subclass of "+listenerClassName+" in the command.path "+ Config.combined().getString("command.path"));
         listenerSubclass = (Class<? extends ParseTreeListener>) listenerSubtypes.iterator().next();
-        Injector listenerInjector = context.getInjector().createChildInjector(new Module() {
+        Injector listenerInjector = injector.createChildInjector(new Module() {
             public void configure(Binder binder) {
                 final Provider selfProvider = new SelfProvider();
                 binder.bind(Command.class).toProvider(selfProvider);
-                binder.bind(getClass()).toProvider(selfProvider);
+                binder.bind(AntlrCommandBase.this.getClass()).toProvider(selfProvider);
             }
         });
         listenerInjector = getListenerInjector(listenerInjector);
@@ -127,13 +128,15 @@ public abstract class AntlrCommandBase extends CommandBase {
     protected void setListener(ParseTreeListener listener) { this.listener = listener; }
 
 
-    private class SelfProvider implements Provider {
-        public Object get() {
+    private class SelfProvider implements Provider<AntlrCommandBase> {
+        public AntlrCommandBase get() {
             return AntlrCommandBase.this;
         }
     }
 
 
+    @Inject
+    private Injector injector;
     private ParseTreeListener listener;
     private String grammarPath; // e.g. org.cryptocoinpartners.command.Order  Suffixes like "Parser" and "Lexer" will be appended
 }

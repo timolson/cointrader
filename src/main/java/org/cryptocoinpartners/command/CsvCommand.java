@@ -12,7 +12,7 @@ public class CsvCommand extends AntlrCommandBase {
 
 
     public String getUsageHelp() {
-        return "csv {filename} [from {start_date}] [(to|til) {end_date}] [by {tick_duration}]";
+        return "csv '{filename}' [from {start_date}] [(to|til) {end_date}] [by {tick_duration}]";
     }
 
 
@@ -22,6 +22,7 @@ public class CsvCommand extends AntlrCommandBase {
 
 
     public void run() {
+        out.println("Dumping ticks...");
         IoUtil.dumpTicks(filename,startDate,endDate,false);
         out.println("Wrote file "+filename);
     }

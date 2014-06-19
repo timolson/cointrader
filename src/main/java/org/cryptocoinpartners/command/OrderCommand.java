@@ -2,11 +2,11 @@ package org.cryptocoinpartners.command;
 
 
 import com.google.inject.Binder;
-import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provider;
 import org.cryptocoinpartners.schema.*;
 import org.cryptocoinpartners.service.OrderService;
+import org.cryptocoinpartners.util.Injector;
 
 import javax.inject.Inject;
 import java.math.BigDecimal;

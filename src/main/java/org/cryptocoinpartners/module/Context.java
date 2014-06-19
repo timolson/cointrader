@@ -9,8 +9,6 @@ import com.espertech.esper.client.time.CurrentTimeEvent;
 import com.espertech.esper.client.time.CurrentTimeSpanEvent;
 import com.espertech.esper.core.service.EPServiceProviderImpl;
 import com.google.inject.Binder;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.matcher.Matchers;
 import com.google.inject.spi.ProvisionListener;
@@ -23,7 +21,7 @@ import org.cryptocoinpartners.schema.Event;
 import org.cryptocoinpartners.schema.StrategyFundManager;
 import org.cryptocoinpartners.service.Service;
 import org.cryptocoinpartners.util.Config;
-import org.cryptocoinpartners.util.LogInjector;
+import org.cryptocoinpartners.util.Injector;
 import org.cryptocoinpartners.util.ReflectionUtil;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
@@ -66,7 +64,7 @@ public class Context {
      * of historical events.
      */
     public static Context create(TimeProvider timeProvider) {
-        return new Context(null);
+        return new Context(timeProvider);
     }
 
 
@@ -104,15 +102,9 @@ public class Context {
 
     public <T> T attach(Class<T> c, final Configuration moduleConfig) {
         registerBindings(c);
-        T result = injector.getInstance(c);
-        if( moduleConfig != null ) {
-            Guice.createInjector(new Module() {
-                public void configure(Binder binder) {
-                    binder.bind(Configuration.class).toInstance(moduleConfig);
-                }
-            }).injectMembers(result);
-        }
-        return result;
+        Injector i = moduleConfig == null ? injector
+                                          : injector.createChildInjector().withConfig(moduleConfig);
+        return i.getInstance(c);
     }
 
 
@@ -393,7 +385,7 @@ public class Context {
             @SuppressWarnings("unchecked")
             public void configure(Binder binder) {
                 if( Class.class.isAssignableFrom(implementationClassOrObject.getClass()) )
-                    binder.bind(interfaceClass).to((Class) implementationClassOrObject);
+                    binder.bind(interfaceClass).to((Class)implementationClassOrObject);
                 else
                     binder.bind(interfaceClass).toInstance(implementationClassOrObject);
             }
@@ -407,6 +399,16 @@ public class Context {
                 binder.bind(interfaceClass).toInstance(instance);
             }
         });
+    }
+
+
+    @SuppressWarnings("unchecked")
+    private Injector injectorForConfig(final Configuration configParams) {
+        if( configParams == null )
+            return injector;
+        Injector childInjector = injector.createChildInjector();
+        childInjector.setConfig(configParams);
+        return childInjector;
     }
 
 
@@ -430,24 +432,21 @@ public class Context {
         epRuntime = epService.getEPRuntime();
         epAdministrator = epService.getEPAdministrator();
         config = Config.combined();
-        injector = Guice.createInjector(
-                                               new LogInjector(),
-                                               new Module() {
-                                                   public void configure(Binder binder) {
-                                                       // bind this Context
-                                                       binder.bind(Context.class).toInstance(Context.this);
-                                                       // bind config
-                                                       binder.bind(Configuration.class).toInstance(Context.this.config);
-                                                       // listen for any new instances and subscribe them to the esper
-                                                       binder.bindListener(Matchers.any(), new ProvisionListener() {
-                                                           public <T> void onProvision(ProvisionInvocation<T> provisionInvocation) {
-                                                               T provision = provisionInvocation.provision();
-                                                               subscribe(provision);
-                                                           }
-                                                       });
-                                                   }
-                                               }
-                                       );
+        injector = Injector.root().createChildInjector(new Module()
+        {
+            public void configure(Binder binder) {
+                // bind this Context
+                binder.bind(Context.class).toInstance(Context.this);
+                // listen for any new instances and subscribe them to the esper
+                binder.bindListener(Matchers.any(), new ProvisionListener() {
+                    public <T> void onProvision(ProvisionInvocation<T> provisionInvocation) {
+                        T provision = provisionInvocation.provision();
+                        subscribe(provision);
+                    }
+                });
+            }
+        });
+        injector.setConfig(config);
     }
 
 

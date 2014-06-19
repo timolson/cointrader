@@ -1,8 +1,6 @@
 package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.*;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import org.apache.commons.configuration.ConfigurationException;
 import org.cryptocoinpartners.util.*;
 import org.slf4j.Logger;
@@ -58,7 +56,7 @@ public class Main
             System.exit(1);
         }
         Config.init(mainParamsOnly.propertiesFilename,mainParamsOnly.definitions);
-        Injector rootInjector = Guice.createInjector(new LogInjector(),new CombinedConfigInjector());
+        Injector rootInjector = Injector.root();
 
         // now parse the full command line
         MainParams mainParams = new MainParams();
@@ -107,6 +105,5 @@ public class Main
             PersistUtil.shutdown();
         }
     }
-
 
 }

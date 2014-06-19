@@ -1,8 +1,8 @@
 package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.Parameters;
-import com.google.inject.Injector;
 import org.apache.commons.configuration.Configuration;
+import org.cryptocoinpartners.util.Injector;
 import org.slf4j.Logger;
 
 import javax.inject.Inject;
