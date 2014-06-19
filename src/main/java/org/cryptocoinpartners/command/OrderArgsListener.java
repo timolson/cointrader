@@ -4,8 +4,10 @@ import org.antlr.v4.runtime.misc.NotNull;
 
 import javax.inject.Inject;
 
-import static org.cryptocoinpartners.command.Parse.amount;
-import static org.cryptocoinpartners.command.Parse.market;
+import java.math.BigDecimal;
+
+import org.cryptocoinpartners.command.Parse;
+import org.cryptocoinpartners.schema.Market;
 
 
 /**
@@ -14,25 +16,29 @@ import static org.cryptocoinpartners.command.Parse.market;
 public class OrderArgsListener extends OrderBaseListener {
 
     public void exitStopPrice(@NotNull OrderParser.StopPriceContext ctx) {
-        command.setStop(amount(ctx.Amount()));
+        BigDecimal amount = Parse.amount(ctx.Amount());
+        command.setStop(amount);
     }
 
 
     public void exitVolume(@NotNull OrderParser.VolumeContext ctx) {
-        command.setVolume(amount(ctx.Amount()));
+        BigDecimal volume = Parse.amount(ctx.Amount());
+        command.setVolume(volume);
     }
 
 
     public void exitLimitPrice(@NotNull OrderParser.LimitPriceContext ctx) {
-        command.setLimit(amount(ctx.Amount()));
+        BigDecimal limit = Parse.amount(ctx.Amount());
+        command.setLimit(limit);
     }
 
 
     public void exitMarket(@NotNull OrderParser.MarketContext ctx) {
-        command.setMarket(market(ctx.Market()));
+        Market market = Parse.market(ctx.Market());
+        command.setMarket(market);
     }
 
 
     @Inject
-    public OrderCommand command; // this will get injected by AntlrCommandBase.  it must be public
+    private OrderCommand command; // this gets injected by AntlrCommandBase.
 }

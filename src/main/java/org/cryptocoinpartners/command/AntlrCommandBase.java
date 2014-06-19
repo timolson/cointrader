@@ -99,7 +99,7 @@ public abstract class AntlrCommandBase extends CommandBase {
 
     @SuppressWarnings("unchecked")
     private void initParseTreeListener() {
-        // to create the Listener we need to first find the Antlr generated class, then we look for
+        // to create the grammar's generated Listener we need to first find the Antlr generated class, then we look for
         // the cointrader subclass beneath the Antlr listener.
         String listenerClassName = grammarPath + "BaseListener";
         Class<? extends ParseTreeListener> listenerSubclass;

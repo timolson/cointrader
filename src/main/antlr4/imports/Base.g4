@@ -7,10 +7,18 @@ grammar Base;
 
 @lexer::members {
 
-
     private void stripQuotes()
     {
         setText(getText().substring(1,getText().length()-1));  // strip the quotes
+    }
+
+
+    private void ident()
+    {
+        if( currencySymbols.contains(getText().toUpperCase()) )
+            setType(Currency);
+        else if( exchangeSymbols.contains(getText().toUpperCase()) )
+            setType(Exchange);
     }
 
     private static Set<String> marketSymbols;
@@ -33,11 +41,14 @@ Amount
 | [0-9]* '.' [0-9]+
 ;
 
+Ident
+: [a-zA-Z][a-zA-Z]* { ident(); }
+;
 
 Market: Exchange ':' Listing ;
 Listing: Currency '.' Currency ;
-Currency: Alpha Alphanum Alphanum? Alphanum?; // 2-4 alphanums
-Exchange: Alpha Alphanum+;
+Currency: Ident; // set by ident();
+Exchange: Ident; // set by ident();
 
 
 fragment
