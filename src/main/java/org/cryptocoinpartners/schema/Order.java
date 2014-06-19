@@ -19,6 +19,13 @@ import java.util.Collection;
 public abstract class Order extends Event {
 
 
+    public void setParentOrder(GeneralOrder parentOrder) { this.parentOrder = parentOrder; }
+
+
+    @ManyToOne
+    public GeneralOrder getParentOrder() { return parentOrder; }
+
+
     public enum FillType {
         GOOD_TIL_CANCELLED, // Order stays open until explicitly cancelled or expired
         GTC_OR_MARGIN_CAP, // Order stays open until explicitly cancelled, expired, or the order is filled to the capacity of the currently available Positions
@@ -92,4 +99,5 @@ public abstract class Order extends Event {
     private Instant expiration;
     private boolean force;     // allow this order to override various types of panic
     private boolean emulation; // ("allow order type emulation" [default, true] or "only use exchange's native functionality")
+    protected GeneralOrder parentOrder;
 }

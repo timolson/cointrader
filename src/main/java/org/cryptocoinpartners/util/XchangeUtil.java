@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 public class XchangeUtil {
 
 
-    public static Exchange getExchangeForTag(String tag) { return Exchange.forSymbol(tag.toUpperCase()); }
+    public static Exchange getExchangeForTag(String tag) { return Exchange.forSymbolOrCreate(tag.toUpperCase()); }
 
 
     public static Set<String> getExchangeTags() { return exchangeTags; }

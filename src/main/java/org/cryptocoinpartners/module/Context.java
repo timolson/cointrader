@@ -39,6 +39,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -53,24 +56,28 @@ public class Context {
      * Contexts are not created through injection, because they are injection contexts themselves.  Use this static
      * method for construction.
      */
-    public static Context create() { return new Context(null); }
+    public static Context create() {
+        return new Context(null);
+    }
 
 
     /**
      * Use a TimeProvider when you do not want real wall-clock time to drive the Context; for example, during replay
      * of historical events.
      */
-    public static Context create( TimeProvider timeProvider ) { return new Context(null); }
+    public static Context create(TimeProvider timeProvider) {
+        return new Context(null);
+    }
 
 
     public interface TimeProvider {
         /**
-         @return the Instant the Context should be initialized to as the starting time
+         * @return the Instant the Context should be initialized to as the starting time
          */
         Instant getInitialTime();
 
         /**
-         @param event The event to be published after the time is advanced
+         * @param event The event to be published after the time is advanced
          */
         Instant nextTime(Event event);
     }
@@ -80,74 +87,81 @@ public class Context {
      * This is the main way to register modules with the Context.  Attaching a class to a Context has
      * many effects:
      * <ul>
-     *     <li>If the class c has any superclasses or interfaces tagged with @Service, this class is registered as
-     *     an implementation of that service interface.  Other instances in this Context will have their @Injected
-     *     fields of service types set to an instance of this class c when the types match.</li>
-     *     <li>The class will be instantiated and the instance will be <pre>@Inject</pre>ed by Guice, binding any other
-     *     objects which have been attached to this Context previously</li>
-     *     <li>The created instance is <pre>subscribe()</pre>'d to the Context's esper, binding any @When annotations
-     *     on the instances's methods to esper statements</li>
-     *     <li>The new instance is returned after configuration</li>
+     * <li>If the class c has any superclasses or interfaces tagged with @Service, this class is registered as
+     * an implementation of that service interface.  Other instances in this Context will have their @Injected
+     * fields of service types set to an instance of this class c when the types match.</li>
+     * <li>The class will be instantiated and the instance will be <pre>@Inject</pre>ed by Guice, binding any other
+     * objects which have been attached to this Context previously</li>
+     * <li>The created instance is <pre>subscribe()</pre>'d to the Context's esper, binding any @When annotations
+     * on the instances's methods to esper statements</li>
+     * <li>The new instance is returned after configuration</li>
      * </ul>
      */
-    public <T> T attach( Class<T> c ) {
-        return attach(c,(Configuration)null);
+    public <T> T attach(Class<T> c) {
+        return attach(c, (Configuration) null);
     }
 
 
-    public <T> T attach( Class<T> c, Configuration moduleConfig ) {
+    public <T> T attach(Class<T> c, final Configuration moduleConfig) {
         registerBindings(c);
-        return injectorForConfig(moduleConfig).getInstance(c);
+        T result = injector.getInstance(c);
+        if( moduleConfig != null ) {
+            Guice.createInjector(new Module() {
+                public void configure(Binder binder) {
+                    binder.bind(Configuration.class).toInstance(moduleConfig);
+                }
+            }).injectMembers(result);
+        }
+        return result;
     }
 
 
-    public Object attach( String name ) {
+    public Object attach(String name) {
         Class<?> c = findModuleClass(name);
         if( c == null )
-            throw new Error("Could not find service implementation named "+name);
+            throw new Error("Could not find service implementation named " + name);
         //noinspection RedundantCast
         return attach(c, (Configuration) null);
     }
 
 
-    public Object attach( String name, Configuration config ) {
+    public Object attach(String name, Configuration config) {
         Class<?> c = findModuleClass(name);
         if( c == null )
-            throw new Error("Could not find service implementation named "+name);
-        return attach(c,config);
+            throw new Error("Could not find service implementation named " + name);
+        return attach(c, config);
     }
 
 
-    public <T> T attach( String name, Class<T> cls ) {
-        return attach(name,cls,null);
+    public <T> T attach(String name, Class<T> cls) {
+        return attach(name, cls, null);
     }
 
 
     @SuppressWarnings("unchecked")
-    public <T> T attach( String name, Class<T> cls, Configuration config ) {
+    public <T> T attach(String name, Class<T> cls, Configuration config) {
         Class<?> c = findModuleClass(name);
         if( c == null )
-            throw new Error("Could not find service implementation named "+name);
+            throw new Error("Could not find service implementation named " + name);
         if( !c.isAssignableFrom(cls) )
-            throw new Error("Module name "+name+" loaded a "+c.getName()+" but expected a "+cls.getName());
-        return (T) attach(c,config);
+            throw new Error("Module name " + name + " loaded a " + c.getName() + " but expected a " + cls.getName());
+        return (T) attach(c, config);
     }
 
 
-    public <T> void attachInstance( T instance ) {
+    public <T> void attachInstance(T instance) {
         injector.injectMembers(instance);
         registerBindings(instance.getClass(), instance);
     }
 
 
-    public <T> void attach( Class<? super T> cls, T instance ) {
+    public <T> void attach(Class<? super T> cls, T instance) {
         injector.injectMembers(instance);
-        register(cls,instance);
+        register(cls, instance);
     }
 
 
-    public void publish(Event e)
-    {
+    public void publish(Event e) {
         if( timeProvider != null ) {
             Instant time = timeProvider.nextTime(e);
             advanceTime(time);
@@ -157,12 +171,11 @@ public class Context {
 
 
     public void destroy() {
-        epService.destroy();
-        // todo shutdown loaded modules
+        privateDestroy();
     }
 
 
-    public void advanceTime( Instant now ) {
+    public void advanceTime(Instant now) {
         if( timeProvider == null )
             throw new IllegalArgumentException("Can only advanceTime() when the Context was constructed with a TimeProvider");
         if( lastTime == null ) {
@@ -170,7 +183,7 @@ public class Context {
             epRuntime.sendEvent(new CurrentTimeEvent(now.getMillis()));
         }
         else if( now.isBefore(lastTime) )
-            throw new IllegalArgumentException("advanceTime must always move time forward. "+now+" < "+lastTime);
+            throw new IllegalArgumentException("advanceTime must always move time forward. " + now + " < " + lastTime);
         else if( now.isAfter(lastTime) ) {
             // step time up to now
             epRuntime.sendEvent(new CurrentTimeSpanEvent(now.getMillis()));
@@ -179,14 +192,13 @@ public class Context {
     }
 
 
-    public void subscribe( Object listener )
-    {
+    public void subscribe(Object listener) {
         // todo search for EPL files and load them
         for( Method method : listener.getClass().getMethods() ) {
             When when = method.getAnnotation(When.class);
             if( when != null ) {
                 String statement = when.value();
-                log.debug("subscribing "+method+" with statement \""+statement+"\"");
+                log.debug("subscribing " + method + " with statement \"" + statement + "\"");
                 subscribe(listener, method, statement);
             }
         }
@@ -203,12 +215,13 @@ public class Context {
         loadStatements(source, null);
     }
 
+
     /**
-     * @param source a string containing EPL statements
+     * @param source        a string containing EPL statements
      * @param intoFieldBean if not null, any @IntoMethod annotations on Esper statements will bind the columns from
      *                      the select statement into the fields of the intoFieldBean instance.
      */
-    public void loadStatements(String source, Object intoFieldBean )
+    public void loadStatements(String source, Object intoFieldBean)
             throws ParseException, DeploymentException, IOException {
         EPDeploymentAdmin deploymentAdmin = epAdministrator.getDeploymentAdmin();
         DeploymentResult deployment = deploymentAdmin.parseDeploy(source);
@@ -223,11 +236,12 @@ public class Context {
                         for( Method method : methods ) {
                             if( method.getName().equals(methodName) ) {
                                 if( !subscribed ) {
-                                    subscribe(intoFieldBean,method,statement);
+                                    subscribe(intoFieldBean, method, statement);
                                     subscribed = true;
                                 }
                                 else
-                                    throw new Error(intoFieldBean.getClass().getSimpleName()+" has multiple methods named "+methodName+".  No overriding allowed from an @IntoMethod binding.");
+                                    throw new Error(intoFieldBean.getClass()
+                                                                 .getSimpleName() + " has multiple methods named " + methodName + ".  No overriding allowed from an @IntoMethod binding.");
                             }
                         }
                     }
@@ -237,12 +251,16 @@ public class Context {
     }
 
 
-    public Injector getInjector() { return injector; }
+    public Injector getInjector() {
+        return injector;
+    }
 
 
-    /** Use this to attach a StrategyFundManager to the Context */
+    /**
+     * Use this to attach a StrategyFundManager to the Context
+     */
     @Deprecated
-    public void loadStrategyFundManager( final StrategyFundManager strategyFundManager ) {
+    public void loadStrategyFundManager(final StrategyFundManager strategyFundManager) {
         // todo tim how to bind instance-specific configuration on the StrategyHandler?
         /*
         final StrategyHandler managerBinder = new StrategyHandler(strategyFundManager);
@@ -261,7 +279,7 @@ public class Context {
 
 
     private void subscribe(Object listener, Method method, EPStatement statement) {
-        statement.setSubscriber(new Listener(listener,method,statement.getText()));
+        statement.setSubscriber(new Listener(listener, method, statement.getText()));
     }
 
 
@@ -269,8 +287,8 @@ public class Context {
         Class<?> found;
         for( String path : getModulePathList() ) {
             String pdot = path + ".";
-            if( (found = findClass( pdot + name )) != null ) return found;
-            if( (found = findClass( pdot + name + "Module" )) != null ) return found;
+            if( (found = findClass(pdot + name)) != null ) return found;
+            if( (found = findClass(pdot + name + "Module")) != null ) return found;
         }
         return null;
     }
@@ -292,12 +310,12 @@ public class Context {
 
 
     private static void loadEsperFiles(Context context, String modulePackageName) throws Exception {
-        String path = modulePackageName.replaceAll("\\.","/");
+        String path = modulePackageName.replaceAll("\\.", "/");
         File[] files = new File(path).listFiles();
         if( files != null ) {
             for( File file : files ) {
                 if( file.getName().toLowerCase().endsWith(".epl") ) {
-                    log.debug("loading epl file "+file.getName());
+                    log.debug("loading epl file " + file.getName());
                     load(context, file);
                 }
             }
@@ -312,7 +330,8 @@ public class Context {
 
 
     // todo how to bring in module-specific config now?
-    private static AbstractConfiguration buildConfig(String name, String modulePackageName, @Nullable AbstractConfiguration c)
+    private static AbstractConfiguration buildConfig(String name, String modulePackageName,
+                                                     @Nullable AbstractConfiguration c)
             throws ConfigurationException {
         final ClassLoader classLoader = Context.class.getClassLoader();
         final ArrayList<AbstractConfiguration> moduleConfigs = new ArrayList<>();
@@ -323,17 +342,17 @@ public class Context {
 
         // then add the package-specific props file
         String slashPackage = modulePackageName.replaceAll("\\.", "/");
-        String propsFilePath = slashPackage +"/"+name+".properties";
+        String propsFilePath = slashPackage + "/" + name + ".properties";
         URL resource = classLoader.getResource(propsFilePath);
-        if (resource != null) {
+        if( resource != null ) {
             PropertiesConfiguration packageConfig = new PropertiesConfiguration(resource);
             moduleConfigs.add(packageConfig);
         }
 
         // then the more generic config.properties
-        propsFilePath = slashPackage+"/config.properties";
+        propsFilePath = slashPackage + "/config.properties";
         resource = classLoader.getResource(propsFilePath);
-        if (resource != null) {
+        if( resource != null ) {
             PropertiesConfiguration packageConfig = new PropertiesConfiguration(resource);
             moduleConfigs.add(packageConfig);
         }
@@ -343,7 +362,7 @@ public class Context {
 
 
     private boolean registerBindings(Class<?> c) {
-        return registerBindings(c,c);
+        return registerBindings(c, c);
     }
 
 
@@ -351,7 +370,7 @@ public class Context {
     private boolean registerBindings(Class service, Object implementationClassOrObject) {
         boolean injectorWasUpdated = conditionalRegister(service, implementationClassOrObject);
         Class<?> superclass = service.getSuperclass();
-        if( superclass != null && registerBindings(superclass,implementationClassOrObject) )
+        if( superclass != null && registerBindings(superclass, implementationClassOrObject) )
             injectorWasUpdated = true;
         for( Class<?> interfaceClass : service.getInterfaces() )
             if( registerBindings(interfaceClass, implementationClassOrObject) )
@@ -374,7 +393,7 @@ public class Context {
             @SuppressWarnings("unchecked")
             public void configure(Binder binder) {
                 if( Class.class.isAssignableFrom(implementationClassOrObject.getClass()) )
-                    binder.bind(interfaceClass).to((Class)implementationClassOrObject);
+                    binder.bind(interfaceClass).to((Class) implementationClassOrObject);
                 else
                     binder.bind(interfaceClass).toInstance(implementationClassOrObject);
             }
@@ -391,19 +410,7 @@ public class Context {
     }
 
 
-    @SuppressWarnings("unchecked")
-    private Injector injectorForConfig(final Configuration configParams) {
-        if( configParams == null )
-            return injector;
-        return injector.createChildInjector(new Module() {
-            public void configure(Binder binder) {
-                binder.bind(Configuration.class).toInstance(configParams);
-            }
-        });
-    }
-
-
-    private Context( TimeProvider timeProvider ) {
+    private Context(TimeProvider timeProvider) {
         this.timeProvider = timeProvider;
         final com.espertech.esper.client.Configuration esperConfig = new com.espertech.esper.client.Configuration();
         esperConfig.addEventType(Event.class);
@@ -424,23 +431,23 @@ public class Context {
         epAdministrator = epService.getEPAdministrator();
         config = Config.combined();
         injector = Guice.createInjector(
-            new LogInjector(),
-            new Module() {
-                public void configure(Binder binder) {
-                    // bind this Context
-                    binder.bind(Context.class).toInstance(Context.this);
-                    // bind config
-                    binder.bind(Configuration.class).toInstance(Context.this.config);
-                    // listen for any new instances and subscribe them to the esper
-                    binder.bindListener(Matchers.any(),new ProvisionListener() {
-                        public <T> void onProvision(ProvisionInvocation<T> provisionInvocation) {
-                            T provision = provisionInvocation.provision();
-                            subscribe(provision);
-                        }
-                    });
-                }
-            }
-        );
+                                               new LogInjector(),
+                                               new Module() {
+                                                   public void configure(Binder binder) {
+                                                       // bind this Context
+                                                       binder.bind(Context.class).toInstance(Context.this);
+                                                       // bind config
+                                                       binder.bind(Configuration.class).toInstance(Context.this.config);
+                                                       // listen for any new instances and subscribe them to the esper
+                                                       binder.bindListener(Matchers.any(), new ProvisionListener() {
+                                                           public <T> void onProvision(ProvisionInvocation<T> provisionInvocation) {
+                                                               T provision = provisionInvocation.provision();
+                                                               subscribe(provision);
+                                                           }
+                                                       });
+                                                   }
+                                               }
+                                       );
     }
 
 
@@ -452,13 +459,13 @@ public class Context {
     private class Listener {
         public void update(Object[] row) {
             try {
-                method.invoke(delegate,row);
+                method.invoke(delegate, row);
             }
-            catch( IllegalAccessException e ) {
-                throw new EsperError("Could not invoke method "+method+" on statement trigger "+statement,e);
+            catch( IllegalAccessException | InvocationTargetException e ) {
+                throw new EsperError("Could not invoke method " + method + " on statement trigger " + statement, e);
             }
-            catch( InvocationTargetException e ) {
-                e.printStackTrace();
+            catch( Throwable t ) {
+                throw new Error("Error invoking "+delegate.getClass().getName()+"."+ method.getName(),t);
             }
         }
 
@@ -485,4 +492,24 @@ public class Context {
     private EPServiceProvider epService;
     private EPRuntime epRuntime;
     private EPAdministrator epAdministrator;
+
+
+    private void privateDestroy() {
+        epService.destroy();
+
+        // null all the variables here to eliminate any crazy cycles
+        config = null;
+        injector = null;
+        timeProvider = null;
+        lastTime = null;
+        epService = null;
+        epRuntime = null;
+        epAdministrator = null;
+
+        ScheduledExecutorService svc = Executors.newSingleThreadScheduledExecutor();
+        Runnable garbageCollection = new Runnable() { public void run() { Runtime.getRuntime().gc(); } };
+        svc.schedule(garbageCollection,1, TimeUnit.MILLISECONDS);
+    }
+
+
 }

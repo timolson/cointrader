@@ -23,6 +23,9 @@ import java.util.Set;
 public abstract class AntlrCommandBase extends CommandBase {
 
 
+    public abstract String getUsageHelp();
+
+
     public void parse( String commandArguments )
     {
         initCommandArgs();

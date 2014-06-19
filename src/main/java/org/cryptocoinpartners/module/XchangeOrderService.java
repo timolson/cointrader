@@ -33,14 +33,14 @@ public class XchangeOrderService extends BaseOrderService {
     protected void handleSpecificOrder(SpecificOrder specificOrder) {
         Exchange exchange = XchangeUtil.getExchangeForMarket(specificOrder.getMarket().getExchange());
         PollingTradeService tradeService = exchange.getPollingTradeService();
-        if( specificOrder.getLimitPriceCount() != 0 && specificOrder.getStopPriceCount() != 0 )
+        if( specificOrder.getLimitPrice() != null && specificOrder.getStopPrice() != null )
             reject(specificOrder,"Stop-limit orders are not supported");
         Order.OrderType orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
         BigDecimal tradeableVolume = specificOrder.getVolume().asBigDecimal();
         CurrencyPair currencyPair = XchangeUtil.getCurrencyPairForListing(specificOrder.getMarket().getListing());
         String id = specificOrder.getId().toString();
         Date timestamp = specificOrder.getTime().toDate();
-        if( specificOrder.getLimitPriceCount() != 0 ) {
+        if( specificOrder.getLimitPrice() != null ) {
             LimitOrder limitOrder = new LimitOrder(orderType, tradeableVolume, currencyPair, id, timestamp,
                                                    specificOrder.getLimitPrice().asBigDecimal() );
             // todo put on a queue

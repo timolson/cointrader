@@ -100,7 +100,7 @@ public class Replay
 
     private static Instant getEventsStart( boolean orderByRemoteTime ) {
         String timeField = timeFieldForOrdering(orderByRemoteTime);
-        Instant bookStart = PersistUtil.queryOne(Instant.class,"select min("+timeField+" from Book");
+        Instant bookStart = PersistUtil.queryOne(Instant.class,"select min("+timeField+") from Book");
         Instant tradeStart = PersistUtil.queryOne(Instant.class,"select min("+timeField+") from Trade");
         if( bookStart == null && tradeStart == null )
             return null;

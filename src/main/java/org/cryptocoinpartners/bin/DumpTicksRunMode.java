@@ -8,6 +8,7 @@ import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.SaveTicksCsv;
 import org.cryptocoinpartners.module.TickWindow;
 import org.cryptocoinpartners.util.Config;
+import org.cryptocoinpartners.util.IoUtil;
 import org.cryptocoinpartners.util.Replay;
 import org.joda.time.Instant;
 
@@ -22,51 +23,9 @@ public class DumpTicksRunMode extends RunMode
 
     public void run()
     {
-        // parse the start and end times
-        Date start = null;
-        if( startStr != null ) {
-            try {
-                start = new StringToTime(startStr);
-            }
-            catch( Exception e ) {
-                log.error("Could not parse start time \"" + startStr + "\"");
-                System.exit(7001);
-            }
-        }
-
-        Date end = null;
-        if( endStr != null ) {
-            try {
-                end = new StringToTime(endStr);
-            }
-            catch( Exception e ) {
-                log.error("Could not parse end time \"" + endStr + "\"");
-                System.exit(7001);
-            }
-        }
-
-
-        Replay replay;
-        if( start == null ) {
-            if( end == null )
-                replay = Replay.all(false);
-            else
-                replay = Replay.until(new Instant(end),false);
-        }
-        else if( end == null )
-            replay = Replay.since(new Instant(start),false);
-        else
-            replay = Replay.between(new Instant(start), new Instant(end),false);
-
-
-        Context context = replay.getContext();
-        context.attach(TickWindow.class); // generate ticks
-        context.attach(SaveTicksCsv.class,  // save ticks as csv
-                       Config.module( "savetickscsv.filename", filenames.get(0),
-                                      "savetickscsv.na", allowNa )
-                      );
-        replay.run();
-        context.destroy();
+        String startString = startStr;
+        String endString = endStr;
+        IoUtil.dumpTicks(filenames.get(0), startString, endString,allowNa);
         System.exit(0);
     }
 

@@ -35,7 +35,7 @@ public abstract class OrderPrice extends Temporal {
     public OrderPrice(Instant time, @Nullable String remoteKey, Market market,
                       @Nullable BigDecimal price, @Nullable BigDecimal volume) {
         super(time);
-        this.priceCount = DiscreteAmount.countForValueRounded(price, market.getPriceBasis());
+        this.priceCount = DecimalAmount.roundedCountForBasis(price, market.getPriceBasis());
     }
 
 
@@ -50,7 +50,7 @@ public abstract class OrderPrice extends Temporal {
 
 
     @Transient @Nullable
-    public DiscreteAmount getPrice() {
+    public Amount getPrice() {
         if( priceCount == null )
             return null;
         if( price == null )
@@ -61,13 +61,13 @@ public abstract class OrderPrice extends Temporal {
 
     @Transient @Nullable
     public Double getPriceAsDouble() {
-        DiscreteAmount price = getPrice();
+        Amount price = getPrice();
         return price == null ? null : price.asDouble();
     }
 
 
     @Transient @Nullable
-    public DiscreteAmount getVolume() {
+    public Amount getVolume() {
         if( volumeCount == null )
             return null;
         if( volume == null )
@@ -78,7 +78,7 @@ public abstract class OrderPrice extends Temporal {
 
     @Transient @Nullable
     public Double getVolumeAsDouble() {
-        DiscreteAmount volume = getVolume();
+        Amount volume = getVolume();
         return volume == null ? null : volume.asDouble();
     }
 
@@ -90,8 +90,8 @@ public abstract class OrderPrice extends Temporal {
     protected void setMarket(Market market) { this.market = market; }
 
 
-    private DiscreteAmount price;
-    private DiscreteAmount volume;
+    private Amount price;
+    private Amount volume;
     private Long priceCount;
     private Long volumeCount;
     private Market market;

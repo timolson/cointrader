@@ -25,7 +25,7 @@ public class OrderBuilder {
 
 
     /** @param volume to create a sell order, use a negative volume */
-    public GeneralOrderBuilder create(Listing listing, double volume) {
+    public GeneralOrderBuilder create(Listing listing, String volume) {
         return new GeneralOrderBuilder(listing,volume);
     }
 
@@ -49,7 +49,7 @@ public class OrderBuilder {
 
 
     /** @param volume to create a sell order, use a negative volume */
-    public SpecificOrderBuilder create( Market market, DiscreteAmount volume ) {
+    public SpecificOrderBuilder create( Market market, Amount volume ) {
         return new SpecificOrderBuilder(market,volume);
     }
 
@@ -108,19 +108,19 @@ public class OrderBuilder {
         }
 
 
-        public GeneralOrderBuilder(Listing listing, double volume) {
+        public GeneralOrderBuilder(Listing listing, String volume) {
             order = new GeneralOrder(listing,volume);
         }
 
 
-        public GeneralOrderBuilder withLimitPrice(double price) {
-            order.setLimitPrice(BigDecimal.valueOf(price));
+        public GeneralOrderBuilder withLimitPrice(String price) {
+            order.setLimitPrice(DecimalAmount.of(price));
             return this;
         }
 
 
-        public GeneralOrderBuilder withStopPrice(double price) {
-            order.setStopPrice(BigDecimal.valueOf(price));
+        public GeneralOrderBuilder withStopPrice(String price) {
+            order.setStopPrice(DecimalAmount.of(price));
             return this;
         }
 
@@ -134,12 +134,13 @@ public class OrderBuilder {
 
     public class SpecificOrderBuilder extends CommonOrderBuilder<SpecificOrderBuilder> {
         
+        
         public SpecificOrderBuilder(Market market, BigDecimal volume) {
             order = new SpecificOrder(market,volume);
         }
 
 
-        public SpecificOrderBuilder(Market market, DiscreteAmount volume) {
+        public SpecificOrderBuilder(Market market, Amount volume) {
             order = new SpecificOrder(market,volume);
         }
 
@@ -158,6 +159,18 @@ public class OrderBuilder {
         public SpecificOrderBuilder withStopPriceCount(long price /* units in basis of Market's quote fungible */) {
             order.setStopPriceCount(price);
             return this;
+        }
+        
+        
+        public SpecificOrderBuilder withLimitPrice( DiscreteAmount price ) {
+            price.assertBasis(order.getMarket().getPriceBasis());
+            return withLimitPriceCount(price.getCount());
+        }
+
+
+        public SpecificOrderBuilder withStopPrice( DiscreteAmount price ) {
+            price.assertBasis(order.getMarket().getPriceBasis());
+            return withStopPriceCount(price.getCount());
         }
 
 

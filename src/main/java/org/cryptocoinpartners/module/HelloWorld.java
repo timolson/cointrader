@@ -3,6 +3,7 @@ package org.cryptocoinpartners.module;
 import org.cryptocoinpartners.schema.Event;
 import org.slf4j.Logger;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 
@@ -25,6 +26,7 @@ public class HelloWorld {
 
 
     private double avgTrade;
+    @Inject
     private Logger log;
 
 }

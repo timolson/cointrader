@@ -6,8 +6,9 @@ import javax.persistence.Entity;
 
 
 /**
- * A Transaction represents the modification of multiple Positions, whether it is the purchase of a Market or transfer
- * of funds between Accounts
+ * A Transaction represents the modification of multiple Positions, whether it is a purchase on a Market or an Account
+ * transfer.
+ * of Fungibles between Accounts
  * @author Tim Olson
  */
 @Entity

@@ -2,8 +2,8 @@ package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.Parameter;
 import org.cryptocoinpartners.report.Report;
-import org.cryptocoinpartners.util.IoUtil;
 import org.cryptocoinpartners.report.TableOutput;
+import org.cryptocoinpartners.util.IoUtil;
 
 
 public abstract class ReportRunMode extends RunMode

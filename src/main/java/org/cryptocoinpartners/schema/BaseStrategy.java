@@ -25,9 +25,6 @@ public class BaseStrategy implements Strategy {
     }
 
 
-    protected Logger log;
-
-
     /** This is what you use to place orders:
      * <pre>
      * order.create(Listing.BTC_USD,1.00).withLimit(651.538).place();
@@ -45,4 +42,8 @@ public class BaseStrategy implements Strategy {
 
     @Inject
     protected OrderService orderService;
+
+    @Inject
+    protected Logger log;
+
 }

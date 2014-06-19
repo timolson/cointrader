@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.schema;
 
+import javax.annotation.Nullable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
@@ -24,22 +25,19 @@ public class SpecificOrder extends Order {
     }
 
 
-    public SpecificOrder(Market market, double volume) {
+    public SpecificOrder(Market market, Amount volume) {
         this.market = market;
-        this.volumeCount = DiscreteAmount.countForValueRounded(volume, market.getVolumeBasis());
-    }
-
-
-    public SpecificOrder(Market market, DiscreteAmount volume) {
-        volume.assertBasis(market.getVolumeBasis());
-        this.market = market;
-        this.volumeCount = volume.getCount();
+        this.volumeCount = volume.toBasis(market.getVolumeBasis(),Remainder.DISCARD).getCount();
     }
 
 
     public SpecificOrder(Market market, BigDecimal volume) {
-        this.market = market;
-        this.volumeCount = DiscreteAmount.fromValue(volume, market.getVolumeBasis(), Remainder.DISCARD).getCount();
+        this(market,new DecimalAmount(volume));
+    }
+
+
+    public SpecificOrder(Market market, double volume) {
+        this(market,new DecimalAmount(new BigDecimal(volume)));
     }
 
 
@@ -48,13 +46,37 @@ public class SpecificOrder extends Order {
 
 
     @Transient
-    public DiscreteAmount getVolume() { return new DiscreteAmount(volumeCount, market.getVolumeBasis()); }
+    public DiscreteAmount getVolume() {
+        if( volume == null )
+            volume = amount().fromVolumeCount(volumeCount);
+        return volume;
+    }
 
 
-    public long getVolumeCount() { return volumeCount; }
+    @Transient
+    @Nullable
+    public DiscreteAmount getLimitPrice() {
+        if( limitPriceCount == 0 )
+            return null;
+        if( limitPrice == null )
+            limitPrice = amount().fromPriceCount(limitPriceCount);
+        return limitPrice;
+    }
 
 
-    @Transient DiscreteAmount getUnfilledVolume() {
+    @Transient
+    @Nullable
+    public DiscreteAmount getStopPrice() {
+        if( stopPriceCount == 0 )
+            return null;
+        if( stopPrice == null )
+            stopPrice = amount().fromPriceCount(stopPriceCount);
+        return stopPrice;
+    }
+
+
+    @Transient
+    DiscreteAmount getUnfilledVolume() {
         return new DiscreteAmount(getUnfilledVolumeCount(),market.getVolumeBasis());
     }
 
@@ -68,31 +90,12 @@ public class SpecificOrder extends Order {
 
 
     @Transient
-    public DiscreteAmount getLimitPrice() { return new DiscreteAmount(limitPriceCount, market.getPriceBasis()); }
-
-
-    /** 0 if no limit is set */
-    public long getLimitPriceCount() { return limitPriceCount; }
-
-
-    @Transient
-    public DiscreteAmount getStopPrice() { return new DiscreteAmount(stopPriceCount, market.getPriceBasis()); }
-
-
-    /** 0 if no limit is set */
-    public long getStopPriceCount() { return stopPriceCount; }
-
-
-    @Transient
     public boolean isFilled() {
         return getUnfilledVolumeCount() == 0;
     }
 
 
     @Transient public boolean isBid() { return volumeCount > 0; }
-
-    @ManyToOne
-    public GeneralOrder getParentOrder() { return parentOrder; }
 
 
     public void copyCommonOrderProperties(GeneralOrder generalOrder) {
@@ -108,7 +111,7 @@ public class SpecificOrder extends Order {
     public String toString() {
         return "SpecificOrder{" +
                        "id=" + getId() +
-                       ", parentOrder=" + (parentOrder == null ? "null" : parentOrder.getId()) +
+                       ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) +
                        ", market=" + market +
                        ", volumeCount=" + volumeCount +
                        ", limitPriceCount=" + limitPriceCount +
@@ -116,18 +119,33 @@ public class SpecificOrder extends Order {
                        '}';
     }
 
-
+    
+    // JPA
+    protected long getVolumeCount() { return volumeCount; }
+    /** 0 if no limit is set */
+    protected long getLimitPriceCount() { return limitPriceCount; }
+    /** 0 if no limit is set */
+    protected long getStopPriceCount() { return stopPriceCount; }
     protected SpecificOrder() { }
     protected void setMarket(Market market) { this.market = market; }
-    protected void setVolumeCount(long volumeCount) { this.volumeCount = volumeCount; }
-    protected void setLimitPriceCount(long limitPriceCount) { this.limitPriceCount = limitPriceCount; }
-    protected void setStopPriceCount(long stopPriceCount) { this.stopPriceCount = stopPriceCount; }
-    public void setParentOrder(GeneralOrder parentOrder) { this.parentOrder = parentOrder; }
+    protected void setVolumeCount(long volumeCount) { this.volumeCount = volumeCount; volume = null; }
+    protected void setLimitPriceCount(long limitPriceCount) { this.limitPriceCount = limitPriceCount; limitPrice = null; }
+    protected void setStopPriceCount(long stopPriceCount) { this.stopPriceCount = stopPriceCount; stopPrice = null; }
 
 
-    private GeneralOrder parentOrder;
+    private Market.MarketAmountBuilder amount() {
+        if( amountBuilder == null )
+            amountBuilder = market.buildAmount();
+        return amountBuilder;
+    }
+
+
     private Market market;
+    private DiscreteAmount volume;
+    private DiscreteAmount limitPrice;
+    private DiscreteAmount stopPrice;
     private long volumeCount;
     private long limitPriceCount;
     private long stopPriceCount;
+    private Market.MarketAmountBuilder amountBuilder;
 }

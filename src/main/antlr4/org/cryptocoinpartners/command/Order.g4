@@ -1,9 +1,13 @@
 grammar Order;
-
 import Base;
 
 
-args : volume market ('stop' stopPrice)? ('limit' limitPrice)? ;
+args:
+
+volume market ('stop' stopPrice)? ('limit' limitPrice)?
+
+;
+
 
 market : Market;
 

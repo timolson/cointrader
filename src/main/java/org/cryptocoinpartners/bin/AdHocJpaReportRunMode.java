@@ -2,13 +2,10 @@ package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import com.google.inject.Injector;
 import org.apache.commons.lang.StringUtils;
 import org.cryptocoinpartners.report.AdHocJpaReport;
 import org.cryptocoinpartners.report.Report;
-import org.cryptocoinpartners.report.TableOutput;
 
-import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;

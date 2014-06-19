@@ -95,6 +95,21 @@
             <artifactId>xchange-cryptsy</artifactId>
             <version>${xchange.version}</version>
         </dependency>
+		<dependency>
+            <groupId>com.xeiam.xchange</groupId>
+            <artifactId>xchange-coinbase</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+		<dependency>
+            <groupId>com.xeiam.xchange</groupId>
+            <artifactId>xchange-bter</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+		<dependency>
+            <groupId>com.xeiam.xchange</groupId>
+            <artifactId>xchange-campbx</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
         <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>

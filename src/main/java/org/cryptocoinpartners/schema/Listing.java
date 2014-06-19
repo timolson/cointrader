@@ -6,6 +6,8 @@ import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.NoResultException;
 import javax.persistence.Transient;
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -23,17 +25,12 @@ public class Listing extends BaseEntity
     public Fungible getQuote() { return quote; }
 
 
-    /**
-     will create the listing if it doesn't exist
-     @param base
-     @param quote
-     @return
-     */
+    /** will create the listing if it doesn't exist */
     public static Listing forPair( Fungible base, Fungible quote ) {
         try {
-            Listing listing = PersistUtil
-                                      .queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2",
-                                                    base, quote);
+            Listing listing = PersistUtil.queryZeroOne(Listing.class,
+                                                       "select a from Listing a where base=?1 and quote=?2",
+                                                       base, quote);
             if( listing == null ) {
                 listing = new Listing(base,quote);
                 PersistUtil.insert(listing);
@@ -53,6 +50,15 @@ public class Listing extends BaseEntity
 
     @Transient
     public String getSymbol() { return base.getSymbol()+'.'+quote.getSymbol(); }
+
+
+    public static List<String> allSymbols() {
+        List<String> result = new ArrayList<>();
+        List<Listing> listings = PersistUtil.queryList(Listing.class, "select x from Listing x");
+        for( Listing listing : listings )
+            result.add((listing.getSymbol()));
+        return result;
+    }
 
 
     // JPA

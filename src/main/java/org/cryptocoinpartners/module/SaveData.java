@@ -5,6 +5,8 @@ import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.slf4j.Logger;
 
+import javax.inject.Inject;
+
 
 /**
  * @author Tim Olson
@@ -19,7 +21,7 @@ public class SaveData {
                                                       "select t from Trade t where market=?1 and remoteKey=?2",
                                                       trade.getMarket(), trade.getRemoteKey());
             if( duplicate == null )
-                PersistUtil.insert(m);
+                PersistUtil.insert(trade);
             else
                 log.warn("dropped duplicate Trade "+trade);
         }
@@ -29,5 +31,6 @@ public class SaveData {
     }
 
 
+    @Inject
     private Logger log;
 }

@@ -27,7 +27,7 @@ public class MockTicker {
             throw new ConfigurationError("MockTicker must be configured with the \"mockticker.exchange\" property");
         for( String marketName : marketStr.toUpperCase().split(",") ) {
             String upperMarket = marketName.toUpperCase();
-            Exchange exchange = Exchange.forSymbol(upperMarket);
+            Exchange exchange = Exchange.forSymbolOrCreate(upperMarket);
             if( exchange == null )
                 throw new ConfigurationError("Could not find Exchange with symbol \""+ upperMarket +"\"");
             for( Market market : Market.find(exchange) ) {

@@ -3,7 +3,10 @@ package org.cryptocoinpartners.schema;
 import org.cryptocoinpartners.util.PersistUtil;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 
 /**
@@ -66,17 +69,11 @@ public class Market extends BaseEntity
 
 
     @Basic(optional = false)
-    public double getPriceBasis() { return quoteBasis; }
+    public double getPriceBasis() { return priceBasis; }
 
 
     @Basic(optional = false)
     public double getVolumeBasis() { return volumeBasis; }
-
-
-    public DiscreteAmount discretePrice( double price ) { return DiscreteAmount.fromValueRounded(price,getPriceBasis()); }
-
-
-    public DiscreteAmount discreteVolume( double vol ) { return DiscreteAmount.fromValueRounded(vol, getVolumeBasis()); }
 
 
     /** @return true iff the Listing is currently traded at the Exchange.  The Market could have been retired. */
@@ -107,19 +104,58 @@ public class Market extends BaseEntity
     }
 
 
+    public static List<String> allSymbols() {
+        List<String> result = new ArrayList<>();
+        List<Market> markets = PersistUtil.queryList(Market.class, "select m from Market m");
+        for( Market market : markets )
+            result.add((market.getSymbol()));
+        return result;
+    }
+
+
+    public static class MarketAmountBuilder {
+
+        public DiscreteAmount fromPriceCount(long count) { return priceBuilder.fromCount(count); }
+        public DiscreteAmount fromVolumeCount(long count) { return volumeBuilder.fromCount(count); }
+
+        public DiscreteAmount fromPrice(BigDecimal amount, DecimalAmount.RemainderHandler remainderHandler) {
+            return priceBuilder.fromValue(amount,remainderHandler);
+        }
+
+        public DiscreteAmount fromVolume(BigDecimal amount, DecimalAmount.RemainderHandler remainderHandler) {
+            return volumeBuilder.fromValue(amount,remainderHandler);
+        }
+
+        public MarketAmountBuilder(double priceBasis, double volumeBasis) {
+            this.priceBuilder = DiscreteAmount.withBasis(priceBasis);
+            this.volumeBuilder = DiscreteAmount.withBasis(volumeBasis);
+        }
+
+        private final DiscreteAmount.DiscreteAmountBuilder priceBuilder;
+        private final DiscreteAmount.DiscreteAmountBuilder volumeBuilder;
+    }
+
+
+    public MarketAmountBuilder buildAmount() {
+        if( marketAmountBuilder == null )
+            marketAmountBuilder = new MarketAmountBuilder(priceBasis, volumeBasis);
+        return marketAmountBuilder;
+    }
+
+
     // JPA
     protected Market() {}
     protected void setExchange(Exchange exchange) { this.exchange = exchange; }
     protected void setListing( Listing listing ) { this.listing = listing; }
     protected void setActive( boolean active ) { this.active = active; }
-    protected void setPriceBasis(double quoteBasis) { this.quoteBasis = quoteBasis; }
+    protected void setPriceBasis(double quoteBasis) { this.priceBasis = quoteBasis; }
     protected void setVolumeBasis(double volumeBasis) { this.volumeBasis = volumeBasis; }
 
 
-    private Market(Exchange exchange, Listing listing, double quoteBasis, double volumeBasis) {
+    private Market(Exchange exchange, Listing listing, double priceBasis, double volumeBasis) {
         this.exchange = exchange;
         this.listing = listing;
-        this.quoteBasis = quoteBasis;
+        this.priceBasis = priceBasis;
         this.volumeBasis = volumeBasis;
         this.active = true;
     }
@@ -127,7 +163,8 @@ public class Market extends BaseEntity
 
     private Exchange exchange;
     private Listing listing;
-    private double quoteBasis;
+    private double priceBasis;
     private double volumeBasis;
     private boolean active;
+    private MarketAmountBuilder marketAmountBuilder;
 }

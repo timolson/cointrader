@@ -116,7 +116,12 @@ public class SaveTicksCsv
     }
 
 
+    @Inject
     public Logger log;
+    @Inject
+    private Context context;
+    @Inject
+    private Configuration config;
     private int bookDepth;
     private SimpleDateFormat timeFormat;
     private CSVWriter writer;

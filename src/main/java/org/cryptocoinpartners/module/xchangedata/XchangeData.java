@@ -237,6 +237,7 @@ public class XchangeData {
     }
 
 
+    @Inject
     private Logger log;
     private final Context context;
 }

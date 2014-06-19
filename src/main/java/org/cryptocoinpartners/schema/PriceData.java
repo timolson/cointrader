@@ -35,8 +35,8 @@ public abstract class PriceData extends MarketData {
     public PriceData(Instant time, @Nullable String remoteKey, Market market,
                      @Nullable BigDecimal price, @Nullable BigDecimal volume) {
         super(time, remoteKey, market);
-        this.priceCount = DiscreteAmount.countForValueRounded(price, market.getPriceBasis());
-        this.volumeCount = DiscreteAmount.countForValueRounded(volume, market.getVolumeBasis());
+        this.priceCount = Amount.roundedCountForBasis(price,market.getPriceBasis());
+        this.volumeCount = Amount.roundedCountForBasis(volume, market.getVolumeBasis());
     }
 
 
@@ -58,8 +58,8 @@ public abstract class PriceData extends MarketData {
     public PriceData(Instant time, Instant timeReceived, @Nullable String remoteKey, Market market,
                      @Nullable BigDecimal price, @Nullable BigDecimal volume) {
         super(time, timeReceived, remoteKey, market);
-        this.priceCount = DiscreteAmount.countForValueRounded(price, market.getPriceBasis());
-        this.volumeCount = DiscreteAmount.countForValueRounded(volume, market.getVolumeBasis());
+        this.priceCount = DecimalAmount.roundedCountForBasis(price, market.getPriceBasis());
+        this.volumeCount = DecimalAmount.roundedCountForBasis(volume, market.getVolumeBasis());
     }
 
 
@@ -81,14 +81,14 @@ public abstract class PriceData extends MarketData {
 
     @Transient @Nullable
     public Double getPriceAsDouble() {
-        DiscreteAmount price = getPrice();
+        Amount price = getPrice();
         return price == null ? null : price.asDouble();
     }
 
 
     @Transient @Nullable
     public BigDecimal getPriceAsBigDecimal() {
-        DiscreteAmount price = getPrice();
+        Amount price = getPrice();
         return price == null ? null : price.asBigDecimal();
     }
 
@@ -105,14 +105,14 @@ public abstract class PriceData extends MarketData {
 
     @Transient @Nullable
     public Double getVolumeAsDouble() {
-        DiscreteAmount volume = getVolume();
+        Amount volume = getVolume();
         return volume == null ? null : volume.asDouble();
     }
 
 
     @Transient @Nullable
     public BigDecimal getVolumeAsBigDecimal() {
-        DiscreteAmount volume = getVolume();
+        Amount volume = getVolume();
         return volume == null ? null : volume.asBigDecimal();
     }
 

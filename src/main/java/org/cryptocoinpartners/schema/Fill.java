@@ -26,7 +26,7 @@ public class Fill extends RemoteEvent {
     }
 
 
-    public @ManyToOne Order getOrder() { return order; }
+    public @ManyToOne SpecificOrder getOrder() { return order; }
 
 
     @ManyToOne
@@ -34,11 +34,11 @@ public class Fill extends RemoteEvent {
 
 
     @Transient
-    public DiscreteAmount getPrice() { return new DiscreteAmount(priceCount,market.getPriceBasis()); }
+    public Amount getPrice() { return new DiscreteAmount(priceCount,market.getPriceBasis()); }
     public long getPriceCount() { return priceCount; }
 
     @Transient
-    public DiscreteAmount getVolume() { return new DiscreteAmount(volumeCount,market.getVolumeBasis()); }
+    public Amount getVolume() { return new DiscreteAmount(volumeCount,market.getVolumeBasis()); }
     public long getVolumeCount() { return volumeCount; }
 
 
@@ -57,7 +57,7 @@ public class Fill extends RemoteEvent {
     protected void setOrder(SpecificOrder order) { this.order = order; }
     protected void setMarket(Market market) { this.market = market; }
     protected void setPriceCount(long priceCount) { this.priceCount = priceCount; }
-    protected void setvolumeCount(long volumeCount) { this.volumeCount = volumeCount; }
+    protected void setVolumeCount(long volumeCount) { this.volumeCount = volumeCount; }
 
 
     private SpecificOrder order;

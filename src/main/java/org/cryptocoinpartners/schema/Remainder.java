@@ -1,6 +1,10 @@
 package org.cryptocoinpartners.schema;
 
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
+
 /**
  * This is a grouping of DiscreteAmount.RemainderHandlers for convenience
  *
@@ -9,27 +13,17 @@ package org.cryptocoinpartners.schema;
 public class Remainder {
 
 
-    public static final DiscreteAmount.RemainderHandler DISCARD = new DiscreteAmount.RemainderHandler() {
-        public void handleRemainder(DiscreteAmount result, double remainder) {
-        }
+    public static final DecimalAmount.RemainderHandler DISCARD = new Amount.RemainderHandler() {
+        public void handleRemainder(Amount result, BigDecimal remainder) { }
     };
 
 
-    public static final DiscreteAmount.RemainderHandler ROUND_HALF_UP = new DiscreteAmount.RemainderHandler() {
-        public void handleRemainder(DiscreteAmount result, double remainder) {
-            if( remainder >= result.getBasis()/2 )
-                result.increment();
+    public static final DecimalAmount.RemainderHandler TO_HOUSE = new Amount.RemainderHandler() {
+        public void handleRemainder(Amount result, BigDecimal remainder) {
+            // todo
         }
+        public RoundingMode getRoundingMode() { return RoundingMode.FLOOR; }
     };
-
-
-    public static DiscreteAmount.RemainderHandler toAccount(Account a,Fungible f) {
-        return new DiscreteAmount.RemainderHandler() {
-            public void handleRemainder(DiscreteAmount result, double remainder) {
-
-            }
-        };
-    }
 
 
 }

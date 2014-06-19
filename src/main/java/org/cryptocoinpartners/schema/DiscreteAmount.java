@@ -1,128 +1,56 @@
 package org.cryptocoinpartners.schema;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
 
 
 /**
- * DiscreteAmount acts like an integer except the amounts do not need to be whole values.  The value is stored as a
- * long count of double basis count. It is useful for both money and volume withAmount calculations.  For example, the
- * Swiss Franc rounds to nickels, so CHF 0.20 would be represented as a DiscreteAmount with count=4 and basis=0.05.
- * Internally, DiscreteAmount stores 1/basis as a long integer.
- *
  * @author Tim Olson
  */
 @SuppressWarnings("UnusedDeclaration")
-public class DiscreteAmount implements Comparable<DiscreteAmount> {
+public class DiscreteAmount extends Amount {
 
 
-    /**
-     * This is a delegate interface which is called when there are remainders or errors in a calcualation.
-     */
-    public interface RemainderHandler {
-        /**
-         * @param result is the final DiscreteAmount produced by the operation
-         * @param remainder is a leftover withAmount x where |x| < basis
-         */
-        public void handleRemainder(DiscreteAmount result, double remainder);
+    /** helper for constructing an Amount with a double basis instead of long inverted basis.  a double basis like
+     * 0.05 is easier for human configurers than the inverted basis of 20 */
+    public static long invertBasis(double basis) { return Math.round(1/basis); }
+
+
+    /** for convenience of representation in properties files.  we round to the nearest whole iBasis */
+    public static DiscreteAmountBuilder withBasis(double basis) {
+        assert basis > 0;
+        return new DiscreteAmountBuilder(invertBasis(basis));
     }
 
 
-    public static DiscreteAmount fromValue( double value, double basis, RemainderHandler remainderHandler ) {
-        return fromValuePrivate(value, basis, remainderHandler);
+    public static DiscreteAmountBuilder withIBasis(long iBasis) {
+        assert iBasis > 0;
+        return new DiscreteAmountBuilder(iBasis);
     }
 
 
-    public static DiscreteAmount fromValue( BigDecimal value, double basis, RemainderHandler remainderHandler ) {
-        return fromValuePrivate(value, basis, remainderHandler);
+    public static class DiscreteAmountBuilder {
+        public DiscreteAmount fromCount(long count) { return new DiscreteAmount(count,iBasis); }
+        public DiscreteAmount fromValue(BigDecimal input, RemainderHandler remainderHandler) {
+            return new DecimalAmount(input).toIBasis(iBasis, remainderHandler);
+        }
+
+        private DiscreteAmountBuilder(long iBasis) { this.iBasis = iBasis; }
+        private final long iBasis;
     }
 
 
-    /**
-     * The value is rounded to the nearest withAmount of the basis.  The withAmount rounded is ignored / discarded.
-     */
-    public static DiscreteAmount fromValueRounded( double value, double basis ) {
-        return new DiscreteAmount( Math.round(value/basis), basis );
-    }
-
-
-    /**
-     * The value is rounded to the nearest withAmount of the basis.  The withAmount rounded is ignored / discarded.
-     */
-    public static DiscreteAmount fromValueRounded( BigDecimal value, double basis ) {
-        BigDecimal count = value.divide(BigDecimal.valueOf(basis), RoundingMode.HALF_UP);
-        return new DiscreteAmount( count.longValueExact(), basis );
-    }
-
-
-    public static long countForValueRounded(BigDecimal value, double basis) {
-        return countForValueRounded(value, new BigDecimal(basis));
-    }
-
-
-    public static long countForValueRounded(BigDecimal value, BigDecimal basis) {
-        return Math.round(value.divide(basis, MathContext.DECIMAL128).doubleValue());
-    }
-
-
-    public static long countForValueRounded( double value, double basis ) {
-        return Math.round(value/basis);
+    public DiscreteAmount(long count, long invertedBasis) {
+        this.count = count;
+        this.iBasis = invertedBasis;
     }
 
 
     public DiscreteAmount(long count, double basis) {
-        this.count = count;
-        this.invertedBasis = Math.round(1/basis);
+        this(count,invertBasis(basis));
     }
 
 
     public long getCount() { return count; }
-
-
-    public double getBasis() { return 1d/invertedBasis; }
-
-
-    /**
-     * The invertedBasis is 1/basis, which is what DiscreteAmount stores internally.  This is done because we can then
-     * use a long integer instead of double, knowing that all bases must be integral factors of 1.<br/>
-     * Example inverted bases: quarters=4, dimes=10, nickels=20, pennies=100, satoshis=1e8
-     */
-    public long getInvertedBasis() { return invertedBasis; }
-
-
-    /**
-     * @return a new DiscreteAmount whose count is -this.count and whose basis is the same as this.basis;
-     */
-    public DiscreteAmount negate() { return new DiscreteAmount(-count, invertedBasis); }
-
-
-    public class BasisError extends Error { public BasisError(String msg) { super(msg); } }
-
-
-    public void assertBasis(double basis) throws BasisError {
-        if( Math.round(1d/basis) != invertedBasis )
-            throw new BasisError("Basis mismatch.  Expected "+(1d/invertedBasis)+" but got "+basis);
-    }
-
-
-    /** This should be used for display purposes only, not calculation! */
-    public double asDouble() {
-        return ((double) count)/invertedBasis;
-    }
-
-
-    public BigDecimal asBigDecimal() {
-        return new BigDecimal(count).divide(new BigDecimal(invertedBasis));
-    }
-
-
-    public DiscreteAmount convertBasis(double newBasis, RemainderHandler remainderHandler) {
-        return fromValuePrivate(asDouble(), newBasis, remainderHandler);
-    }
 
 
     /** adds one basis to the value by incrementing the count */
@@ -141,47 +69,85 @@ public class DiscreteAmount implements Comparable<DiscreteAmount> {
     public void decrement( long pips ) { count -= pips; }
 
 
-    public int compareTo(DiscreteAmount o) {
-        if( this.invertedBasis != o.invertedBasis ) {
-            log.warn("Comparing DiscreteAmounts with different bases", new Error("Informative Stacktrace"));
-            return Double.compare(this.asDouble(),o.asDouble());
+    public DiscreteAmount negate() {
+        return new DiscreteAmount(-count,iBasis);
+    }
+
+
+    public Amount plus(Amount o) {
+        return null;
+    }
+
+
+    public Amount minus(Amount o) {
+        return null;
+    }
+
+
+    public double asDouble() {
+        return ((double)count)/iBasis;
+    }
+
+
+    public BigDecimal asBigDecimal() {
+        if( bd == null )
+            bd = new BigDecimal(count).divide(new BigDecimal(iBasis), mc);
+        return bd;
+    }
+
+
+    public DiscreteAmount toIBasis( long newIBasis, RemainderHandler remainderHandler )
+    {
+        if( newIBasis % iBasis == 0 ) {
+            // new basis is a multiple of old basis and has higher resolution.  no remainder
+            return new DiscreteAmount(count*(newIBasis/iBasis),newIBasis);
         }
-        return Long.compare(this.count,o.count);
+        BigDecimal oldAmount = asBigDecimal();
+        long newCount = oldAmount.multiply(new BigDecimal(newIBasis),remainderHandler.getMathContext()).longValue();
+        DiscreteAmount newAmount = new DiscreteAmount(newCount, newIBasis);
+        BigDecimal remainder = oldAmount.subtract(newAmount.asBigDecimal(),remainderHandler.getMathContext());
+        remainderHandler.handleRemainder(newAmount,remainder);
+        return newAmount;
     }
 
 
-    private DiscreteAmount(long count, long invertedBasis) {
-        this.count = count;
-        this.invertedBasis = invertedBasis;
+    public int compareTo(@SuppressWarnings("NullableProblems") Amount o) {
+        if( o instanceof DiscreteAmount ) {
+            DiscreteAmount discreteAmount = (DiscreteAmount) o;
+            if( discreteAmount.iBasis == iBasis )
+                return Long.compare(count, discreteAmount.count);
+        }
+        return asBigDecimal().compareTo(o.asBigDecimal());
     }
 
 
-    private static DiscreteAmount fromValuePrivate( double value, double basis, RemainderHandler remainderHandler) {
-        double countD = value/basis;
-        long count = (long) countD;
-        DiscreteAmount result = new DiscreteAmount(count, basis);
-        remainderHandler.handleRemainder(result,countD-count);
-        return result;
+    public void assertIBasis(long otherIBasis) {
+        if( iBasis != otherIBasis )
+            throw new BasisError();
     }
 
 
-    private static DiscreteAmount fromValuePrivate( BigDecimal value, double basis, RemainderHandler remainderHandler) {
-        BigDecimal[] countAndRemainder = value.divideAndRemainder(BigDecimal.valueOf(basis));
-        BigDecimal countBD = countAndRemainder[0];
-        BigDecimal remainderBD = countAndRemainder[1];
-        DiscreteAmount result = new DiscreteAmount(countBD.longValueExact(), basis);
-        remainderHandler.handleRemainder(result, remainderBD.doubleValue());
-        return result;
+    public boolean isPositive() {
+        return count > 0;
     }
 
 
-    private long count;
+    public boolean isZero() {
+        return count == 0;
+    }
+
+
+    public boolean isNegative() {
+        return count < 0;
+    }
+
+
     /**
      * The invertedBasis is 1/basis.  This is done because we can then use a long integer instead of double, knowing
      * that all bases must be integral factors of 1.<br/>
      * Example inverted bases: quarters=4, dimes=10, nickels=20, pennies=100, satoshis=1e8
      */
-    private long invertedBasis;
-
-    private static final Logger log = LoggerFactory.getLogger(DiscreteAmount.class);
+    private long iBasis;
+    protected long count;
+    private BigDecimal bd;
 }

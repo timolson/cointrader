@@ -1,7 +1,5 @@
 package org.cryptocoinpartners.module;
 
-import org.cryptocoinpartners.module.Context;
-import org.cryptocoinpartners.module.When;
 import org.cryptocoinpartners.schema.*;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.QuoteService;
@@ -9,6 +7,7 @@ import org.slf4j.Logger;
 
 import javax.inject.Inject;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -85,21 +84,21 @@ public abstract class BaseOrderService implements OrderService {
 
 
     private SpecificOrder convertGeneralOrderToSpecific(GeneralOrder generalOrder, Market market) {
-        DiscreteAmount volume = DiscreteAmount.fromValue(generalOrder.getVolume(), market.getVolumeBasis(),
-                                                         Remainder.DISCARD);
+        DiscreteAmount volume = generalOrder.getVolume().toBasis(market.getVolumeBasis(), Remainder.DISCARD);
+
         // the volume will already be negative for a sell order
         OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(generalOrder.getFund()).create(market, volume);
 
-        DiscreteAmount.RemainderHandler priceRemainderHandler = generalOrder.isBid() ? buyHandler : sellHandler;
-        final BigDecimal limitPrice = generalOrder.getLimitPrice();
+        DecimalAmount.RemainderHandler priceRemainderHandler = generalOrder.isBid() ? buyHandler : sellHandler;
+        final DecimalAmount limitPrice = generalOrder.getLimitPrice();
         if( limitPrice != null ) {
-            DiscreteAmount price = DiscreteAmount.fromValue(limitPrice, market.getPriceBasis(),priceRemainderHandler);
-            builder.withLimitPriceCount(price.getCount());
+            DiscreteAmount discreteLimit = limitPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
+            builder.withLimitPrice(discreteLimit);
         }
-        final BigDecimal stopPrice = generalOrder.getStopPrice();
+        final DecimalAmount stopPrice = generalOrder.getStopPrice();
         if( stopPrice != null ) {
-            DiscreteAmount price = DiscreteAmount.fromValue(stopPrice, market.getPriceBasis(),priceRemainderHandler);
-            builder.withStopPriceCount(price.getCount());
+            DiscreteAmount discreteStop = stopPrice.toBasis(market.getPriceBasis(),priceRemainderHandler);
+            builder.withStopPrice(discreteStop);
         }
         SpecificOrder specificOrder = builder.getOrder();
         specificOrder.copyCommonOrderProperties(generalOrder);
@@ -127,19 +126,13 @@ public abstract class BaseOrderService implements OrderService {
 
 
     // rounding depends on whether it is a buy or sell order.  we round to the "best" price
-    private static final DiscreteAmount.RemainderHandler sellHandler = new DiscreteAmount.RemainderHandler() {
-        public void handleRemainder(DiscreteAmount result, double remainder) {
-            if( remainder > .01 )
-                result.increment();
-        }
+    private static final DecimalAmount.RemainderHandler sellHandler = new Amount.RemainderHandler() {
+        public RoundingMode getRoundingMode() { return RoundingMode.CEILING; }
     };
 
 
-    private static final DiscreteAmount.RemainderHandler buyHandler = new DiscreteAmount.RemainderHandler() {
-        public void handleRemainder(DiscreteAmount result, double remainder) {
-            if( remainder > .01 )
-                result.increment();
-        }
+    private static final DecimalAmount.RemainderHandler buyHandler = new Amount.RemainderHandler() {
+        public RoundingMode getRoundingMode() { return RoundingMode.FLOOR; }
     };
 
 

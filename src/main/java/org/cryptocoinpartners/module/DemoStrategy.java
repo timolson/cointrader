@@ -26,10 +26,10 @@ public class DemoStrategy extends SimpleStatefulStrategy {
             throw new Error("Could not find Market for symbol "+marketSymbol);
         BigDecimal volumeBD = config.getBigDecimal("demostrategy.volume",
                                                    new BigDecimal("0.00000100"));// 100 satoshis
-        volumeCount = DiscreteAmount.countForValueRounded(volumeBD, market.getVolumeBasis());
+        volumeCount = DecimalAmount.roundedCountForBasis(volumeBD, market.getVolumeBasis());
         // set our orders $2.00 above/below the current best offers
         BigDecimal spreadBD = config.getBigDecimal("demostrategy.spread", new BigDecimal("2.00"));
-        spreadCount = DiscreteAmount.countForValueRounded(spreadBD, market.getPriceBasis());
+        spreadCount = DecimalAmount.roundedCountForBasis(spreadBD, market.getPriceBasis());
     }
 
 

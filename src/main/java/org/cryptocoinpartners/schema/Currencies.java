@@ -3,36 +3,41 @@ package org.cryptocoinpartners.schema;
 public class Currencies
 {
     // Fiat
-	public static final Currency USD = fiat("USD",0.01);
-	public static final Currency EUR = fiat("EUR",0.01);
-	public static final Currency JPY = fiat("JPY",1.00);
-	public static final Currency GBP = fiat("GBP",0.01);
 	public static final Currency AUD = fiat("AUD",0.01);
-	public static final Currency CHF = fiat("CHF",0.05);
 	public static final Currency CAD = fiat("CAD",0.01);
-	public static final Currency MXN = fiat("MXN",0.01);
+	public static final Currency CHF = fiat("CHF",0.05);
 	public static final Currency CNY = fiat("CNY",0.01);
-	public static final Currency NZD = fiat("NZD",0.10);
-	public static final Currency SEK = fiat("SEK",1.00);
-	public static final Currency RUB = fiat("RUB",0.01);
+	public static final Currency EUR = fiat("EUR",0.01);
+	public static final Currency GBP = fiat("GBP",0.01);
 	public static final Currency HKD = fiat("HKD",0.01);
+	public static final Currency JPY = fiat("JPY",1.00);
+	public static final Currency MXN = fiat("MXN",0.01);
+	public static final Currency NZD = fiat("NZD",0.10);
+	public static final Currency RUB = fiat("RUB",0.01);
+	public static final Currency SEK = fiat("SEK",1.00);
 	public static final Currency SGD = fiat("SGD",0.01);
 	public static final Currency TRY = fiat("TRY",0.01);
+	public static final Currency USD = fiat("USD",0.01);
 
     // Cryptos
 
-    // Base coins Bitcoin, Litecoin, Primecoin
-	public static final Currency BTC = crypto("BTC",1e-8);
-	public static final Currency LTC = crypto("LTC",1e-8);
-	public static final Currency XPM = crypto("XPM",1e-8);
-	public static final Currency DOGE = crypto("DOGE",1e-8);
-	public static final Currency FTC = crypto("FTC",1e-8);
-	public static final Currency MOON = crypto("MOON",1e-8);
-	public static final Currency MEM = crypto("MEM",1e-8);
+    // Base coins Bitcoin, Litecoin, Primecoin, Dogecoin, Nextcoin
+    // todo review bases!  they may not be correct
+    // todo we need a way for a Market to trade in a different basis than the quote's basis
 	public static final Currency AUR = crypto("AUR",1e-8);
-	public static final Currency NMC = crypto("NMC",1e-8);
+	public static final Currency BTC = crypto("BTC",1e-8);
+	public static final Currency DOGE = crypto("DOGE",1e-8);
 	public static final Currency DRK = crypto("DRK",1e-8);
-	
+	public static final Currency FTC = crypto("FTC",1e-8);
+	public static final Currency LTC = crypto("LTC",1e-8);
+	public static final Currency MEM = crypto("MEM",1e-8);
+	public static final Currency MOON = crypto("MOON",1e-8);
+	public static final Currency NMC = crypto("NMC",1e-8);
+    public static final Currency NVC = crypto("NVC",1e-8);
+    public static final Currency NXT = crypto("NXT",1e-8);
+	public static final Currency XCP = crypto("XCP",1e-8);
+	public static final Currency XPM = crypto("XPM",1e-8);
+
 
     // Altcoins
     /* these need currency basis research
@@ -89,7 +94,6 @@ public class Currencies
 	public static final Currency MEC = crypto("MEC");
 	public static final Currency FFC = crypto("FFC");
 	public static final Currency PHS = crypto("PHS");
-	public static final Currency NXT = crypto("NXT");
 	public static final Currency BEN = crypto("BEN");
 	public static final Currency FLO = crypto("FLO");
 	public static final Currency NAN = crypto("NAN");
@@ -119,7 +123,6 @@ public class Currencies
 	public static final Currency HBN = crypto("HBN");
 	public static final Currency EZC = crypto("EZC");
 	public static final Currency FRK = crypto("FRK");
-	public static final Currency NVC = crypto("NVC");
 	public static final Currency FLAP = crypto("FLAP");
 	public static final Currency CPR = crypto("CPR");
 	public static final Currency SXC = crypto("SXC");

@@ -1,11 +1,11 @@
 package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.Parameters;
+import jline.Terminal;
 import jline.TerminalFactory;
 import jline.console.ConsoleReader;
 import jline.console.KeyMap;
 import jline.console.history.MemoryHistory;
-import jline.Terminal;
 import org.apache.commons.lang.StringUtils;
 import org.cryptocoinpartners.command.Command;
 import org.cryptocoinpartners.command.CommandBase;
@@ -15,10 +15,6 @@ import org.cryptocoinpartners.module.*;
 import org.cryptocoinpartners.module.xchangedata.XchangeData;
 import org.cryptocoinpartners.schema.Fund;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.regex.Matcher;

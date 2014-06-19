@@ -3,6 +3,7 @@ package org.cryptocoinpartners.util;
 import org.cryptocoinpartners.schema.BaseEntity;
 import org.cryptocoinpartners.schema.Currencies;
 import org.cryptocoinpartners.schema.Exchanges;
+import org.cryptocoinpartners.schema.Market;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -30,7 +30,7 @@ public class MockOrderService extends BaseOrderService {
 
 
     protected void handleSpecificOrder(SpecificOrder specificOrder) {
-        if( specificOrder.getStopPriceCount() != 0 )
+        if( specificOrder.getStopPrice() != null )
             reject(specificOrder,"Stop prices unsupported");
         pendingOrders.add(specificOrder);
     }
@@ -44,9 +44,9 @@ public class MockOrderService extends BaseOrderService {
         for( SpecificOrder order : pendingOrders ) {
             if( order.getMarket().equals(b.getMarket()) ) {
                 if( order.isBid() ) {
-                    long remainingVolume = order.getVolumeCount();
+                    long remainingVolume = order.getVolume().getCount();
                     for( Offer ask : b.getAsks() ) {
-                        if( order.getLimitPriceCount() < ask.getPriceCount() )
+                        if( order.getLimitPrice().getCount() < ask.getPriceCount() )
                             break;
                         long fillVolume = Math.min(Math.abs(ask.getVolumeCount()), remainingVolume);
                         Fill fill = new Fill(order, ask.getTime(), ask.getMarket(), ask.getPriceCount(), fillVolume);
@@ -58,9 +58,9 @@ public class MockOrderService extends BaseOrderService {
                     }
                 }
                 if( order.isAsk() ) {
-                    long remainingVolume = order.getVolumeCount(); // this will be negative
+                    long remainingVolume = order.getVolume().getCount(); // this will be negative
                     for( Offer bid : b.getBids() ) {
-                        if( order.getLimitPriceCount() > bid.getPriceCount() )
+                        if( order.getLimitPrice().getCount() > bid.getPriceCount() )
                             break;
                         long fillVolume = -Math.min(bid.getVolumeCount(), Math.abs(remainingVolume));
                         Fill fill = new Fill(order, bid.getTime(), bid.getMarket(), bid.getPriceCount(), fillVolume);
@@ -84,7 +84,8 @@ public class MockOrderService extends BaseOrderService {
     }
 
 
-    private static final Logger log = LoggerFactory.getLogger(MockOrderService.class);
+    @Inject
+    private Logger log;
 
     private Collection<SpecificOrder> pendingOrders = new ArrayList<>();
     private QuoteService quotes;

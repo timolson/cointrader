@@ -1,6 +1,9 @@
 package org.cryptocoinpartners.module;
 
 /**
+ * The idea here is to trigger on disaster conditions and set a Panic mode.  A better approach is to declare
+ * the safe conditions and fail on anything outside that.
+ *
  * @author Tim Olson
  */
 public class CircuitBreaker {

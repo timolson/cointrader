@@ -5,6 +5,7 @@ import org.cryptocoinpartners.util.PersistUtil;
 
 import javax.persistence.Entity;
 import javax.persistence.NoResultException;
+import java.util.List;
 
 
 /**
@@ -18,6 +19,11 @@ public class Currency extends Fungible {
 
     public static Currency forSymbol( String symbol ) {
         return PersistUtil.queryOne(Currency.class, "select c from Currency c where symbol=?1", symbol);
+    }
+
+
+    public static List<String> allSymbols() {
+        return PersistUtil.queryList(String.class, "select symbol from Currency");
     }
 
 

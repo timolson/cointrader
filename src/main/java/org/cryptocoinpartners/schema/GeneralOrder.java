@@ -19,14 +19,14 @@ public class GeneralOrder extends Order {
     public GeneralOrder(Listing listing, BigDecimal volume)
     {
         this.listing = listing;
-        this.volume = volume;
+        this.volume = DecimalAmount.of(volume);
     }
 
 
-    public GeneralOrder(Listing listing, double volume)
+    public GeneralOrder(Listing listing, String volume)
     {
         this.listing = listing;
-        this.volume = BigDecimal.valueOf(volume);
+        this.volume = DecimalAmount.of(volume);
     }
 
 
@@ -34,19 +34,19 @@ public class GeneralOrder extends Order {
     public Listing getListing() { return listing; }
 
 
-    @Column(precision = 65, scale = 30)
-    @Basic(optional = false)
-    public BigDecimal getVolume() { return volume; }
+    @Embedded
+    @AttributeOverride(name = "bd", column = @Column(name = "volume"))
+    public DecimalAmount getVolume() { return volume; }
 
 
-    @Column(precision = 65, scale = 30)
-    @Nullable
-    public BigDecimal getLimitPrice() { return limitPrice; }
+    @Nullable @Embedded
+    @AttributeOverride(name = "bd", column = @Column(name = "limit"))
+    public DecimalAmount getLimitPrice() { return limitPrice; }
 
 
-    @Column(precision = 65, scale = 30)
-    @Nullable
-    public BigDecimal getStopPrice() { return stopPrice; }
+    @Nullable @Embedded
+    @AttributeOverride(name = "bd", column = @Column(name = "stop"))
+    public DecimalAmount getStopPrice() { return stopPrice; }
 
 
     @Transient BigDecimal getUnfilledVolume() {
@@ -64,18 +64,18 @@ public class GeneralOrder extends Order {
 
 
     @Transient
-    public boolean isBid() { return volume.compareTo(BigDecimal.ZERO) > 0; }
+    public boolean isBid() { return !volume.isNegative(); }
 
 
     protected GeneralOrder() { }
-    protected void setVolume(BigDecimal volume) { this.volume = volume; }
-    protected void setLimitPrice(BigDecimal limit) { this.limitPrice = limit; }
-    protected void setStopPrice(BigDecimal stopPrice) { this.stopPrice = stopPrice; }
+    protected void setVolume(DecimalAmount volume) { this.volume = volume; }
+    protected void setLimitPrice(DecimalAmount limitPrice) { this.limitPrice = limitPrice; }
+    protected void setStopPrice(DecimalAmount stopPrice) { this.stopPrice = stopPrice; }
     protected void setListing(Listing listing) { this.listing = listing; }
 
 
     private Listing listing;
-    private BigDecimal volume;
-    private BigDecimal limitPrice;
-    private BigDecimal stopPrice;
+    private DecimalAmount volume;
+    private DecimalAmount limitPrice;
+    private DecimalAmount stopPrice;
 }

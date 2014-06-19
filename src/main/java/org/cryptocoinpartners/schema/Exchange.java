@@ -5,6 +5,7 @@ import org.cryptocoinpartners.util.PersistUtil;
 
 import javax.persistence.Basic;
 import javax.persistence.Entity;
+import java.util.List;
 
 
 /**
@@ -14,13 +15,24 @@ import javax.persistence.Entity;
 public class Exchange extends BaseEntity {
 
 
-    public static Exchange forSymbol( String symbol ) {
-        Exchange found = PersistUtil.queryZeroOne(Exchange.class, "select m from Exchange m where symbol=?1", symbol);
+    public static Exchange forSymbolOrCreate(String symbol) {
+        Exchange found = forSymbol(symbol);
         if( found == null ) {
             found = new Exchange(symbol);
             PersistUtil.insert(found);
         }
         return found;
+    }
+
+
+    /** returns null if the symbol does not represent an existing exchange */
+    public static Exchange forSymbol(String symbol) {
+        return PersistUtil.queryZeroOne(Exchange.class,"select e from Exchange e where symbol=?1",symbol);
+    }
+
+
+    public static List<String> allSymbols() {
+        return PersistUtil.queryList(String.class, "select symbol from Exchange");
     }
 
 
