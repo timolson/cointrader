@@ -40,12 +40,12 @@ public class GeneralOrder extends Order {
 
 
     @Nullable @Embedded
-    @AttributeOverride(name = "bd", column = @Column(name = "limit"))
+    @AttributeOverride(name = "bd", column = @Column(name = "limitPrice"))
     public DecimalAmount getLimitPrice() { return limitPrice; }
 
 
     @Nullable @Embedded
-    @AttributeOverride(name = "bd", column = @Column(name = "stop"))
+    @AttributeOverride(name = "bd", column = @Column(name = "stopPrice"))
     public DecimalAmount getStopPrice() { return stopPrice; }
 
 
