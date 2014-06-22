@@ -1,12 +1,8 @@
 package org.cryptocoinpartners.module;
 
-import org.cryptocoinpartners.schema.Book;
-import org.cryptocoinpartners.schema.Fill;
-import org.cryptocoinpartners.schema.Offer;
-import org.cryptocoinpartners.schema.SpecificOrder;
+import org.cryptocoinpartners.schema.*;
 import org.cryptocoinpartners.service.QuoteService;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
@@ -44,9 +40,9 @@ public class MockOrderService extends BaseOrderService {
         for( SpecificOrder order : pendingOrders ) {
             if( order.getMarket().equals(b.getMarket()) ) {
                 if( order.isBid() ) {
-                    long remainingVolume = order.getVolume().getCount();
+                    long remainingVolume = order.getUnfilledVolumeCount();
                     for( Offer ask : b.getAsks() ) {
-                        if( order.getLimitPrice().getCount() < ask.getPriceCount() )
+                        if( order.getLimitPrice() != null && order.getLimitPrice().getCount() < ask.getPriceCount() )
                             break;
                         long fillVolume = Math.min(Math.abs(ask.getVolumeCount()), remainingVolume);
                         Fill fill = new Fill(order, ask.getTime(), ask.getMarket(), ask.getPriceCount(), fillVolume);
@@ -60,7 +56,7 @@ public class MockOrderService extends BaseOrderService {
                 if( order.isAsk() ) {
                     long remainingVolume = order.getVolume().getCount(); // this will be negative
                     for( Offer bid : b.getBids() ) {
-                        if( order.getLimitPrice().getCount() > bid.getPriceCount() )
+                        if( order.getLimitPrice() != null && order.getLimitPrice().getCount() > bid.getPriceCount() )
                             break;
                         long fillVolume = -Math.min(bid.getVolumeCount(), Math.abs(remainingVolume));
                         Fill fill = new Fill(order, bid.getTime(), bid.getMarket(), bid.getPriceCount(), fillVolume);
@@ -75,6 +71,12 @@ public class MockOrderService extends BaseOrderService {
         }
         for( Fill fill : fills )
             context.publish(fill);
+    }
+
+
+    @When("select * from OrderUpdate where state.open=false")
+    private void completeOrder( OrderUpdate update ) {
+        pendingOrders.remove(update.getOrder());
     }
 
 

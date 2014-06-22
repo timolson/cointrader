@@ -122,7 +122,8 @@ public class ConsoleRunMode extends RunMode {
         console.setKeyMap(KeyMap.EMACS);
         out = new ConsoleWriter(console);
         context.attach(ConsoleWriter.class,out);
-        context.attach(PrintWriter.class, out);
+        context.attach(PrintWriter.class,out);
+        notifications = context.attach(ConsoleNotifications.class);
         console.println("Coin Trader Console "+config.getString("project.version"));
     }
 
@@ -132,4 +133,5 @@ public class ConsoleRunMode extends RunMode {
     private ConsoleReader console;
     private ConsoleWriter out;
     private MemoryHistory history;
+    private ConsoleNotifications notifications;
 }

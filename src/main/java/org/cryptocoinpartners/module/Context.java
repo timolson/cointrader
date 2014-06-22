@@ -10,13 +10,12 @@ import com.espertech.esper.client.time.CurrentTimeSpanEvent;
 import com.espertech.esper.core.service.EPServiceProviderImpl;
 import com.google.inject.Binder;
 import com.google.inject.Module;
-import com.google.inject.matcher.Matchers;
-import com.google.inject.spi.ProvisionListener;
 import org.apache.commons.configuration.AbstractConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.ArrayUtils;
 import org.cryptocoinpartners.schema.Event;
 import org.cryptocoinpartners.schema.StrategyFundManager;
 import org.cryptocoinpartners.service.Service;
@@ -100,14 +99,6 @@ public class Context {
     }
 
 
-    public <T> T attach(Class<T> c, final Configuration moduleConfig) {
-        registerBindings(c);
-        Injector i = moduleConfig == null ? injector
-                                          : injector.createChildInjector().withConfig(moduleConfig);
-        return i.getInstance(c);
-    }
-
-
     public Object attach(String name) {
         Class<?> c = findModuleClass(name);
         if( c == null )
@@ -127,6 +118,16 @@ public class Context {
 
     public <T> T attach(String name, Class<T> cls) {
         return attach(name, cls, null);
+    }
+
+
+    public <T> T attach(Class<T> c, final Configuration moduleConfig) {
+        registerBindings(c);
+        Injector i = moduleConfig == null ? injector
+                                          : injector.createChildInjector().withConfig(moduleConfig);
+        T instance = i.getInstance(c);
+        subscribe(instance);
+        return instance;
     }
 
 
@@ -185,10 +186,13 @@ public class Context {
 
 
     public void subscribe(Object listener) {
+        if( listener == this )
+            return;
         // todo search for EPL files and load them
-        for( Method method : listener.getClass().getMethods() ) {
+        for( Method method : listener.getClass().getDeclaredMethods() ) {
             When when = method.getAnnotation(When.class);
             if( when != null ) {
+                method.setAccessible(true);
                 String statement = when.value();
                 log.debug("subscribing " + method + " with statement \"" + statement + "\"");
                 subscribe(listener, method, statement);
@@ -381,11 +385,11 @@ public class Context {
 
 
     private void doRegister(final Class interfaceClass, final Object implementationClassOrObject) {
-        injector = injector.createChildInjector(new Module() {
+        injector = childInjector(null, new Module() {
             @SuppressWarnings("unchecked")
             public void configure(Binder binder) {
                 if( Class.class.isAssignableFrom(implementationClassOrObject.getClass()) )
-                    binder.bind(interfaceClass).to((Class)implementationClassOrObject);
+                    binder.bind(interfaceClass).to((Class) implementationClassOrObject);
                 else
                     binder.bind(interfaceClass).toInstance(implementationClassOrObject);
             }
@@ -394,7 +398,7 @@ public class Context {
 
 
     private <T> void register(final Class<? super T> interfaceClass, final T instance) {
-        injector = injector.createChildInjector(new Module() {
+        injector = childInjector(null, new Module() {
             public void configure(Binder binder) {
                 binder.bind(interfaceClass).toInstance(instance);
             }
@@ -402,12 +406,38 @@ public class Context {
     }
 
 
+    /*  I was trying to use the subscribingListener to call context.subscribe() on all provisioned instances, but it
+        wasn't working with all created instances for some reason (Guice bug?).  now all instances get subscribe()'d
+        explicitly in the register methods
+
     @SuppressWarnings("unchecked")
-    private Injector injectorForConfig(final Configuration configParams) {
-        if( configParams == null )
+    private Injector childInjector(final @Nullable Configuration configParams, Module... modules) {
+        final int moduleLength = ArrayUtils.getLength(modules);
+        if( moduleLength == 0 && configParams == null )
             return injector;
-        Injector childInjector = injector.createChildInjector();
-        childInjector.setConfig(configParams);
+        int childModuleLength = moduleLength + 1;
+        Module[] childModules = new Module[childModuleLength];
+        if( !ArrayUtils.isEmpty(modules) ) {
+            ArrayList<Module> childModuleList = new ArrayList<>(childModuleLength);
+            childModuleList.add(subscribingModule);
+            childModules = childModuleList.toArray(childModules);
+        }
+        Injector childInjector = injector.createChildInjector(childModules);
+        if( configParams != null )
+            childInjector.setConfig(configParams);
+        return childInjector;
+    }
+    */
+
+
+    @SuppressWarnings("unchecked")
+    private Injector childInjector(final @Nullable Configuration configParams, Module... modules) {
+        final int moduleLength = ArrayUtils.getLength(modules);
+        if( moduleLength == 0 && configParams == null )
+            return injector;
+        Injector childInjector = injector.createChildInjector(modules);
+        if( configParams != null )
+            childInjector.setConfig(configParams);
         return childInjector;
     }
 
@@ -432,18 +462,12 @@ public class Context {
         epRuntime = epService.getEPRuntime();
         epAdministrator = epService.getEPAdministrator();
         config = Config.combined();
+        //injector = Injector.root().createChildInjector(subscribingModule,new Module()
         injector = Injector.root().createChildInjector(new Module()
         {
             public void configure(Binder binder) {
                 // bind this Context
                 binder.bind(Context.class).toInstance(Context.this);
-                // listen for any new instances and subscribe them to the esper
-                binder.bindListener(Matchers.any(), new ProvisionListener() {
-                    public <T> void onProvision(ProvisionInvocation<T> provisionInvocation) {
-                        T provision = provisionInvocation.provision();
-                        subscribe(provision);
-                    }
-                });
             }
         });
         injector.setConfig(config);
@@ -457,6 +481,8 @@ public class Context {
      */
     private class Listener {
         public void update(Object[] row) {
+            boolean wasAccessible = method.isAccessible();
+            method.setAccessible(true);
             try {
                 method.invoke(delegate, row);
             }
@@ -465,6 +491,9 @@ public class Context {
             }
             catch( Throwable t ) {
                 throw new Error("Error invoking "+delegate.getClass().getName()+"."+ method.getName(),t);
+            }
+            finally {
+                method.setAccessible(wasAccessible);
             }
         }
 
@@ -509,6 +538,21 @@ public class Context {
         Runnable garbageCollection = new Runnable() { public void run() { Runtime.getRuntime().gc(); } };
         svc.schedule(garbageCollection,1, TimeUnit.MILLISECONDS);
     }
+
+
+    /*
+    private final Module subscribingModule = new Module() {
+        public void configure(Binder binder) {
+             // listen for any new instances and subscribe them to the esper
+            binder.bindListener(Matchers.any(), new ProvisionListener() {
+                public <T> void onProvision(ProvisionInvocation<T> provisionInvocation) {
+                    T provision = provisionInvocation.provision();
+                    subscribe(provision);
+                }
+            });
+        }
+    };
+    */
 
 
 }

@@ -47,7 +47,7 @@ public abstract class OrderCommand extends AntlrCommandBase {
             builder = builder.withStopPriceCount(stopCount);
         }
         Order order = builder.place();
-        out.println("Placing order " + order);
+        out.println("Placed order " + order);
     }
 
 

@@ -76,12 +76,13 @@ public class SpecificOrder extends Order {
 
 
     @Transient
-    DiscreteAmount getUnfilledVolume() {
+    public DiscreteAmount getUnfilledVolume() {
         return new DiscreteAmount(getUnfilledVolumeCount(),market.getVolumeBasis());
     }
 
 
-    @Transient long getUnfilledVolumeCount() {
+    @Transient
+    public long getUnfilledVolumeCount() {
         long filled = 0;
         for( Fill fill : getFills() )
             filled += fill.getVolumeCount();

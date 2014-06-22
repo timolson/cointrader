@@ -49,7 +49,7 @@ public abstract class BaseOrderService implements OrderService {
 
 
     @When("select * from Fill")
-    void handleFill( Fill fill ) {
+    public void handleFill( Fill fill ) {
         Order order = fill.getOrder();
         if( log.isInfoEnabled() )
             log.info("Received Fill "+fill);

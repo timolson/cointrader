@@ -64,7 +64,7 @@ public abstract class Order extends Event {
     @OneToMany
     public Collection<Fill> getFills() { return fills; }
 
-    
+
     @Transient
     public boolean hasFills() { return !getFills().isEmpty(); }
 
