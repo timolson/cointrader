@@ -5,6 +5,7 @@ import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
 import java.math.BigDecimal;
+import java.util.Collection;
 
 
 /**
@@ -84,7 +85,10 @@ public class SpecificOrder extends Order {
     @Transient
     public long getUnfilledVolumeCount() {
         long filled = 0;
-        for( Fill fill : getFills() )
+        Collection<Fill> fills = getFills();
+        if( fills == null )
+            return volumeCount;
+        for( Fill fill : fills )
             filled += fill.getVolumeCount();
         return volumeCount - filled;
     }

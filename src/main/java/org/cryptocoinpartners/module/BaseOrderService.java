@@ -6,7 +6,6 @@ import org.cryptocoinpartners.service.QuoteService;
 import org.slf4j.Logger;
 
 import javax.inject.Inject;
-import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;

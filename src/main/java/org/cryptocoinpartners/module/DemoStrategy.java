@@ -46,7 +46,6 @@ public class DemoStrategy extends SimpleStatefulStrategy {
         }
     }
 
-
     @SuppressWarnings("ConstantConditions")
     protected OrderBuilder.CommonOrderBuilder buildEntryOrder() {
         if( bestAsk == null )

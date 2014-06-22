@@ -189,10 +189,15 @@ public class Context {
         if( listener == this )
             return;
         // todo search for EPL files and load them
-        for( Method method : listener.getClass().getDeclaredMethods() ) {
+        for( Class<?> cls = listener.getClass(); cls != Object.class; cls = cls.getSuperclass() )
+            subscribe(listener, cls);
+    }
+
+
+    private void subscribe(Object listener, Class<?> cls) {
+        for( Method method : cls.getDeclaredMethods() ) {
             When when = method.getAnnotation(When.class);
             if( when != null ) {
-                method.setAccessible(true);
                 String statement = when.value();
                 log.debug("subscribing " + method + " with statement \"" + statement + "\"");
                 subscribe(listener, method, statement);

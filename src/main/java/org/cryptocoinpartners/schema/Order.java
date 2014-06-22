@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema;
 import org.joda.time.Instant;
 
 import javax.persistence.*;
+import java.util.ArrayList;
 import java.util.Collection;
 
 
@@ -63,6 +64,13 @@ public abstract class Order extends Event {
 
     @OneToMany
     public Collection<Fill> getFills() { return fills; }
+
+
+    public void addFill( Fill fill ) {
+        if( fills == null )
+            fills = new ArrayList<>();
+        fills.add(fill);
+    }
 
 
     @Transient

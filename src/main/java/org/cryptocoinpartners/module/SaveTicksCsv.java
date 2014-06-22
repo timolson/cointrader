@@ -7,6 +7,7 @@ import org.cryptocoinpartners.schema.*;
 import org.slf4j.Logger;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -16,6 +17,7 @@ import java.util.List;
 
 
 @SuppressWarnings("UnusedDeclaration")
+@Singleton
 public class SaveTicksCsv
 {
 

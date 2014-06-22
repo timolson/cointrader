@@ -5,6 +5,7 @@ import org.cryptocoinpartners.service.QuoteService;
 import org.slf4j.Logger;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -15,6 +16,7 @@ import java.util.List;
  *
  * @author Tim Olson
  */
+@Singleton
 @SuppressWarnings("UnusedDeclaration")
 public class MockOrderService extends BaseOrderService {
 
@@ -54,7 +56,7 @@ public class MockOrderService extends BaseOrderService {
                     }
                 }
                 if( order.isAsk() ) {
-                    long remainingVolume = order.getVolume().getCount(); // this will be negative
+                    long remainingVolume = order.getUnfilledVolumeCount(); // this will be negative
                     for( Offer bid : b.getBids() ) {
                         if( order.getLimitPrice() != null && order.getLimitPrice().getCount() > bid.getPriceCount() )
                             break;
@@ -69,13 +71,16 @@ public class MockOrderService extends BaseOrderService {
                 }
             }
         }
-        for( Fill fill : fills )
+        for( Fill fill : fills ) {
+            fill.getOrder().addFill(fill);
             context.publish(fill);
+        }
     }
 
 
     @When("select * from OrderUpdate where state.open=false")
     private void completeOrder( OrderUpdate update ) {
+        //noinspection SuspiciousMethodCalls
         pendingOrders.remove(update.getOrder());
     }
 
