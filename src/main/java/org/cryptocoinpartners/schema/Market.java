@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.schema;
 
 import org.cryptocoinpartners.util.PersistUtil;
+import org.cryptocoinpartners.util.RemainderHandler;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -118,11 +119,11 @@ public class Market extends EntityBase
         public DiscreteAmount fromPriceCount(long count) { return priceBuilder.fromCount(count); }
         public DiscreteAmount fromVolumeCount(long count) { return volumeBuilder.fromCount(count); }
 
-        public DiscreteAmount fromPrice(BigDecimal amount, DecimalAmount.RemainderHandler remainderHandler) {
+        public DiscreteAmount fromPrice(BigDecimal amount, RemainderHandler remainderHandler) {
             return priceBuilder.fromValue(amount,remainderHandler);
         }
 
-        public DiscreteAmount fromVolume(BigDecimal amount, DecimalAmount.RemainderHandler remainderHandler) {
+        public DiscreteAmount fromVolume(BigDecimal amount, RemainderHandler remainderHandler) {
             return volumeBuilder.fromValue(amount,remainderHandler);
         }
 

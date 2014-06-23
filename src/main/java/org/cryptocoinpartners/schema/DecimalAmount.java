@@ -1,5 +1,7 @@
 package org.cryptocoinpartners.schema;
 
+import org.cryptocoinpartners.util.RemainderHandler;
+
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Embeddable;

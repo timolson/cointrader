@@ -1,5 +1,7 @@
 package org.cryptocoinpartners.schema;
 
+import org.cryptocoinpartners.util.RemainderHandler;
+
 import java.math.BigDecimal;
 
 
@@ -25,6 +27,11 @@ public class DiscreteAmount extends Amount {
     public static DiscreteAmountBuilder withIBasis(long iBasis) {
         assert iBasis > 0;
         return new DiscreteAmountBuilder(iBasis);
+    }
+
+
+    public static long roundedCountForBasis(BigDecimal amount, double basis) {
+        return amount.divide(new BigDecimal(basis), mc).round(mc).longValue();
     }
 
 
@@ -54,19 +61,19 @@ public class DiscreteAmount extends Amount {
 
 
     /** adds one basis to the value by incrementing the count */
-    public void increment() { count++; }
+    public DiscreteAmount increment() { return new DiscreteAmount(count+1,iBasis); }
 
 
     /** adds to the value by incrementing the count by pips */
-    public void increment( long pips ) { count += pips; }
+    public DiscreteAmount increment( long pips ) { return new DiscreteAmount(count+pips,iBasis); }
 
 
     /** subtracts one basis from the value by decrementing the count */
-    public void decrement() { count++; }
+    public DiscreteAmount decrement() { return new DiscreteAmount(count-1,iBasis); }
 
 
     /** adds to the value by decrementing the count by pips */
-    public void decrement( long pips ) { count -= pips; }
+    public DiscreteAmount decrement( long pips ) { return new DiscreteAmount(count-pips,iBasis); }
 
 
     public DiscreteAmount negate() {

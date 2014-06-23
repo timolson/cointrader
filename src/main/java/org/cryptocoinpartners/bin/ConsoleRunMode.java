@@ -16,6 +16,7 @@ import org.cryptocoinpartners.module.*;
 import org.cryptocoinpartners.module.xchange.XchangeData;
 import org.cryptocoinpartners.module.xchange.XchangeOrderService;
 import org.cryptocoinpartners.schema.Fund;
+import org.cryptocoinpartners.schema.StrategyFundManager;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -103,7 +104,6 @@ public class ConsoleRunMode extends RunMode {
 
     private void init() throws IOException {
         context = Context.create();
-
         context.attach(XchangeData.class);
         context.attach(BasicQuoteService.class);
         context.attach(BasicAccountService.class);
@@ -111,6 +111,8 @@ public class ConsoleRunMode extends RunMode {
             context.attach(XchangeOrderService.class);
         else
             context.attach(MockOrderService.class);
+        StrategyFundManager fundManager = new StrategyFundManager("fake");
+        context.attach(StrategyFundManager.class,fundManager);
 
         Terminal terminal = TerminalFactory.get();
         try {
@@ -132,17 +134,16 @@ public class ConsoleRunMode extends RunMode {
         out = new ConsoleWriter(console);
         context.attach(ConsoleWriter.class,out);
         context.attach(PrintWriter.class,out);
-        notifications = context.attach(ConsoleNotifications.class);
+        context.attach(ConsoleNotifications.class);
+        console.println();
         console.println("Coin Trader Console "+config.getString("project.version"));
         if( live )
             console.println("-= LIVE TRADING MODE =-");
     }
 
 
-    private Fund fund;
     private Context context;
     private ConsoleReader console;
     private ConsoleWriter out;
     private MemoryHistory history;
-    private ConsoleNotifications notifications;
 }

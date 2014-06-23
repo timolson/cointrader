@@ -19,17 +19,20 @@ public class StrategyFundManager extends FundManager {
 
 
     public StrategyFundManager(String moduleName) {
+        super( moduleName+" fund" );
         this.moduleName = moduleName;
     }
 
 
     public StrategyFundManager(String moduleName, Map<String, String> config) {
+        super( moduleName+" Fund" );
         this.moduleName = moduleName;
         this.config = config;
     }
 
 
     public StrategyFundManager(String moduleName, Configuration configuration) {
+        super( moduleName+" Fund" );
         this.moduleName = moduleName;
         this.config = new HashMap<>();
         Iterator keys = configuration.getKeys();

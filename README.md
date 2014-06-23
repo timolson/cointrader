@@ -26,6 +26,8 @@ See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more inform
 The Coin Trader console gives you a peek into the engine.
 
 ```
+$ ./cointrader.sh console
+
 Coin Trader Console 0.3.0-SNAPSHOT
 
 ct> help
@@ -113,6 +115,8 @@ Order has been completely filled.  SpecificOrder{id=3ff02408-8269-4bf9-929f-8d2c
 Order has been completely filled.  GeneralOrder{id=a4664af4-a21d-4b77-a999-bc8a78a8d951, parentOrder=null, listing=BTC.USD, volume=1}
 
 ct> exit
+
+$
 ```
 
 _Coin Trader does not send live orders to exchanges yet.  The above demo uses simulated order filling for testing._

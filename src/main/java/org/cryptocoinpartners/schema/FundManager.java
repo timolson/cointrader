@@ -20,7 +20,7 @@ public class FundManager extends EntityBase {
 
 
     /** for subclasses */
-    protected FundManager(Fund fund) { this.fund = fund; }
+    protected FundManager(String fundName) { this.fund = new Fund(fundName,this); }
 
 
     // JPA

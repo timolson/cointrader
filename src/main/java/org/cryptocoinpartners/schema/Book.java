@@ -159,8 +159,8 @@ public class Book extends MarketData implements Spread {
         public Builder addBid( BigDecimal price, BigDecimal volume ) {
             Market market = book.getMarket();
             book.bids.add(Offer.bid(market, book.getTime(), book.getTimeReceived(),
-                                    Amount.roundedCountForBasis(price, market.getPriceBasis()),
-                                    Amount.roundedCountForBasis(volume, market.getVolumeBasis())));
+                                    DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
+                                    DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
             return this;
         }
 
@@ -168,8 +168,8 @@ public class Book extends MarketData implements Spread {
         public Builder addAsk( BigDecimal price, BigDecimal volume ) {
             Market market = book.getMarket();
             book.asks.add(Offer.ask(market, book.getTime(), book.getTimeReceived(),
-                                    Amount.roundedCountForBasis(price, market.getPriceBasis()),
-                                    Amount.roundedCountForBasis(volume, market.getVolumeBasis())));
+                                    DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
+                                    DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
             return this;
         }
 

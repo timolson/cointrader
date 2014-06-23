@@ -19,6 +19,7 @@ import javax.inject.Inject;
 public class BaseStrategy implements Strategy {
 
 
+    @Inject
     public void setStrategyFundManager(StrategyFundManager strategyFundManager) {
         this.manager = strategyFundManager;
         order = new OrderBuilder(manager.getFund(),orderService);
@@ -30,14 +31,12 @@ public class BaseStrategy implements Strategy {
      * order.create(Listing.BTC_USD,1.00).withLimit(651.538).place();
      * </pre>
      */
-    @Inject
     protected OrderBuilder order;
 
     /** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
     @Inject
     protected QuoteService quotes;
 
-    @Inject
     protected StrategyFundManager manager;
 
     @Inject
