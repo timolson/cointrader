@@ -92,7 +92,9 @@ Just try it :)
 ## `watch/unwatch {listing}`
 When a watch is set, all `Book` and `Trade` data for the given `Listing` is echoed to the console as soon as it arrives.
 
-## `buy/sell {volume} {market} [limit {limitPrice}] [stop {stopPrice}]`
+## `buy/sell`
+`buy/sell {volume} {market} [limit {limitPrice}] [stop {stopPrice}]`
+
 Use this command to place an order.  Currently you must specify the exact `Market` (including the `Exchange`) where the `Order` should be placed.  Stops are not yet supported.  ONLY MOCK EXECUTIONS ARE CURRENTLY PROVIDED.  You can play with this all day long: Coin Trader will not trade live money yet.
 
 ## `csv {filename}`
