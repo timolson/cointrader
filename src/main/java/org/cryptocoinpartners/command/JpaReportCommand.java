@@ -9,6 +9,7 @@ import org.cryptocoinpartners.report.TableOutput;
  * @author Tim Olson
  */
 @CommandName("jpa")
+@SuppressWarnings("UnusedDeclaration")
 public class JpaReportCommand extends ReportCommand {
 
     public String getUsageHelp() {

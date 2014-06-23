@@ -7,6 +7,7 @@ import org.cryptocoinpartners.report.Report;
 /**
  * @author Tim Olson
  */
+@SuppressWarnings("UnusedDeclaration")
 public class DataCommand extends ReportCommand {
 
 

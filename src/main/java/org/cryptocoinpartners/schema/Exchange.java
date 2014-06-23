@@ -12,7 +12,7 @@ import java.util.List;
  * @author Tim Olson
  */
 @Entity
-public class Exchange extends BaseEntity {
+public class Exchange extends EntityBase {
 
 
     public static Exchange forSymbolOrCreate(String symbol) {

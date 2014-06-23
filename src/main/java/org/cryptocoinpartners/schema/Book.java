@@ -253,7 +253,7 @@ public class Book extends MarketData implements Spread {
     // JPA
     protected Book() { }
     // These getters and setters are for conversion in JPA
-    protected @ManyToOne(cascade = CascadeType.PERSIST) Book getParent() { return parent; }
+    protected @ManyToOne Book getParent() { return parent; }
     protected @Lob byte[] getBidDeletionsBlob() { return bidDeletionsBlob; }
     protected @Lob byte[] getAskDeletionsBlob() { return askDeletionsBlob; }
     protected @Lob byte[] getBidInsertionsBlob() { return bidInsertionsBlob; }

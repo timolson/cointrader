@@ -56,6 +56,8 @@ public class ConsoleWriter extends PrintWriter {
             String output = new String(cbuf, off, len);
             try {
                 console.print(output);
+                if( output.contains("\n") )
+                    console.flush();
             }
             catch( IOException e ) {
                 throw new Error("Could not write to console",e);

@@ -15,7 +15,7 @@ import java.util.List;
  * @author Tim Olson
  */
 @Entity
-public class Market extends BaseEntity
+public class Market extends EntityBase
 {
 
     public static Collection<Market> findAll()

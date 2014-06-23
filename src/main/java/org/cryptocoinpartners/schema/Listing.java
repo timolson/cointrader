@@ -15,7 +15,7 @@ import java.util.List;
  */
 @SuppressWarnings( "UnusedDeclaration" )
 @Entity
-public class Listing extends BaseEntity
+public class Listing extends EntityBase
 {
     @ManyToOne(optional = false)
     public Fungible getBase() { return base; }
@@ -79,6 +79,7 @@ public class Listing extends BaseEntity
     
     public static Listing forSymbol( String symbol )
     {
+        symbol = symbol.toUpperCase();
         final int dot = symbol.indexOf('.');
         if( dot == -1 )
             throw new IllegalArgumentException("Invalid Listing symbol: \""+symbol+"\"");

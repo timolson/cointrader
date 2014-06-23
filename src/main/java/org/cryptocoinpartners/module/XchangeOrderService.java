@@ -11,6 +11,7 @@ import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.util.XchangeUtil;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Date;
@@ -21,13 +22,8 @@ import java.util.Date;
  *
  * @author Tim Olson
  */
+@Singleton
 public class XchangeOrderService extends BaseOrderService {
-
-
-    @Inject
-    public XchangeOrderService(Context context) {
-        super(context);
-    }
 
 
     protected void handleSpecificOrder(SpecificOrder specificOrder) {

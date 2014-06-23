@@ -13,6 +13,7 @@ import org.cryptocoinpartners.schema.Market;
 /**
  * @author Tim Olson
  */
+@SuppressWarnings("UnusedDeclaration")
 public class OrderArgsListener extends OrderBaseListener {
 
     public void exitStopPrice(@NotNull OrderParser.StopPriceContext ctx) {

@@ -12,7 +12,7 @@ import java.math.BigDecimal;
  * @author Tim Olson
  */
 @Entity
-public class Stake extends Fungible {
+public class Stake extends EntityBase {
 
 
     public Stake(Owner owner, BigDecimal stake, Fund fund) {

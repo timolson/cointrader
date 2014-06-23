@@ -8,6 +8,7 @@ import javax.inject.Inject;
 /**
  * @author Tim Olson
  */
+@SuppressWarnings("UnusedDeclaration")
 public class CsvArgsListener extends CsvBaseListener {
 
     public void exitStartDate(@NotNull CsvParser.StartDateContext ctx) {

@@ -13,7 +13,7 @@ import java.util.Collection;
  * @author Tim Olson
  */
 @Entity
-public class Fund extends BaseEntity {
+public class Fund extends EntityBase {
 
 
     public @OneToMany Collection<Position> getPositions() { return positions; }

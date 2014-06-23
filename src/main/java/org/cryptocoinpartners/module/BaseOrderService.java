@@ -20,11 +20,6 @@ import java.util.Map;
 public abstract class BaseOrderService implements OrderService {
 
 
-    protected BaseOrderService(Context context) {
-        this.context = context;
-    }
-
-
     public void placeOrder(Order order) {
         updateOrderState(order, OrderState.NEW);
         log.info("Created new order "+order);

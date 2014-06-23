@@ -8,6 +8,7 @@ import org.cryptocoinpartners.util.IoUtil;
 /**
  * @author Tim Olson
  */
+@SuppressWarnings("UnusedDeclaration")
 public class CsvCommand extends AntlrCommandBase {
 
 

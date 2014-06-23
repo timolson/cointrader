@@ -18,7 +18,7 @@ public class Currency extends Fungible {
 
 
     public static Currency forSymbol( String symbol ) {
-        return PersistUtil.queryOne(Currency.class, "select c from Currency c where symbol=?1", symbol);
+        return PersistUtil.queryOne(Currency.class, "select c from Currency c where symbol=?1", symbol );
     }
 
 

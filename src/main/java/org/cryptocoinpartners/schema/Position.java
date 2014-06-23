@@ -12,7 +12,7 @@ import javax.persistence.Transient;
  * @author Tim Olson
  */
 @Entity
-public class Position extends BaseEntity {
+public class Position extends EntityBase {
 
 
     // todo is Account one-to-one with Exchange?  Should we pass in the Account here instead?

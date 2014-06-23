@@ -6,11 +6,13 @@ import org.cryptocoinpartners.util.PersistUtil;
 import org.slf4j.Logger;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 
 /**
  * @author Tim Olson
  */
+@Singleton
 public class SaveData {
 
     @When("select * from MarketData")
@@ -25,9 +27,15 @@ public class SaveData {
             else
                 log.warn("dropped duplicate Trade "+trade);
         }
-        else
+        else {
             // if not a Trade, persist unconditionally
-            PersistUtil.insert(m);
+            try {
+                PersistUtil.insert(m);
+            }
+            catch( Throwable e ) {
+                throw new Error("Could not insert "+m,e);
+            }
+        }
     }
 
 

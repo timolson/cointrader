@@ -3,8 +3,7 @@ package org.cryptocoinpartners.command;
 /**
  * @author Tim Olson
  */
-@CommandName("buy")
 @SuppressWarnings("UnusedDeclaration")
-public class BuyCommand extends OrderCommand {
-    public BuyCommand() { super(false); }
+public class WatchCommand extends WatchCommandBase {
+    public void run() { notifications.watch(listing); }
 }

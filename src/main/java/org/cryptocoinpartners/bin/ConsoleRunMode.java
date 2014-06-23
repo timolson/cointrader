@@ -36,7 +36,7 @@ public class ConsoleRunMode extends RunMode {
                 String line = console.readLine();
                 if( StringUtils.isEmpty(line) )
                     continue;
-                Matcher matcher = Pattern.compile("^(\\w+)(\\s+.*)?$").matcher(line);
+                Matcher matcher = Pattern.compile("^(\\w+)\\s*(.*)$").matcher(line);
                 if( !matcher.matches() ) {
                     out.println("Could not understand command name");
                     continue;
@@ -98,7 +98,6 @@ public class ConsoleRunMode extends RunMode {
         context = Context.create();
 
         context.attach(XchangeData.class);
-        context.attach(TickWindow.class);
         context.attach(BasicQuoteService.class);
         context.attach(BasicAccountService.class);
         context.attach(MockOrderService.class);

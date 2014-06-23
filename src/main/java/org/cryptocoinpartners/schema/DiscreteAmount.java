@@ -142,6 +142,11 @@ public class DiscreteAmount extends Amount {
     }
 
 
+    public String toString() {
+        return asBigDecimal().toString();
+    }
+
+
     /**
      * The invertedBasis is 1/basis.  This is done because we can then use a long integer instead of double, knowing
      * that all bases must be integral factors of 1.<br/>

@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.persistence.EntityManager;
 import javax.persistence.TypedQuery;
 import java.io.IOException;
@@ -29,6 +30,7 @@ import java.util.Set;
 /**
  * @author Tim Olson
  */
+@Singleton
 public class XchangeData {
 
 

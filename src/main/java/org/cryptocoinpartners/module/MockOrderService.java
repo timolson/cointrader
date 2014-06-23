@@ -12,7 +12,7 @@ import java.util.List;
 
 
 /**
- * MockOrderService simulates the Filling of Orders by looking at subsequent Book data for price and volume information.
+ * MockOrderService simulates the Filling of Orders by looking at broadcast Book data for price and volume information.
  *
  * @author Tim Olson
  */
@@ -21,16 +21,11 @@ import java.util.List;
 public class MockOrderService extends BaseOrderService {
 
 
-    @Inject
-    public MockOrderService(Context context) {
-        super(context);
-    }
-
-
     protected void handleSpecificOrder(SpecificOrder specificOrder) {
         if( specificOrder.getStopPrice() != null )
             reject(specificOrder,"Stop prices unsupported");
         pendingOrders.add(specificOrder);
+        updateOrderState(specificOrder,OrderState.PLACED);
     }
 
 
