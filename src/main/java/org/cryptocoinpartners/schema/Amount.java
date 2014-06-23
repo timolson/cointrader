@@ -1,11 +1,11 @@
 package org.cryptocoinpartners.schema;
 
+import org.cryptocoinpartners.util.RemainderHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.math.RoundingMode;
 
 
 /**
@@ -50,29 +50,6 @@ public abstract class Amount implements Comparable<Amount> {
 
 
     public abstract void assertIBasis(long otherIBasis);
-
-
-    /**
-     * This is a delegate interface which is called when there are remainders or errors in a calcualation.
-     */
-    public static abstract class RemainderHandler {
-        /**
-         * @param result    is the final Amount produced by the operation
-         * @param remainder is a leftover amount x where |x| < basis for discrete amounts and |x| ~ double roundoff error for doubles
-         */
-        public void handleRemainder(Amount result, BigDecimal remainder) {
-        }
-
-
-        public RoundingMode getRoundingMode() {
-            return RoundingMode.HALF_EVEN;
-        }
-
-
-        public MathContext getMathContext() {
-            return new MathContext(mc.getPrecision(), getRoundingMode());
-        }
-    }
 
 
     public class BasisError extends Error {

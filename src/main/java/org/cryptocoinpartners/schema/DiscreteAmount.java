@@ -1,5 +1,7 @@
 package org.cryptocoinpartners.schema;
 
+import org.cryptocoinpartners.util.RemainderHandler;
+
 import java.math.BigDecimal;
 
 

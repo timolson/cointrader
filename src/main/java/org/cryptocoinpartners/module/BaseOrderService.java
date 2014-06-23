@@ -4,6 +4,7 @@ import org.cryptocoinpartners.schema.*;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.Remainder;
+import org.cryptocoinpartners.util.RemainderHandler;
 import org.slf4j.Logger;
 
 import javax.inject.Inject;
@@ -83,7 +84,7 @@ public abstract class BaseOrderService implements OrderService {
         // the volume will already be negative for a sell order
         OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(generalOrder.getFund()).create(market, volume);
 
-        DecimalAmount.RemainderHandler priceRemainderHandler = generalOrder.isBid() ? buyHandler : sellHandler;
+        RemainderHandler priceRemainderHandler = generalOrder.isBid() ? buyHandler : sellHandler;
         final DecimalAmount limitPrice = generalOrder.getLimitPrice();
         if( limitPrice != null ) {
             DiscreteAmount discreteLimit = limitPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
@@ -168,12 +169,12 @@ public abstract class BaseOrderService implements OrderService {
 
 
     // rounding depends on whether it is a buy or sell order.  we round to the "best" price
-    private static final DecimalAmount.RemainderHandler sellHandler = new Amount.RemainderHandler() {
+    private static final RemainderHandler sellHandler = new RemainderHandler() {
         public RoundingMode getRoundingMode() { return RoundingMode.CEILING; }
     };
 
 
-    private static final DecimalAmount.RemainderHandler buyHandler = new Amount.RemainderHandler() {
+    private static final RemainderHandler buyHandler = new RemainderHandler() {
         public RoundingMode getRoundingMode() { return RoundingMode.FLOOR; }
     };
 
