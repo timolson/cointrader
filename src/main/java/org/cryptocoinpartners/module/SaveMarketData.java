@@ -13,7 +13,7 @@ import javax.inject.Singleton;
  * @author Tim Olson
  */
 @Singleton
-public class SaveData {
+public class SaveMarketData {
 
     @When("select * from MarketData")
     public void handleMarketData( MarketData m ) {

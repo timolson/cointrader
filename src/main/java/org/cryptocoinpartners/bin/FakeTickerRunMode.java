@@ -3,7 +3,7 @@ package org.cryptocoinpartners.bin;
 import com.beust.jcommander.Parameters;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.MockTicker;
-import org.cryptocoinpartners.module.SaveData;
+import org.cryptocoinpartners.module.SaveMarketData;
 
 
 /**
@@ -15,7 +15,7 @@ public class FakeTickerRunMode extends RunMode {
     public void run() {
         Context context = Context.create();
         context.attach(MockTicker.class);
-        context.attach(SaveData.class);
+        context.attach(SaveMarketData.class);
     }
 
 }

@@ -76,22 +76,29 @@ public class ConsoleNotifications {
         switch( update.getState() ) {
             case NEW:
                 out.println("Sending order " + order);
+                break;
             case PLACED:
                 out.println("Order has been placed. " + order);
+                break;
             case PARTFILLED:
                 out.println("Order is partially filled " + order);
+                break;
             case FILLED:
                 out.println("Order has been completely filled.  " + order);
+                break;
             case CANCELLING:
                 out.println("Cancelling order " + order);
+                break;
             case CANCELLED:
                 out.println("Cancelled order " + order);
+                break;
             case REJECTED:
                 out.println("Order REJECTED as unfillable. " + order);
+                break;
             case EXPIRED:
                 out.println("Order has expired.  " + order);
+                break;
         }
-        out.flush();
     }
 
 

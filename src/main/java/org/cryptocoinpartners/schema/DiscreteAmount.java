@@ -75,12 +75,30 @@ public class DiscreteAmount extends Amount {
 
 
     public Amount plus(Amount o) {
-        return null;
+        // todo
+        throw new Error("unimplemented");
     }
 
 
     public Amount minus(Amount o) {
-        return null;
+        // todo
+        throw new Error("unimplemented");
+    }
+
+
+    public Amount times(Amount o, RemainderHandler remainderHandler) {
+        // todo shouldn't this always maintain the basis?
+        if( o instanceof DiscreteAmount ) {
+            DiscreteAmount discreteOther = (DiscreteAmount) o;
+            if( iBasis == discreteOther.iBasis )
+                return new DiscreteAmount(count*discreteOther.count,iBasis);
+        }
+        return new DecimalAmount(asBigDecimal().multiply(o.asBigDecimal()));
+    }
+
+
+    public Amount dividedBy(Amount o, RemainderHandler remainderHandler) {
+        throw new Error("unimplemented");
     }
 
 

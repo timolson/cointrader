@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema;
 import org.joda.time.Instant;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -27,6 +28,18 @@ public abstract class Order extends Event {
     public GeneralOrder getParentOrder() { return parentOrder; }
 
 
+    @Transient
+    public abstract boolean isBid();
+
+
+    @Transient
+    public boolean isAsk() { return !isBid(); }
+
+
+    @ManyToOne(optional = false)
+    public Fund getFund() { return fund; } 
+
+    
     public enum FillType {
         GOOD_TIL_CANCELLED, // Order stays open until explicitly cancelled or expired
         GTC_OR_MARGIN_CAP, // Order stays open until explicitly cancelled, expired, or the order is filled to the capacity of the currently available Positions
@@ -34,17 +47,13 @@ public abstract class Order extends Event {
     }
 
 
+    public FillType getFillType() { return fillType; }
+
+
     public enum MarginType {
         USE_MARGIN, // trade up to the limit of credit in the quote fungible
         CASH_ONLY, // do not trade more than the available cash-on-hand (quote fungible)
     }
-
-
-    @ManyToOne(optional = false)
-    public Fund getFund() { return fund; } 
-
-    
-    public FillType getFillType() { return fillType; }
 
 
     public MarginType getMarginType() { return marginType; }
@@ -63,13 +72,15 @@ public abstract class Order extends Event {
 
 
     @OneToMany
-    public Collection<Fill> getFills() { return fills; }
+    public Collection<Fill> getFills() {
+        if( fills == null )
+            fills = new ArrayList<>();
+        return fills;
+    }
 
 
     public void addFill( Fill fill ) {
-        if( fills == null )
-            fills = new ArrayList<>();
-        fills.add(fill);
+        getFills().add(fill);
     }
 
 
@@ -81,12 +92,20 @@ public abstract class Order extends Event {
     public abstract boolean isFilled();
 
 
-    @Transient
-    public abstract boolean isBid();
-
-
-    @Transient
-    public boolean isAsk() { return !isBid(); }
+    public DecimalAmount averageFillPrice() {
+        if( !hasFills() )
+            return null;
+        BigDecimal sumProduct = BigDecimal.ZERO;
+        BigDecimal volume = BigDecimal.ZERO;
+        Collection<Fill> fills = getFills();
+        for( Fill fill : fills ) {
+            BigDecimal priceBd = fill.getPrice().asBigDecimal();
+            BigDecimal volumeBd = fill.getVolume().asBigDecimal();
+            sumProduct = sumProduct.add(priceBd.multiply(volumeBd));
+            volume = volume.add(volumeBd);
+        }
+        return new DecimalAmount(sumProduct.divide(volume,Amount.mc));
+    }
 
 
     // JPA

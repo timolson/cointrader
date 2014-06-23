@@ -114,17 +114,20 @@ public class SpecificOrder extends Order {
 
 
     public String toString() {
-        return "SpecificOrder{" +
+        String s = "SpecificOrder{" +
                        "id=" + getId() +
                        ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) +
                        ", market=" + market +
                        ", volumeCount=" + volumeCount +
                        ", limitPriceCount=" + limitPriceCount +
-                       ", stopPriceCount=" + stopPriceCount +
-                       '}';
+                       ", stopPriceCount=" + stopPriceCount;
+        if( hasFills() )
+            s += ", averageFillPrice=" + averageFillPrice();
+        s += '}';
+        return s;
     }
 
-    
+
     // JPA
     protected long getVolumeCount() { return volumeCount; }
     /** 0 if no limit is set */

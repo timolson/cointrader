@@ -34,6 +34,18 @@ public class DecimalAmount extends Amount {
     }
 
 
+    public Amount times(Amount o, RemainderHandler remainderHandler) {
+        // todo
+        throw new Error("unimplemented");
+    }
+
+
+    public Amount dividedBy(Amount o, RemainderHandler remainderHandler) {
+        // todo
+        throw new Error("unimplemented");
+    }
+
+
     public int compareTo(@SuppressWarnings("NullableProblems") Amount o) {
         if( o instanceof DecimalAmount ) {
             DecimalAmount decimalAmount = (DecimalAmount) o;
@@ -80,6 +92,9 @@ public class DecimalAmount extends Amount {
         remainderHandler.handleRemainder(newAmount,remainder);
         return newAmount;
     }
+
+
+    public String toString() { return bd.toString(); }
 
 
     // JPA

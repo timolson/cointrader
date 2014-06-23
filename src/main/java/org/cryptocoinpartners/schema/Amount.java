@@ -22,8 +22,12 @@ import java.math.RoundingMode;
  */
 public abstract class Amount implements Comparable<Amount> {
 
+    public static final MathContext mc = MathContext.DECIMAL128;  //  IEEE 128-bit decimal, scale 34
 
-    /** only when absolutely necessary */
+
+    /**
+     * only when absolutely necessary
+     */
     public abstract double asDouble();
 
 
@@ -32,7 +36,7 @@ public abstract class Amount implements Comparable<Amount> {
 
     public DiscreteAmount toBasis(double newBasis, RemainderHandler remainderHandler) {
         long newIBasis = DiscreteAmount.invertBasis(newBasis);
-        return toIBasis(newIBasis,remainderHandler);
+        return toIBasis(newIBasis, remainderHandler);
     }
 
 
@@ -49,7 +53,7 @@ public abstract class Amount implements Comparable<Amount> {
 
 
     public static long roundedCountForBasis(BigDecimal amount, double basis) {
-        return amount.divide(new BigDecimal(basis),mc).round(mc).longValue();
+        return amount.divide(new BigDecimal(basis), mc).round(mc).longValue();
     }
 
 
@@ -58,59 +62,77 @@ public abstract class Amount implements Comparable<Amount> {
      */
     public static abstract class RemainderHandler {
         /**
-         * @param result is the final Amount produced by the operation
+         * @param result    is the final Amount produced by the operation
          * @param remainder is a leftover amount x where |x| < basis for discrete amounts and |x| ~ double roundoff error for doubles
          */
-        public void handleRemainder(Amount result, BigDecimal remainder) {}
+        public void handleRemainder(Amount result, BigDecimal remainder) {
+        }
 
-        public RoundingMode getRoundingMode() { return RoundingMode.HALF_EVEN; }
+
+        public RoundingMode getRoundingMode() {
+            return RoundingMode.HALF_EVEN;
+        }
+
 
         public MathContext getMathContext() {
-            return new MathContext(mc.getPrecision(),getRoundingMode());
+            return new MathContext(mc.getPrecision(), getRoundingMode());
         }
     }
 
 
-    public class BasisError extends Error {}
+    public class BasisError extends Error {
+    }
 
 
     public abstract boolean isPositive();
+
     public abstract boolean isZero();
+
     public abstract boolean isNegative();
 
     public abstract Amount negate();
 
-    public abstract Amount plus( Amount o );
-    public abstract Amount minus( Amount o );
+    public abstract Amount plus(Amount o);
+
+    public abstract Amount minus(Amount o);
 
 
-    public DecimalAmount times( BigDecimal o, RemainderHandler remainderHandler ) {
-        return new DecimalAmount(asBigDecimal().multiply(o,remainderHandler.getMathContext()));
+    public DecimalAmount times(BigDecimal o, RemainderHandler remainderHandler) {
+        return new DecimalAmount(asBigDecimal().multiply(o, remainderHandler.getMathContext()));
     }
 
-    public DecimalAmount dividedBy( BigDecimal o, RemainderHandler remainderHandler )  {
-        BigDecimal[] divideAndRemainder = asBigDecimal().divideAndRemainder(o,remainderHandler.getMathContext());
+
+    public DecimalAmount dividedBy(BigDecimal o, RemainderHandler remainderHandler) {
+        BigDecimal[] divideAndRemainder = asBigDecimal().divideAndRemainder(o, remainderHandler.getMathContext());
         DecimalAmount result = new DecimalAmount(divideAndRemainder[0]);
-        remainderHandler.handleRemainder(result,divideAndRemainder[1]);
+        remainderHandler.handleRemainder(result, divideAndRemainder[1]);
         return result;
     }
 
-    public Amount times( int o, RemainderHandler remainderHandler ) {
-        return times(new BigDecimal(o),remainderHandler);
-    }
-    public Amount dividedBy( int o, RemainderHandler remainderHandler ) {
-        return dividedBy(new BigDecimal(o),remainderHandler);
-    }
-    public Amount times( double o, RemainderHandler remainderHandler ) {
-        return times(new BigDecimal(o),remainderHandler);
-    }
-    public Amount dividedBy( double o, RemainderHandler remainderHandler ) {
-        return dividedBy(new BigDecimal(o),remainderHandler);
+
+    public Amount times(int o, RemainderHandler remainderHandler) {
+        return times(new BigDecimal(o), remainderHandler);
     }
 
+
+    public Amount dividedBy(int o, RemainderHandler remainderHandler) {
+        return dividedBy(new BigDecimal(o), remainderHandler);
+    }
+
+
+    public Amount times(double o, RemainderHandler remainderHandler) {
+        return times(new BigDecimal(o), remainderHandler);
+    }
+
+
+    public Amount dividedBy(double o, RemainderHandler remainderHandler) {
+        return dividedBy(new BigDecimal(o), remainderHandler);
+    }
+
+
+    public abstract Amount times(Amount o, RemainderHandler remainderHandler);
+    public abstract Amount dividedBy(Amount o, RemainderHandler remainderHandler);
 
 
     protected static final Logger log = LoggerFactory.getLogger(Amount.class);
-
-    protected static final MathContext mc = MathContext.DECIMAL128;
 }

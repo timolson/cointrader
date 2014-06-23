@@ -2,7 +2,7 @@ package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.Parameters;
 import org.cryptocoinpartners.module.Context;
-import org.cryptocoinpartners.module.SaveData;
+import org.cryptocoinpartners.module.SaveMarketData;
 import org.cryptocoinpartners.module.xchangedata.XchangeData;
 
 
@@ -15,6 +15,6 @@ public class SaveDataRunMode extends RunMode {
     public void run() {
         Context context = Context.create();
         context.attach(XchangeData.class);
-        context.attach(SaveData.class);
+        context.attach(SaveMarketData.class);
     }
 }

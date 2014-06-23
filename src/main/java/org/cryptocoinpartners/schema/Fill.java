@@ -46,8 +46,8 @@ public class Fill extends RemoteEvent {
         return "Fill{" +
                        "order=" + order.getId() +
                        ", market=" + market +
-                       ", price=" + getPrice().asBigDecimal() + " (" + priceCount + ")" +
-                       ", volume=" + getVolume().asBigDecimal() + " (" + volumeCount + ")" +
+                       ", price=" + getPrice() +
+                       ", volume=" + getVolume() +
                        '}';
     }
 
