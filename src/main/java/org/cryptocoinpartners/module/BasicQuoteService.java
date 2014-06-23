@@ -4,6 +4,7 @@ import org.cryptocoinpartners.schema.*;
 import org.cryptocoinpartners.service.QuoteService;
 
 import javax.annotation.Nullable;
+import javax.inject.Singleton;
 import java.util.*;
 
 
@@ -13,25 +14,26 @@ import java.util.*;
  * @author Tim Olson
  */
 @SuppressWarnings("UnusedDeclaration")
+@Singleton
 public class BasicQuoteService implements QuoteService {
     
     public Trade getLastTrade(Market market) {
-        return null;
+        return lastTradeByMarket.get(market.getSymbol());
     }
 
 
     public Trade getLastTrade(Listing listing) {
-        return null;
+        return lastTradeByListing.get(listing.getSymbol());
     }
 
 
     public Book getLastBook(Market market) {
-        return null;
+        return lastBookByMarket.get(market.getSymbol());
     }
 
 
     public Book getLastBook(Listing listing) {
-        return null;
+        return lastBookByListing.get(listing.getSymbol());
     }
 
 
@@ -44,21 +46,39 @@ public class BasicQuoteService implements QuoteService {
     /**
      * @return null if no Books for the given listing have been received yet
      */
-    public @Nullable Book getBestBidForListing( Listing listing ) {
-        return bestBidByMarket.get(listing.getSymbol());
+    public @Nullable Offer getBestBidForListing(Listing listing) {
+        Offer bestBid = null;
+        for( Market market : marketsByListing.get(listing.getSymbol()) ) {
+            Book book = bestBidByMarket.get(market.getSymbol());
+            Offer testBestBid = book.getBestBid();
+            //noinspection ConstantConditions
+            if( bestBid == null || 
+                        (testBestBid != null && testBestBid.getPrice().compareTo(bestBid.getPrice()) > 0) )
+                bestBid = testBestBid;
+        }
+        return bestBid;
     }
     
     
     /**
      * @return null if no Books for the given listing have been received yet
      */
-    public @Nullable Book getBestAskForListing( Listing listing ) {
-        return bestAskByMarket.get(listing.getSymbol());
+    public @Nullable Offer getBestAskForListing(Listing listing) {
+        Offer bestAsk = null;
+        for( Market market : marketsByListing.get(listing.getSymbol()) ) {
+            Book book = bestAskByMarket.get(market.getSymbol());
+            Offer testBestAsk = book.getBestAsk();
+            //noinspection ConstantConditions
+            if( bestAsk == null || 
+                        (testBestAsk != null && testBestAsk.getPrice().compareTo(bestAsk.getPrice()) < 0) )
+                bestAsk = testBestAsk;
+        }
+        return bestAsk;
     }
     
     
     @When("select * from Book")
-    void recordBook( Book b ) {
+    private void recordBook( Book b ) {
         Market market = b.getMarket();
         
         String listingSymbol = market.getListing().getSymbol();
@@ -90,7 +110,7 @@ public class BasicQuoteService implements QuoteService {
 
 
     @When("select * from Trade")
-    void recordTrade( Trade t ) {
+    private void recordTrade( Trade t ) {
         Market market = t.getMarket();
         handleMarket(market);
         

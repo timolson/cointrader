@@ -125,6 +125,18 @@ public class OrderBuilder {
         }
 
 
+        public GeneralOrderBuilder withLimitPrice(BigDecimal price) {
+            order.setLimitPrice(DecimalAmount.of(price));
+            return this;
+        }
+
+
+        public GeneralOrderBuilder withStopPrice(BigDecimal price) {
+            order.setStopPrice(DecimalAmount.of(price));
+            return this;
+        }
+
+
         public GeneralOrder getOrder() { return order; }
         
         

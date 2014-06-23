@@ -1,16 +1,15 @@
 package org.cryptocoinpartners.schema;
 
-import javax.persistence.Transient;
-
-
 /**
  * @author Mike Olson
  * @author Tim Olson
  */
 public enum OrderState
 { 
-    /** the Order is created but it has not been sent to an Exchange yet.  Subsequent states may be: PLACED, CANCELLING, EXPIRED, REJECTED */
-    NEW, 
+    /** the Order is created but it has not been sent to an Exchange yet.  Subsequent states may be: ROUTED, PLACED, CANCELLING, EXPIRED, REJECTED */
+    NEW,
+    /** Indicates that a GeneralOrder has been broken into SpecificOrders which are ready to be placed.  Subsequent states may be: PLACED, CANCELLING, EXPIRED, REJECTED */
+    ROUTED,
     /** At least part of the Order has been routed to an Exchange.  Subsequent states may be: PARTFILLED, FILLED, CANCELLING, EXPIRED, REJECTED  */
     PLACED,
     /** Some of the requested volume has been filled, but not all of it.  Subsequent states may be: FILLED, CANCELLING, EXPIRED */
@@ -24,12 +23,14 @@ public enum OrderState
     /** If the cancellation was due to expiry, this is the terminal state instead of CANCELLED */
     EXPIRED,
     /** The Order cannot be filled as specified.  This is a terminal state.  */
-    REJECTED;
+    REJECTED,
+
+    ;
 
 
-    /** return true iff NEW || PLACED || PARTFILLED */
+    /** return true iff NEW || ROUTED || PLACED || PARTFILLED */
     public boolean isOpen() {
-        return this == OrderState.NEW || this == OrderState.PLACED || this == OrderState.PARTFILLED;
+        return this == OrderState.NEW || this == OrderState.ROUTED || this == OrderState.PLACED || this == OrderState.PARTFILLED;
     }
 
 }

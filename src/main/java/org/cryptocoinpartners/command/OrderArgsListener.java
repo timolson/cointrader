@@ -7,6 +7,7 @@ import javax.inject.Inject;
 import java.math.BigDecimal;
 
 import org.cryptocoinpartners.command.Parse;
+import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 
 
@@ -37,6 +38,12 @@ public class OrderArgsListener extends OrderBaseListener {
     public void exitMarket(@NotNull OrderParser.MarketContext ctx) {
         Market market = Parse.market(ctx.Market());
         command.setMarket(market);
+    }
+
+
+    public void exitListing(@NotNull OrderParser.ListingContext ctx) {
+        Listing listing = Parse.listing(ctx.Listing());
+        command.setListing(listing);
     }
 
 

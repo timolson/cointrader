@@ -75,7 +75,10 @@ public class ConsoleNotifications {
         Order order = update.getOrder();
         switch( update.getState() ) {
             case NEW:
-                out.println("Sending order " + order);
+                out.println("Creating order " + order);
+                break;
+            case ROUTED:
+                out.println("Order has been placed. " + order);
                 break;
             case PLACED:
                 out.println("Order has been placed. " + order);
@@ -97,6 +100,9 @@ public class ConsoleNotifications {
                 break;
             case EXPIRED:
                 out.println("Order has expired.  " + order);
+                break;
+            default:
+                out.println("Unknown order state: "+update.getState());
                 break;
         }
     }

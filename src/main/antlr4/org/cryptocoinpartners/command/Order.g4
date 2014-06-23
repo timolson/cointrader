@@ -4,12 +4,14 @@ import Base;
 
 args:
 
-volume market ('stop' stopPrice)? ('limit' limitPrice)?
+volume (market|listing) ('stop' stopPrice)? ('limit' limitPrice)?
 
 ;
 
 
 market : Market;
+
+listing : Listing;
 
 volume : Amount;
 

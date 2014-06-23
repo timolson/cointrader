@@ -36,11 +36,13 @@ public interface QuoteService {
 
 
     /** returns the Book which offers the best bid price.  Could be null if no data for listing has been received yet. */
-    public @Nullable Book getBestBidForListing( Listing listing );
+    public @Nullable
+    org.cryptocoinpartners.schema.Offer getBestBidForListing(Listing listing);
 
 
     /** returns the Book which offers the best ask price.  Could be null if no data for listing has been received yet. */
-    public @Nullable Book getBestAskForListing( Listing listing );
+    public @Nullable
+    org.cryptocoinpartners.schema.Offer getBestAskForListing(Listing listing);
 
 
 }

@@ -63,15 +63,14 @@ public abstract class BaseOrderService implements OrderService {
 
 
     protected void handleGeneralOrder(GeneralOrder generalOrder) {
-        Book b = generalOrder.isBid() ? quotes.getBestBidForListing(generalOrder.getListing())
-                                      : quotes.getBestAskForListing(generalOrder.getListing());
-        if( b == null ) {
+        Offer offer = generalOrder.isBid() ? quotes.getBestBidForListing(generalOrder.getListing())
+                                           : quotes.getBestAskForListing(generalOrder.getListing());
+        if( offer == null ) {
             log.warn("No offers on the book for "+generalOrder.getListing());
-            reject(generalOrder, "Stop-limit orders are not supported");
+            reject(generalOrder, "No recent book data for "+generalOrder.getListing()+" so GeneralOrder routing is disabled");
+            return;
         }
-        @SuppressWarnings("ConstantConditions")
-        Market market = b.getMarket();
-        @SuppressWarnings("ConstantConditions")
+        Market market = offer.getMarket();
         SpecificOrder specificOrder = convertGeneralOrderToSpecific(generalOrder, market);
         log.info("Routing order "+generalOrder+" to "+ market.getExchange().getSymbol());
         handleSpecificOrder(specificOrder);
@@ -117,6 +116,54 @@ public abstract class BaseOrderService implements OrderService {
             oldState = OrderState.NEW;
         orderStateMap.put(order,state);
         context.publish(new OrderUpdate(order, oldState, state));
+        if( order.getParentOrder() != null )
+            updateParentOrderState(order.getParentOrder(),order,state);
+    }
+
+
+    private void updateParentOrderState(GeneralOrder order, Order childOrder, OrderState childOrderState) {
+        OrderState oldState = orderStateMap.get(order);
+        switch( childOrderState ) {
+            case NEW:
+                break;
+            case ROUTED:
+                break;
+            case PLACED:
+                break;
+            case PARTFILLED:
+                updateOrderState(order,OrderState.PARTFILLED);
+                break;
+            case FILLED:
+                if( order.isFilled() )
+                    updateOrderState(order,OrderState.FILLED);
+                break;
+            case CANCELLING:
+                break;
+            case CANCELLED:
+                if( oldState == OrderState.CANCELLING ) {
+                    boolean fullyCancelled = true;
+                    for( SpecificOrder child : order.getChildren() ) {
+                        if( orderStateMap.get(child).isOpen() ) {
+                            fullyCancelled = false;
+                            break;
+                        }
+                    }
+                    if( fullyCancelled )
+                        updateOrderState(order,OrderState.CANCELLED);
+                }
+                break;
+            case REJECTED:
+                reject(order,"Child order was rejected");
+                break;
+            case EXPIRED:
+                if( !childOrder.getExpiration().isEqual(order.getExpiration()) )
+                    throw new Error("Child order expirations must match parent order expirations");
+                updateOrderState(order,OrderState.EXPIRED);
+                break;
+            default:
+                log.warn("Unknown order state: "+childOrderState);
+                break;
+        }
     }
 
 

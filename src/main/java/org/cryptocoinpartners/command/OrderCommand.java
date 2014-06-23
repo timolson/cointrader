@@ -36,6 +36,14 @@ public abstract class OrderCommand extends AntlrCommandBase {
 
 
     public void run() {
+        if( market != null )
+            placeSpecificOrder();
+        else
+            placeGeneralOrder();
+    }
+
+
+    protected void placeSpecificOrder() {
         OrderBuilder.SpecificOrderBuilder builder =
                 new OrderBuilder(fund, orderService).create(market, volume);
         if( limit != null ) {
@@ -46,6 +54,17 @@ public abstract class OrderCommand extends AntlrCommandBase {
             long stopCount = DecimalAmount.roundedCountForBasis(stop, market.getPriceBasis());
             builder = builder.withStopPriceCount(stopCount);
         }
+        Order order = builder.place();
+    }
+
+
+    protected void placeGeneralOrder() {
+        OrderBuilder.GeneralOrderBuilder builder =
+                new OrderBuilder(fund, orderService).create(listing, volume);
+        if( limit != null )
+            builder = builder.withLimitPrice(limit);
+        if( stop != null )
+            builder = builder.withStopPrice(stop);
         Order order = builder.place();
     }
 
@@ -83,7 +102,10 @@ public abstract class OrderCommand extends AntlrCommandBase {
     public void setVolume(BigDecimal volume) { this.volume = volume; }
 
     public Market getMarket() { return market; }
-    public void setMarket(Market market) { this.market = market; }
+    public void setMarket(Market market) { this.market = market; this.listing = null; }
+
+    public Listing getListing() { return listing; }
+    public void setListing(Listing listing) { this.listing = listing; this.market = null; }
 
     public BigDecimal getLimit() { return limit; }
     public void setLimit(BigDecimal limit) { this.limit = limit; }
@@ -100,6 +122,7 @@ public abstract class OrderCommand extends AntlrCommandBase {
     private Fund fund;
     private BigDecimal volume;
     private Market market;
+    private Listing listing;
     private BigDecimal limit;
     private BigDecimal stop;
     private boolean isSell;
