@@ -35,7 +35,7 @@ public abstract class OrderPrice extends Temporal {
     public OrderPrice(Instant time, @Nullable String remoteKey, Market market,
                       @Nullable BigDecimal price, @Nullable BigDecimal volume) {
         super(time);
-        this.priceCount = DecimalAmount.roundedCountForBasis(price, market.getPriceBasis());
+        this.priceCount = DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis());
     }
 
 

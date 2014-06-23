@@ -35,8 +35,8 @@ public abstract class PriceData extends MarketData {
     public PriceData(Instant time, @Nullable String remoteKey, Market market,
                      @Nullable BigDecimal price, @Nullable BigDecimal volume) {
         super(time, remoteKey, market);
-        this.priceCount = Amount.roundedCountForBasis(price,market.getPriceBasis());
-        this.volumeCount = Amount.roundedCountForBasis(volume, market.getVolumeBasis());
+        this.priceCount = DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis());
+        this.volumeCount = DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis());
     }
 
 
@@ -58,8 +58,8 @@ public abstract class PriceData extends MarketData {
     public PriceData(Instant time, Instant timeReceived, @Nullable String remoteKey, Market market,
                      @Nullable BigDecimal price, @Nullable BigDecimal volume) {
         super(time, timeReceived, remoteKey, market);
-        this.priceCount = DecimalAmount.roundedCountForBasis(price, market.getPriceBasis());
-        this.volumeCount = DecimalAmount.roundedCountForBasis(volume, market.getVolumeBasis());
+        this.priceCount = DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis());
+        this.volumeCount = DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis());
     }
 
 

@@ -47,11 +47,11 @@ public abstract class OrderCommand extends AntlrCommandBase {
         OrderBuilder.SpecificOrderBuilder builder =
                 new OrderBuilder(fund, orderService).create(market, volume);
         if( limit != null ) {
-            long limitCount = DecimalAmount.roundedCountForBasis(limit, market.getPriceBasis());
+            long limitCount = DiscreteAmount.roundedCountForBasis(limit, market.getPriceBasis());
             builder = builder.withLimitPriceCount(limitCount);
         }
         if( stop != null ) {
-            long stopCount = DecimalAmount.roundedCountForBasis(stop, market.getPriceBasis());
+            long stopCount = DiscreteAmount.roundedCountForBasis(stop, market.getPriceBasis());
             builder = builder.withStopPriceCount(stopCount);
         }
         Order order = builder.place();

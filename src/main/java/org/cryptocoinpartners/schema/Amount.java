@@ -52,11 +52,6 @@ public abstract class Amount implements Comparable<Amount> {
     public abstract void assertIBasis(long otherIBasis);
 
 
-    public static long roundedCountForBasis(BigDecimal amount, double basis) {
-        return amount.divide(new BigDecimal(basis), mc).round(mc).longValue();
-    }
-
-
     /**
      * This is a delegate interface which is called when there are remainders or errors in a calcualation.
      */

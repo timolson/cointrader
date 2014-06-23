@@ -19,7 +19,10 @@ public class Fund extends EntityBase {
     public @OneToMany Collection<Position> getPositions() { return positions; }
 
 
-    public Fund(String name) { this.name = name; }
+    public Fund(String name, FundManager manager) {
+        this.name = name;
+        this.manager = manager;
+    }
 
 
     public String getName() { return name; }
@@ -29,7 +32,7 @@ public class Fund extends EntityBase {
     public Collection<Stake> getStakes() { return stakes; }
 
 
-    @ManyToOne
+    @ManyToOne(optional = false)
     public FundManager getManager() { return manager; }
 
 

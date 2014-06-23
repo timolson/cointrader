@@ -17,7 +17,7 @@ public class Owner extends FundManager {
 
 
     public Owner(String name) {
-        super(new Fund(name+"'s deposit account"));
+        super(name+"'s deposit account");
         this.name = name;
         stakes.add(new Stake(this, BigDecimal.ONE, getFund())); // 100% Stake in the deposit fund
     }

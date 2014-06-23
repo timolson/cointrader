@@ -1,8 +1,10 @@
 package org.cryptocoinpartners.module;
 
 import org.apache.commons.configuration.Configuration;
+import org.cryptocoinpartners.command.ConsoleWriter;
 import org.cryptocoinpartners.schema.*;
 
+import javax.inject.Inject;
 import java.math.BigDecimal;
 
 
@@ -19,17 +21,15 @@ import java.math.BigDecimal;
 public class DemoStrategy extends SimpleStatefulStrategy {
 
 
-    public void initModule(Context context, Configuration config) {
+    @Inject
+    public DemoStrategy(Context context, Configuration config) {
         String marketSymbol = config.getString("demostrategy.market","BITFINEX:BTC.USD");
         market = Market.forSymbol(marketSymbol);
         if( market == null )
             throw new Error("Could not find Market for symbol "+marketSymbol);
         BigDecimal volumeBD = config.getBigDecimal("demostrategy.volume",
                                                    new BigDecimal("0.00000100"));// 100 satoshis
-        volumeCount = DecimalAmount.roundedCountForBasis(volumeBD, market.getVolumeBasis());
-        // set our orders $2.00 above/below the current best offers
-        BigDecimal spreadBD = config.getBigDecimal("demostrategy.spread", new BigDecimal("2.00"));
-        spreadCount = DecimalAmount.roundedCountForBasis(spreadBD, market.getPriceBasis());
+        volumeCount = DiscreteAmount.roundedCountForBasis(volumeBD, market.getVolumeBasis());
     }
 
 
@@ -51,7 +51,8 @@ public class DemoStrategy extends SimpleStatefulStrategy {
     protected OrderBuilder.CommonOrderBuilder buildEntryOrder() {
         if( bestAsk == null )
             return null;
-        return order.create(market,volumeCount).withLimitPriceCount(bestAsk.getPriceCount()-spreadCount);
+        DiscreteAmount limitPrice = bestBid.getPrice().decrement();
+        return order.create(market,volumeCount).withLimitPrice(limitPrice);
     }
 
 
@@ -59,13 +60,14 @@ public class DemoStrategy extends SimpleStatefulStrategy {
     protected OrderBuilder.CommonOrderBuilder buildExitOrder(Order entryOrder) {
         if( bestBid == null )
             return null;
-        return order.create(market,-volumeCount).withLimitPriceCount(bestBid.getPriceCount() + spreadCount);
+        DiscreteAmount limitPrice = bestAsk.getPrice().increment();
+        return order.create(market,-volumeCount).withLimitPrice(limitPrice);
     }
 
 
+    private @Inject ConsoleWriter out;
     private Offer bestBid;
     private Offer bestAsk;
     private Market market;
     private long volumeCount;
-    private long spreadCount;
 }
