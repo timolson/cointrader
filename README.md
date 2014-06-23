@@ -31,8 +31,10 @@ Coin Trader Console 0.3.0-SNAPSHOT
 ct> help
 Type "help {command}" for more detailed information.
 Available commands:
+    • attach
     • buy
     • csv
+    • currencies
     • data
     • exchanges
     • exit
@@ -41,17 +43,37 @@ Available commands:
     • listings
     • markets
     • sell
+    • set
+    • unset
     • unwatch
     • watch
     • watches
 
-ct> data
+ct> data summary
 +------------------+------------+-----------+
 |      Market      | Num Trades | Num Books |
 +------------------+------------+-----------+
-|     BTCE:BTC.USD |       3975 |      2336 |
-| BITFINEX:BTC.USD |       1599 |      2303 |
-| BITSTAMP:BTC.USD |        869 |       786 |
+|     BTCE:BTC.USD |       8149 |      2671 |
+| BITFINEX:BTC.USD |       3509 |      2551 |
+| BITSTAMP:BTC.USD |       1344 |       901 |
+| BITFINEX:DRK.USD |       1000 |        21 |
+| BITFINEX:DRK.BTC |       1000 |        21 |
+| BITFINEX:LTC.USD |       1000 |        22 |
+| BITFINEX:LTC.BTC |       1000 |        22 |
+| BTCCHINA:BTC.CNY |        134 |        31 |
+| BTCCHINA:LTC.CNY |        110 |        31 |
+| BTCCHINA:LTC.BTC |        102 |        31 |
+|     BTER:BTC.CNY |         47 |         7 |
+|     BTER:LTC.BTC |         38 |        84 |
+|    BTER:DOGE.CNY |         26 |         7 |
+|     BTER:NXT.CNY |         26 |         6 |
+|     BTER:DRK.CNY |         23 |         6 |
+|    BTER:DOGE.BTC |         23 |         6 |
+|     BTER:LTC.CNY |         21 |         7 |
+|     BTER:XCP.CNY |         20 |         6 |
+|     BTER:DRK.BTC |         19 |         6 |
+|     BTER:XCP.BTC |         18 |        12 |
+|     BTER:NXT.USD |          2 |         6 |
 +------------------+------------+-----------+
 
 ct> watch btc.usd
@@ -81,8 +103,18 @@ Order is partially filled SpecificOrder{id=d5a2ff79-0eca-445d-a3b3-75d1e80265a7,
 Filled order d5a2ff79-0eca-445d-a3b3-75d1e80265a7: Fill{order=d5a2ff79-0eca-445d-a3b3-75d1e80265a7, market=BITFINEX:BTC.USD, price=585.58, volume=7.88513305}
 Order has been completely filled.  SpecificOrder{id=d5a2ff79-0eca-445d-a3b3-75d1e80265a7, parentOrder=null, market=BITFINEX:BTC.USD, volumeCount=1000000000, averageFillPrice=585.57788513305}
 
+ct> buy 1 btc.usd
+Creating order GeneralOrder{id=a4664af4-a21d-4b77-a999-bc8a78a8d951, parentOrder=null, listing=BTC.USD, volume=1}
+Order has been placed. SpecificOrder{id=3ff02408-8269-4bf9-929f-8d2ca060f6fc, parentOrder=a4664af4-a21d-4b77-a999-bc8a78a8d951, market=BITSTAMP:BTC.USD, volumeCount=100000000}
+
+ct>
+Filled order 3ff02408-8269-4bf9-929f-8d2ca060f6fc: Fill{order=3ff02408-8269-4bf9-929f-8d2ca060f6fc, market=BITSTAMP:BTC.USD, price=584.99, volume=1}
+Order has been completely filled.  SpecificOrder{id=3ff02408-8269-4bf9-929f-8d2ca060f6fc, parentOrder=a4664af4-a21d-4b77-a999-bc8a78a8d951, market=BITSTAMP:BTC.USD, volumeCount=100000000, averageFillPrice=584.99}
+Order has been completely filled.  GeneralOrder{id=a4664af4-a21d-4b77-a999-bc8a78a8d951, parentOrder=null, listing=BTC.USD, volume=1}
+
 ct> exit
 ```
+
 _Coin Trader does not send live orders to exchanges yet.  The above demo uses simulated order filling for testing._
 
 #### Automated Trading
