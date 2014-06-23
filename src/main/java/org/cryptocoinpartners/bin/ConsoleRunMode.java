@@ -30,7 +30,7 @@ import java.util.regex.Pattern;
 @Parameters(commandNames = {"console","terminal"}, commandDescription = "run in interactive mode")
 public class ConsoleRunMode extends RunMode {
 
-    @Parameter(names = "--live", description = "Enables LIVE trading mode")
+    @Parameter(names = "--live", description = "Enables LIVE trading mode (NOT RECOMMENDED)")
     public boolean live = false;
 
 

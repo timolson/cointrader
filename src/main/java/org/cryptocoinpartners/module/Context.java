@@ -102,7 +102,7 @@ public class Context {
     public Object attach(String name) {
         Class<?> c = findModuleClass(name);
         if( c == null )
-            throw new Error("Could not find service implementation named " + name);
+            throw new Error("Could not find module named " + name + " in module.path");
         //noinspection RedundantCast
         return attach(c, (Configuration) null);
     }
@@ -111,7 +111,7 @@ public class Context {
     public Object attach(String name, Configuration config) {
         Class<?> c = findModuleClass(name);
         if( c == null )
-            throw new Error("Could not find service implementation named " + name);
+            throw new Error("Could not find module named " + name + " in module.path");
         return attach(c, config);
     }
 

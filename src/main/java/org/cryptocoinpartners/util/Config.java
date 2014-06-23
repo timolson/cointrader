@@ -49,7 +49,7 @@ public class Config {
         buildtimeConfig = new PropertiesConfiguration(buildtimeProps);
         combined = buildConfig(Collections.<AbstractConfiguration>emptyList());
         if( log.isDebugEnabled() )
-            log.debug("Combined Configuration:\n"+ configAsString(combined));
+            log.debug("Combined Configuration:\n"+ asString(combined));
     }
 
 
@@ -66,7 +66,7 @@ public class Config {
     public static CombinedConfiguration module( Collection<? extends AbstractConfiguration> moduleConfigs ) {
         CombinedConfiguration result = buildConfig(moduleConfigs);
         if( log.isDebugEnabled() )
-            log.debug("Module Configuration:\n"+configAsString(result));
+            log.debug("Module Configuration:\n"+ asString(result));
         return result;
     }
 
@@ -100,7 +100,7 @@ public class Config {
     }
 
 
-    private static String configAsString(CombinedConfiguration configuration) {
+    public static String asString(Configuration configuration) {
         StringWriter out = new StringWriter();
         PrintWriter pout = new PrintWriter(out);
         ConfigurationUtils.dump(configuration, pout);
@@ -116,6 +116,7 @@ public class Config {
             if( !line.contains("password") && !line.contains("secret") )
                 outLines.add(line);
         }
+        Collections.sort(outLines);
         return StringUtils.join(outLines,"\n");
     }
 
