@@ -82,6 +82,7 @@ Order has been completely filled.  SpecificOrder{id=d5a2ff79-0eca-445d-a3b3-75d1
 
 ct> exit
 ```
+_Coin Trader does not send live orders to exchanges yet.  The above demo uses simulated order filling for testing._
 
 #### Automated Trading
 
