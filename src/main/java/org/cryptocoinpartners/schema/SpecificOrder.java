@@ -1,5 +1,7 @@
 package org.cryptocoinpartners.schema;
 
+import org.cryptocoinpartners.util.Remainder;
+
 import javax.annotation.Nullable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
@@ -28,7 +30,7 @@ public class SpecificOrder extends Order {
 
     public SpecificOrder(Market market, Amount volume) {
         this.market = market;
-        this.volumeCount = volume.toBasis(market.getVolumeBasis(),Remainder.DISCARD).getCount();
+        this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
     }
 
 

@@ -1,5 +1,7 @@
-package org.cryptocoinpartners.schema;
+package org.cryptocoinpartners.util;
 
+
+import org.cryptocoinpartners.schema.Amount;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

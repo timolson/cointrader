@@ -3,6 +3,7 @@ package org.cryptocoinpartners.module;
 import org.cryptocoinpartners.schema.*;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.QuoteService;
+import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
 
 import javax.inject.Inject;

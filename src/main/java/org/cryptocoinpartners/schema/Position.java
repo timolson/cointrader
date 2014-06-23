@@ -1,5 +1,7 @@
 package org.cryptocoinpartners.schema;
 
+import org.cryptocoinpartners.util.Remainder;
+
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToOne;
@@ -20,7 +22,7 @@ public class Position extends EntityBase {
         volume.assertBasis(fungible.getBasis());
         this.fund = fund;
         this.exchange = exchange;
-        this.volumeCount = volume.toBasis(fungible.getBasis(),Remainder.TO_HOUSE).getCount();
+        this.volumeCount = volume.toBasis(fungible.getBasis(), Remainder.TO_HOUSE).getCount();
         this.fungible = fungible;
     }
 
