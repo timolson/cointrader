@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.command;
 
+import org.apache.commons.lang.StringUtils;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.util.Injector;
 import org.cryptocoinpartners.util.ReflectionUtil;
@@ -15,7 +16,7 @@ import java.util.*;
  */
 public abstract class CommandBase implements Command {
 
-    public String getUsageHelp() { return null; }
+    public String getUsageHelp() { return StringUtils.join(getCommandNames(getClass()),"|"); }
 
 
     public void parse(String commandArguments) { }
@@ -56,23 +57,26 @@ public abstract class CommandBase implements Command {
             int modifiers = commandClass.getModifiers();
             if( Modifier.isAbstract(modifiers) || Modifier.isInterface(modifiers) )
                 continue;
-
-            String[] commandNames;
-            String className;
-            CommandName commandNameAnn = commandClass.getAnnotation(CommandName.class);
-            if( commandNameAnn != null ) {
-                commandNames = commandNameAnn.value();
-            }
-            else {
-                className = commandClass.getSimpleName();
-                if( !className.endsWith("Command") ) {
-                    throw new Error("If the name of your subclass of AntlrCommandBase doesn't end with \"Command\" then you need to use the AntlrCommandBase(String) constructor to pass in the name of your command");
-                }
-                commandNames = new String[]{className.substring(0,className.length() - "Command".length()).toLowerCase()};
-            }
-
-            for( String commandName : commandNames )
+            for( String commandName : getCommandNames(commandClass) )
                 commandClassesByName.put(commandName.toLowerCase(),commandClass);
         }
+    }
+
+
+    private static String[] getCommandNames(Class<? extends Command> commandClass) {
+        String[] commandNames;
+        String className;
+        CommandName commandNameAnn = commandClass.getAnnotation(CommandName.class);
+        if( commandNameAnn != null ) {
+            commandNames = commandNameAnn.value();
+        }
+        else {
+            className = commandClass.getSimpleName();
+            if( !className.endsWith("Command") ) {
+                throw new Error("If the name of your subclass of CommandBase doesn't end with \"Command\" then you need to use the @CommandName(name) annotation to declare the name of your command");
+            }
+            commandNames = new String[]{className.substring(0,className.length() - "Command".length()).toLowerCase()};
+        }
+        return commandNames;
     }
 }

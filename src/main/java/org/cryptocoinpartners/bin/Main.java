@@ -95,6 +95,7 @@ public class Main
             parameterParser.usage();
             System.exit(7001);
         }
+        PersistUtil.init();
         try {
             runMode.run();
         }

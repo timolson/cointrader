@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.bin;
 
+import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import jline.Terminal;
 import jline.TerminalFactory;
@@ -12,7 +13,8 @@ import org.cryptocoinpartners.command.CommandBase;
 import org.cryptocoinpartners.command.ConsoleWriter;
 import org.cryptocoinpartners.command.ParseError;
 import org.cryptocoinpartners.module.*;
-import org.cryptocoinpartners.module.xchangedata.XchangeData;
+import org.cryptocoinpartners.module.xchange.XchangeData;
+import org.cryptocoinpartners.module.xchange.XchangeOrderService;
 import org.cryptocoinpartners.schema.Fund;
 
 import java.io.IOException;
@@ -28,11 +30,16 @@ import java.util.regex.Pattern;
 @Parameters(commandNames = {"console","terminal"}, commandDescription = "run in interactive mode")
 public class ConsoleRunMode extends RunMode {
 
+    @Parameter(names = "--live", description = "Enables LIVE trading mode")
+    public boolean live = false;
+
+
     public void run() {
         try {
             init();
             //noinspection InfiniteLoopStatement
             while(true) {
+                console.println();
                 String line = console.readLine();
                 if( StringUtils.isEmpty(line) )
                     continue;
@@ -100,7 +107,10 @@ public class ConsoleRunMode extends RunMode {
         context.attach(XchangeData.class);
         context.attach(BasicQuoteService.class);
         context.attach(BasicAccountService.class);
-        context.attach(MockOrderService.class);
+        if( live )
+            context.attach(XchangeOrderService.class);
+        else
+            context.attach(MockOrderService.class);
 
         Terminal terminal = TerminalFactory.get();
         try {
@@ -124,6 +134,8 @@ public class ConsoleRunMode extends RunMode {
         context.attach(PrintWriter.class,out);
         notifications = context.attach(ConsoleNotifications.class);
         console.println("Coin Trader Console "+config.getString("project.version"));
+        if( live )
+            console.println("-= LIVE TRADING MODE =-");
     }
 
 

@@ -2,6 +2,7 @@ package org.cryptocoinpartners.util;
 
 import org.apache.commons.configuration.*;
 import org.apache.commons.configuration.tree.OverrideCombiner;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,7 +111,12 @@ public class Config {
         catch( IOException e ) {
             throw new Error(e);
         }
-        return out.toString();
+        ArrayList<String> outLines = new ArrayList<>();
+        for( String line : out.toString().split("\n") ) {
+            if( !line.contains("password") && !line.contains("secret") )
+                outLines.add(line);
+        }
+        return StringUtils.join(outLines,"\n");
     }
 
 

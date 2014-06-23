@@ -1,4 +1,4 @@
-package org.cryptocoinpartners.module.xchangedata;
+package org.cryptocoinpartners.module.xchange;
 
 import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.marketdata.Trades;

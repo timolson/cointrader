@@ -3,7 +3,7 @@ package org.cryptocoinpartners.bin;
 import com.beust.jcommander.Parameters;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.SaveMarketData;
-import org.cryptocoinpartners.module.xchangedata.XchangeData;
+import org.cryptocoinpartners.module.xchange.XchangeData;
 
 
 /**

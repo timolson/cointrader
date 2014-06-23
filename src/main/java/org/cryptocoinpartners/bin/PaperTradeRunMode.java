@@ -6,7 +6,7 @@ import org.cryptocoinpartners.module.BasicAccountService;
 import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.MockOrderService;
-import org.cryptocoinpartners.module.xchangedata.XchangeData;
+import org.cryptocoinpartners.module.xchange.XchangeData;
 import org.cryptocoinpartners.schema.StrategyFundManager;
 
 import java.util.List;

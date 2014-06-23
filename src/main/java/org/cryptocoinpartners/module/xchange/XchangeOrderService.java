@@ -1,14 +1,17 @@
-package org.cryptocoinpartners.module;
+package org.cryptocoinpartners.module.xchange;
 
 import com.xeiam.xchange.Exchange;
+import com.xeiam.xchange.NotYetImplementedForExchangeException;
 import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.Order;
 import com.xeiam.xchange.dto.trade.LimitOrder;
 import com.xeiam.xchange.dto.trade.MarketOrder;
 import com.xeiam.xchange.service.polling.PollingTradeService;
+import org.cryptocoinpartners.module.BaseOrderService;
 import org.cryptocoinpartners.schema.OrderState;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.util.XchangeUtil;
+import org.slf4j.Logger;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -32,7 +35,7 @@ public class XchangeOrderService extends BaseOrderService {
         if( specificOrder.getLimitPrice() != null && specificOrder.getStopPrice() != null )
             reject(specificOrder,"Stop-limit orders are not supported");
         Order.OrderType orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
-        BigDecimal tradeableVolume = specificOrder.getVolume().asBigDecimal();
+        BigDecimal tradeableVolume = specificOrder.getVolume().abs().asBigDecimal();
         CurrencyPair currencyPair = XchangeUtil.getCurrencyPairForListing(specificOrder.getMarket().getListing());
         String id = specificOrder.getId().toString();
         Date timestamp = specificOrder.getTime().toDate();
@@ -46,7 +49,7 @@ public class XchangeOrderService extends BaseOrderService {
             }
             catch( IOException e ) {
                 e.printStackTrace();
-                // todo retry until expiration
+                // todo retry until expiration or reject as invalid
             }
         }
         else {
@@ -57,11 +60,18 @@ public class XchangeOrderService extends BaseOrderService {
                 updateOrderState(specificOrder, OrderState.PLACED);
             }
             catch( IOException e ) {
-                e.printStackTrace();
+                // todo retry until expiration or reject as invalid
+                log.warn("Could not place this order: "+specificOrder,e);
+            }
+            catch( NotYetImplementedForExchangeException e ) {
+                log.warn("XChange adapter " + exchange + " does not support this order: "+specificOrder,e);
+                reject(specificOrder, "XChange adapter " + exchange + " does not support this order");
             }
         }
 
     }
 
 
+    @Inject
+    Logger log;
 }

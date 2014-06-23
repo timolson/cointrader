@@ -225,7 +225,7 @@ The Trader relies heavily on Esper as the hub of the architecture.  The 'org.cry
 WARNING: any object which has been published to Esper MUST NOT BE CHANGED after being published.  All events are "in the past" and should not be touched after creation. 
 
 # Context Loading
-Modules are simply classes `attach()`ed to a `Context`.  Modules perform any task which needs to publish or listen for events.  The `XchangeMarketData` module, for example, initializes the XChange framework and begins collection of all available market data.  The `SaveData` module detects all `MarketData` events published to the `Context` and persists them using `PersistUtil`.  The `save-data` command works like this:
+Modules are simply classes `attach()`ed to a `Context`.  Modules perform any task which needs to publish or listen for events.  The `XchangeMarketData` module, for example, initializes the XChange framework and begins collection of all available market data.  The `SaveMarketData` module detects all `MarketData` events published to the `Context` and persists them using `PersistUtil`.  The `save-data` command works like this:
 
 ## `@When` binding
 When a class is attached to a `Context`, it has an instance created using the `Context`'s `Injector`, and any method on this instance which uses the `@When` annotation will be triggered for every `Event` row which triggers that `@When` clause, like this:

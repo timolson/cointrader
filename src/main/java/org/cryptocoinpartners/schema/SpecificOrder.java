@@ -120,9 +120,11 @@ public class SpecificOrder extends Order {
                        "id=" + getId() +
                        ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) +
                        ", market=" + market +
-                       ", volumeCount=" + volumeCount +
-                       ", limitPriceCount=" + limitPriceCount +
-                       ", stopPriceCount=" + stopPriceCount;
+                       ", volumeCount=" + volumeCount;
+        if( limitPriceCount != 0 )
+            s += ", limitPriceCount=" + limitPriceCount;
+        if( stopPriceCount != 0 )
+            s += ", stopPriceCount=" + stopPriceCount;
         if( hasFills() )
             s += ", averageFillPrice=" + averageFillPrice();
         s += '}';

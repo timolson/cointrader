@@ -84,6 +84,8 @@ public abstract class Amount implements Comparable<Amount> {
     }
 
 
+    public Amount abs() { return isNegative() ? negate() : this; }
+
     public abstract boolean isPositive();
 
     public abstract boolean isZero();
