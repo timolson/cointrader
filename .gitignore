@@ -14,3 +14,4 @@ cointrader.jar
 trader.jar
 *.csv
 .DS_Store
+gen
