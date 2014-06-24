@@ -19,7 +19,8 @@ Coin Trader's future goals include:
 * Library of quantitative indicators
 * Web console & graphing
 
-See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more information, or jump to [Setup](https://github.com/timolson/cointrader/wiki/).
+See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more information, or jump to [Setup](https://github.com/timolson/cointrader/wiki/).  
+There's no mailing list, so just open a new issue for anything, help or just discussion.  Tag it with "Question" and I'll follow through with you.
 
 #### Console Demo
 
