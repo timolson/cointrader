@@ -4,26 +4,26 @@ Coin Trader is a Java-based backend for trading cryptocurrencies, released under
 
 * Connectivity to many exchanges
 * Control console (text)
+* Basic order routing
 * Simulated trading
 * Schema and persistence
 * CSV output of market data
 * Ad-hoc table reports
 * Modular infrastructure
 
-Coin Trader's future includes:
-* Live order execution
-* Basic order routing
-* Flexible data output
-* Basic indicators
+Coin Trader's future goals include:
 * Accounting and reconciliation
 * Backtesting
+* Live order execution
+* Flexible data output
+* Library of quantitative indicators
 * Web console & graphing
 
 See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more information, or jump to [Setup](https://github.com/timolson/cointrader/wiki/).
 
 #### Console Demo
 
-The Coin Trader console gives you a peek into the engine.
+The Coin Trader Console gives you a peek into the engine.
 
 ```
 $ ./cointrader.sh console
