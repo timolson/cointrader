@@ -136,7 +136,7 @@ To implement signals and automated strategies, you connect [Esper](http://esper.
 void checkMovingAverage( double avg )
 {
   if( avg > trigger )
-    esper.publish( new MyIndicator(5.31) );
+    context.publish( new MyIndicator(5.31) );
 }
 
 @When( "select * from MyIndicator where myIndicatorValue > 5.0" )
