@@ -19,8 +19,12 @@ Coin Trader's future goals include:
 * Library of quantitative indicators
 * Web console & graphing
 
+#### [Setup](https://github.com/timolson/cointrader/wiki/Setup)
+Coin Trader requires Java JDK 1.7, Maven, and a SQL database (MySQL default).  
+[Setup Instructions](https://github.com/timolson/cointrader/wiki/Setup)
+
 #### Support
-See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more information, or jump to [Setup](https://github.com/timolson/cointrader/wiki/).  
+See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more information, or jump to .  
 There's no mailing list, so open a new issue for anything, help or just discussion.  Tag it with "Question" and I'll follow through with you.
 
 #### Console Demo
