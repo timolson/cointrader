@@ -19,7 +19,7 @@ Coin Trader's future goals include:
 * Library of quantitative indicators
 * Web console & graphing
 
-#### [Setup](https://github.com/timolson/cointrader/wiki/Setup)
+#### Setup
 Coin Trader requires Java JDK 1.7, Maven, and a SQL database (MySQL default).  
 [Setup Instructions](https://github.com/timolson/cointrader/wiki/Setup)
 
