@@ -1,7 +1,6 @@
 package org.cryptocoinpartners.module;
 
 import org.apache.commons.configuration.Configuration;
-import org.cryptocoinpartners.command.ConsoleWriter;
 import org.cryptocoinpartners.schema.*;
 
 import javax.inject.Inject;
@@ -65,7 +64,6 @@ public class DemoStrategy extends SimpleStatefulStrategy {
     }
 
 
-    private @Inject ConsoleWriter out;
     private Offer bestBid;
     private Offer bestAsk;
     private Market market;
