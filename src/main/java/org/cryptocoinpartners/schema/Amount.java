@@ -52,6 +52,11 @@ public abstract class Amount implements Comparable<Amount> {
     public abstract void assertIBasis(long otherIBasis);
 
 
+    public String toString() {
+        return asBigDecimal().toString();
+    }
+
+
     public class BasisError extends Error {
     }
 
