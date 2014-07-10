@@ -109,7 +109,7 @@ public class SpecificOrder extends Order {
         setTime(generalOrder.getTime());
         setEmulation(generalOrder.isEmulation());
         setExpiration(generalOrder.getExpiration());
-        setFund(generalOrder.getFund());
+        setPortfolio(generalOrder.getPortfolio());
         setMarginType(generalOrder.getMarginType());
         setPanicForce(generalOrder.getPanicForce());
     }

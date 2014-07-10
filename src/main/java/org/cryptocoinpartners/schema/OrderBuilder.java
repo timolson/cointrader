@@ -13,14 +13,14 @@ import java.math.BigDecimal;
 public class OrderBuilder {
 
 
-    public OrderBuilder(Fund fund) {
-        this.fund = fund;
+    public OrderBuilder(Portfolio portfolio) {
+        this.portfolio = portfolio;
     }
 
 
-    public OrderBuilder(Fund fund, OrderService orderService) {
+    public OrderBuilder(Portfolio portfolio, OrderService orderService) {
         this.orderService = orderService;
-        this.fund = fund;
+        this.portfolio = portfolio;
     }
 
 
@@ -194,5 +194,5 @@ public class OrderBuilder {
 
 
     private OrderService orderService;
-    private Fund fund;
+    private Portfolio portfolio;
 }

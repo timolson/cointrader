@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 
 
 /**
- * Connects an Owner to a Fund
+ * Connects an Owner to a Portfolio
  *
  * @author Tim Olson
  */
@@ -15,10 +15,10 @@ import java.math.BigDecimal;
 public class Stake extends EntityBase {
 
 
-    public Stake(Owner owner, BigDecimal stake, Fund fund) {
+    public Stake(Owner owner, BigDecimal stake, Portfolio portfolio) {
         this.owner = owner;
         this.stake = stake;
-        this.fund = fund;
+        this.portfolio = portfolio;
     }
 
 
@@ -29,7 +29,7 @@ public class Stake extends EntityBase {
     public BigDecimal getStake() { return stake; }
 
     @ManyToOne
-    public Fund getFund() { return fund; }
+    public Portfolio getPortfolio() { return portfolio; }
 
 
     // JPA
@@ -40,10 +40,10 @@ public class Stake extends EntityBase {
             throw new IllegalArgumentException("stake must be in range [0,1]: "+stake);
         this.stake = stake;
     }
-    protected void setFund(Fund fund) { this.fund = fund; }
+    protected void setPortfolio(Portfolio portfolio) { this.portfolio = portfolio; }
 
 
     private Owner owner;
     private BigDecimal stake;
-    private Fund fund;
+    private Portfolio portfolio;
 }

@@ -1,5 +1,10 @@
 package org.cryptocoinpartners.service;
 
+import org.cryptocoinpartners.schema.Exchange;
+import org.cryptocoinpartners.schema.FeeStructure;
+import org.cryptocoinpartners.schema.Portfolio;
+
+
 /**
  * AccountService provides information about Positions in external Accounts
  *
@@ -7,5 +12,16 @@ package org.cryptocoinpartners.service;
  */
 @Service
 public interface AccountService {
-    // todo
+
+    /** returns all Positions in all Exchanges */
+    public Portfolio getPositions();
+
+
+    /** returns all Postions for the given Exchange */
+    public Portfolio getPositions( Exchange e );
+
+
+    ///** returns a fee calculator for the given exchange */
+    //public FeeStructure getFeeStructure( Exchange e );
+
 }

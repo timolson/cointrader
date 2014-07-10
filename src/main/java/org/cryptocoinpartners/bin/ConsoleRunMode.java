@@ -13,10 +13,10 @@ import org.cryptocoinpartners.command.CommandBase;
 import org.cryptocoinpartners.command.ConsoleWriter;
 import org.cryptocoinpartners.command.ParseError;
 import org.cryptocoinpartners.module.*;
+import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.module.xchange.XchangeData;
 import org.cryptocoinpartners.module.xchange.XchangeOrderService;
-import org.cryptocoinpartners.schema.Fund;
-import org.cryptocoinpartners.schema.StrategyFundManager;
+import org.cryptocoinpartners.schema.StrategyPortfolioManager;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -106,13 +106,13 @@ public class ConsoleRunMode extends RunMode {
         context = Context.create();
         context.attach(XchangeData.class);
         context.attach(BasicQuoteService.class);
-        context.attach(BasicAccountService.class);
+        context.attach(XchangeAccountService.class);
         if( live )
             context.attach(XchangeOrderService.class);
         else
             context.attach(MockOrderService.class);
-        StrategyFundManager fundManager = new StrategyFundManager("fake");
-        context.attach(StrategyFundManager.class,fundManager);
+        StrategyPortfolioManager portfolioManager = new StrategyPortfolioManager("fake");
+        context.attach(StrategyPortfolioManager.class,portfolioManager);
 
         Terminal terminal = TerminalFactory.get();
         try {

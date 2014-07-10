@@ -45,7 +45,7 @@ public abstract class OrderCommand extends AntlrCommandBase {
 
     protected void placeSpecificOrder() {
         OrderBuilder.SpecificOrderBuilder builder =
-                new OrderBuilder(fund, orderService).create(market, volume);
+                new OrderBuilder(portfolio, orderService).create(market, volume);
         if( limit != null ) {
             long limitCount = DiscreteAmount.roundedCountForBasis(limit, market.getPriceBasis());
             builder = builder.withLimitPriceCount(limitCount);
@@ -60,7 +60,7 @@ public abstract class OrderCommand extends AntlrCommandBase {
 
     protected void placeGeneralOrder() {
         OrderBuilder.GeneralOrderBuilder builder =
-                new OrderBuilder(fund, orderService).create(listing, volume);
+                new OrderBuilder(portfolio, orderService).create(listing, volume);
         if( limit != null )
             builder = builder.withLimitPrice(limit);
         if( stop != null )
@@ -95,8 +95,8 @@ public abstract class OrderCommand extends AntlrCommandBase {
     }
 
 
-    public Fund getFund() { return fund; }
-    public void setFund(Fund fund) { this.fund = fund; }
+    public Portfolio getPortfolio() { return portfolio; }
+    public void setPortfolio(Portfolio portfolio) { this.portfolio = portfolio; }
 
     public BigDecimal getVolume() { return volume; }
     public void setVolume(BigDecimal volume) { this.volume = volume; }
@@ -119,7 +119,7 @@ public abstract class OrderCommand extends AntlrCommandBase {
 
     @Inject
     OrderService orderService;
-    private Fund fund;
+    private Portfolio portfolio;
     private BigDecimal volume;
     private Market market;
     private Listing listing;

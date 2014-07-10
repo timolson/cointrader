@@ -18,15 +18,19 @@ import java.util.Set;
 public interface QuoteService {
 
     /** returns the most recent Trade of the specified Market */
-    public Trade getLastTrade( Market market);
+    @Nullable
+    public Trade getLastTrade( Market market );
     
     /** returns the most recent trade of the specified Listing on any Exchange */
+    @Nullable
     public Trade getLastTrade( Listing listing );
 
     /** returns the most recent Book of the specified Market */
+    @Nullable
     public Book getLastBook( Market market);
     
     /** returns the most recent trade of the specified Listing on any Exchange */
+    @Nullable
     public Book getLastBook( Listing listing );
 
 

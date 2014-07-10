@@ -32,6 +32,8 @@ public abstract class BaseOrderService implements OrderService {
         else if( order instanceof SpecificOrder ) {
             SpecificOrder specificOrder = (SpecificOrder) order;
             handleSpecificOrder(specificOrder);
+            // todo reserve a Position to pay for the order
+            //specificOrder.getPortfolio().reserve(specificOrder,estimateCost(specificOrder));
         }
     }
 
@@ -75,6 +77,8 @@ public abstract class BaseOrderService implements OrderService {
         SpecificOrder specificOrder = convertGeneralOrderToSpecific(generalOrder, market);
         log.info("Routing order "+generalOrder+" to "+ market.getExchange().getSymbol());
         handleSpecificOrder(specificOrder);
+        // todo reserve a Position to pay for the order
+        //specificOrder.getPortfolio().reserve(specificOrder,estimateCost(specificOrder));
     }
 
 
@@ -82,7 +86,7 @@ public abstract class BaseOrderService implements OrderService {
         DiscreteAmount volume = generalOrder.getVolume().toBasis(market.getVolumeBasis(), Remainder.DISCARD);
 
         // the volume will already be negative for a sell order
-        OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(generalOrder.getFund()).create(market, volume);
+        OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(generalOrder.getPortfolio()).create(market, volume);
 
         RemainderHandler priceRemainderHandler = generalOrder.isBid() ? buyHandler : sellHandler;
         final DecimalAmount limitPrice = generalOrder.getLimitPrice();
@@ -179,11 +183,8 @@ public abstract class BaseOrderService implements OrderService {
     };
 
 
-    @Inject
-    protected Context context;
-    @Inject
-    private Logger log;
+    @Inject protected Context context;
+    @Inject private Logger log;
     private Map<Order, OrderState> orderStateMap = new HashMap<>();
-    @Inject
-    private QuoteService quotes;
+    @Inject private QuoteService quotes;
 }

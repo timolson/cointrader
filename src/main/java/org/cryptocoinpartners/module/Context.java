@@ -17,7 +17,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.cryptocoinpartners.schema.Event;
-import org.cryptocoinpartners.schema.StrategyFundManager;
+import org.cryptocoinpartners.schema.StrategyPortfolioManager;
 import org.cryptocoinpartners.service.Service;
 import org.cryptocoinpartners.util.Config;
 import org.cryptocoinpartners.util.Injector;
@@ -258,17 +258,17 @@ public class Context {
 
 
     /**
-     * Use this to attach a StrategyFundManager to the Context
+     * Use this to attach a StrategyPortfolioManager to the Context
      */
     @Deprecated
-    public void loadStrategyFundManager(final StrategyFundManager strategyFundManager) {
+    public void loadStrategyPortfolioManager(final StrategyPortfolioManager strategyPortfolioManager) {
         // todo tim how to bind instance-specific configuration on the StrategyHandler?
         /*
-        final StrategyHandler managerBinder = new StrategyHandler(strategyFundManager);
-        MapConfiguration config = new MapConfiguration(strategyFundManager.getConfig());
+        final StrategyHandler managerBinder = new StrategyHandler(strategyPortfolioManager);
+        MapConfiguration config = new MapConfiguration(strategyPortfolioManager.getConfig());
         attach(managerBinder);
         if( !managerBinder.foundStrategy ) {
-            log.warn("Module "+strategyFundManager.getModuleName()+" does not contain a Strategy class");
+            log.warn("Module "+strategyPortfolioManager.getModuleName()+" does not contain a Strategy class");
         }
         */
     }

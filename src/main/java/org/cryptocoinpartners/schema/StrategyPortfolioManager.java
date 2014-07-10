@@ -10,29 +10,29 @@ import java.util.Map;
 
 
 /**
- * StrategyFundManager represents an instance of a Strategy with a specific configuration and its own deposit Fund.
+ * StrategyPortfolioManager represents an instance of a Strategy with a specific configuration and its own deposit Portfolio.
  *
  * @author Tim Olson
  */
 @Entity
-public class StrategyFundManager extends FundManager {
+public class StrategyPortfolioManager extends PortfolioManager {
 
 
-    public StrategyFundManager(String moduleName) {
-        super( moduleName+" fund" );
+    public StrategyPortfolioManager(String moduleName) {
+        super( moduleName+" portfolio" );
         this.moduleName = moduleName;
     }
 
 
-    public StrategyFundManager(String moduleName, Map<String, String> config) {
-        super( moduleName+" Fund" );
+    public StrategyPortfolioManager(String moduleName, Map<String, String> config) {
+        super( moduleName+" Portfolio" );
         this.moduleName = moduleName;
         this.config = config;
     }
 
 
-    public StrategyFundManager(String moduleName, Configuration configuration) {
-        super( moduleName+" Fund" );
+    public StrategyPortfolioManager(String moduleName, Configuration configuration) {
+        super( moduleName+" Portfolio" );
         this.moduleName = moduleName;
         this.config = new HashMap<>();
         Iterator keys = configuration.getKeys();
@@ -52,7 +52,7 @@ public class StrategyFundManager extends FundManager {
 
 
     // JPA
-    protected StrategyFundManager() { }
+    protected StrategyPortfolioManager() { }
     protected void setModuleName(String moduleName) { this.moduleName = moduleName; }
     protected void setConfig(Map<String, String> config) { this.config = config; }
 

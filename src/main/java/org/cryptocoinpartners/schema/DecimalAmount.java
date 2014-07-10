@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 @Embeddable
 public class DecimalAmount extends Amount {
 
+    public static final DecimalAmount ZERO = new DecimalAmount(BigDecimal.ZERO);
 
     public static DecimalAmount of(Amount amount) { return new DecimalAmount(amount.asBigDecimal()); }
     public static DecimalAmount of(BigDecimal bigDecimal) { return new DecimalAmount(bigDecimal); }
