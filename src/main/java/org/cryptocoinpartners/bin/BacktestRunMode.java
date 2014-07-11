@@ -4,6 +4,8 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import org.cryptocoinpartners.module.Context;
 
+import java.util.List;
+
 
 /**
  * @author Tim Olson
@@ -13,7 +15,7 @@ import org.cryptocoinpartners.module.Context;
 public class BacktestRunMode extends RunMode {
 
     @Parameter(description = "Strategy name to load", arity = 1, required = true)
-    public String strategyName;
+    public List<String> strategyNames;
 
     public void run() {
         Context context = Context.create();
