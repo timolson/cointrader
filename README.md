@@ -129,7 +129,7 @@ _Coin Trader does not send live orders to exchanges yet.  The above demo uses si
 
 #### Automated Trading
 
-To implement signals and automated strategies, you connect [Esper](http://esper.codehaus.org/) event queries to Java code like this:
+To implement signals and automated strategies, you connect [Esper](http://esper.codehaus.org/tutorials/tutorial/tutorial.html) event queries to Java code like this:
 
 ```java
 @When( "select avg(priceAsDouble) from Trade.win:time(30 sec)" )
