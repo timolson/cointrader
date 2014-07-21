@@ -78,7 +78,7 @@ public class ReflectionUtil {
 
     public static Reflections getCommandReflections() {
         if( commandReflections == null ) {
-            List<String> paths = Config.getPathProperty("command.path");
+            List<String> paths = ConfigUtil.getPathProperty("command.path");
             Set<URL> urls = new HashSet<>();
             for( String path : paths )
                 urls.addAll(ClasspathHelper.forPackage(path));

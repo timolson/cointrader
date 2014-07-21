@@ -20,10 +20,14 @@ public class BaseStrategy implements Strategy {
 
 
     @Inject
-    public void setStrategyPortfolioManager(StrategyPortfolioManager strategyPortfolioManager) {
-        this.manager = strategyPortfolioManager;
-        order = new OrderBuilder(manager.getPortfolio(),orderService);
+    protected void setPortfolio(Portfolio portfolio) {
+        this.portfolio = portfolio;
+        order = new OrderBuilder(portfolio,orderService);
     }
+
+
+    /** This tracks the assets you have for trading */
+    protected Portfolio portfolio;
 
 
     /** This is what you use to place orders:
@@ -33,16 +37,18 @@ public class BaseStrategy implements Strategy {
      */
     protected OrderBuilder order;
 
+
     /** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
     @Inject
     protected QuoteService quotes;
 
-    protected StrategyPortfolioManager manager;
 
     @Inject
     protected OrderService orderService;
 
+
     @Inject
     protected Logger log;
+
 
 }

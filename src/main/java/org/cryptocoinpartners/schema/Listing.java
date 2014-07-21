@@ -11,22 +11,22 @@ import java.util.List;
 
 
 /**
- * Represents the possibility to trade one Fungible for another
+ * Represents the possibility to trade one Asset for another
  */
 @SuppressWarnings( "UnusedDeclaration" )
 @Entity
 public class Listing extends EntityBase
 {
     @ManyToOne(optional = false)
-    public Fungible getBase() { return base; }
+    public Asset getBase() { return base; }
 
 
     @ManyToOne(optional = false)
-    public Fungible getQuote() { return quote; }
+    public Asset getQuote() { return quote; }
 
 
     /** will create the listing if it doesn't exist */
-    public static Listing forPair( Fungible base, Fungible quote ) {
+    public static Listing forPair( Asset base, Asset quote ) {
         try {
             Listing listing = PersistUtil.queryZeroOne(Listing.class,
                                                        "select a from Listing a where base=?1 and quote=?2",
@@ -63,15 +63,15 @@ public class Listing extends EntityBase
 
     // JPA
     protected Listing() { }
-    protected void setBase(Fungible base) { this.base = base; }
-    protected void setQuote(Fungible quote) { this.quote = quote; }
+    protected void setBase(Asset base) { this.base = base; }
+    protected void setQuote(Asset quote) { this.quote = quote; }
 
 
-    protected Fungible base;
-    protected Fungible quote;
+    protected Asset base;
+    protected Asset quote;
 
 
-    private Listing( Fungible base, Fungible quote ) {
+    private Listing( Asset base, Asset quote ) {
         this.base = base;
         this.quote = quote;
     }
@@ -84,11 +84,11 @@ public class Listing extends EntityBase
         if( dot == -1 )
             throw new IllegalArgumentException("Invalid Listing symbol: \""+symbol+"\"");
         final String baseSymbol = symbol.substring(0, dot);
-        Fungible base = Fungible.forSymbol(baseSymbol);
+        Asset base = Asset.forSymbol(baseSymbol);
         if( base == null )
             throw new IllegalArgumentException("Invalid base symbol: \""+baseSymbol+"\"");
         final String quoteSymbol = symbol.substring(dot + 1, symbol.length());
-        Fungible quote = Fungible.forSymbol(quoteSymbol);
+        Asset quote = Asset.forSymbol(quoteSymbol);
         if( quote == null )
             throw new IllegalArgumentException("Invalid quote symbol: \""+quoteSymbol+"\"");
         return Listing.forPair(base,quote);

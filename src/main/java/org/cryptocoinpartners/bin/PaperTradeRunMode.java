@@ -7,7 +7,7 @@ import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.MockOrderService;
 import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.module.xchange.XchangeData;
-import org.cryptocoinpartners.schema.StrategyPortfolioManager;
+import org.cryptocoinpartners.schema.StrategyInstance;
 
 import java.util.List;
 
@@ -26,8 +26,8 @@ public class PaperTradeRunMode extends RunMode {
         context.attach(MockOrderService.class);
         context.attach(XchangeData.class);
         for( String strategyName : strategyNames ) {
-            StrategyPortfolioManager strategyPortfolioManager = new StrategyPortfolioManager(strategyName);
-            context.loadStrategyPortfolioManager(strategyPortfolioManager);
+            StrategyInstance strategyInstance = new StrategyInstance(strategyName);
+            context.attachInstance(strategyInstance);
         }
     }
 

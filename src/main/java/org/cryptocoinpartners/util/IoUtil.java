@@ -109,8 +109,8 @@ public class IoUtil {
         Context context = replay.getContext();
         context.attach(TickWindow.class); // generate ticks
         context.attach(SaveTicksCsv.class,  // save ticks as csv
-                       Config.module("savetickscsv.filename", filename,
-                                     "savetickscsv.na", allowNa)
+                       ConfigUtil.forModule("savetickscsv.filename", filename,
+                                            "savetickscsv.na", allowNa)
                       );
         replay.run();
         context.destroy();

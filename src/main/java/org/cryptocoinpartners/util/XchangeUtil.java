@@ -45,7 +45,7 @@ public class XchangeUtil {
     static {
         // find all the config keys starting with "xchange." and collect their second groups after the dot
         final String configPrefix = "xchange";
-        CombinedConfiguration config = Config.combined();
+        CombinedConfiguration config = ConfigUtil.combined();
         final Iterator xchangeConfigKeys = config.getKeys(configPrefix);
         exchangeTags = new HashSet<>();
         final Pattern configPattern = Pattern.compile(configPrefix+"\\.([^\\.]+)\\..+");

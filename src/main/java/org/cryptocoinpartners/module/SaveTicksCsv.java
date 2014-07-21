@@ -71,8 +71,8 @@ public class SaveTicksCsv
 
         final Market listing = t.getMarket();
         final String exchange = listing.getExchange().getSymbol();
-        final Fungible base = listing.getBase();
-        final Fungible quote = listing.getQuote();
+        final Asset base = listing.getBase();
+        final Asset quote = listing.getQuote();
         final String timeStr = timeFormat.format(t.getTime().toDate());
         if( t.getPriceCount() != null ) {
             ArrayList<String> row = new ArrayList<>(Arrays.asList(listing.toString(), exchange, base.getSymbol(),

@@ -16,7 +16,7 @@ import org.cryptocoinpartners.module.*;
 import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.module.xchange.XchangeData;
 import org.cryptocoinpartners.module.xchange.XchangeOrderService;
-import org.cryptocoinpartners.schema.StrategyPortfolioManager;
+import org.cryptocoinpartners.schema.StrategyInstance;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -111,8 +111,8 @@ public class ConsoleRunMode extends RunMode {
             context.attach(XchangeOrderService.class);
         else
             context.attach(MockOrderService.class);
-        StrategyPortfolioManager portfolioManager = new StrategyPortfolioManager("fake");
-        context.attach(StrategyPortfolioManager.class,portfolioManager);
+        StrategyInstance portfolioManager = new StrategyInstance("fake");
+        context.attach(StrategyInstance.class,portfolioManager);
 
         Terminal terminal = TerminalFactory.get();
         try {

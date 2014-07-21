@@ -27,11 +27,12 @@ public class Injector {
 
 
     public <T> T getInstance( Class<T> cls ) {
-        return ic().getInstance(cls);
+        T instance = ic().getInstance(cls);
+        return instance;
     }
 
 
-    public void injectMembers(Object o) {
+    public void injectMembers( Object o ) {
         ic().injectMembers(o);
     }
 
@@ -80,6 +81,6 @@ public class Injector {
 
 
     static {
-        root = new Injector(Guice.createInjector(new LogInjector()),Config.combined());
+        root = new Injector(Guice.createInjector(new LogInjector()), ConfigUtil.combined());
     }
 }

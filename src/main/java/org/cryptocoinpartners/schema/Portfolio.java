@@ -52,15 +52,15 @@ public class Portfolio extends EntityBase {
 
 
     /**
-     * This is the main way for a Strategy to determine what assets it has available for trading
+     * This is the main way for a Strategy to determine how much of a given asset it has available for trading
      * @param f
      * @return
      */
     @Transient
-    public Collection<Position> getTradeablePositionsOf( Fungible f ) {
+    public Collection<Position> getTradeablePositionsOf( Asset f ) {
         ArrayList<Position> result = new ArrayList<>();
         for( Position position : positions ) {
-            if( position.getFungible().equals(f) && !position.isReserved() )
+            if( position.getAsset().equals(f) && !position.isReserved() )
                 result.add(position);
         }
         return result;
@@ -68,7 +68,7 @@ public class Portfolio extends EntityBase {
 
 
     /**
-     * Finds a Position in the Portfolio which has the same Fungible as p, then breaks it into the amount p requires
+     * Finds a Position in the Portfolio which has the same Asset as p, then breaks it into the amount p requires
      * plus an unreserved amount.  The resevered Position is then associated with the given order, while
      * the unreserved remainder of the Position has getOrder()==null.  To un-reserve the Position, call release(order)
      *
@@ -81,7 +81,7 @@ public class Portfolio extends EntityBase {
     {
         for( Position position : positions ) {
             if( !position.isReserved()
-                && position.getFungible().equals(order.getMarket().getQuote())
+                && position.getAsset().equals(order.getMarket().getQuote())
                 && position.getExchange().equals(order.getMarket().getExchange())
               ) {
                 if( position.getVolumeCount() < p.getVolumeCount() )
@@ -89,7 +89,7 @@ public class Portfolio extends EntityBase {
                 // subtract the reserve from the existing Position
                 position.setVolumeCount(position.getVolumeCount()-p.getVolumeCount());
                 // add a new reserve Position
-                Position reserve = new Position(p.getExchange(), p.getFungible(), p.getVolume());
+                Position reserve = new Position(p.getExchange(), p.getAsset(), p.getVolume());
                 reserve.setOrder(order);
                 positions.add(reserve);
             }
@@ -112,14 +112,14 @@ public class Portfolio extends EntityBase {
 
 
     /**
-     * finds other Positions in this portfolio which have the same Exchange and Fungible and merges this position's
-     * amount into the found position's amount, thus maintaining only one Position for each Exchange/Fungible pair.
+     * finds other Positions in this portfolio which have the same Exchange and Asset and merges this position's
+     * amount into the found position's amount, thus maintaining only one Position for each Exchange/Asset pair.
      * this method does not remove the position from the positions list.
      * @return true iff another position was found and merged
      */
     private boolean merge(Position position) {
         for( Position p : positions ) {
-            if( p.getExchange().equals(position.getExchange()) && p.getFungible().equals(position.getFungible()) ) {
+            if( p.getExchange().equals(position.getExchange()) && p.getAsset().equals(position.getAsset()) ) {
                 p.setVolumeCount(p.getVolumeCount()+position.getVolumeCount());
                 return true;
             }
