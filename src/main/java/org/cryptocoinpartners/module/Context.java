@@ -170,7 +170,10 @@ public class Context {
         Instant now;
         if( timeProvider != null ) {
             now = timeProvider.nextTime(e);
-            advanceTime(now);
+            if( now != null )
+                advanceTime(now);
+            else
+                now = new Instant(epRuntime.getCurrentTime());
         }
         else
             now = new Instant(epRuntime.getCurrentTime());
