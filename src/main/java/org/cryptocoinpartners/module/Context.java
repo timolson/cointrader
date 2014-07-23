@@ -167,11 +167,14 @@ public class Context {
 
 
     public void publish(Event e) {
+        Instant now;
         if( timeProvider != null ) {
-            Instant time = timeProvider.nextTime(e);
-            advanceTime(time);
+            now = timeProvider.nextTime(e);
+            advanceTime(now);
         }
-        e.publishedAt(new Instant(epRuntime.getCurrentTime()));
+        else
+            now = new Instant(epRuntime.getCurrentTime());
+        e.publishedAt(now);
         epRuntime.sendEvent(e);
     }
 
