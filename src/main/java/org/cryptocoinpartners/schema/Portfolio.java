@@ -6,6 +6,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 
 
@@ -175,6 +176,6 @@ public class Portfolio extends EntityBase {
 
     private String name;
     private PortfolioManager manager;
-    private Collection<Position> positions;
-    private Collection<Stake> stakes;
+    private Collection<Position> positions = Collections.emptyList();
+    private Collection<Stake> stakes = Collections.emptyList();
 }
