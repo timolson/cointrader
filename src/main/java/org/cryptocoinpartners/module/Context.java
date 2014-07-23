@@ -73,7 +73,8 @@ public class Context {
         Instant getInitialTime();
 
         /**
-         * @param event The event to be published after the time is advanced
+         * @param event The event to be published after the time is advanced.  If null is returned, the time is
+         *              not advanced and the current time in the Esper engine is used.
          */
         Instant nextTime(Event event);
     }
