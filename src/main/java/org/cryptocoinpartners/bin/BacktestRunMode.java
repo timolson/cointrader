@@ -5,6 +5,7 @@ import com.beust.jcommander.Parameters;
 import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.MockOrderService;
+import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.schema.*;
 import org.cryptocoinpartners.util.Replay;
 
@@ -34,11 +35,13 @@ public class BacktestRunMode extends RunMode {
     public void run() {
         Replay replay = Replay.all(true);
         Context context = replay.getContext();
+        context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
         context.attach(MockOrderService.class);
+ 
         StrategyInstance strategyInstance = new StrategyInstance(strategyNames.get(0));
         setUpInitialPortfolio(strategyInstance);
-        context.attachInstance(strategyInstance);
+        context.attachInstance(strategyInstance);  
         replay.run();
         // todo report P&L, etc.
     }

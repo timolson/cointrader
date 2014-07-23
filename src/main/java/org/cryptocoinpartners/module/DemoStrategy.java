@@ -22,12 +22,14 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 
     @Inject
     public DemoStrategy(Context context, Configuration config) {
-        String marketSymbol = config.getString("demostrategy.market","BITFINEX:BTC.USD");
+       // String marketSymbol = config.getString("demostrategy.market","BITFINEX:BTC.USD");
+        String marketSymbol = ("BITFINEX:BTC.USD");
+        
         market = Market.forSymbol(marketSymbol);
         if( market == null )
             throw new Error("Could not find Market for symbol "+marketSymbol);
-        BigDecimal volumeBD = config.getBigDecimal("demostrategy.volume",
-                                                   new BigDecimal("0.00000100"));// 100 satoshis
+        BigDecimal volumeBD = 
+                                                   new BigDecimal("0.00000100");// 100 satoshis
         volumeCount = DiscreteAmount.roundedCountForBasis(volumeBD, market.getVolumeBasis());
     }
 
@@ -35,13 +37,14 @@ public class DemoStrategy extends SimpleStatefulStrategy {
     @When("select * from Book")
     void handleBook( Book b ) {
         if( b.getMarket().equals(market) ) {
+        
             bestBid = b.getBestBid();
             bestAsk = b.getBestAsk();
             if( bestBid != null && bestAsk != null ) {
                 ready();
                 enterTrade();
                 exitTrade();
-            }
+         }
         }
     }
 

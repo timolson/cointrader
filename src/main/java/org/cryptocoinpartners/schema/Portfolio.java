@@ -132,6 +132,8 @@ public class Portfolio extends EntityBase {
     public Portfolio(String name, PortfolioManager manager) {
         this.name = name;
         this.manager = manager;
+        this.positions= new ArrayList<Position>();
+        
     }
 
 
