@@ -21,6 +21,7 @@ import org.cryptocoinpartners.service.Service;
 import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.Injector;
 import org.cryptocoinpartners.util.ReflectionUtil;
+import org.cryptocoinpartners.util.Replay;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -168,8 +169,7 @@ public class Context {
 
     public void publish(Event e) {
         Instant now;
-<<<<<<< HEAD
-    	 if( timeProvider != null && timeProvider.getClass()!=Replay.EventTimeManager.class ) {
+        if( timeProvider != null &&  timeProvider.getClass()!=Replay.EventTimeManager.class ) {
             now = timeProvider.nextTime(e);
             advanceTime(now);
         }

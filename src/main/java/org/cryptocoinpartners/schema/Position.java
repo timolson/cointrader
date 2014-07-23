@@ -20,7 +20,7 @@ public class Position extends Holding {
 
 
     public Position(Exchange exchange, Asset asset, Amount volume) {
-        volume.assertBasis(asset.getBasis());
+        //volume.assertBasis(asset.getBasis());
         this.exchange = exchange;
         this.volumeCount = volume.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount();
         this.asset = asset;
@@ -58,6 +58,12 @@ public class Position extends Holding {
         return true;
     }
 
+    public String toString() {
+        return "Position=[Exchangee=" + exchange + ", qty=" + volumeCount
+                        + ", side=" 
+                        + ", entyDate=" 
+                        + ", instrument=" + asset + "]";
+}
 
     // JPA
     protected Position() { }
