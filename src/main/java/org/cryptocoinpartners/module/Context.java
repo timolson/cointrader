@@ -169,7 +169,8 @@ public class Context {
 
     public void publish(Event e) {
         Instant now;
-        if( timeProvider != null ) {
+<<<<<<< HEAD
+    	 if( timeProvider != null && timeProvider.getClass()!=Replay.EventTimeManager.class ) {
             now = timeProvider.nextTime(e);
             if( now != null )
                 advanceTime(now);
