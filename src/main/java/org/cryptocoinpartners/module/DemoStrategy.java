@@ -54,7 +54,7 @@ public class DemoStrategy extends SimpleStatefulStrategy {
         if( bestAsk == null )
             return null;
         DiscreteAmount limitPrice = bestBid.getPrice().decrement();
-        return order.create(market,volumeCount).withLimitPrice(limitPrice);
+        return order.create(market,volumeCount*2).withLimitPrice(limitPrice);
     }
 
 

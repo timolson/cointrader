@@ -4,6 +4,10 @@ import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
+
+import com.xeiam.xchange.dto.trade.Wallet;
+
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -22,7 +26,15 @@ public class Portfolio extends EntityBase {
 
     /** returns all Positions, whether they are tied to an open Order or not.  Use getTradeablePositions() */
     public @OneToMany Collection<Position> getPositions() { return positions; }
+    
+    /** returns all Positions, whether they are tied to an open Order or not.  Use getTradeablePositions() */
+    public @OneToMany Collection<Balance> getBalances() { return balances; }
+    
 
+   // public @OneToMany ConcurrentHashMap<BalanceType, List<Wallet>> getBalances() { return balances; }
+
+  
+    
 
     /**
      * Returns all Positions in the Portfolio which are not reserved as payment for an open Order
@@ -90,7 +102,7 @@ public class Portfolio extends EntityBase {
                 // subtract the reserve from the existing Position
                 position.setVolumeCount(position.getVolumeCount()-p.getVolumeCount());
                 // add a new reserve Position
-                Position reserve = new Position(p.getExchange(), p.getAsset(), p.getVolume());
+                Position reserve = new Position(p.getExchange(), p.getAsset(), p.getVolume(),p.getPrice());
                 reserve.setOrder(order);
                 positions.add(reserve);
             }
@@ -128,11 +140,27 @@ public class Portfolio extends EntityBase {
         return false;
     }
 
+    private boolean merge(Balance balance) {
+        for( Balance b : balances ) {
+            if( b.getExchange().equals(balance.getExchange()) && b.getWallet().getDescription().equals(balance.getWallet().getDescription()) && b.getWallet().getCurrency().equals(balance.getWallet().getCurrency()) ) {
+            	BigDecimal ammount = b.getWallet().getBalance().add(balance.getWallet().getBalance());
+            	Wallet newWallet = new Wallet(balance.getWallet().getCurrency(), ammount, balance.getWallet().getDescription());
+            		
+            	b.setWallet(newWallet);
+            	
+            	
+                return true;
+            }
+        }
+        return false;
+    }
 
     public Portfolio(String name, PortfolioManager manager) {
         this.name = name;
         this.manager = manager;
         this.positions= new ArrayList<Position>();
+        this.balances= new ArrayList<Balance>();
+        
         
     }
 
@@ -159,25 +187,43 @@ public class Portfolio extends EntityBase {
         boolean modifiedExistingPosition = false;
         for( Position curPosition : positions ) {
             if( curPosition.merge(position) ) {
-                modifiedExistingPosition = true;
+            	modifiedExistingPosition = true;
                 break;
             }
         }
         if( !modifiedExistingPosition )
             positions.add(position);
     }
+    
+    public void modifyBalance( Balance balance, Authorization authorization ) {
+        assert authorization != null;
+        assert balance != null;
+        boolean modifiedExistingBalance = false;
+        for( Balance curBalance : balances ) {
+            if( curBalance.merge(balance) ) {
+            	modifiedExistingBalance = true;
+                break;
+            }
+        }
+        if( !modifiedExistingBalance )
+        	balances.add(balance);
+    }
+	
+    	
 
 
     // JPA
     protected Portfolio() {}
     protected void setPositions(Collection<Position> positions) { this.positions = positions; }
+    protected void setBalances(Collection<Balance> balances) { this.balances = balances; }
     protected void setName(String name) { this.name = name; }
     protected void setStakes(Collection<Stake> stakes) { this.stakes = stakes; }
     protected void setManager(PortfolioManager manager) { this.manager = manager; }
 
-
+    
     private String name;
     private PortfolioManager manager;
-    private Collection<Position> positions = Collections.emptyList();
+    private Collection<Position> positions = Collections.emptyList();  
+    private Collection<Balance> balances = Collections.emptyList();
     private Collection<Stake> stakes = Collections.emptyList();
 }
