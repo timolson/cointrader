@@ -144,7 +144,6 @@ public class SpecificOrder extends Order {
     /** 0 if no limit is set */
     protected long getStopPriceCount() { return stopPriceCount; }
     protected SpecificOrder() { }
-  //  protected void setPortfolio( Portfolio portfolio) { setPortfolio( portfolio); }
     protected void setMarket( Market market) { this.market = market; }
     protected void setVolumeCount(long volumeCount) { this.volumeCount = volumeCount; volume = null; }
     protected void setLimitPriceCount(long limitPriceCount) { this.limitPriceCount = limitPriceCount; limitPrice = null; }
