@@ -22,25 +22,29 @@ import java.util.Collection;
 public class SpecificOrder extends Order {
 
 
-    public SpecificOrder(Market market, long volumeCount) {
+    public SpecificOrder(Portfolio portfolio, Market market, long volumeCount) {
         this.market = market;
         this.volumeCount = volumeCount;
+        super.setPortfolio(portfolio);
+        
+        
     }
 
 
-    public SpecificOrder(Market market, Amount volume) {
+    public SpecificOrder(Portfolio portfolio, Market market, Amount volume) {
         this.market = market;
         this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+        super.setPortfolio(portfolio);
     }
 
 
-    public SpecificOrder(Market market, BigDecimal volume) {
-        this(market,new DecimalAmount(volume));
+    public SpecificOrder(Portfolio portfolio, Market market, BigDecimal volume) {
+        this(portfolio, market,new DecimalAmount(volume));
     }
 
 
-    public SpecificOrder(Market market, double volume) {
-        this(market,new DecimalAmount(new BigDecimal(volume)));
+    public SpecificOrder(Portfolio portfolio, Market market, double volume) {
+        this(portfolio, market,new DecimalAmount(new BigDecimal(volume)));
     }
 
 
@@ -119,6 +123,7 @@ public class SpecificOrder extends Order {
         String s = "SpecificOrder{" +
                        "id=" + getId() +
                        ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) +
+                        ", portfolio=" + getPortfolio() +
                        ", market=" + market +
                        ", volumeCount=" + volumeCount;
         if( limitPriceCount != 0 )
@@ -139,7 +144,8 @@ public class SpecificOrder extends Order {
     /** 0 if no limit is set */
     protected long getStopPriceCount() { return stopPriceCount; }
     protected SpecificOrder() { }
-    protected void setMarket(Market market) { this.market = market; }
+  //  protected void setPortfolio( Portfolio portfolio) { setPortfolio( portfolio); }
+    protected void setMarket( Market market) { this.market = market; }
     protected void setVolumeCount(long volumeCount) { this.volumeCount = volumeCount; volume = null; }
     protected void setLimitPriceCount(long limitPriceCount) { this.limitPriceCount = limitPriceCount; limitPrice = null; }
     protected void setStopPriceCount(long stopPriceCount) { this.stopPriceCount = stopPriceCount; stopPrice = null; }

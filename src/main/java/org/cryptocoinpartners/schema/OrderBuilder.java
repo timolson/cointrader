@@ -148,17 +148,17 @@ public class OrderBuilder {
         
         
         public SpecificOrderBuilder(Market market, BigDecimal volume) {
-            order = new SpecificOrder(market,volume);
+            order = new SpecificOrder(portfolio,market,volume);
         }
 
 
         public SpecificOrderBuilder(Market market, Amount volume) {
-            order = new SpecificOrder(market,volume);
+            order = new SpecificOrder(portfolio,market,volume);
         }
 
 
         public SpecificOrderBuilder(Market market, long volumeCount) {
-            order = new SpecificOrder(market,volumeCount);
+            order = new SpecificOrder(portfolio,market,volumeCount);
         }
 
 
