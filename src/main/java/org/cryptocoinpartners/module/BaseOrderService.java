@@ -5,6 +5,7 @@ import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.Remainder;
 import org.cryptocoinpartners.util.RemainderHandler;
+import org.joda.time.Instant;
 import org.slf4j.Logger;
 
 import javax.inject.Inject;
@@ -62,6 +63,10 @@ public abstract class BaseOrderService implements OrderService {
             OrderState newState = order.isFilled() ? OrderState.FILLED : OrderState.PARTFILLED;
             updateOrderState(order,newState);
         }
+        Transaction transaction=new Transaction(order.getPortfolio(), fill.getMarket().getBase(), fill.getPriceCount(), fill.getVolume());
+       log.info("Created new transaction " +transaction );
+        context.publish(transaction);
+        
     }
 
 

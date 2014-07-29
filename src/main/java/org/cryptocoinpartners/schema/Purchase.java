@@ -13,6 +13,10 @@ import javax.persistence.Entity;
 public class Purchase extends Transaction {
 
 
-    private long volumeCount;
+    public Purchase(Portfolio portfolio, Asset asset, long priceCount, Amount volume) {
+		super(portfolio, asset, priceCount, volume);
+		// TODO Auto-generated constructor stub
+	}
+	private long volumeCount;
     private Market market;
 }
