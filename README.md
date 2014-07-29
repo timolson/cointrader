@@ -1,29 +1,35 @@
 ### Coin Trader
 
-Coin Trader is a Java-based backend for trading cryptocurrencies, released under the Apache License.  It features:
+[Coin Trader](http://cryptocoinpartners.org) is a Java-based backend for trading cryptocurrencies, released under the Apache License.  It features:
 
 * Connectivity to many exchanges
 * Control console (text)
+* Basic order routing
 * Simulated trading
 * Schema and persistence
 * CSV output of market data
 * Ad-hoc table reports
 * Modular infrastructure
 
-Coin Trader's future includes:
-* Live order execution
-* Basic order routing
-* Flexible data output
-* Basic indicators
+Coin Trader's future goals include:
 * Accounting and reconciliation
 * Backtesting
+* Live order execution
+* Flexible data output
+* Library of quantitative indicators
 * Web console & graphing
 
-See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more information, or jump to [Setup](https://github.com/timolson/cointrader/wiki/).
+#### Setup
+Coin Trader requires Java JDK 1.7, Maven, and a SQL database (MySQL default).  
+[Setup Instructions](https://github.com/timolson/cointrader/wiki/Setup)
+
+#### Support
+See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more information.  
+There's no mailing list, so [open a new issue](https://github.com/timolson/cointrader/issues/new) for anything, help or just discussion.  Tag it with "Question" and I'll follow through with you.
 
 #### Console Demo
 
-The Coin Trader console gives you a peek into the engine.
+The Coin Trader Console gives you a peek into the engine.
 
 ```
 $ ./cointrader.sh console
@@ -123,14 +129,14 @@ _Coin Trader does not send live orders to exchanges yet.  The above demo uses si
 
 #### Automated Trading
 
-To implement signals and automated strategies, you connect [Esper](http://esper.codehaus.org/) event queries to Java code like this:
+To implement signals and automated strategies, you connect [Esper](http://esper.codehaus.org/tutorials/tutorial/tutorial.html) event queries to Java code like this:
 
 ```java
 @When( "select avg(priceAsDouble) from Trade.win:time(30 sec)" )
 void checkMovingAverage( double avg )
 {
   if( avg > trigger )
-    esper.publish( new MyIndicator(5.31) );
+    context.publish( new MyIndicator(5.31) );
 }
 
 @When( "select * from MyIndicator where myIndicatorValue > 5.0" )

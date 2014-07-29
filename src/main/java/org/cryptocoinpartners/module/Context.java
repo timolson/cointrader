@@ -74,7 +74,8 @@ public class Context {
         Instant getInitialTime();
 
         /**
-         * @param event The event to be published after the time is advanced
+         * @param event The event to be published after the time is advanced.  If null is returned, the time is
+         *              not advanced and the current time in the Esper engine is used.
          */
         Instant nextTime(Event event);
     }
@@ -171,7 +172,10 @@ public class Context {
         Instant now;
         if( timeProvider != null &&  timeProvider.getClass()!=Replay.EventTimeManager.class ) {
             now = timeProvider.nextTime(e);
-            advanceTime(now);
+            if( now != null )
+                advanceTime(now);
+            else
+                now = new Instant(epRuntime.getCurrentTime());
         }
         else
             now = new Instant(epRuntime.getCurrentTime());
