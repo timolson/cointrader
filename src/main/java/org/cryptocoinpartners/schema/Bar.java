@@ -15,6 +15,7 @@ public class Bar extends Event {
 
     public Bar( Instant time, Market market,
                 BigDecimal open, BigDecimal high, BigDecimal low, BigDecimal close, @Nullable BigDecimal volume ) {
+        super(time);
         this.open = open;
         this.high = high;
         this.low = low;

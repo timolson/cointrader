@@ -12,7 +12,7 @@ import java.util.List;
  * @author Tim Olson
  */
 @Entity
-public class Currency extends Fungible {
+public class Currency extends Asset {
 
     public boolean isFiat() { return fiat; }
 

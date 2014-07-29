@@ -44,7 +44,7 @@ public class Main
 
 
     public static void main( String[] args ) throws ConfigurationException, IllegalAccessException, InstantiationException {
-        // first, parse only the MainParams to get the properties file location and initialize Config and rootInjector
+        // first, parse only the MainParams to get the properties file location and initialize ConfigUtil and rootInjector
         MainParamsOnly mainParamsOnly = new MainParamsOnly();
         JCommander parameterParser = new JCommander(mainParamsOnly);
         parameterParser.setProgramName(Main.class.getName());
@@ -55,7 +55,7 @@ public class Main
             t.printStackTrace();
             System.exit(1);
         }
-        Config.init(mainParamsOnly.propertiesFilename,mainParamsOnly.definitions);
+        ConfigUtil.init(mainParamsOnly.propertiesFilename, mainParamsOnly.definitions);
         Injector rootInjector = Injector.root();
 
         // now parse the full command line

@@ -37,7 +37,7 @@ public abstract class Order extends Event {
 
 
     @ManyToOne(optional = false)
-    public Fund getFund() { return fund; } 
+    public Portfolio getPortfolio() { return portfolio; }
 
     
     public enum FillType {
@@ -116,10 +116,10 @@ public abstract class Order extends Event {
     protected void setExpiration(Instant expiration) { this.expiration = expiration; }
     protected void setPanicForce(boolean force) { this.force = force; }
     protected void setEmulation(boolean emulation) { this.emulation = emulation; }
-    protected void setFund(Fund fund) { this.fund = fund; } 
+    protected void setPortfolio(Portfolio portfolio) { this.portfolio = portfolio; }
 
     
-    private Fund fund;
+    private Portfolio portfolio;
     private Collection<Fill> fills;
     private FillType fillType;
     private MarginType marginType;

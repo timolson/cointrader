@@ -9,9 +9,9 @@ import javax.inject.Inject;
 
 
 /**
- * A Strategy represents a configurable approach to trading, but not a specific trading algorithm.  StrategyFundManager
+ * A Strategy represents a configurable approach to trading, but not a specific trading algorithm.  StrategyPortfolioManager
  * instantiates a Strategy by loading to a module which contains a Strategy service using a specific configuration set
- * by the StrategyFundManager.  The Strategy may then place Orders against Positions in the StrategyFundManager's Fund.
+ * by the StrategyPortfolioManager.  The Strategy may then place Orders against Positions in the StrategyPortfolioManager's Portfolio.
  * BaseStrategy helps implement Strategies by providing injected fields for a QuoteService and OrderBuilder.
  *
  * @author Tim Olson
@@ -20,10 +20,14 @@ public class BaseStrategy implements Strategy {
 
 
     @Inject
-    public void setStrategyFundManager(StrategyFundManager strategyFundManager) {
-        this.manager = strategyFundManager;
-        order = new OrderBuilder(manager.getFund(),orderService);
+    protected void setPortfolio(Portfolio portfolio) {
+        this.portfolio = portfolio;
+        order = new OrderBuilder(portfolio,orderService);
     }
+
+
+    /** This tracks the assets you have for trading */
+    protected Portfolio portfolio;
 
 
     /** This is what you use to place orders:
@@ -33,16 +37,18 @@ public class BaseStrategy implements Strategy {
      */
     protected OrderBuilder order;
 
+
     /** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
     @Inject
     protected QuoteService quotes;
 
-    protected StrategyFundManager manager;
 
     @Inject
     protected OrderService orderService;
 
+
     @Inject
     protected Logger log;
+
 
 }

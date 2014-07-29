@@ -2,12 +2,12 @@ package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import org.cryptocoinpartners.module.BasicAccountService;
 import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.MockOrderService;
+import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.module.xchange.XchangeData;
-import org.cryptocoinpartners.schema.StrategyFundManager;
+import org.cryptocoinpartners.schema.StrategyInstance;
 
 import java.util.List;
 
@@ -21,13 +21,13 @@ public class PaperTradeRunMode extends RunMode {
 
     public void run() {
         Context context = Context.create();
-        context.attach(BasicAccountService.class);
+        context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
         context.attach(MockOrderService.class);
         context.attach(XchangeData.class);
         for( String strategyName : strategyNames ) {
-            StrategyFundManager strategyFundManager = new StrategyFundManager(strategyName);
-            context.loadStrategyFundManager(strategyFundManager);
+            StrategyInstance strategyInstance = new StrategyInstance(strategyName);
+            context.attachInstance(strategyInstance);
         }
     }
 

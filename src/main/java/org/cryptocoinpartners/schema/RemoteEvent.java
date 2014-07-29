@@ -24,6 +24,13 @@ public abstract class RemoteEvent extends Event {
     public String getRemoteKey() { return remoteKey; }
 
 
+    public void publishedAt(Instant instant) {
+        super.publishedAt(instant);
+        if( timeReceived == null )
+            timeReceived = instant;
+    }
+
+
     protected RemoteEvent( Instant time, @Nullable String remoteKey) {
         this(time,Instant.now(),remoteKey);
     }

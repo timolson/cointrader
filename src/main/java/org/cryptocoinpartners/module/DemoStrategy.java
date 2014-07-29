@@ -11,7 +11,7 @@ import java.math.BigDecimal;
  * This simple Strategy first waits for Book data to arrive about the target Market, then it places a buy order
  * at demostrategy.spread below the current bestAsk.  Once it enters the trade, it places a sell order at
  * demostrategy.spread above the current bestBid.
- * This strategy ignores the available Positions in the Fund and always trades the amount set by demostrategy.volume on
+ * This strategy ignores the available Positions in the Portfolio and always trades the amount set by demostrategy.volume on
  * the Market specified by demostrategy.market
  *
  * @author Tim Olson

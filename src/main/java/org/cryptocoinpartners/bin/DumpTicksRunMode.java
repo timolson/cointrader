@@ -3,16 +3,8 @@ package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
-import com.clutch.dates.StringToTime;
-import org.cryptocoinpartners.module.Context;
-import org.cryptocoinpartners.module.SaveTicksCsv;
-import org.cryptocoinpartners.module.TickWindow;
-import org.cryptocoinpartners.util.Config;
 import org.cryptocoinpartners.util.IoUtil;
-import org.cryptocoinpartners.util.Replay;
-import org.joda.time.Instant;
 
-import java.util.Date;
 import java.util.List;
 
 

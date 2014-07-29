@@ -8,18 +8,18 @@ import java.util.Collection;
 
 
 /**
- * An Owner is a person or corporate entity who holds Stakes in Funds.  Every Owner has a 100% stake in their deposit
- * fund, which is how
+ * An Owner is a person or corporate entity who holds Stakes in Portfolios.  Every Owner has a 100% stake in their deposit
+ * portfolio, which is how
  * @author Tim Olson
  */
 @Entity
-public class Owner extends FundManager {
+public class Owner extends PortfolioManager {
 
 
     public Owner(String name) {
         super(name+"'s deposit account");
         this.name = name;
-        stakes.add(new Stake(this, BigDecimal.ONE, getFund())); // 100% Stake in the deposit fund
+        stakes.add(new Stake(this, BigDecimal.ONE, getPortfolio())); // 100% Stake in the deposit portfolio
     }
 
 

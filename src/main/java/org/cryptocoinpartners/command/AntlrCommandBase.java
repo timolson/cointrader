@@ -8,7 +8,7 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 import org.apache.commons.lang.StringUtils;
-import org.cryptocoinpartners.util.Config;
+import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.Injector;
 import org.cryptocoinpartners.util.ReflectionUtil;
 
@@ -108,7 +108,8 @@ public abstract class AntlrCommandBase extends CommandBase {
         if( listenerSubtypes.size() > 1 )
             throw new Error("Found multiple subclasses of "+listenerClassName+":\n"+StringUtils.join(listenerSubtypes,',')+"\n.  Use the explicit AntlrCommandBase(String,Lexer,Parser,ParseTreeListener) constructor.");
         if( listenerSubtypes.isEmpty() )
-            throw new Error("Could not find any subclass of "+listenerClassName+" in the command.path "+ Config.combined().getString("command.path"));
+            throw new Error("Could not find any subclass of "+listenerClassName+" in the command.path "+ ConfigUtil
+                                                                                                                 .combined().getString("command.path"));
         listenerSubclass = (Class<? extends ParseTreeListener>) listenerSubtypes.iterator().next();
         Injector listenerInjector = injector.createChildInjector(new Module() {
             public void configure(Binder binder) {

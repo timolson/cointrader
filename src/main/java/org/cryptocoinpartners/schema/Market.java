@@ -11,7 +11,7 @@ import java.util.List;
 
 
 /**
- * Represents the possibility to trade one Fungible for another at a specific Exchange.
+ * Represents the possibility to trade one Asset for another at a specific Exchange.
  *
  * @author Tim Olson
  */
@@ -82,11 +82,11 @@ public class Market extends EntityBase
 
 
     @Transient
-    public Fungible getBase() { return listing.getBase(); }
+    public Asset getBase() { return listing.getBase(); }
 
 
     @Transient
-    public Fungible getQuote() { return listing.getQuote(); }
+    public Asset getQuote() { return listing.getQuote(); }
 
 
     @Transient

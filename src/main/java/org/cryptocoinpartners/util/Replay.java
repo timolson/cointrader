@@ -49,7 +49,7 @@ public class Replay
 
 
     public Replay( Interval replayTimeInterval, boolean orderByTimeReceived ) {
-        this.replayTimeInterval = replayTimeInterval;
+        this.replayTimeInterval = replayTimeInterval; // set this before creating EventTimeManager
         this.context = Context.create(new EventTimeManager());
         this.orderByTimeReceived = orderByTimeReceived;
     }
@@ -65,7 +65,6 @@ public class Replay
     public void run() {
         final Instant start = replayTimeInterval.getStart().toInstant();
         final Instant end = replayTimeInterval.getEnd().toInstant();
-        context.advanceTime(start);
         if( replayTimeInterval.toDuration().isLongerThan(timeStep) ) {
             for( Instant now = start; !now.isAfter(end); ) {
                 final Instant stepEnd = now.plus(timeStep);
@@ -82,7 +81,7 @@ public class Replay
     {
         for( RemoteEvent event : queryEvents(start, stop) )
             context.publish(event);
-        context.advanceTime(stop);
+        context.advanceTime(stop); // advance to the end of the time window to trigger any timer events
     }
 
 
@@ -152,17 +151,8 @@ public class Replay
 
     public class EventTimeManager implements Context.TimeProvider
     {
-
-        public Instant getInitialTime()
-        {
-            return replayTimeInterval.getStart().toInstant();
-        }
-
-
-        public Instant nextTime( Event event )
-        {
-            return event.getTime();
-        }
+        public Instant getInitialTime() { return replayTimeInterval.getStart().toInstant(); }
+        public Instant nextTime( Event event ) { return event.getTime(); }
     }
 
 

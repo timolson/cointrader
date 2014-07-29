@@ -2,7 +2,7 @@ package org.cryptocoinpartners.command;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.StringUtils;
-import org.cryptocoinpartners.util.Config;
+import org.cryptocoinpartners.util.ConfigUtil;
 
 import javax.inject.Inject;
 import java.io.IOException;
@@ -58,7 +58,7 @@ public class SetCommand extends CommandBase {
 
 
     private void dumpConfig() {
-        out.println(Config.asString(config));
+        out.println(ConfigUtil.asString(config));
     }
 
 

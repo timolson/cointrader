@@ -17,9 +17,8 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.cryptocoinpartners.schema.Event;
-import org.cryptocoinpartners.schema.StrategyFundManager;
 import org.cryptocoinpartners.service.Service;
-import org.cryptocoinpartners.util.Config;
+import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.Injector;
 import org.cryptocoinpartners.util.ReflectionUtil;
 import org.joda.time.Instant;
@@ -74,31 +73,45 @@ public class Context {
         Instant getInitialTime();
 
         /**
-         * @param event The event to be published after the time is advanced
+         * @param event The event to be published after the time is advanced.  If null is returned, the time is
+         *              not advanced and the current time in the Esper engine is used.
          */
         Instant nextTime(Event event);
+    }
+
+
+    public static interface AttachListener {
+        public void afterAttach(Context context);
     }
 
 
     /**
      * This is the main way to register modules with the Context.  Attaching a class to a Context has
      * many effects:
-     * <ul>
-     * <li>If the class c has any superclasses or interfaces tagged with @Service, this class is registered as
-     * an implementation of that service interface.  Other instances in this Context will have their @Injected
-     * fields of service types set to an instance of this class c when the types match.</li>
+     * <ol>
      * <li>The class will be instantiated and the instance will be <pre>@Inject</pre>ed by Guice, binding any other
      * objects which have been attached to this Context previously</li>
+     * <li>The instance will have any fields marked with @Config set using this Context's current Configuration.</li>
+     * <li>If the class c has any superclasses or interfaces tagged with @Service, this instance is registered as
+     * an implementation of that service interface for future injections.  Other instances in this Context will have
+     * their @Injected fields of service types set to an instance of this class c when the types match.</li>
      * <li>The created instance is <pre>subscribe()</pre>'d to the Context's esper, binding any @When annotations
      * on the instances's methods to esper statements</li>
+     * <li>If the attached class implements AttachListener, the instance's afterAttach() method is called.</li>
      * <li>The new instance is returned after configuration</li>
-     * </ul>
+     * </ol>
      */
     public <T> T attach(Class<T> c) {
-        return attach(c, (Configuration) null);
+        return attach(c,null);
     }
 
 
+    /**
+     * Looks in the module.path packages for a class with the given simple name.  The classname may have "Module"
+     * appended at the end e.g. class MyNameModule can be referenced as String "MyName"
+     * @param name The name of the Class to load from the module.path (See Configuration)
+     * @return the instance that was created and attached
+     */
     public Object attach(String name) {
         Class<?> c = findModuleClass(name);
         if( c == null )
@@ -108,57 +121,64 @@ public class Context {
     }
 
 
-    public Object attach(String name, Configuration config) {
+    /**
+     * @param config Override configuration for this particular attachment
+     * @see #attach(Class)
+     */
+    public Object attach(String name, Configuration config, Module... specificInjections ) {
         Class<?> c = findModuleClass(name);
         if( c == null )
             throw new Error("Could not find module named " + name + " in module.path");
-        return attach(c, config);
+        return attach(c, config, specificInjections);
     }
 
 
-    public <T> T attach(String name, Class<T> cls) {
-        return attach(name, cls, null);
+    public <T> T attach(Class<T> c, final Configuration moduleConfig ) {
+        return attach(c,moduleConfig,(Module[])null);
     }
 
 
-    public <T> T attach(Class<T> c, final Configuration moduleConfig) {
-        registerBindings(c);
-        Injector i = moduleConfig == null ? injector
-                                          : injector.createChildInjector().withConfig(moduleConfig);
+    public <T> T attach(Class<T> c, final Configuration moduleConfig, Module... specificInjections ) {
+        Injector i = ArrayUtils.isEmpty(specificInjections) ? injector : injector.createChildInjector(specificInjections);
+        if( moduleConfig != null )
+            i = i.withConfig(moduleConfig);
         T instance = i.getInstance(c);
-        subscribe(instance);
+        attach(c, instance);
         return instance;
     }
 
 
-    @SuppressWarnings("unchecked")
-    public <T> T attach(String name, Class<T> cls, Configuration config) {
-        Class<?> c = findModuleClass(name);
-        if( c == null )
-            throw new Error("Could not find service implementation named " + name);
-        if( !c.isAssignableFrom(cls) )
-            throw new Error("Module name " + name + " loaded a " + c.getName() + " but expected a " + cls.getName());
-        return (T) attach(c, config);
+    public void attach(Class c, Object instance) {
+        ConfigUtil.applyConfiguration(instance, config);
+        subscribe(instance);
+        registerBindings(c,instance);
+        if( AttachListener.class.isAssignableFrom(c) ) {
+            AttachListener listener = (AttachListener) instance;
+            listener.afterAttach(this);
+        }
     }
 
 
-    public <T> void attachInstance(T instance) {
-        injector.injectMembers(instance);
-        registerBindings(instance.getClass(), instance);
-    }
-
-
-    public <T> void attach(Class<? super T> cls, T instance) {
-        injector.injectMembers(instance);
-        register(cls, instance);
+    /**
+     * Attaches a specific instance to this Context.
+     */
+    public void attachInstance(Object instance) {
+        attach((Class)instance.getClass(),instance);
     }
 
 
     public void publish(Event e) {
+        Instant now;
         if( timeProvider != null ) {
-            Instant time = timeProvider.nextTime(e);
-            advanceTime(time);
+            now = timeProvider.nextTime(e);
+            if( now != null )
+                advanceTime(now);
+            else
+                now = new Instant(epRuntime.getCurrentTime());
         }
+        else
+            now = new Instant(epRuntime.getCurrentTime());
+        e.publishedAt(now);
         epRuntime.sendEvent(e);
     }
 
@@ -257,23 +277,6 @@ public class Context {
     }
 
 
-    /**
-     * Use this to attach a StrategyFundManager to the Context
-     */
-    @Deprecated
-    public void loadStrategyFundManager(final StrategyFundManager strategyFundManager) {
-        // todo tim how to bind instance-specific configuration on the StrategyHandler?
-        /*
-        final StrategyHandler managerBinder = new StrategyHandler(strategyFundManager);
-        MapConfiguration config = new MapConfiguration(strategyFundManager.getConfig());
-        attach(managerBinder);
-        if( !managerBinder.foundStrategy ) {
-            log.warn("Module "+strategyFundManager.getModuleName()+" does not contain a Strategy class");
-        }
-        */
-    }
-
-
     //
     // End of Public Interface
     //
@@ -326,7 +329,7 @@ public class Context {
 
     private static List<String> getModulePathList() {
         String pathProperty = "module.path";
-        return Config.getPathProperty(pathProperty);
+        return ConfigUtil.getPathProperty(pathProperty);
     }
 
 
@@ -358,7 +361,7 @@ public class Context {
             moduleConfigs.add(packageConfig);
         }
 
-        return Config.module(moduleConfigs);
+        return ConfigUtil.forModule(moduleConfigs);
     }
 
 
@@ -466,7 +469,7 @@ public class Context {
         }
         epRuntime = epService.getEPRuntime();
         epAdministrator = epService.getEPAdministrator();
-        config = Config.combined();
+        config = ConfigUtil.combined();
         //injector = Injector.root().createChildInjector(subscribingModule,new Module()
         injector = Injector.root().createChildInjector(new Module()
         {

@@ -1,0 +1,53 @@
+package org.cryptocoinpartners.schema;
+
+import javax.persistence.ManyToOne;
+import javax.persistence.MappedSuperclass;
+import javax.persistence.OneToOne;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+
+/**
+ * A Holding represents an Asset on an Exchange.  It does not specify how much of the asset is held. See Position
+ *
+ * @author Tim Olson
+ */
+@MappedSuperclass
+public class Holding extends EntityBase {
+
+
+    public static Holding forSymbol(String symbol) {
+        Matcher matcher = Pattern.compile("(\\w+):(\\w+)").matcher(symbol);
+        if( !matcher.matches() )
+            throw new IllegalArgumentException("Could not parse Holding symbol " + symbol);
+        return new Holding( Exchange.forSymbol(matcher.group(1)), Asset.forSymbol(matcher.group(2)) );
+    }
+
+    public Holding( Exchange exchange, Asset asset ) {
+        this.exchange = exchange;
+        this.asset = asset;
+    }
+
+
+    @ManyToOne(optional = false)
+    public Exchange getExchange() { return exchange; }
+
+
+    @OneToOne(optional = false)
+    public Asset getAsset() { return asset; }
+
+
+    public String toString() {
+        return exchange.getSymbol() + asset.getSymbol();
+    }
+
+
+    // JPA
+    protected Holding() { }
+    protected void setExchange(Exchange exchange) { this.exchange = exchange; }
+    protected void setAsset(Asset asset) { this.asset = asset; }
+
+
+    protected Exchange exchange;
+    protected Asset asset;
+}

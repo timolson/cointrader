@@ -13,10 +13,10 @@ import javax.persistence.Entity;
  * @author Tim Olson
  */
 @Entity
-public abstract class Fungible extends EntityBase {
+public abstract class Asset extends EntityBase {
 
 
-    public static Fungible forSymbol( String symbol )
+    public static Asset forSymbol( String symbol )
     {
         // only Currency is supported
         return Currency.forSymbol(symbol);
@@ -34,11 +34,11 @@ public abstract class Fungible extends EntityBase {
     public String toString() { return symbol; }
 
 
-    protected Fungible( String symbol, double basis ) { this.symbol = symbol; this.basis = basis; }
+    protected Asset(String symbol, double basis) { this.symbol = symbol; this.basis = basis; }
 
 
     // JPA
-    protected Fungible() {}
+    protected Asset() {}
     protected void setSymbol(String symbol) { this.symbol = symbol; }
     protected void setBasis(double basis) { this.basis = basis; }
 
@@ -46,5 +46,5 @@ public abstract class Fungible extends EntityBase {
     private String symbol;
     private double basis;
 
-    private static Logger log = LoggerFactory.getLogger(Fungible.class);
+    private static Logger log = LoggerFactory.getLogger(Asset.class);
 }

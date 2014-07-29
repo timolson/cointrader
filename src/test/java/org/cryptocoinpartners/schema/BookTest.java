@@ -1,7 +1,7 @@
 package org.cryptocoinpartners.schema;
 
 import org.apache.commons.configuration.ConfigurationException;
-import org.cryptocoinpartners.util.Config;
+import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.joda.time.Instant;
 import org.junit.Ignore;
@@ -84,7 +84,7 @@ public class BookTest {
 
     /** something like this will be required for all test cases to be initialized */
     public static void init() throws ConfigurationException {
-        Config.init("cointrader.properties", Collections.<String, String>emptyMap());
+        ConfigUtil.init("cointrader.properties", Collections.<String, String>emptyMap());
         PersistUtil.init();
     }
 
