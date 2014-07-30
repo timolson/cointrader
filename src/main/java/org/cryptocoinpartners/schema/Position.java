@@ -19,10 +19,11 @@ import javax.persistence.Transient;
 public class Position extends Holding {
 
 
-    public Position(Exchange exchange, Asset asset, Amount volume) {
-        volume.assertBasis(asset.getBasis());
+    public Position(Exchange exchange, Asset asset, Amount volume, Amount price ) {
+        //volume.assertBasis(asset.getBasis());
         this.exchange = exchange;
         this.volumeCount = volume.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount();
+        this.priceCount= price.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount();
         this.asset = asset;
     }
 
@@ -34,6 +35,12 @@ public class Position extends Holding {
         return volume;
     }
 
+    @Transient
+    public Amount getPrice() {
+        if( price == null )
+            price = new DiscreteAmount(priceCount, asset.getBasis());
+        return price;
+    }
 
     /** If the SpecificOrder is not null, then this Position is being held in reserve as payment for that Order */
     @OneToOne
@@ -52,12 +59,18 @@ public class Position extends Holding {
      * has modified its volume by the amount in the position argument.
      */
     public boolean merge(Position position) {
-        if( !exchange.equals(position.exchange) || !asset.equals(position.asset) )
+        if( !exchange.equals(position.exchange) || !asset.equals(position.asset) || priceCount!=(position.priceCount) )
             return false;
         volumeCount += position.volumeCount;
         return true;
     }
 
+    public String toString() {
+        return "Position=[Exchange=" + exchange + ", qty=" + volumeCount
+                        + ", price="  + priceCount
+                        + ", entyDate=" 
+                        + ", instrument=" + asset + "]";
+}
 
     // JPA
     protected Position() { }
@@ -69,6 +82,8 @@ public class Position extends Holding {
 
 
     private Amount volume;
+    private Amount price;
     private long volumeCount;
+    private long priceCount;
     private SpecificOrder order;
 }

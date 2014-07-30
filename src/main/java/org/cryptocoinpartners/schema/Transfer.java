@@ -15,6 +15,11 @@ public class Transfer extends Transaction {
 
     // todo
 
-    private Duration estimatedDelay;
+    public Transfer(Portfolio portfolio, Asset asset, long priceCount, Amount volume) {
+		super(portfolio, asset, priceCount, volume);
+		// TODO Auto-generated constructor stub
+	}
+
+	private Duration estimatedDelay;
 
 }

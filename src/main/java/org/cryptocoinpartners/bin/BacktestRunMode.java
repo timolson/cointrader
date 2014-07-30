@@ -5,6 +5,7 @@ import com.beust.jcommander.Parameters;
 import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.MockOrderService;
+import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.schema.*;
 import org.cryptocoinpartners.util.Replay;
 
@@ -34,11 +35,15 @@ public class BacktestRunMode extends RunMode {
     public void run() {
         Replay replay = Replay.all(true);
         Context context = replay.getContext();
+        context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
         context.attach(MockOrderService.class);
-        StrategyInstance strategyInstance = new StrategyInstance(strategyNames.get(0));
-        setUpInitialPortfolio(strategyInstance);
-        context.attachInstance(strategyInstance);
+        for( String strategyName : strategyNames ) {
+        	 StrategyInstance strategyInstance = new StrategyInstance(strategyName);
+             setUpInitialPortfolio(strategyInstance);
+             context.attachInstance(strategyInstance);  
+           
+        }
         replay.run();
         // todo report P&L, etc.
     }
@@ -52,8 +57,11 @@ public class BacktestRunMode extends RunMode {
         for( int i = 0; i < positions.size(); ) {
             Holding holding = Holding.forSymbol(positions.get(i++));
             Amount amount = DecimalAmount.of(positions.get(i++));
-            Position position = new Position(holding.getExchange(), holding.getAsset(), amount);
+            Amount price=DecimalAmount.ZERO;
+            Position position = new Position(holding.getExchange(), holding.getAsset(), amount, price);
+            Balance balance = new Balance(holding.getExchange(),holding.getAsset(), amount, Balance.BalanceType.ACTUAL);
             portfolio.modifyPosition( position, new Authorization("initial position") );
+            portfolio.modifyBalance( balance, new Authorization("initial position") );
         }
     }
 
