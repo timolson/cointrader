@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.module;
 
+import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.schema.*;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.QuoteService;
@@ -63,10 +64,17 @@ public abstract class BaseOrderService implements OrderService {
             OrderState newState = order.isFilled() ? OrderState.FILLED : OrderState.PARTFILLED;
             updateOrderState(order,newState);
         }
-        Transaction transaction=new Transaction(order.getPortfolio(), fill.getMarket().getBase(), fill.getPriceCount(), fill.getVolume());
-       log.info("Created new transaction " +transaction );
-        context.publish(transaction);
-        
+        Transaction transaction;
+		try {
+			transaction = new Transaction(fill);
+			 log.info("Created new transaction " +transaction );
+		        context.publish(transaction);
+		        
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+       
     }
 
 
