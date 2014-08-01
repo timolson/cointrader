@@ -1,8 +1,15 @@
 package org.cryptocoinpartners.schema;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 
 import org.cryptocoinpartners.enumeration.TransactionType;
+import org.cryptocoinpartners.util.Remainder;
+import org.cryptocoinpartners.util.RemainderHandler;
+import org.hibernate.Hibernate;
+import org.hibernate.LockOptions;
+import org.hibernate.Session;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
 
@@ -22,21 +29,93 @@ public class Transaction extends Event {
 
     enum TransactionStatus { OFFERED, ACCEPTED, CLOSED, SETTLED, CANCELLED }
     private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
-	private static final String SEPARATOR = " ";
+	private static final String SEPARATOR = ",";
 	
      // todo add basis rounding
-	   public Transaction(Portfolio portfolio, Asset asset, long priceCount, Amount volume) {
-		   this.volume=volume;
+	   public Transaction(Portfolio portfolio, Asset asset, TransactionType type, long priceCount, Amount amount) {
+		   this.amount=amount;
 		   this.portfolio=portfolio;
 		   this.asset=asset;
 		   this.priceCount=priceCount;
-		   
+		   this.type=type;
 	       	     
 	    }
+	   public Transaction(Portfolio portfolio, Asset asset, TransactionType type, long priceCount, Amount amount, Currency currnecy, Amount Commission) {
+		   this.amount=amount;
+		   //this.volumeCount = DiscreteAmount.roundedCountForBasis(volume.asBigDecimal(), asset.getBasis());
+		   this.portfolio=portfolio;
+		   this.asset=asset;
+		   this.priceCount=priceCount;
+		   this.type=type;
+		   this.commission=commission;
+		   this.currency=currency;
+	       	     
+	    }
+	   
+	   public Transaction(Fill fill) throws Exception {
+			Portfolio portfolio = fill.getOrder().getPortfolio();
+			Market security = fill.getMarket();
+					
+
+			TransactionType transactionType = fill.getVolume().isPositive() ? TransactionType.BUY : TransactionType.SELL;
+			//long quantity = Side.BUY.equals(fill.getSide()) ? fill.getQuantity() : -fill.getQuantity();
+
+			this.setDateTime(fill.getTime());
+			this.setAmount( fill.getVolume());
+			this.setAsset(fill.getMarket().getBase());
+			this.setPrice(fill.getPrice());
+			this.setType(transactionType);
+			this.setSecurity(security);
+			this.setPortfolio(portfolio);
+			this.setCurrency(fill.getMarket().getBase());
+			this.setCommission(fill.getCommission());
+			
+			
+		}
      
+	   private void setSecurity(Market security) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private void setDateTime(Instant time) {
+		// TODO Auto-generated method stub
+		
+	}
+	@Transient
+	   public Amount getValue() {
+		 
+			if (this.value == null) {
+				if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL) ) {
+					this.value = (getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN)).minus(getCommission());
+					
+				} else if (getType().equals(TransactionType.CREDIT) || getType().equals(TransactionType.INTREST)) {
+					this.value = (getPrice());
+				} else if (getType().equals(TransactionType.DEBIT) || getType().equals(TransactionType.FEES)) {
+					this.value = getPrice().negate();
+				} else if (getType().equals(TransactionType.REBALANCE)) {
+					this.value = getAmount().times(getPrice(), Remainder.ROUND_EVEN);
+							
+							
+				} else {
+					throw new IllegalArgumentException("unsupported transactionType: " + getType());
+				}
+			}
+			return this.value;
+		}
     @ManyToOne(optional = false)
     public Asset getAsset() { return asset; }
 
+    @Transient
+    public Asset getCurrency() { return currency; }
+    
+    @Transient
+    public Amount getAmount() { return amount; }
+    
+    @Transient
+    public Amount getCommission() { return commission; }
+    
+    
     @ManyToOne(optional = false)
     public Portfolio getPortfolio() { return portfolio; }
     
@@ -45,29 +124,37 @@ public class Transaction extends Event {
     public TransactionType getType() { return type; }
     
     @Transient
-    public long getPriceCount() { return priceCount; }
+    public Amount getPrice() { 
+    	
+    	return price; }
 
    
 
 	public String toString() {
 		
 		
-		return  (getTime() != null ? (FORMAT.format(getTime())) : "") + SEPARATOR + getType() + SEPARATOR + getVolumeCount() + (getAsset() != null ? (SEPARATOR + getAsset()) : "")
-				+ SEPARATOR + getPriceCount() ;
+		return  "time=" + (getTime() != null ? (FORMAT.format(getTime())) : "") + SEPARATOR + "type=" +getType() + SEPARATOR + "volume=" +getAmount() + (getAsset() != null ? (SEPARATOR + "asset=" + getAsset()) : "")
+				+ SEPARATOR + "price=" + getPrice() ;
 	}
-    protected long getVolumeCount() { return volumeCount; }
-    protected void setVolumeCount(long volumeCount) { this.volumeCount = volumeCount; this.volume = null; }
+	 protected void setAmount(Amount amount) { this.amount = amount; }
     protected void setPortfolio(Portfolio portfolio) { this.portfolio = portfolio; }
     protected void setAsset(Asset asset) { this.asset = asset; }
+    protected void setCommission(Amount commission) { this.commission = commission; }
+    protected void setCurrency(Asset currency) { this.currency = currency; }
     protected void setType(TransactionType type) { this.type = type; }
-    protected void setPriceCount(long priceCount) { this.priceCount = priceCount; }
+    protected void setPrice(Amount price) { this.price = price; }
  //   protected Instant getTime() { return acceptedTime; }
     
-    private Amount volume;
+    private Amount value; 
+    private Amount amount;
+    private Amount price;
+    
     private long volumeCount;
     private Portfolio portfolio;
     private Asset asset;
     private long priceCount ;
+    private Amount commission;
+    private Asset currency;
      private Instant acceptedTime;
     private Instant closedTime;
     private Instant settledTime;

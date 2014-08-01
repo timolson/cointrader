@@ -40,7 +40,12 @@ public class Fill extends RemoteEvent {
     @Transient
     public Amount getVolume() { return new DiscreteAmount(volumeCount,market.getVolumeBasis()); }
     public long getVolumeCount() { return volumeCount; }
-
+    
+    @Transient
+	public Amount getCommission() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
     public String toString() {
         return "Fill{" +
@@ -64,4 +69,5 @@ public class Fill extends RemoteEvent {
     private Market market;
     private long priceCount;
     private long volumeCount;
+
 }

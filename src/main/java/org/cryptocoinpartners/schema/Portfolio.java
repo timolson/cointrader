@@ -5,6 +5,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.enumeration.TransactionType;
+
 import com.xeiam.xchange.dto.trade.Wallet;
 
 import java.math.BigDecimal;
@@ -12,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 
 
 /**
@@ -26,6 +29,8 @@ public class Portfolio extends EntityBase {
 
     /** returns all Positions, whether they are tied to an open Order or not.  Use getTradeablePositions() */
     public @OneToMany Collection<Position> getPositions() { return positions; }
+    
+
     
     /** returns all Positions, whether they are tied to an open Order or not.  Use getTradeablePositions() */
     public @OneToMany Collection<Balance> getBalances() { return balances; }
@@ -47,6 +52,17 @@ public class Portfolio extends EntityBase {
                 result.add(position);
         }
         return result;
+    }
+    public boolean addTransactions(Transaction transaction)
+    {
+        return this.transactions.add(transaction);
+    }
+    
+
+    @Transient
+    public Collection<Transaction> getTransactions()
+    {
+        return this.transactions;
     }
 
 
@@ -173,7 +189,7 @@ public class Portfolio extends EntityBase {
 
 
     @ManyToOne(optional = false)
-    public PortfolioManager getManager() { return manager; }
+   public PortfolioManager getManager() { return manager; }
 
 
     /**
@@ -209,21 +225,90 @@ public class Portfolio extends EntityBase {
         	balances.add(balance);
     }
 	
-    	
+
+    @Transient
+    @SuppressWarnings("null")
+	public List<Transaction> getCashFlows() {
+    	// return all CREDIT,DEBIT,INTREST and FEES
+		   ArrayList<Transaction>  cashFlows = null;
+		   Collection<Transaction> transactions = getTrades();
+			Iterator <Transaction> cashItr=transactions.iterator();
+			while (cashItr.hasNext()){
+				Transaction transaction = cashItr.next();
+				if(transaction.getType()==TransactionType.CREDIT||transaction.getType()==TransactionType.DEBIT||transaction.getType()==TransactionType.INTREST||transaction.getType()==TransactionType.FEES)
+				{
+					cashFlows.add(transaction);
+				}
+						
+			}
+		return cashFlows;
+	    }
+    @Transient 
+   @SuppressWarnings("null")
+public List<Transaction> getTrades() {
+	   //return all BUY and SELL
+	   ArrayList<Transaction>  trades = null;
+	   Collection<Transaction> transactions = getTrades();
+		Iterator <Transaction> balItr=transactions.iterator();
+		while (balItr.hasNext()){
+			Transaction transaction = balItr.next();
+			if(transaction.getType()==TransactionType.BUY||transaction.getType()==TransactionType.SELL)
+			{
+				trades.add(transaction);
+			}
+					
+		}
+	return trades;
+    }
+    @Transient
+    public Amount getCashBalance() {
+
+		// sum of all transactions that belongs to this strategy
+		BigDecimal balance = BigDecimal.ZERO;
+		Collection<Transaction> transactions = getTrades();
+		Iterator <Transaction> balItr=transactions.iterator();
+		while (balItr.hasNext()){
+			balance.add( balItr.next().getValue().asBigDecimal());
+			
+		}
+
+		// plus part of all cashFlows
+		BigDecimal cashFlows = BigDecimal.ZERO;
+		
+		
+		Collection<Transaction> cashFlowTransactions = getCashFlows();
+		Iterator <Transaction> cashlItr=cashFlowTransactions.iterator();
+		while (cashlItr.hasNext()){
+			cashFlows.add( cashlItr.next().getValue().asBigDecimal());
+			
+		}
+		
+		Amount amount=DecimalAmount.of(balance.add(cashFlows));
+		//Amount amount;
+		//balance;
+		return amount ;
+	}
+	public String toString() {
+		
+		return getName();
+	}
 
 
     // JPA
     protected Portfolio() {}
     protected void setPositions(Collection<Position> positions) { this.positions = positions; }
     protected void setBalances(Collection<Balance> balances) { this.balances = balances; }
+    protected void setTransactions(Collection<Transaction> transactions) { this.transactions = transactions; }
+    
     protected void setName(String name) { this.name = name; }
     protected void setStakes(Collection<Stake> stakes) { this.stakes = stakes; }
     protected void setManager(PortfolioManager manager) { this.manager = manager; }
 
-    
-    private String name;
     private PortfolioManager manager;
+   
+    private String name;
     private Collection<Position> positions = Collections.emptyList();  
     private Collection<Balance> balances = Collections.emptyList();
+    private Collection<Transaction> transactions = Collections.emptyList();
     private Collection<Stake> stakes = Collections.emptyList();
 }
