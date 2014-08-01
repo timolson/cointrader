@@ -69,9 +69,7 @@ public class Transaction extends Event {
 			this.setPortfolio(portfolio);
 			this.setCurrency(fill.getMarket().getBase());
 			this.setCommission(fill.getCommission());
-			//portfolio.getTransactions().add(this);
-			log.debug(portfolio.getTransactions().toString());
-	
+			
 			String logMessage = "executed transaction type: " + getType() + " quantity: " + getAmount() + " of " + getAsset()
 					+ " price: " + getPrice() + " commission: " + getCommission();
 
