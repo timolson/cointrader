@@ -32,18 +32,17 @@ public class Transaction extends Event {
 	private static final String SEPARATOR = ",";
 	
      // todo add basis rounding
-	   public Transaction(Portfolio portfolio, Asset asset, TransactionType type, long priceCount, Amount volume) {
-		   this.volume=volume;
-		   this.volumeCount = DiscreteAmount.roundedCountForBasis(volume.asBigDecimal(), asset.getBasis());
+	   public Transaction(Portfolio portfolio, Asset asset, TransactionType type, long priceCount, Amount amount) {
+		   this.amount=amount;
 		   this.portfolio=portfolio;
 		   this.asset=asset;
 		   this.priceCount=priceCount;
 		   this.type=type;
 	       	     
 	    }
-	   public Transaction(Portfolio portfolio, Asset asset, TransactionType type, long priceCount, Amount volume, Currency currnecy, Amount Commission) {
-		   this.volume=volume;
-		   this.volumeCount = DiscreteAmount.roundedCountForBasis(volume.asBigDecimal(), asset.getBasis());
+	   public Transaction(Portfolio portfolio, Asset asset, TransactionType type, long priceCount, Amount amount, Currency currnecy, Amount Commission) {
+		   this.amount=amount;
+		   //this.volumeCount = DiscreteAmount.roundedCountForBasis(volume.asBigDecimal(), asset.getBasis());
 		   this.portfolio=portfolio;
 		   this.asset=asset;
 		   this.priceCount=priceCount;
@@ -62,7 +61,8 @@ public class Transaction extends Event {
 			//long quantity = Side.BUY.equals(fill.getSide()) ? fill.getQuantity() : -fill.getQuantity();
 
 			this.setDateTime(fill.getTime());
-			this.setQuantity( fill.getVolume());
+			this.setAmount( fill.getVolume());
+			this.setAsset(fill.getMarket().getBase());
 			this.setPrice(fill.getPrice());
 			this.setType(transactionType);
 			this.setSecurity(security);
@@ -70,20 +70,14 @@ public class Transaction extends Event {
 			this.setCurrency(fill.getMarket().getBase());
 			this.setCommission(fill.getCommission());
 			
-			String logMessage = "executed transaction type: " + getType() + " quantity: " + getAmount() + " of " + getAsset()
-					+ " price: " + getPrice() + " commission: " + getCommission();
-
-			log.info(logMessage);
+			
 		}
      
 	   private void setSecurity(Market security) {
 		// TODO Auto-generated method stub
 		
 	}
-	private void setQuantity(Amount volume2) {
-		// TODO Auto-generated method stub
-		
-	}
+
 	private void setDateTime(Instant time) {
 		// TODO Auto-generated method stub
 		
@@ -116,6 +110,9 @@ public class Transaction extends Event {
     public Asset getCurrency() { return currency; }
     
     @Transient
+    public Amount getAmount() { return amount; }
+    
+    @Transient
     public Amount getCommission() { return commission; }
     
     
@@ -129,7 +126,7 @@ public class Transaction extends Event {
     @Transient
     public Amount getPrice() { 
     	
-    	return (new DiscreteAmount(priceCount, getAsset().getBasis())); }
+    	return price; }
 
    
 
@@ -139,9 +136,7 @@ public class Transaction extends Event {
 		return  "time=" + (getTime() != null ? (FORMAT.format(getTime())) : "") + SEPARATOR + "type=" +getType() + SEPARATOR + "volume=" +getAmount() + (getAsset() != null ? (SEPARATOR + "asset=" + getAsset()) : "")
 				+ SEPARATOR + "price=" + getPrice() ;
 	}
-	@Transient
-    protected Amount getAmount() { return new DiscreteAmount(volumeCount, getAsset().getBasis()); }
-    protected void setAmount(long volumeCount) { this.volumeCount = volumeCount; this.volume = null; }
+	 protected void setAmount(Amount amount) { this.amount = amount; }
     protected void setPortfolio(Portfolio portfolio) { this.portfolio = portfolio; }
     protected void setAsset(Asset asset) { this.asset = asset; }
     protected void setCommission(Amount commission) { this.commission = commission; }
@@ -151,7 +146,7 @@ public class Transaction extends Event {
  //   protected Instant getTime() { return acceptedTime; }
     
     private Amount value; 
-    private Amount volume;
+    private Amount amount;
     private Amount price;
     
     private long volumeCount;
