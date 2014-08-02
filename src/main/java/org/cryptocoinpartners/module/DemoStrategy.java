@@ -41,11 +41,8 @@ public class DemoStrategy extends SimpleStatefulStrategy {
             bestBid = b.getBestBid();
             bestAsk = b.getBestAsk();
             if( bestBid != null && bestAsk != null ) {
-            //	log.info(portfolioManager.getPositions().toString());
                 ready();
                 log.info(portfolioService.getPositions(portfolio).toString());
-                
-                //log.info(portfolio.getManager().getPortfolio().getPositions().toString());
                 enterTrade();
                 exitTrade();
          }
