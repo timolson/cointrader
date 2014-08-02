@@ -152,7 +152,14 @@ public class Replay
     public class EventTimeManager implements Context.TimeProvider
     {
         public Instant getInitialTime() { return replayTimeInterval.getStart().toInstant(); }
-        public Instant nextTime( Event event ) { return event.getTime(); }
+        public Instant nextTime( Event event ) {
+            if( orderByTimeReceived && event instanceof RemoteEvent ) {
+                RemoteEvent remoteEvent = (RemoteEvent) event;
+                return remoteEvent.getTimeReceived();
+            }
+            else
+                return event.getTime();
+        }
     }
 
 
