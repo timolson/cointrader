@@ -38,6 +38,7 @@ public class Transaction extends Event {
 		   this.asset=asset;
 		   this.priceCount=priceCount;
 		   this.type=type;
+		   
 	       	     
 	    }
 	   public Transaction(Portfolio portfolio, Asset asset, TransactionType type, long priceCount, Amount amount, Currency currnecy, Amount Commission) {
@@ -69,6 +70,7 @@ public class Transaction extends Event {
 			this.setPortfolio(portfolio);
 			this.setCurrency(fill.getMarket().getBase());
 			this.setCommission(fill.getCommission());
+			this.setMarket(fill.getMarket());
 			
 			
 		}
@@ -106,6 +108,9 @@ public class Transaction extends Event {
     @ManyToOne(optional = false)
     public Asset getAsset() { return asset; }
 
+    @ManyToOne(optional = false)
+    public Market getMarket() { return market; }
+    
     @Transient
     public Asset getCurrency() { return currency; }
     
@@ -143,6 +148,7 @@ public class Transaction extends Event {
     protected void setCurrency(Asset currency) { this.currency = currency; }
     protected void setType(TransactionType type) { this.type = type; }
     protected void setPrice(Amount price) { this.price = price; }
+    protected void setMarket(Market market) { this.market = market; }
  //   protected Instant getTime() { return acceptedTime; }
     
     private Amount value; 
@@ -158,5 +164,6 @@ public class Transaction extends Event {
      private Instant acceptedTime;
     private Instant closedTime;
     private Instant settledTime;
+    private Market market;
     @Inject private Logger log;
 }

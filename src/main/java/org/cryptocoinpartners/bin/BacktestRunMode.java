@@ -2,6 +2,8 @@ package org.cryptocoinpartners.bin;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+
+import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.MockOrderService;
@@ -38,6 +40,7 @@ public class BacktestRunMode extends RunMode {
         context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
         context.attach(MockOrderService.class);
+        context.attach(BasicPortfolioService.class);
         for( String strategyName : strategyNames ) {
         	 StrategyInstance strategyInstance = new StrategyInstance(strategyName);
              setUpInitialPortfolio(strategyInstance);
