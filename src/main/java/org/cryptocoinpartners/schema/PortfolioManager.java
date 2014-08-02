@@ -27,19 +27,17 @@ public class PortfolioManager extends EntityBase {
   
     //TODO Limit handle FIll to only handle fills for orders it has places. should only recieve fills for orders that this portfolios belonging to this manager has placed.
     @When("select * from Transaction")
-    public void handleFill( Transaction transaction ) {
-    	//Exchange exchange=fill.getMarket().getExchange();
+    public void handleTransaction( Transaction transaction ) {
+    	Portfolio portfolio=transaction.getPortfolio();
     	Asset asset=transaction.getAsset();
     	Amount amount = transaction.getAmount();
     	Amount price = transaction.getPrice();
-    	Exchange exchange =transaction.getMarket().getExchange();
+    	Exchange exchange =transaction.getExchange();
         Position position = new Position(exchange, asset, amount, price);
-       // Balance balance=new Balance( exchange,asset, amount, Balance.BalanceType.ACTUAL );
-        //Update the position and balance. The position might be higher than the balance when trading on margin.
-        portfolio.modifyPosition( position, new Authorization("Fill for " + transaction.toString() ));
-       // portfolio.modifyBalance( balance, new Authorization("Fill for " + fill.toString() ));
+       portfolio.modifyPosition( position, new Authorization("Fill for " + transaction.toString() ));
         portfolio.addTransactions(transaction);
-        log.info("Positions:"+portfolio.getPositions().toString());
+        log.info("Transaction Processed: " + transaction);
+      
       
     }
 

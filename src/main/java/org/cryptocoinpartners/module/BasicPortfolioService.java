@@ -47,4 +47,9 @@ public  class BasicPortfolioService implements PortfolioService {
 		// TODO Auto-generated method stub
 		return null;
 	}
+	
+	public void CreateTransaction(Portfolio portfolio,Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price ) {
+		 Transaction transaction=new Transaction(portfolio, exchange, asset, type, amount, price);
+         context.publish(transaction);	
+	}
 }

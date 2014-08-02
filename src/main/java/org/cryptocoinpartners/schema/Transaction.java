@@ -1,16 +1,10 @@
 package org.cryptocoinpartners.schema;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.text.SimpleDateFormat;
-
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.util.Remainder;
-import org.cryptocoinpartners.util.RemainderHandler;
-import org.hibernate.Hibernate;
-import org.hibernate.LockOptions;
-import org.hibernate.Session;
 import org.joda.time.Instant;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 
 import javax.inject.Inject;
@@ -28,57 +22,42 @@ import javax.persistence.Transient;
 public class Transaction extends Event {
 
     enum TransactionStatus { OFFERED, ACCEPTED, CLOSED, SETTLED, CANCELLED }
-    private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
+    private static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+    
+   // private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
 	private static final String SEPARATOR = ",";
 	
-     // todo add basis rounding
-	   public Transaction(Portfolio portfolio, Asset asset, TransactionType type, long priceCount, Amount amount) {
-		   this.amount=amount;
-		   this.portfolio=portfolio;
-		   this.asset=asset;
-		   this.priceCount=priceCount;
-		   this.type=type;
-		   
-	       	     
-	    }
-	   public Transaction(Portfolio portfolio, Asset asset, TransactionType type, long priceCount, Amount amount, Currency currnecy, Amount Commission) {
-		   this.amount=amount;
-		   //this.volumeCount = DiscreteAmount.roundedCountForBasis(volume.asBigDecimal(), asset.getBasis());
-		   this.portfolio=portfolio;
-		   this.asset=asset;
-		   this.priceCount=priceCount;
-		   this.type=type;
-		   this.commission=commission;
-		   this.currency=currency;
-	       	     
+     public Transaction(Portfolio portfolio, Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price) {
+		  
+			this.setAmount(amount);
+			this.setAsset(asset);
+			this.setPrice(price);
+			this.setType(type);
+			this.setPortfolio(portfolio);
+			this.setExchange(exchange);
+				     
 	    }
 	   
 	   public Transaction(Fill fill) throws Exception {
 			Portfolio portfolio = fill.getOrder().getPortfolio();
-			Market security = fill.getMarket();
 					
 
 			TransactionType transactionType = fill.getVolume().isPositive() ? TransactionType.BUY : TransactionType.SELL;
 			//long quantity = Side.BUY.equals(fill.getSide()) ? fill.getQuantity() : -fill.getQuantity();
 
-			this.setDateTime(fill.getTime());
 			this.setAmount( fill.getVolume());
 			this.setAsset(fill.getMarket().getBase());
 			this.setPrice(fill.getPrice());
 			this.setType(transactionType);
-			this.setSecurity(security);
 			this.setPortfolio(portfolio);
 			this.setCurrency(fill.getMarket().getBase());
 			this.setCommission(fill.getCommission());
 			this.setMarket(fill.getMarket());
-			
+			this.setExchange(fill.getMarket().getExchange());
 			
 		}
      
-	   private void setSecurity(Market security) {
-		// TODO Auto-generated method stub
-		
-	}
+	
 
 	private void setDateTime(Instant time) {
 		// TODO Auto-generated method stub
@@ -133,16 +112,20 @@ public class Transaction extends Event {
     	
     	return price; }
 
-   
+    @Transient
+    public Exchange getExchange() { 
+    	
+    	return exchange; }
 
 	public String toString() {
 		
 		
-		return  "time=" + (getTime() != null ? (FORMAT.format(getTime())) : "") + SEPARATOR + "type=" +getType() + SEPARATOR + "volume=" +getAmount() + (getAsset() != null ? (SEPARATOR + "asset=" + getAsset()) : "")
+		return  "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Portfolio=" +getPortfolio() + SEPARATOR + "Exchange=" +getExchange()+ SEPARATOR + "type=" +getType() + SEPARATOR + "volume=" +getAmount() + (getAsset() != null ? (SEPARATOR + "asset=" + getAsset()) : "")
 				+ SEPARATOR + "price=" + getPrice() ;
 	}
 	 protected void setAmount(Amount amount) { this.amount = amount; }
     protected void setPortfolio(Portfolio portfolio) { this.portfolio = portfolio; }
+    protected void setExchange(Exchange exchange) { this.exchange = exchange; }
     protected void setAsset(Asset asset) { this.asset = asset; }
     protected void setCommission(Amount commission) { this.commission = commission; }
     protected void setCurrency(Asset currency) { this.currency = currency; }
@@ -155,15 +138,11 @@ public class Transaction extends Event {
     private Amount amount;
     private Amount price;
     
-    private long volumeCount;
     private Portfolio portfolio;
     private Asset asset;
-    private long priceCount ;
     private Amount commission;
     private Asset currency;
-     private Instant acceptedTime;
-    private Instant closedTime;
-    private Instant settledTime;
-    private Market market;
+     private Market market;
+     private Exchange exchange;
     @Inject private Logger log;
 }

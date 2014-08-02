@@ -29,14 +29,14 @@ public class Position extends Holding {
 
 
     @Transient
-    public Amount getVolume() {
+    protected Amount getVolume() {
         if( volume == null )
             volume = new DiscreteAmount(volumeCount, asset.getBasis());
         return volume;
     }
 
     @Transient
-    public Amount getPrice() {
+    protected Amount getPrice() {
         if( price == null )
             price = new DiscreteAmount(priceCount, asset.getBasis());
         return price;
@@ -45,11 +45,11 @@ public class Position extends Holding {
     /** If the SpecificOrder is not null, then this Position is being held in reserve as payment for that Order */
     @OneToOne
     @Nullable
-    public SpecificOrder getOrder() { return order; }
+    protected SpecificOrder getOrder() { return order; }
 
 
     @Transient
-    public boolean isReserved() { return order != null; }
+    protected boolean isReserved() { return order != null; }
 
 
     /**
@@ -58,8 +58,8 @@ public class Position extends Holding {
      * @return true iff the positions both have the same Asset and the same Exchange, in which case this Position
      * has modified its volume by the amount in the position argument.
      */
-    public boolean merge(Position position) {
-        if( !exchange.equals(position.exchange) || !asset.equals(position.asset) || priceCount!=(position.priceCount) )
+    protected boolean merge(Position position) {
+        if( !exchange.equals(position.exchange) || !asset.equals(position.asset)  )
             return false;
         volumeCount += position.volumeCount;
         return true;
