@@ -36,14 +36,14 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 
     @When("select * from Book")
     void handleBook( Book b ) {
+    	
         if( b.getMarket().equals(market) ) {
         
             bestBid = b.getBestBid();
             bestAsk = b.getBestAsk();
             if( bestBid != null && bestAsk != null ) {
                 ready();
-                log.info(portfolioService.getPositions(portfolio).toString());
-                enterTrade();
+                 enterTrade();
                 exitTrade();
          }
         }
