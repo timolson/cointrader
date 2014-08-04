@@ -176,6 +176,7 @@ public class Portfolio extends EntityBase {
         this.manager = manager;
         this.positions= new ArrayList<Position>();
         this.balances= new ArrayList<Balance>();
+        this.transactions= new ArrayList<Transaction>();
         
         
     }
@@ -197,7 +198,7 @@ public class Portfolio extends EntityBase {
      * @param position
      * @param authorization
      */
-    public void modifyPosition( Position position, Authorization authorization ) {
+    protected void modifyPosition( Position position, Authorization authorization ) {
         assert authorization != null;
         assert position != null;
         boolean modifiedExistingPosition = false;

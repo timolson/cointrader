@@ -23,7 +23,11 @@ public enum TransactionType
     DEBIT("DEBIT"),
     INTREST("INTREST"),
     FEES("FEES"),
-    REBALANCE("REBALANCE");
+    REBALANCE("REBALANCE"),
+     TRANSFER("TRANSFER"),
+     PURCHASE("PURCHASE"),
+     ;
+     
 
     private final String enumValue;
 
@@ -89,6 +93,8 @@ public enum TransactionType
             TransactionType.values.put(INTREST.enumValue, INTREST);
             TransactionType.values.put(FEES.enumValue, FEES);
             TransactionType.values.put(REBALANCE.enumValue, REBALANCE);
+            TransactionType.values.put(TRANSFER.enumValue, TRANSFER);
+            TransactionType.values.put(PURCHASE.enumValue, PURCHASE);
         }
         synchronized (TransactionType.valueList)
         {
@@ -99,6 +105,8 @@ public enum TransactionType
             TransactionType.valueList.add(INTREST);
             TransactionType.valueList.add(FEES);
             TransactionType.valueList.add(REBALANCE);
+            TransactionType.valueList.add(TRANSFER);
+            TransactionType.valueList.add(PURCHASE);
             TransactionType.valueList = Collections.unmodifiableList(valueList);
         }
         synchronized (TransactionType.literals)
@@ -110,6 +118,8 @@ public enum TransactionType
             TransactionType.literals.add(INTREST.enumValue);
             TransactionType.literals.add(FEES.enumValue);
             TransactionType.literals.add(REBALANCE.enumValue);
+            TransactionType.literals.add(TRANSFER.enumValue);
+            TransactionType.literals.add(PURCHASE.enumValue);
             TransactionType.literals = Collections.unmodifiableList(literals);
         }
         synchronized (TransactionType.names)
@@ -121,6 +131,8 @@ public enum TransactionType
             TransactionType.names.add("INTREST");
             TransactionType.names.add("FEES");
             TransactionType.names.add("REBALANCE");
+            TransactionType.names.add("TRANSFER");
+            TransactionType.names.add("PURCHASE");
             TransactionType.names = Collections.unmodifiableList(names);
         }
     }

@@ -16,8 +16,8 @@ public class Transfer extends Transaction {
 
     // todo
 
-    public Transfer(Portfolio portfolio, Asset asset, TransactionType type, long priceCount, Amount volume) {
-		super(portfolio, asset, type, priceCount, volume);
+    public Transfer(Portfolio portfolio, Exchange exchange,Asset asset, Amount price, Amount volume) {
+		super(portfolio,exchange, asset, TransactionType.TRANSFER, price, volume);
 		// TODO Auto-generated constructor stub
 	}
 

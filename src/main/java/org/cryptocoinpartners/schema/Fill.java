@@ -18,7 +18,6 @@ public class Fill extends RemoteEvent {
 
 
     public Fill(SpecificOrder order, Instant time, Market market, long priceCount, long volumeCount ) {
-        super(time,null);
         this.order = order;
         this.market = market;
         this.priceCount = priceCount;

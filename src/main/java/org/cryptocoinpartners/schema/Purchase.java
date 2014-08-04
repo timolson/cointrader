@@ -14,11 +14,10 @@ import org.cryptocoinpartners.enumeration.TransactionType;
 @Entity
 public class Purchase extends Transaction {
 
-
-    public Purchase(Portfolio portfolio, Asset asset, TransactionType type, long priceCount, Amount volume) {
-		super(portfolio, asset, type, priceCount, volume);
-		// TODO Auto-generated constructor stub
-	}
-	private long volumeCount;
-    private Market market;
+	 public Purchase(Portfolio portfolio,Exchange exchange,  Asset asset, Amount price, Amount volume) {
+			super(portfolio,exchange ,asset,  TransactionType.PURCHASE, price, volume);
+			// TODO Auto-generated constructor stub
+		}
+    
+	
 }

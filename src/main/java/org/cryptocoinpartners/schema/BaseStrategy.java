@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.schema;
 
 import org.cryptocoinpartners.service.OrderService;
+import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.service.Strategy;
 import org.slf4j.Logger;
@@ -45,6 +46,9 @@ public class BaseStrategy implements Strategy {
 
     @Inject
     protected OrderService orderService;
+
+    @Inject
+    protected PortfolioService portfolioService;
 
 
     @Inject
