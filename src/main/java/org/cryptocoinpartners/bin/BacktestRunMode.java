@@ -48,9 +48,10 @@ public class BacktestRunMode extends RunMode {
         	 StrategyInstance strategyInstance = new StrategyInstance(strategyName);
         	 context.attachInstance(strategyInstance);
              setUpInitialPortfolio(strategyInstance);
-               
+              // context.getInjector().getInstance(cls)
            
         }
+        
         replay.run();
         // todo report P&L, etc.
     }

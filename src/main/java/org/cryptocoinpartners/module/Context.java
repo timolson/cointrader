@@ -2,11 +2,14 @@ package org.cryptocoinpartners.module;
 
 import com.espertech.esper.client.*;
 import com.espertech.esper.client.deploy.DeploymentException;
+import com.espertech.esper.client.deploy.DeploymentOptions;
 import com.espertech.esper.client.deploy.DeploymentResult;
 import com.espertech.esper.client.deploy.EPDeploymentAdmin;
 import com.espertech.esper.client.deploy.ParseException;
 import com.espertech.esper.client.time.CurrentTimeEvent;
 import com.espertech.esper.client.time.CurrentTimeSpanEvent;
+import com.espertech.esper.core.deploy.EPDeploymentAdminImpl;
+import com.espertech.esper.core.deploy.EPLModuleUtil;
 import com.espertech.esper.core.service.EPServiceProviderImpl;
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -17,6 +20,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.ArrayUtils;
 import org.cryptocoinpartners.schema.Event;
+import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.service.Service;
 import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.Injector;
@@ -29,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -151,6 +156,26 @@ public class Context {
 
     public void attach(Class c, Object instance) {
         ConfigUtil.applyConfiguration(instance, config);
+        try {
+        	try {
+				loadEsperFiles(this,instance.getClass().getSimpleName());
+						//
+				//instance.toString());
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			loadStatements(instance.toString());
+		} catch (ParseException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (DeploymentException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
         subscribe(instance);
         registerBindings(c,instance);
         if( AttachListener.class.isAssignableFrom(c) ) {
@@ -237,7 +262,40 @@ public class Context {
         loadStatements(source, null);
     }
 
+    protected void DeployModule(String moduleName) throws java.lang.Exception {
+log.debug("test");
+		//EPAdministrator administrator = getServiceProvider(strategyName).getEPAdministrator();
+		EPDeploymentAdmin deployAdmin = epAdministrator.getDeploymentAdmin();
+		com.espertech.esper.client.deploy.Module module = deployAdmin.read(moduleName + ".epl");
+		DeploymentResult deployResult = deployAdmin.deploy(module, new DeploymentOptions());
+		List<EPStatement> statements = deployResult.getStatements();
 
+	
+
+		log.debug("deployed module " + moduleName );
+	}
+    
+    
+    public List<Object> loadRules(String source) throws ParseException, DeploymentException, IOException {
+       // loadStatements(source, null);
+  
+	EPStatement statement = epAdministrator.getStatement("GET_AVG");
+	List<Object> list = new ArrayList<Object>();
+	if (statement != null && statement.isStarted()) {
+		SafeIterator<EventBean> it = statement.safeIterator();
+		try {
+			while (it.hasNext()) {
+				EventBean bean = it.next();
+				Object underlaying = bean.getUnderlying();
+				list.add(underlaying);
+			}
+		} finally {
+			it.close();
+		}
+	}
+	return list;
+    }
+    
     /**
      * @param source        a string containing EPL statements
      * @param intoFieldBean if not null, any @IntoMethod annotations on Esper statements will bind the columns from
@@ -314,8 +372,40 @@ public class Context {
     }
 
 
+    public static com.espertech.esper.client.deploy.Module readResource(String resource) throws IOException, ParseException {
+        String stripped = resource.startsWith("/") ? resource.substring(1) : resource;
+
+        InputStream stream = null;
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        if (classLoader!=null) {
+            stream = classLoader.getResourceAsStream( stripped );
+        }
+        if ( stream == null ) {
+            stream = EPDeploymentAdminImpl.class.getResourceAsStream( resource );
+        }
+        if ( stream == null ) {
+            stream = EPDeploymentAdminImpl.class.getClassLoader().getResourceAsStream( stripped );
+        }
+        if ( stream == null ) {
+           throw new IOException("Failed to find resource '" + resource + "' in classpath");
+        }
+
+        try {
+            return EPLModuleUtil.readInternal(stream, resource);
+        }
+        finally {
+            try {
+                stream.close();
+            } catch (IOException e) {
+                log.debug("Error closing input stream", e);
+            }
+        }
+    }
+
+    
     private static void loadEsperFiles(Context context, String modulePackageName) throws Exception {
         String path = modulePackageName.replaceAll("\\.", "/");
+       // readResource("BasicPortfolioService.epl");
         File[] files = new File(path).listFiles();
         if( files != null ) {
             for( File file : files ) {
