@@ -1,2 +1,2 @@
-@IntoMethod("setAvgTrade")
+@IntoMethod("getAvgTrade")
 select avg(priceAsDouble) from Trade.win:time(10 sec)

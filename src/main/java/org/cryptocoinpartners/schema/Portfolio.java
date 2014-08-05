@@ -227,68 +227,8 @@ public class Portfolio extends EntityBase {
     }
 	
 
-    @Transient
-    @SuppressWarnings("null")
-	public List<Transaction> getCashFlows() {
-    	// return all CREDIT,DEBIT,INTREST and FEES
-		   ArrayList<Transaction>  cashFlows = null;
-		   Collection<Transaction> transactions = getTrades();
-			Iterator <Transaction> cashItr=transactions.iterator();
-			while (cashItr.hasNext()){
-				Transaction transaction = cashItr.next();
-				if(transaction.getType()==TransactionType.CREDIT||transaction.getType()==TransactionType.DEBIT||transaction.getType()==TransactionType.INTREST||transaction.getType()==TransactionType.FEES)
-				{
-					cashFlows.add(transaction);
-				}
-						
-			}
-		return cashFlows;
-	    }
-    @Transient 
-   @SuppressWarnings("null")
-public List<Transaction> getTrades() {
-	   //return all BUY and SELL
-	   ArrayList<Transaction>  trades = null;
-	   Collection<Transaction> transactions = getTrades();
-		Iterator <Transaction> balItr=transactions.iterator();
-		while (balItr.hasNext()){
-			Transaction transaction = balItr.next();
-			if(transaction.getType()==TransactionType.BUY||transaction.getType()==TransactionType.SELL)
-			{
-				trades.add(transaction);
-			}
-					
-		}
-	return trades;
-    }
-    @Transient
-    public Amount getCashBalance() {
-
-		// sum of all transactions that belongs to this strategy
-		BigDecimal balance = BigDecimal.ZERO;
-		Collection<Transaction> transactions = getTrades();
-		Iterator <Transaction> balItr=transactions.iterator();
-		while (balItr.hasNext()){
-			balance.add( balItr.next().getValue().asBigDecimal());
-			
-		}
-
-		// plus part of all cashFlows
-		BigDecimal cashFlows = BigDecimal.ZERO;
-		
-		
-		Collection<Transaction> cashFlowTransactions = getCashFlows();
-		Iterator <Transaction> cashlItr=cashFlowTransactions.iterator();
-		while (cashlItr.hasNext()){
-			cashFlows.add( cashlItr.next().getValue().asBigDecimal());
-			
-		}
-		
-		Amount amount=DecimalAmount.of(balance.add(cashFlows));
-		//Amount amount;
-		//balance;
-		return amount ;
-	}
+  
+    
 	public String toString() {
 		
 		return getName();
