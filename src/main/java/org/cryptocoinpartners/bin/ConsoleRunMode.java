@@ -16,7 +16,7 @@ import org.cryptocoinpartners.module.*;
 import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.module.xchange.XchangeData;
 import org.cryptocoinpartners.module.xchange.XchangeOrderService;
-import org.cryptocoinpartners.schema.StrategyInstance;
+import org.cryptocoinpartners.schema.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -111,8 +111,10 @@ public class ConsoleRunMode extends RunMode {
             context.attach(XchangeOrderService.class);
         else
             context.attach(MockOrderService.class);
-        StrategyInstance portfolioManager = new StrategyInstance("fake");
-        context.attach(StrategyInstance.class,portfolioManager);
+
+        // todo Adjust the Owner's Portfolio to have some BTC & USD to play with.
+        Owner owner = new Owner("Console Portfolio");
+        context.attachInstance(owner);
 
         Terminal terminal = TerminalFactory.get();
         try {

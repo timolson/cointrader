@@ -12,12 +12,16 @@
 * Modular infrastructure
 
 Coin Trader's future goals include:
+
 * Accounting and reconciliation
 * Backtesting
 * Live order execution
 * Flexible data output
 * Library of quantitative indicators
 * Web console & graphing
+
+#### Video
+[Tim presents Coin Trader](http://youtu.be/JAvcL05nSKw) at the SF Bitcoin Dev meetup.
 
 #### Setup
 Coin Trader requires Java JDK 1.7, Maven, and a SQL database (MySQL default).  
