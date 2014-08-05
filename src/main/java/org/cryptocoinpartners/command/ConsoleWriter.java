@@ -9,12 +9,15 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.Collection;
 
+import javax.inject.Inject;
+
 
 /**
  * @author Tim Olson
  */
 public class ConsoleWriter extends PrintWriter {
 
+	@Inject
     public ConsoleWriter(ConsoleReader out) {
         super(new ConsolePrintWriter(out));
         this.console = out;

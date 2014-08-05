@@ -4,6 +4,7 @@ import javax.persistence.Basic;
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collection;
 
 
@@ -37,6 +38,6 @@ public class Owner extends PortfolioManager {
     protected void setStakes(Collection<Stake> stakes) { this.stakes = stakes; }
 
 
-    private Collection<Stake> stakes;
+    private Collection<Stake> stakes = new ArrayList<Stake>();
     private String name;
 }
