@@ -59,7 +59,7 @@ public class BasicPortfolioService implements PortfolioService {
 
 		List<Object> events = null;
 		try {
-			context.loadStatementByName("GET_LAST_TICK");
+			events = context.loadStatementByName("GET_LAST_TICK");
 			if (events.size() > 0) {
 				Trade trade = ((Trade) events.get(events.size() - 1));
 				return (trade.getPrice());
