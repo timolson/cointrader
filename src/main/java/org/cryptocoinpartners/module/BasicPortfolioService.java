@@ -23,6 +23,8 @@ import org.cryptocoinpartners.schema.Position;
 import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.schema.Transaction;
 import org.cryptocoinpartners.service.PortfolioService;
+import org.cryptocoinpartners.service.QuoteService;
+import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
 
 import com.espertech.esper.client.deploy.DeploymentException;
@@ -44,7 +46,7 @@ public class BasicPortfolioService implements PortfolioService {
 	@Override
 	@Nullable
 	public ArrayList<Position> getPositions(Portfolio portfolio) {
-		log.info("Last Tick Recived: " + getLastTrade(portfolio).toString());
+		//log.info("Last Tick Recived: " + getLastTrade(portfolio).toString());
 		return (ArrayList<Position>) portfolio.getPositions();
 	}
 
@@ -55,6 +57,7 @@ public class BasicPortfolioService implements PortfolioService {
 		return null;
 	}
 
+	@Override
 	public DiscreteAmount getLastTrade(Portfolio portfolio) {
 
 		List<Object> events = null;
@@ -78,6 +81,7 @@ public class BasicPortfolioService implements PortfolioService {
 		return null;
 	}
 
+	@Override
 	@Transient
 	public Amount getCashBalance(Portfolio portfolio) {
 
@@ -104,6 +108,7 @@ public class BasicPortfolioService implements PortfolioService {
 		return amount;
 	}
 
+	@Override
 	@Transient
 	@SuppressWarnings("null")
 	public List<Transaction> getCashFlows(Portfolio portfolio) {
@@ -122,6 +127,7 @@ public class BasicPortfolioService implements PortfolioService {
 		return cashFlows;
 	}
 
+	@Override
 	@Transient
 	@SuppressWarnings("null")
 	public List<Transaction> getTrades(Portfolio portfolio) {
@@ -140,6 +146,41 @@ public class BasicPortfolioService implements PortfolioService {
 	}
 
 	@Override
+	@Transient
+	public DiscreteAmount getMarketPrice(Position postion) {
+
+		if (postion.isOpen()) {
+			if (postion.isShort()) {
+				DiscreteAmount price = quotes.getLastAskForMarket(postion.getMarket()).getPrice();
+				return price;
+
+			} else {
+
+				DiscreteAmount price = quotes.getLastBidForMarket(postion.getMarket()).getPrice();
+
+				return price;
+			}
+		} else {
+			return new DiscreteAmount(0, postion.getMarket().getVolumeBasis());
+
+		}
+	}
+
+	@Override
+	@Transient
+	public Amount getMarketValue(Position postion) {
+
+		if (postion.isOpen()) {
+
+			return postion.getVolume().times(getMarketPrice(postion), Remainder.ROUND_EVEN);
+
+		} else {
+			return new DiscreteAmount(0, postion.getMarket().getVolumeBasis());
+
+		}
+	}
+
+	@Override
 	public void CreateTransaction(Portfolio portfolio, Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price) {
 		Transaction transaction = new Transaction(portfolio, exchange, asset, type, amount, price);
 		context.publish(transaction);
@@ -147,6 +188,8 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Inject
 	protected Context context;
+	@Inject
+	protected QuoteService quotes;
 	@Inject
 	private Logger log;
 }

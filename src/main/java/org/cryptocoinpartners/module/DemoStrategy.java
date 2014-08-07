@@ -1,11 +1,18 @@
 package org.cryptocoinpartners.module;
 
-import org.apache.commons.configuration.Configuration;
-import org.cryptocoinpartners.schema.*;
+import java.math.BigDecimal;
+import java.util.Iterator;
 
 import javax.inject.Inject;
-import java.math.BigDecimal;
 
+import org.apache.commons.configuration.Configuration;
+import org.cryptocoinpartners.schema.Book;
+import org.cryptocoinpartners.schema.DiscreteAmount;
+import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.Offer;
+import org.cryptocoinpartners.schema.Order;
+import org.cryptocoinpartners.schema.OrderBuilder;
+import org.cryptocoinpartners.schema.Position;
 
 /**
  * This simple Strategy first waits for Book data to arrive about the target Market, then it places a buy order
@@ -19,59 +26,59 @@ import java.math.BigDecimal;
 @SuppressWarnings("UnusedDeclaration")
 public class DemoStrategy extends SimpleStatefulStrategy {
 
+	@Inject
+	public DemoStrategy(Context context, Configuration config) {
+		// String marketSymbol = config.getString("demostrategy.market","BITFINEX:BTC.USD");
+		String marketSymbol = ("BITFINEX:BTC.USD");
 
-    @Inject
-    public DemoStrategy(Context context, Configuration config) {
-       // String marketSymbol = config.getString("demostrategy.market","BITFINEX:BTC.USD");
-        String marketSymbol = ("BITFINEX:BTC.USD");
-        
-        market = Market.forSymbol(marketSymbol);
-        if( market == null )
-            throw new Error("Could not find Market for symbol "+marketSymbol);
-        BigDecimal volumeBD = 
-                                                   new BigDecimal("0.00000100");// 100 satoshis
-        volumeCount = DiscreteAmount.roundedCountForBasis(volumeBD, market.getVolumeBasis());
-    }
+		market = Market.forSymbol(marketSymbol);
+		if (market == null)
+			throw new Error("Could not find Market for symbol " + marketSymbol);
+		BigDecimal volumeBD = new BigDecimal("1.00000000");// 100 satoshis
+		volumeCount = DiscreteAmount.roundedCountForBasis(volumeBD, market.getVolumeBasis());
+	}
 
+	@When("select * from Book")
+	void handleBook(Book b) {
 
-    @When("select * from Book")
-    void handleBook( Book b ) {
-    	
-        if( b.getMarket().equals(market) ) {
-        
-            bestBid = b.getBestBid();
-            bestAsk = b.getBestAsk();
-            if( bestBid != null && bestAsk != null ) {
-                ready();
-                portfolioService.getPositions(portfolio);
-                 enterTrade();
-                 
-                exitTrade();
-         }
-        }
-    }
+		if (b.getMarket().equals(market)) {
 
+			bestBid = b.getBestBid();
+			bestAsk = b.getBestAsk();
+			if (bestBid != null && bestAsk != null) {
+				ready();
+				enterTrade();
+				exitTrade();
+				Iterator<Position> it = portfolioService.getPositions(portfolio).iterator();
+				while (it.hasNext()) {
+					Position position = it.next();
+					log.info(portfolioService.getMarketValue(position).toString());
 
-    @SuppressWarnings("ConstantConditions")
-    protected OrderBuilder.CommonOrderBuilder buildEntryOrder() {
-        if( bestAsk == null )
-            return null;
-        DiscreteAmount limitPrice = bestBid.getPrice().decrement();
-        return order.create(market,volumeCount*2).withLimitPrice(limitPrice);
-    }
+				}
+			}
+		}
+	}
 
+	@Override
+	@SuppressWarnings("ConstantConditions")
+	protected OrderBuilder.CommonOrderBuilder buildEntryOrder() {
+		if (bestAsk == null)
+			return null;
+		DiscreteAmount limitPrice = bestBid.getPrice().decrement();
+		return order.create(market, volumeCount * 2).withLimitPrice(limitPrice);
+	}
 
-    @SuppressWarnings("ConstantConditions")
-    protected OrderBuilder.CommonOrderBuilder buildExitOrder(Order entryOrder) {
-        if( bestBid == null )
-            return null;
-        DiscreteAmount limitPrice = bestAsk.getPrice().increment();
-        return order.create(market,-volumeCount).withLimitPrice(limitPrice);
-    }
+	@Override
+	@SuppressWarnings("ConstantConditions")
+	protected OrderBuilder.CommonOrderBuilder buildExitOrder(Order entryOrder) {
+		if (bestBid == null)
+			return null;
+		DiscreteAmount limitPrice = bestAsk.getPrice().increment();
+		return order.create(market, -volumeCount).withLimitPrice(limitPrice);
+	}
 
-
-    private Offer bestBid;
-    private Offer bestAsk;
-    private Market market;
-    private long volumeCount;
+	private Offer bestBid;
+	private Offer bestAsk;
+	private final Market market;
+	private final long volumeCount;
 }
