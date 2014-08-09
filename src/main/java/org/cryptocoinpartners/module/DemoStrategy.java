@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.module;
 
 import java.math.BigDecimal;
+import java.util.Iterator;
 
 import javax.inject.Inject;
 
@@ -11,6 +12,7 @@ import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Offer;
 import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderBuilder;
+import org.cryptocoinpartners.schema.Position;
 
 /**
  * This simple Strategy first waits for Book data to arrive about the target Market, then it places a buy order
@@ -47,6 +49,12 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 				ready();
 				enterTrade();
 				exitTrade();
+				Iterator<Position> it = portfolioService.getPositions(portfolio).iterator();
+				while (it.hasNext()) {
+					Position position = it.next();
+					log.debug(portfolioService.getMarketValue(position).toString());
+
+				}
 			}
 		}
 	}
