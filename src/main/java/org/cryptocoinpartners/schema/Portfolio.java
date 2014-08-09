@@ -104,7 +104,7 @@ public class Portfolio extends EntityBase {
 				// subtract the reserve from the existing Position
 				position.setVolumeCount(position.getVolumeCount() - p.getVolumeCount());
 				// add a new reserve Position
-				Position reserve = new Position(p.getExchange(), p.getMarket(), p.getAsset(), p.getVolume(), p.getPrice());
+				Position reserve = new Position(p.getPortfolio(), p.getExchange(), p.getMarket(), p.getAsset(), p.getVolume(), p.getPrice());
 				reserve.setOrder(order);
 				positions.add(reserve);
 			}

@@ -40,7 +40,7 @@ public class PortfolioManager extends EntityBase {
 			portfolio.addTransactions(transaction);
 			// update postion
 			if (type == TransactionType.BUY || type == TransactionType.SELL) {
-				Position position = new Position(exchange, market, asset, amount, price);
+				Position position = new Position(portfolio, exchange, market, asset, amount, price);
 				portfolio.modifyPosition(position, new Authorization("Fill for " + transaction.toString()));
 
 			}

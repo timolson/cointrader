@@ -18,11 +18,16 @@ import org.cryptocoinpartners.schema.Asset;
 import org.cryptocoinpartners.schema.DecimalAmount;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Exchange;
+import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.OrderBuilder;
+import org.cryptocoinpartners.schema.OrderBuilder.SpecificOrderBuilder;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.Position;
 import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.schema.Transaction;
+import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.PortfolioService;
+import org.cryptocoinpartners.service.PortfolioServiceException;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
@@ -186,10 +191,95 @@ public class BasicPortfolioService implements PortfolioService {
 		context.publish(transaction);
 	}
 
+	@Override
+	public void exitPosition(Position position) throws Exception {
+
+		reducePosition(position, (position.getVolume().abs()));
+	}
+
+	@Override
+	public void reducePosition(final Position position, final Amount amount) {
+		try {
+			this.handleReducePosition(position, amount);
+		} catch (Throwable th) {
+			throw new PortfolioServiceException("Error performing 'PositionService.reducePosition(int positionId, long quantity)' --> " + th, th);
+		}
+	}
+
+	@Override
+	public void handleReducePosition(Position position, Amount amount) throws Exception {
+
+		Market market = position.getMarket();
+		OrderBuilder orderBuilder = new OrderBuilder(position.getPortfolio(), orderService);
+		if (orderBuilder != null) {
+			SpecificOrderBuilder exitOrder = orderBuilder.create(market, amount.negate());
+			log.info("Entering trade with order " + exitOrder);
+			orderService.placeOrder(exitOrder.getOrder());
+		}
+
+		if (!position.isOpen()) {
+			//TOFO remove subsrcption
+		}
+	}
+
+	@Override
+	public void handleSetExitPrice(Position position, Amount exitPrice, boolean force) throws PortfolioServiceException {
+
+		// there needs to be a position
+		if (position == null) {
+			throw new PortfolioServiceException("position does not exist: ");
+		}
+		if (!force && position.getExitPrice() == null) {
+			log.warn("no exit value was set for position: " + position);
+			return;
+		}
+
+		// we don't want to set the exitValue to Zero
+		if (exitPrice.isZero()) {
+			log.warn("setting of exit Pirice of zero is prohibited: " + exitPrice);
+			return;
+		}
+
+		if (!force) {
+			if (position.isShort() && exitPrice.compareTo(position.getExitPrice()) > 0) {
+				log.warn("exit value " + exitPrice + " is higher than existing exit value " + position.getExitPrice() + " of short position " + position);
+				return;
+			} else if (position.isLong() && exitPrice.compareTo(position.getExitPrice()) < 0) {
+				log.warn("exit value " + exitPrice + " is lower than existing exit value " + position.getExitPrice() + " of long position " + position);
+				return;
+			}
+		}
+
+		// exitValue cannot be lower than currentValue
+		Amount currentPrice = getMarketPrice(position);
+
+		if (position.isShort() && exitPrice.compareTo(currentPrice) < 0) {
+			throw new PortfolioServiceException("ExitValue (" + exitPrice + ") for short-position " + position + " is lower than currentValue: " + exitPrice);
+		} else if (position.isLong() && exitPrice.compareTo(currentPrice) > 0) {
+			throw new PortfolioServiceException("ExitValue (" + exitPrice + ") for long-position " + position + " is higher than currentValue: " + currentPrice);
+		}
+
+		position.setExitPrice(exitPrice);
+
+		log.info("set exit value " + position + " to " + exitPrice);
+	}
+
+	@Override
+	public void handleSetMargin(Position position) throws Exception {
+		//TODO manage setting and mainuplating margin
+	}
+
+	@Override
+	public void handleSetMargins() throws Exception {
+		//TODO manage setting and mainuplating margin
+	}
+
 	@Inject
 	protected Context context;
 	@Inject
 	protected QuoteService quotes;
+	@Inject
+	protected OrderService orderService;
 	@Inject
 	private Logger log;
 }

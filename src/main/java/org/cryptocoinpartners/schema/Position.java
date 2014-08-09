@@ -16,13 +16,16 @@ import org.cryptocoinpartners.util.Remainder;
 @Entity
 public class Position extends Holding {
 
-	public Position(Exchange exchange, Market market, Asset asset, Amount volume, Amount price) {
+	private Portfolio portfolio;
+
+	public Position(Portfolio portfolio, Exchange exchange, Market market, Asset asset, Amount volume, Amount price) {
 
 		this.exchange = exchange;
 		this.market = market;
 		this.volumeCount = volume.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount();
 		this.priceCount = price.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount();
 		this.asset = asset;
+		this.portfolio = portfolio;
 	}
 
 	@Transient
@@ -59,6 +62,12 @@ public class Position extends Holding {
 	public Market getMarket() {
 
 		return market;
+	}
+
+	@Transient
+	public Portfolio getPortfolio() {
+
+		return portfolio;
 	}
 
 	@Transient
@@ -132,6 +141,10 @@ public class Position extends Holding {
 
 	protected void setOrder(SpecificOrder order) {
 		this.order = order;
+	}
+
+	public void setExitPrice(Amount exitPrice) {
+		this.exitPrice = exitPrice;
 	}
 
 	private Amount volume;
