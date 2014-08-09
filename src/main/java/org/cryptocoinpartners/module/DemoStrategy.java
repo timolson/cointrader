@@ -1,7 +1,6 @@
 package org.cryptocoinpartners.module;
 
 import java.math.BigDecimal;
-import java.util.Iterator;
 
 import javax.inject.Inject;
 
@@ -12,7 +11,6 @@ import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Offer;
 import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderBuilder;
-import org.cryptocoinpartners.schema.Position;
 
 /**
  * This simple Strategy first waits for Book data to arrive about the target Market, then it places a buy order
@@ -34,7 +32,7 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 		market = Market.forSymbol(marketSymbol);
 		if (market == null)
 			throw new Error("Could not find Market for symbol " + marketSymbol);
-		BigDecimal volumeBD = new BigDecimal("1.00000000");// 100 satoshis
+		BigDecimal volumeBD = new BigDecimal("0.00000100");// 100 satoshis
 		volumeCount = DiscreteAmount.roundedCountForBasis(volumeBD, market.getVolumeBasis());
 	}
 
@@ -49,12 +47,6 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 				ready();
 				enterTrade();
 				exitTrade();
-				Iterator<Position> it = portfolioService.getPositions(portfolio).iterator();
-				while (it.hasNext()) {
-					Position position = it.next();
-					log.info(portfolioService.getMarketValue(position).toString());
-
-				}
 			}
 		}
 	}
