@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<esper-configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="http://www.espertech.com/schema/esper"
+    xsi:schemaLocation="http://www.espertech.com/schema/esper/esper-configuration-4-0.xsd">
+
+	<engine-settings>
+		<defaults>
+			<threading>
+				<internal-timer enabled="false" msec-resolution="200"/>
+			</threading>
+			<expression udf-cache="false"/>
+			<execution prioritized="true"/>			
+		</defaults>
+	</engine-settings>
+
+</esper-configuration>

@@ -436,7 +436,10 @@ public class Context {
 
 	private Context(TimeProvider timeProvider) {
 		this.timeProvider = timeProvider;
+
 		final com.espertech.esper.client.Configuration esperConfig = new com.espertech.esper.client.Configuration();
+		esperConfig.configure("cointrader-esper.cfg.xml");
+
 		esperConfig.addEventType(Event.class);
 		Set<Class<? extends Event>> eventTypes = ReflectionUtil.getSubtypesOf(Event.class);
 		for (Class<? extends Event> eventType : eventTypes)
