@@ -7,6 +7,7 @@ import javax.persistence.InheritanceType;
 import javax.persistence.OneToOne;
 
 import org.cryptocoinpartners.enumeration.TransactionType;
+import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.When;
 import org.slf4j.Logger;
 
@@ -51,7 +52,8 @@ public class PortfolioManager extends EntityBase {
 		}
 	}
 
-	/** for subclasses */
+
+    /** for subclasses */
 	protected PortfolioManager(String portfolioName) {
 		this.portfolio = new Portfolio(portfolioName, this);
 	}

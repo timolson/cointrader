@@ -38,6 +38,6 @@ public class Owner extends PortfolioManager {
     protected void setStakes(Collection<Stake> stakes) { this.stakes = stakes; }
 
 
-    private Collection<Stake> stakes = new ArrayList<Stake>();
+    private Collection<Stake> stakes = new ArrayList<>();
     private String name;
 }
