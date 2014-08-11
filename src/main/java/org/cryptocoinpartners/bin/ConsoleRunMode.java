@@ -112,9 +112,13 @@ public class ConsoleRunMode extends RunMode {
         else
             context.attach(MockOrderService.class);
 
-        // todo Adjust the Owner's Portfolio to have some BTC & USD to play with.
         Owner owner = new Owner("Console Portfolio");
+        Portfolio portfolio = owner.getPortfolio();
+        // Adjust the Owner's Portfolio to have some BTC & USD to play with.
+        portfolio.modifyBalance( new Balance(Exchanges.BITFINEX,Currencies.BTC, Balance.BalanceType.ACTUAL),
+                                 new Authorization("Console Mock Portfolio Setup") );
         context.attachInstance(owner);
+        context.attachInstance(new BasicPortfolioService());
 
         Terminal terminal = TerminalFactory.get();
         try {

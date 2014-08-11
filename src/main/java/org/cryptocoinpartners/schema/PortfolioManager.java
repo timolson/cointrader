@@ -18,7 +18,7 @@ import org.slf4j.Logger;
  */
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-public class PortfolioManager extends EntityBase {
+public class PortfolioManager extends EntityBase implements Context.AttachListener {
 
 	// todo we need to get the tradeable portfolio separately from the "reserved" portfolio (assets needed for open orders)
 	@OneToOne
@@ -51,6 +51,11 @@ public class PortfolioManager extends EntityBase {
 			return;
 		}
 	}
+
+
+    public void afterAttach(Context context) {
+        context.attachInstance(getPortfolio());
+    }
 
 
     /** for subclasses */
