@@ -54,6 +54,7 @@ public class PersistUtil implements Callable<String> {
 			log.info("Cointrader Database Peristnace had an error, the details are: {}.", e2);
 
 		}
+		service.shutdown();
 	}
 
 	private static void insertData(EntityBase... entities) {
