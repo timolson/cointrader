@@ -6,6 +6,7 @@ import java.util.Map;
 
 import javax.inject.Inject;
 
+import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.DecimalAmount;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Fill;
@@ -20,6 +21,7 @@ import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.schema.Transaction;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.QuoteService;
+import org.cryptocoinpartners.util.FeesUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.cryptocoinpartners.util.RemainderHandler;
 import org.slf4j.Logger;
@@ -42,9 +44,14 @@ public abstract class BaseOrderService implements OrderService {
 		} else if (order instanceof SpecificOrder) {
 			SpecificOrder specificOrder = (SpecificOrder) order;
 			handleSpecificOrder(specificOrder);
+			Amount fees = FeesUtil.getExchangeFees(specificOrder);
+			specificOrder.setForcastedCommission(fees);
+
 			Transaction transaction;
 			try {
+
 				transaction = new Transaction(specificOrder);
+
 				log.info("Created new transaction " + transaction);
 				context.publish(transaction);
 

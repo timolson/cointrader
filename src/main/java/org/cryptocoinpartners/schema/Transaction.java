@@ -61,7 +61,7 @@ public class Transaction extends Event {
 	public Transaction(SpecificOrder order) throws Exception {
 		Portfolio portfolio = order.getPortfolio();
 
-		TransactionType transactionType = order.getVolume().isPositive() ? TransactionType.BUY : TransactionType.SELL;
+		TransactionType transactionType = order.getVolume().isPositive() ? TransactionType.BUY_RESERVATION : TransactionType.SELL_RESERVATION;
 		//long quantity = Side.BUY.equals(fill.getSide()) ? fill.getQuantity() : -fill.getQuantity();
 
 		this.setAmount(order.getVolume());

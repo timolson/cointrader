@@ -1,12 +1,11 @@
 package org.cryptocoinpartners.schema;
 
-import org.cryptocoinpartners.util.RemainderHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.math.BigDecimal;
 import java.math.MathContext;
 
+import org.cryptocoinpartners.util.RemainderHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Amount has a polymorphic base representation of either a BigDecimal or a special long/long format
@@ -22,96 +21,87 @@ import java.math.MathContext;
  */
 public abstract class Amount implements Comparable<Amount> {
 
-    public static final MathContext mc = MathContext.DECIMAL128;  //  IEEE 128-bit decimal, scale 34
+	public static final MathContext mc = MathContext.DECIMAL128; //  IEEE 128-bit decimal, scale 34
 
+	/**
+	 * only when absolutely necessary
+	 */
+	public abstract double asDouble();
 
-    /**
-     * only when absolutely necessary
-     */
-    public abstract double asDouble();
+	public abstract BigDecimal asBigDecimal();
 
+	public abstract double getBasis();
 
-    public abstract BigDecimal asBigDecimal();
+	public abstract int getPrecision();
 
+	public DiscreteAmount toBasis(double newBasis, RemainderHandler remainderHandler) {
+		long newIBasis = DiscreteAmount.invertBasis(newBasis);
+		return toIBasis(newIBasis, remainderHandler);
+	}
 
-    public DiscreteAmount toBasis(double newBasis, RemainderHandler remainderHandler) {
-        long newIBasis = DiscreteAmount.invertBasis(newBasis);
-        return toIBasis(newIBasis, remainderHandler);
-    }
+	public abstract DiscreteAmount toIBasis(long newIBasis, RemainderHandler remainderHandler);
 
+	public void assertBasis(double basis) throws BasisError {
+		long otherIBasis = DiscreteAmount.invertBasis(basis);
+		assertIBasis(otherIBasis);
+	}
 
-    public abstract DiscreteAmount toIBasis(long newIBasis, RemainderHandler remainderHandler);
+	public abstract void assertIBasis(long otherIBasis);
 
+	@Override
+	public String toString() {
+		return asBigDecimal().toString();
+	}
 
-    public void assertBasis(double basis) throws BasisError {
-        long otherIBasis = DiscreteAmount.invertBasis(basis);
-        assertIBasis(otherIBasis);
-    }
+	public class BasisError extends Error {
+	}
 
+	public Amount abs() {
+		return isNegative() ? negate() : this;
+	}
 
-    public abstract void assertIBasis(long otherIBasis);
+	public abstract boolean isPositive();
 
+	public abstract boolean isZero();
 
-    public String toString() {
-        return asBigDecimal().toString();
-    }
+	public abstract boolean isNegative();
 
+	public abstract Amount negate();
 
-    public class BasisError extends Error {
-    }
+	public abstract Amount plus(Amount o);
 
+	public abstract Amount minus(Amount o);
 
-    public Amount abs() { return isNegative() ? negate() : this; }
+	public DecimalAmount times(BigDecimal o, RemainderHandler remainderHandler) {
+		return new DecimalAmount(asBigDecimal().multiply(o, remainderHandler.getMathContext()));
+	}
 
-    public abstract boolean isPositive();
+	public DecimalAmount dividedBy(BigDecimal o, RemainderHandler remainderHandler) {
+		BigDecimal[] divideAndRemainder = asBigDecimal().divideAndRemainder(o, remainderHandler.getMathContext());
+		DecimalAmount result = new DecimalAmount(divideAndRemainder[0]);
+		remainderHandler.handleRemainder(result, divideAndRemainder[1]);
+		return result;
+	}
 
-    public abstract boolean isZero();
+	public Amount times(int o, RemainderHandler remainderHandler) {
+		return times(new BigDecimal(o), remainderHandler);
+	}
 
-    public abstract boolean isNegative();
+	public Amount dividedBy(int o, RemainderHandler remainderHandler) {
+		return dividedBy(new BigDecimal(o), remainderHandler);
+	}
 
-    public abstract Amount negate();
+	public Amount times(double o, RemainderHandler remainderHandler) {
+		return times(new BigDecimal(o), remainderHandler);
+	}
 
-    public abstract Amount plus(Amount o);
+	public Amount dividedBy(double o, RemainderHandler remainderHandler) {
+		return dividedBy(new BigDecimal(o), remainderHandler);
+	}
 
-    public abstract Amount minus(Amount o);
+	public abstract Amount times(Amount o, RemainderHandler remainderHandler);
 
+	public abstract Amount dividedBy(Amount o, RemainderHandler remainderHandler);
 
-    public DecimalAmount times(BigDecimal o, RemainderHandler remainderHandler) {
-        return new DecimalAmount(asBigDecimal().multiply(o, remainderHandler.getMathContext()));
-    }
-
-
-    public DecimalAmount dividedBy(BigDecimal o, RemainderHandler remainderHandler) {
-        BigDecimal[] divideAndRemainder = asBigDecimal().divideAndRemainder(o, remainderHandler.getMathContext());
-        DecimalAmount result = new DecimalAmount(divideAndRemainder[0]);
-        remainderHandler.handleRemainder(result, divideAndRemainder[1]);
-        return result;
-    }
-
-
-    public Amount times(int o, RemainderHandler remainderHandler) {
-        return times(new BigDecimal(o), remainderHandler);
-    }
-
-
-    public Amount dividedBy(int o, RemainderHandler remainderHandler) {
-        return dividedBy(new BigDecimal(o), remainderHandler);
-    }
-
-
-    public Amount times(double o, RemainderHandler remainderHandler) {
-        return times(new BigDecimal(o), remainderHandler);
-    }
-
-
-    public Amount dividedBy(double o, RemainderHandler remainderHandler) {
-        return dividedBy(new BigDecimal(o), remainderHandler);
-    }
-
-
-    public abstract Amount times(Amount o, RemainderHandler remainderHandler);
-    public abstract Amount dividedBy(Amount o, RemainderHandler remainderHandler);
-
-
-    protected static final Logger log = LoggerFactory.getLogger(Amount.class);
+	protected static final Logger log = LoggerFactory.getLogger(Amount.class);
 }

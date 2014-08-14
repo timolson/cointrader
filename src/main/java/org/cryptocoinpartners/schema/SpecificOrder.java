@@ -137,8 +137,8 @@ public class SpecificOrder extends Order {
 
 	@Transient
 	public Amount getForcastedCommission() {
-		// TODO Auto-generated method stub
-		return null;
+		return forcastedFees;
+
 	}
 
 	/** 0 if no limit is set */
@@ -151,6 +151,10 @@ public class SpecificOrder extends Order {
 
 	protected void setMarket(Market market) {
 		this.market = market;
+	}
+
+	public void setForcastedCommission(Amount forcastedFees) {
+		this.forcastedFees = forcastedFees;
 	}
 
 	protected void setVolumeCount(long volumeCount) {
@@ -178,6 +182,7 @@ public class SpecificOrder extends Order {
 	private DiscreteAmount volume;
 	private DiscreteAmount limitPrice;
 	private DiscreteAmount stopPrice;
+	private Amount forcastedFees;
 	private long volumeCount;
 	private long limitPriceCount;
 	private long stopPriceCount;
