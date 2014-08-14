@@ -42,8 +42,17 @@ public abstract class BaseOrderService implements OrderService {
 		} else if (order instanceof SpecificOrder) {
 			SpecificOrder specificOrder = (SpecificOrder) order;
 			handleSpecificOrder(specificOrder);
-			// todo reserve a Position to pay for the order
-			//specificOrder.getPortfolio().reserve(specificOrder,estimateCost(specificOrder));
+			Transaction transaction;
+			try {
+				transaction = new Transaction(specificOrder);
+				log.info("Created new transaction " + transaction);
+				context.publish(transaction);
+
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
 		}
 	}
 

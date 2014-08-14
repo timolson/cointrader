@@ -7,6 +7,9 @@
         <exclude-unlisted-classes>false</exclude-unlisted-classes>
         <properties>
             <property name="hibernate.archive.autodetection" value="class"/>
+            <property name="javax.persistence.lock.timeout" value="1000"/>
+               <property name="javax.persistence.query.timeout" value="1000" />
+
         </properties>
     </persistence-unit>
 </persistence>

@@ -135,6 +135,12 @@ public class SpecificOrder extends Order {
 		return limitPriceCount;
 	}
 
+	@Transient
+	public Amount getForcastedCommission() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 	/** 0 if no limit is set */
 	protected long getStopPriceCount() {
 		return stopPriceCount;
@@ -176,4 +182,5 @@ public class SpecificOrder extends Order {
 	private long limitPriceCount;
 	private long stopPriceCount;
 	private Market.MarketAmountBuilder amountBuilder;
+
 }

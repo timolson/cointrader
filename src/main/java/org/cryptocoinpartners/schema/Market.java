@@ -92,11 +92,6 @@ public class Market extends EntityBase {
 	}
 
 	@Transient
-	public double getMargin() {
-		return margin;
-	}
-
-	@Transient
 	public String getSymbol() {
 		return exchange.toString() + ':' + listing.toString();
 	}
@@ -171,10 +166,6 @@ public class Market extends EntityBase {
 		this.active = active;
 	}
 
-	protected void setMargin(double margin) {
-		this.margin = margin;
-	}
-
 	protected void setPriceBasis(double quoteBasis) {
 		this.priceBasis = quoteBasis;
 	}
@@ -191,20 +182,10 @@ public class Market extends EntityBase {
 		this.active = true;
 	}
 
-	private Market(Exchange exchange, Listing listing, double priceBasis, double volumeBasis, double margin) {
-		this.exchange = exchange;
-		this.listing = listing;
-		this.priceBasis = priceBasis;
-		this.volumeBasis = volumeBasis;
-		this.active = true;
-		this.margin = margin;
-	}
-
 	private Exchange exchange;
 	private Listing listing;
 	private double priceBasis;
 	private double volumeBasis;
-	private double margin;
 	private boolean active;
 	private MarketAmountBuilder marketAmountBuilder;
 }

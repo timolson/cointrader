@@ -9,15 +9,19 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
+import javax.persistence.LockTimeoutException;
 import javax.persistence.NoResultException;
+import javax.persistence.NonUniqueResultException;
 import javax.persistence.Persistence;
+import javax.persistence.PersistenceException;
+import javax.persistence.PessimisticLockException;
 import javax.persistence.Query;
+import javax.persistence.QueryTimeoutException;
+import javax.persistence.TransactionRequiredException;
 import javax.persistence.TypedQuery;
 
 import org.cryptocoinpartners.schema.Currencies;
@@ -43,10 +47,11 @@ public class PersistUtil implements Callable<String> {
 		Future<String> futureResult = service.submit(persistanceThread);
 		try {
 			//TODO have user configured timeout
-			futureResult.get(30, TimeUnit.SECONDS);
-		} catch (TimeoutException e) {
-			log.error("Could not insert entity into Cointrader Db");
-			futureResult.cancel(true);
+			//futureResult.get(30, TimeUnit.SECONDS);
+			futureResult.get();
+			//		} catch (TimeoutException e) {
+			//			log.error("Could not insert entity into Cointrader Db");
+			//			futureResult.cancel(true);
 		} catch (InterruptedException e1) {
 			log.error("Cointrader Database Peristnace had an error, the details are:  {}.", e1);
 
@@ -54,11 +59,7 @@ public class PersistUtil implements Callable<String> {
 			log.info("Cointrader Database Peristnace had an error, the details are: {}.", e2);
 
 		}
-		service.shutdown();
-	}
-
-	private static void insertData(EntityBase... entities) {
-
+		//service.shutdown();
 	}
 
 	/**
@@ -280,6 +281,22 @@ public class PersistUtil implements Callable<String> {
 			} catch (Error t) {
 				transaction.rollback();
 				throw t;
+			} catch (NoResultException e) {
+				//- if there is no result}
+			} catch (NonUniqueResultException e) {
+				//- if more than one result
+			} catch (IllegalStateException e) {
+				//- if called for a Java Persistence query language UPDATE or DELETE statement
+			} catch (QueryTimeoutException e) {
+				// - if the query execution exceeds the query timeout value set and only the statement is rolled back
+			} catch (TransactionRequiredException e) {
+				// - if a lock mode has been set and there is no transaction
+			} catch (PessimisticLockException e) {
+				//- if pessimistic locking fails and the transaction is rolled back
+			} catch (LockTimeoutException e) {
+				// - if pessimistic locking fails and only the statement is rolled back
+			} catch (PersistenceException e) {
+				// - if the query execution exceeds the query timeout value set and the transaction is rolled back
 			}
 			return "Complete";
 		} finally {
@@ -293,7 +310,7 @@ public class PersistUtil implements Callable<String> {
 
 	private static EntityManagerFactory entityManagerFactory;
 	private static final int defaultBatchSize = 20;
-	private static ExecutorService service = Executors.newFixedThreadPool(100);
+	static ExecutorService service = Executors.newFixedThreadPool(100);
 	private final EntityBase[] entities;
 
 }
