@@ -12,8 +12,17 @@ import javax.persistence.Transient;
  * 
  */
 public enum TransactionType {
-	BUY("BUY"), SELL("SELL"), BUY_RESERVATION("BUY_RESERVATION"), SELL_RESERVATION("SELL_RESERVATION"), CREDIT("CREDIT"), DEBIT("DEBIT"), INTREST("INTREST"), FEES(
-			"FEES"), REBALANCE("REBALANCE"), TRANSFER("TRANSFER"), PURCHASE("PURCHASE"), ;
+	BUY("BUY"), //0
+	SELL("SELL"), //1
+	BUY_RESERVATION("BUY_RESERVATION"), //2
+	SELL_RESERVATION("SELL_RESERVATION"), //3
+	CREDIT("CREDIT"), //4
+	DEBIT("DEBIT"), //5
+	INTREST("INTREST"), //6
+	FEES("FEES"), //7
+	REBALANCE("REBALANCE"), //8
+	TRANSFER("TRANSFER"), //9
+	PURCHASE("PURCHASE");//10
 
 	private final String enumValue;
 
@@ -65,17 +74,17 @@ public enum TransactionType {
 	 */
 	static {
 		synchronized (TransactionType.values) {
-			TransactionType.values.put(BUY.enumValue, BUY);
-			TransactionType.values.put(SELL.enumValue, SELL);
-			TransactionType.values.put(BUY.enumValue, BUY_RESERVATION);
-			TransactionType.values.put(SELL_RESERVATION.enumValue, SELL_RESERVATION);
-			TransactionType.values.put(CREDIT.enumValue, CREDIT);
-			TransactionType.values.put(DEBIT.enumValue, DEBIT);
-			TransactionType.values.put(INTREST.enumValue, INTREST);
-			TransactionType.values.put(FEES.enumValue, FEES);
-			TransactionType.values.put(REBALANCE.enumValue, REBALANCE);
-			TransactionType.values.put(TRANSFER.enumValue, TRANSFER);
-			TransactionType.values.put(PURCHASE.enumValue, PURCHASE);
+			TransactionType.values.put(BUY.enumValue, BUY); //0
+			TransactionType.values.put(SELL.enumValue, SELL); //1
+			TransactionType.values.put(BUY.enumValue, BUY_RESERVATION); //2
+			TransactionType.values.put(SELL_RESERVATION.enumValue, SELL_RESERVATION); //3
+			TransactionType.values.put(CREDIT.enumValue, CREDIT); //4
+			TransactionType.values.put(DEBIT.enumValue, DEBIT); //5
+			TransactionType.values.put(INTREST.enumValue, INTREST);//6
+			TransactionType.values.put(FEES.enumValue, FEES); //7
+			TransactionType.values.put(REBALANCE.enumValue, REBALANCE); //8
+			TransactionType.values.put(TRANSFER.enumValue, TRANSFER); //9
+			TransactionType.values.put(PURCHASE.enumValue, PURCHASE); //10
 		}
 		synchronized (TransactionType.valueList) {
 			TransactionType.valueList.add(BUY);

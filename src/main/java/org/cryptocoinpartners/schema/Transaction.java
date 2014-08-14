@@ -3,7 +3,9 @@ package org.cryptocoinpartners.schema;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.ManyToOne;
+import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.TransactionType;
@@ -19,6 +21,7 @@ import org.slf4j.Logger;
  * @author Tim Olson
  */
 @Entity
+@Table(indexes = { @Index(columnList = "portfolioName"), @Index(columnList = "type") })
 public class Transaction extends Event {
 
 	enum TransactionStatus {
@@ -38,6 +41,7 @@ public class Transaction extends Event {
 		this.setType(type);
 		this.setPortfolio(portfolio);
 		this.setExchange(exchange);
+		this.setPortfolioName(portfolio);
 		this.amountCount = DiscreteAmount.roundedCountForBasis(amount.asBigDecimal(), asset.getBasis());
 		this.priceCount = DiscreteAmount.roundedCountForBasis(price.asBigDecimal(), asset.getBasis());
 
@@ -56,6 +60,7 @@ public class Transaction extends Event {
 		this.setAmountCount(fill.getVolumeCount());
 		this.setType(transactionType);
 		this.setPortfolio(portfolio);
+		this.setPortfolioName(portfolio);
 		this.setCurrency(fill.getMarket().getBase());
 		this.setCommission(fill.getCommission());
 		this.setMarket(fill.getMarket());
@@ -77,6 +82,7 @@ public class Transaction extends Event {
 		this.setCurrency(order.getMarket().getBase());
 		this.setCommission(order.getForcastedCommission());
 		this.setMarket(order.getMarket());
+		this.setPortfolioName(portfolio);
 		this.setExchange(order.getMarket().getExchange());
 
 	}
@@ -153,9 +159,14 @@ public class Transaction extends Event {
 
 	//@ManyToOne(optional = false)
 
-	@ManyToOne(optional = false)
+	@Transient
 	public Portfolio getPortfolio() {
 		return portfolio;
+	}
+
+	public String getPortfolioName() {
+		return portfolioName;
+
 	}
 
 	@ManyToOne(optional = false)
@@ -224,6 +235,10 @@ public class Transaction extends Event {
 		this.currency = asset;
 	}
 
+	protected void setPortfolioName(Portfolio portfolio) {
+		this.portfolioName = portfolio.getName();
+	}
+
 	protected void setType(TransactionType type) {
 		this.type = type;
 	}
@@ -246,6 +261,7 @@ public class Transaction extends Event {
 	private Amount amount;
 	private Long commissionCount;
 	private long amountCount;
+	private String portfolioName;
 
 	private long priceCount;
 	private Amount commission;
