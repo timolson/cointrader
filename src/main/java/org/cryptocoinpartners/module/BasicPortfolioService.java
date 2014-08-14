@@ -43,26 +43,28 @@ import com.espertech.esper.client.deploy.ParseException;
 @Singleton
 public class BasicPortfolioService implements PortfolioService {
 
-	public BasicPortfolioService() {
+	private final Portfolio portfolio;
 
+	public BasicPortfolioService(Portfolio portfolio) {
+		this.portfolio = portfolio;
 	}
 
 	@Override
 	@Nullable
-	public ArrayList<Position> getPositions(Portfolio portfolio) {
+	public ArrayList<Position> getPositions() {
 		//log.info("Last Tick Recived: " + getLastTrade(portfolio).toString());
 		return (ArrayList<Position>) portfolio.getPositions();
 	}
 
 	@Override
 	@Nullable
-	public ArrayList<Position> getPositions(Portfolio portfolio, Exchange exchange) {
+	public ArrayList<Position> getPositions(Exchange exchange) {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public DiscreteAmount getLastTrade(Portfolio portfolio) {
+	public DiscreteAmount getLastTrade() {
 
 		List<Object> events = null;
 		try {
@@ -81,11 +83,11 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Transient
-	public Amount getCashBalance(Portfolio portfolio) {
+	public Amount getCashBalance() {
 
 		// sum of all transactions that belongs to this strategy
 		BigDecimal balance = BigDecimal.ZERO;
-		Iterator<Transaction> itt = getTrades(portfolio).iterator();
+		Iterator<Transaction> itt = getTrades().iterator();
 		while (itt.hasNext()) {
 			Transaction transaction = itt.next();
 			balance.add(transaction.getValue().asBigDecimal());
@@ -94,7 +96,7 @@ public class BasicPortfolioService implements PortfolioService {
 		// plus part of all cashFlows
 		BigDecimal cashFlows = BigDecimal.ZERO;
 
-		Iterator<Transaction> itc = getCashFlows(portfolio).iterator();
+		Iterator<Transaction> itc = getCashFlows().iterator();
 		while (itc.hasNext()) {
 			Transaction cashFlowTransaction = itc.next();
 			BigDecimal tranAmt = cashFlowTransaction.getValue().asBigDecimal();
@@ -108,7 +110,7 @@ public class BasicPortfolioService implements PortfolioService {
 	@Override
 	@Transient
 	@SuppressWarnings("null")
-	public List<Transaction> getCashFlows(Portfolio portfolio) {
+	public List<Transaction> getCashFlows() {
 		// return all CREDIT,DEBIT,INTREST and FEES
 
 		ArrayList<Transaction> cashFlows = new ArrayList<Transaction>();
@@ -127,7 +129,7 @@ public class BasicPortfolioService implements PortfolioService {
 	@Override
 	@Transient
 	@SuppressWarnings("null")
-	public List<Transaction> getTrades(Portfolio portfolio) {
+	public List<Transaction> getTrades() {
 		//return all BUY and SELL
 		ArrayList<Transaction> trades = new ArrayList<Transaction>();
 		Iterator<Transaction> it = portfolio.getTransactions().iterator();
@@ -178,7 +180,7 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Transient
-	public Amount getMarketValue(Portfolio portfolio) {
+	public Amount getMarketValue() {
 		Amount marketValue = DecimalAmount.ZERO;
 		Iterator<Position> it = portfolio.getPositions().iterator();
 		while (it.hasNext()) {
@@ -193,7 +195,7 @@ public class BasicPortfolioService implements PortfolioService {
 	}
 
 	@Override
-	public void CreateTransaction(Portfolio portfolio, Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price) {
+	public void CreateTransaction(Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price) {
 		Transaction transaction = new Transaction(portfolio, exchange, asset, type, amount, price);
 		context.publish(transaction);
 	}

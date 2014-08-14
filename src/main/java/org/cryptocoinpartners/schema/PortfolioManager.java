@@ -5,8 +5,10 @@ import javax.persistence.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.OneToOne;
+import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.TransactionType;
+import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.When;
 import org.slf4j.Logger;
@@ -20,10 +22,17 @@ import org.slf4j.Logger;
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 public class PortfolioManager extends EntityBase implements Context.AttachListener {
 
+	private BasicPortfolioService portfolioService;
+
 	// todo we need to get the tradeable portfolio separately from the "reserved" portfolio (assets needed for open orders)
 	@OneToOne
 	public Portfolio getPortfolio() {
 		return portfolio;
+	}
+
+	@Transient
+	public BasicPortfolioService getPortfolioService() {
+		return portfolioService;
 	}
 
 	@When("select * from Transaction as transaction")
@@ -54,11 +63,13 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 	@Override
 	public void afterAttach(Context context) {
 		context.attachInstance(getPortfolio());
+		context.attachInstance(getPortfolioService());
 	}
 
 	/** for subclasses */
 	protected PortfolioManager(String portfolioName) {
 		this.portfolio = new Portfolio(portfolioName, this);
+		this.portfolioService = new BasicPortfolioService(portfolio);
 	}
 
 	// JPA
@@ -72,4 +83,5 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 	@Inject
 	private Logger log;
 	private Portfolio portfolio;
+
 }

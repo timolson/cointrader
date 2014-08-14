@@ -11,7 +11,6 @@ import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Asset;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Exchange;
-import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.Position;
 import org.cryptocoinpartners.schema.Transaction;
 
@@ -26,27 +25,27 @@ public interface PortfolioService {
 	/** returns all Positions in all Exchanges.  NOTE: if you have open orders, you will not be able to trade
 	 * all the Positions returned by this method.  Use getTradeablePositions() instead. */
 	@Nullable
-	public ArrayList<Position> getPositions(Portfolio portfolio);
+	public ArrayList<Position> getPositions();
 
-	public void CreateTransaction(Portfolio portfolio, Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price);
+	public void CreateTransaction(Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price);
 
 	/** returns all Postions for the given Exchange.  NOTE: if you have open orders, you will not be able to trade
 	 * all the Positions returned by this method.  Use getTradeablePositions() instead. */
 	@Nullable
-	public ArrayList<Position> getPositions(Portfolio portfolio, Exchange exchange);
+	public ArrayList<Position> getPositions(Exchange exchange);
 
-	public DiscreteAmount getLastTrade(Portfolio portfolio);
-
-	@Transient
-	public Amount getCashBalance(Portfolio portfolio);
+	public DiscreteAmount getLastTrade();
 
 	@Transient
-	@SuppressWarnings("null")
-	public List<Transaction> getCashFlows(Portfolio portfolio);
+	public Amount getCashBalance();
 
 	@Transient
 	@SuppressWarnings("null")
-	public List<Transaction> getTrades(Portfolio portfolio);
+	public List<Transaction> getCashFlows();
+
+	@Transient
+	@SuppressWarnings("null")
+	public List<Transaction> getTrades();
 
 	@Transient
 	public DiscreteAmount getMarketPrice(Position postion);
@@ -55,7 +54,7 @@ public interface PortfolioService {
 	public Amount getMarketValue(Position postion);
 
 	@Transient
-	public Amount getMarketValue(Portfolio portfolio);
+	public Amount getMarketValue();
 
 	void exitPosition(Position position) throws Exception;
 

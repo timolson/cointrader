@@ -1,13 +1,12 @@
 package org.cryptocoinpartners.schema;
 
+import javax.inject.Inject;
+
+import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.service.OrderService;
-import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.service.Strategy;
 import org.slf4j.Logger;
-
-import javax.inject.Inject;
-
 
 /**
  * A Strategy represents a configurable approach to trading, but not a specific trading algorithm.  StrategyPortfolioManager
@@ -19,40 +18,36 @@ import javax.inject.Inject;
  */
 public class BaseStrategy implements Strategy {
 
+	@Inject
+	protected void setPortfolio(Portfolio portfolio) {
+		this.portfolio = portfolio;
+		order = new OrderBuilder(portfolio, orderService);
+	}
 
-    @Inject
-    protected void setPortfolio(Portfolio portfolio) {
-        this.portfolio = portfolio;
-        order = new OrderBuilder(portfolio,orderService);
-    }
+	@Inject
+	protected void setPortfolioService(BasicPortfolioService portfolioService) {
+		this.portfolioService = portfolioService;
+	}
 
+	/** This tracks the assets you have for trading */
+	protected Portfolio portfolio;
+	protected BasicPortfolioService portfolioService;
 
-    /** This tracks the assets you have for trading */
-    protected Portfolio portfolio;
+	/** This is what you use to place orders:
+	 * <pre>
+	 * order.create(Listing.BTC_USD,1.00).withLimit(651.538).place();
+	 * </pre>
+	 */
+	protected OrderBuilder order;
 
+	/** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
+	@Inject
+	protected QuoteService quotes;
 
-    /** This is what you use to place orders:
-     * <pre>
-     * order.create(Listing.BTC_USD,1.00).withLimit(651.538).place();
-     * </pre>
-     */
-    protected OrderBuilder order;
+	@Inject
+	protected OrderService orderService;
 
-
-    /** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
-    @Inject
-    protected QuoteService quotes;
-
-
-    @Inject
-    protected OrderService orderService;
-
-    @Inject
-    protected PortfolioService portfolioService;
-
-
-    @Inject
-    protected Logger log;
-
+	@Inject
+	protected Logger log;
 
 }
