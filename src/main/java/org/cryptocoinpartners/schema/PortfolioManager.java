@@ -46,19 +46,17 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
 			}
 			log.info("Transaction Processed for: " + portfolio + " " + transaction);
-			log.info("Current Positions: " + portfolio + " " + portfolio.getPositions());
 		} else {
 			return;
 		}
 	}
 
+	@Override
+	public void afterAttach(Context context) {
+		context.attachInstance(getPortfolio());
+	}
 
-    public void afterAttach(Context context) {
-        context.attachInstance(getPortfolio());
-    }
-
-
-    /** for subclasses */
+	/** for subclasses */
 	protected PortfolioManager(String portfolioName) {
 		this.portfolio = new Portfolio(portfolioName, this);
 	}

@@ -1,10 +1,29 @@
 package org.cryptocoinpartners.module;
 
-import com.espertech.esper.client.deploy.DeploymentException;
-import com.espertech.esper.client.deploy.ParseException;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import javax.annotation.Nullable;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import javax.persistence.Transient;
+
 import org.cryptocoinpartners.enumeration.TransactionType;
-import org.cryptocoinpartners.schema.*;
+import org.cryptocoinpartners.schema.Amount;
+import org.cryptocoinpartners.schema.Asset;
+import org.cryptocoinpartners.schema.DecimalAmount;
+import org.cryptocoinpartners.schema.DiscreteAmount;
+import org.cryptocoinpartners.schema.Exchange;
+import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.OrderBuilder;
 import org.cryptocoinpartners.schema.OrderBuilder.SpecificOrderBuilder;
+import org.cryptocoinpartners.schema.Portfolio;
+import org.cryptocoinpartners.schema.Position;
+import org.cryptocoinpartners.schema.Trade;
+import org.cryptocoinpartners.schema.Transaction;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.PortfolioServiceException;
@@ -12,15 +31,8 @@ import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
 
-import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import javax.persistence.Transient;
-import java.io.IOException;
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import com.espertech.esper.client.deploy.DeploymentException;
+import com.espertech.esper.client.deploy.ParseException;
 
 /**
  * This depends on a QuoteService being attached to the Context first.
@@ -64,7 +76,7 @@ public class BasicPortfolioService implements PortfolioService {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-        return null;
+		return null;
 	}
 
 	@Override
@@ -73,18 +85,21 @@ public class BasicPortfolioService implements PortfolioService {
 
 		// sum of all transactions that belongs to this strategy
 		BigDecimal balance = BigDecimal.ZERO;
-		Collection<Transaction> transactions = getTrades(portfolio);
-        for( Transaction transaction : transactions ) {
-            balance.add(transaction.getValue().asBigDecimal());
-        }
+		Iterator<Transaction> itt = getTrades(portfolio).iterator();
+		while (itt.hasNext()) {
+			Transaction transaction = itt.next();
+			balance.add(transaction.getValue().asBigDecimal());
+		}
 
 		// plus part of all cashFlows
 		BigDecimal cashFlows = BigDecimal.ZERO;
 
-		Collection<Transaction> cashFlowTransactions = getCashFlows(portfolio);
-        for( Transaction cashFlowTransaction : cashFlowTransactions ) {
-            cashFlows.add(cashFlowTransaction.getValue().asBigDecimal());
-        }
+		Iterator<Transaction> itc = getCashFlows(portfolio).iterator();
+		while (itc.hasNext()) {
+			Transaction cashFlowTransaction = itc.next();
+			BigDecimal tranAmt = cashFlowTransaction.getValue().asBigDecimal();
+			cashFlows = cashFlows.add(tranAmt);
+		}
 
 		Amount amount = DecimalAmount.of(balance.add(cashFlows));
 		return amount;
@@ -95,15 +110,17 @@ public class BasicPortfolioService implements PortfolioService {
 	@SuppressWarnings("null")
 	public List<Transaction> getCashFlows(Portfolio portfolio) {
 		// return all CREDIT,DEBIT,INTREST and FEES
-		ArrayList<Transaction> cashFlows = null;
-		Collection<Transaction> transactions = portfolio.getTransactions();
-        for( Transaction transaction : transactions ) {
-            if( transaction.getType() == TransactionType.CREDIT || transaction.getType() == TransactionType.DEBIT
-                        || transaction.getType() == TransactionType.INTREST || transaction
-                                                                                       .getType() == TransactionType.FEES ) {
-                cashFlows.add(transaction);
-            }
-        }
+
+		ArrayList<Transaction> cashFlows = new ArrayList<Transaction>();
+		Iterator<Transaction> it = portfolio.getTransactions().iterator();
+		while (it.hasNext()) {
+			Transaction transaction = it.next();
+			if (transaction.getType() == TransactionType.CREDIT || transaction.getType() == TransactionType.DEBIT
+					|| transaction.getType() == TransactionType.INTREST || transaction.getType() == TransactionType.FEES) {
+				cashFlows.add(transaction);
+			}
+		}
+
 		return cashFlows;
 	}
 
@@ -112,13 +129,15 @@ public class BasicPortfolioService implements PortfolioService {
 	@SuppressWarnings("null")
 	public List<Transaction> getTrades(Portfolio portfolio) {
 		//return all BUY and SELL
-		ArrayList<Transaction> trades = null;
-		Collection<Transaction> transactions = portfolio.getTransactions();
-        for( Transaction transaction : transactions ) {
-            if( transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL ) {
-                trades.add(transaction);
-            }
-        }
+		ArrayList<Transaction> trades = new ArrayList<Transaction>();
+		Iterator<Transaction> it = portfolio.getTransactions().iterator();
+		while (it.hasNext()) {
+			Transaction transaction = it.next();
+
+			if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL) {
+				trades.add(transaction);
+			}
+		}
 		return trades;
 	}
 
@@ -129,11 +148,11 @@ public class BasicPortfolioService implements PortfolioService {
 		if (postion.isOpen()) {
 			if (postion.isShort()) {
 				@SuppressWarnings("ConstantConditions")
-                DiscreteAmount price = quotes.getLastAskForMarket(postion.getMarket()).getPrice();
+				DiscreteAmount price = quotes.getLastAskForMarket(postion.getMarket()).getPrice();
 				return price;
 
 			} else {
-                @SuppressWarnings("ConstantConditions")
+				@SuppressWarnings("ConstantConditions")
 				DiscreteAmount price = quotes.getLastBidForMarket(postion.getMarket()).getPrice();
 				return price;
 			}
@@ -155,6 +174,22 @@ public class BasicPortfolioService implements PortfolioService {
 			return new DiscreteAmount(0, postion.getMarket().getVolumeBasis());
 
 		}
+	}
+
+	@Override
+	@Transient
+	public Amount getMarketValue(Portfolio portfolio) {
+		Amount marketValue = DecimalAmount.ZERO;
+		Iterator<Position> it = portfolio.getPositions().iterator();
+		while (it.hasNext()) {
+			Position position = it.next();
+			if (position.isOpen()) {
+				marketValue.plus(position.getVolume().times(getMarketPrice(position), Remainder.ROUND_EVEN));
+
+			}
+		}
+		return marketValue;
+
 	}
 
 	@Override

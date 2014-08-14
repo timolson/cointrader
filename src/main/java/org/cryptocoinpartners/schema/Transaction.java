@@ -84,22 +84,23 @@ public class Transaction extends Event {
 	@Transient
 	public Amount getValue() {
 
-		if (this.value == null) {
-			if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
-				this.value = (getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN)).minus(getCommission());
+		if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
+			value = (getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN)).plus(getCommission());
+		} else if (getType().equals(TransactionType.BUY_RESERVATION) || getType().equals(TransactionType.SELL_RESERVATION)) {
+			value = (getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN)).minus(getCommission());
 
-			} else if (getType().equals(TransactionType.CREDIT) || getType().equals(TransactionType.INTREST)) {
-				this.value = (getPrice());
-			} else if (getType().equals(TransactionType.DEBIT) || getType().equals(TransactionType.FEES)) {
-				this.value = getPrice().negate();
-			} else if (getType().equals(TransactionType.REBALANCE)) {
-				this.value = getAmount().times(getPrice(), Remainder.ROUND_EVEN);
+		} else if (getType().equals(TransactionType.CREDIT) || getType().equals(TransactionType.INTREST)) {
+			value = (getAmount());
+		} else if (getType().equals(TransactionType.DEBIT) || getType().equals(TransactionType.FEES)) {
+			value = getAmount().negate();
+		} else if (getType().equals(TransactionType.REBALANCE)) {
+			value = getAmount().times(getPrice(), Remainder.ROUND_EVEN);
 
-			} else {
-				throw new IllegalArgumentException("unsupported transactionType: " + getType());
-			}
+		} else {
+			throw new IllegalArgumentException("unsupported transactionType: " + getType());
 		}
-		return this.value;
+
+		return value;
 	}
 
 	@ManyToOne(optional = false)

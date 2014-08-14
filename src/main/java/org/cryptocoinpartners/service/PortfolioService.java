@@ -54,6 +54,9 @@ public interface PortfolioService {
 	@Transient
 	public Amount getMarketValue(Position postion);
 
+	@Transient
+	public Amount getMarketValue(Portfolio portfolio);
+
 	void exitPosition(Position position) throws Exception;
 
 	void reducePosition(Position position, Amount amount);
