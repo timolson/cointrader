@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.schema;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
@@ -37,6 +38,8 @@ public class Transaction extends Event {
 		this.setType(type);
 		this.setPortfolio(portfolio);
 		this.setExchange(exchange);
+		this.amountCount = DiscreteAmount.roundedCountForBasis(amount.asBigDecimal(), asset.getBasis());
+		this.priceCount = DiscreteAmount.roundedCountForBasis(price.asBigDecimal(), asset.getBasis());
 
 	}
 
@@ -49,6 +52,8 @@ public class Transaction extends Event {
 		this.setAmount(fill.getVolume());
 		this.setAsset(fill.getMarket().getBase());
 		this.setPrice(fill.getPrice());
+		this.setPriceCount(fill.getPriceCount());
+		this.setAmountCount(fill.getVolumeCount());
 		this.setType(transactionType);
 		this.setPortfolio(portfolio);
 		this.setCurrency(fill.getMarket().getBase());
@@ -108,12 +113,30 @@ public class Transaction extends Event {
 		return asset;
 	}
 
-	@ManyToOne(optional = false)
+	public @Nullable
+	Long getPriceCount() {
+		return priceCount;
+	}
+
+	public Long getAmountCount() {
+		return amountCount;
+	}
+
+	public @Nullable
+	Long getCommissionCount() {
+		return commissionCount;
+	}
+
+	@Nullable
+	@ManyToOne(optional = true)
 	public Market getMarket() {
 		return market;
 	}
 
-	@Transient
+	private Asset currency;
+
+	@Nullable
+	@ManyToOne(optional = true)
 	public Asset getCurrency() {
 		return currency;
 	}
@@ -127,6 +150,8 @@ public class Transaction extends Event {
 	public Amount getCommission() {
 		return commission;
 	}
+
+	//@ManyToOne(optional = false)
 
 	@ManyToOne(optional = false)
 	public Portfolio getPortfolio() {
@@ -146,7 +171,10 @@ public class Transaction extends Event {
 		return price;
 	}
 
-	@Transient
+	private Exchange exchange;
+
+	@Nullable
+	@ManyToOne(optional = true)
 	public Exchange getExchange() {
 
 		return exchange;
@@ -180,8 +208,20 @@ public class Transaction extends Event {
 		this.commission = commission;
 	}
 
-	protected void setCurrency(Asset currency) {
-		this.currency = currency;
+	protected void setCommissionCount(Long commissionCount) {
+		this.commissionCount = commissionCount;
+	}
+
+	protected void setPriceCount(Long priceCount) {
+		this.priceCount = priceCount;
+	}
+
+	protected void setAmountCount(Long amountCount) {
+		this.amountCount = amountCount;
+	}
+
+	protected void setCurrency(Asset asset) {
+		this.currency = asset;
 	}
 
 	protected void setType(TransactionType type) {
@@ -199,15 +239,18 @@ public class Transaction extends Event {
 	//   protected Instant getTime() { return acceptedTime; }
 
 	private Amount value;
-	private Amount amount;
 	private Amount price;
 
 	private Portfolio portfolio;
 	private Asset asset;
+	private Amount amount;
+	private Long commissionCount;
+	private long amountCount;
+
+	private long priceCount;
 	private Amount commission;
-	private Asset currency;
+
 	private Market market;
-	private Exchange exchange;
 	@Inject
 	private Logger log;
 }

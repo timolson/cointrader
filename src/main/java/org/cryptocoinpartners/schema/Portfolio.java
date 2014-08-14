@@ -7,9 +7,10 @@ import java.util.Collections;
 import java.util.Iterator;
 
 import javax.persistence.Entity;
-import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
+
+import org.cryptocoinpartners.util.PersistUtil;
 
 import com.xeiam.xchange.dto.trade.Wallet;
 
@@ -22,14 +23,22 @@ import com.xeiam.xchange.dto.trade.Wallet;
 @Entity
 public class Portfolio extends EntityBase {
 
+	public static Portfolio forPortfolioOrCreate(Portfolio portfolio) {
+		Portfolio found = forPortfolio(portfolio);
+		if (found == null) {
+			PersistUtil.insert(portfolio);
+		}
+		return found;
+	}
+
 	/** returns all Positions, whether they are tied to an open Order or not.  Use getTradeablePositions() */
-	public @OneToMany
+	public @Transient
 	Collection<Position> getPositions() {
 		return positions;
 	}
 
 	/** returns all Positions, whether they are tied to an open Order or not.  Use getTradeablePositions() */
-	public @OneToMany
+	public @Transient
 	Collection<Balance> getBalances() {
 		return balances;
 	}
@@ -84,6 +93,11 @@ public class Portfolio extends EntityBase {
 				result.add(position);
 		}
 		return result;
+	}
+
+	/** returns null if the symbol does not represent an existing exchange */
+	public static Portfolio forPortfolio(Portfolio portfolio) {
+		return PersistUtil.queryZeroOne(Portfolio.class, "select p from Portfolio p where name=?1", portfolio.getName());
 	}
 
 	/**
@@ -161,7 +175,7 @@ public class Portfolio extends EntityBase {
 		this.positions = new ArrayList<Position>();
 		this.balances = new ArrayList<Balance>();
 		this.transactions = new ArrayList<Transaction>();
-
+		Portfolio.forPortfolioOrCreate(this);
 	}
 
 	public String getName() {
@@ -173,7 +187,7 @@ public class Portfolio extends EntityBase {
 		return stakes;
 	}
 
-	@ManyToOne(optional = false)
+	@Transient
 	public PortfolioManager getManager() {
 		return manager;
 	}

@@ -11,6 +11,7 @@ import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.When;
+import org.cryptocoinpartners.util.PersistUtil;
 import org.slf4j.Logger;
 
 /**
@@ -54,6 +55,12 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 				portfolio.modifyPosition(position, new Authorization("Fill for " + transaction.toString()));
 
 			}
+			try {
+				PersistUtil.insert(transaction);
+			} catch (Throwable e) {
+				throw new Error("Could not insert " + transaction, e);
+			}
+
 			log.info("Transaction Processed for: " + portfolio + " " + transaction);
 		} else {
 			return;

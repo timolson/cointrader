@@ -40,12 +40,14 @@ public class DecimalAmount extends Amount {
 
 	@Override
 	public Amount plus(Amount o) {
-		return null;
+		return new DecimalAmount(bd.add(o.asBigDecimal()));
+
 	}
 
 	@Override
 	public Amount minus(Amount o) {
-		return null;
+		return new DecimalAmount(bd.subtract(o.asBigDecimal()));
+
 	}
 
 	@Override
