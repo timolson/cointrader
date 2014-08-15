@@ -1,7 +1,6 @@
 package org.cryptocoinpartners.module;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -86,24 +85,28 @@ public class BasicPortfolioService implements PortfolioService {
 	public Amount getCashBalance() {
 
 		// sum of all transactions that belongs to this strategy
-		BigDecimal balance = BigDecimal.ZERO;
+		//BigDecimal balance = BigDecimal.ZERO;
+		Amount balance = DecimalAmount.ZERO;
+
 		Iterator<Transaction> itt = getTrades().iterator();
 		while (itt.hasNext()) {
 			Transaction transaction = itt.next();
-			balance.add(transaction.getValue().asBigDecimal());
+			Amount tranValue = transaction.getValue();
+			balance = balance.plus(tranValue);
+
 		}
 
 		// plus part of all cashFlows
-		BigDecimal cashFlows = BigDecimal.ZERO;
+		Amount cashFlows = DecimalAmount.ZERO;
 
 		Iterator<Transaction> itc = getCashFlows().iterator();
 		while (itc.hasNext()) {
 			Transaction cashFlowTransaction = itc.next();
-			BigDecimal tranAmt = cashFlowTransaction.getValue().asBigDecimal();
-			cashFlows = cashFlows.add(tranAmt);
-		}
+			Amount tranValue = cashFlowTransaction.getValue();
+			cashFlows = cashFlows.plus(tranValue);
 
-		Amount amount = DecimalAmount.of(balance.add(cashFlows));
+		}
+		Amount amount = balance.plus(cashFlows);
 		return amount;
 	}
 

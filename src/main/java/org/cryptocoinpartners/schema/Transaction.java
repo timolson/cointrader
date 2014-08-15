@@ -1,5 +1,7 @@
 package org.cryptocoinpartners.schema;
 
+import java.math.BigDecimal;
+
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.persistence.Entity;
@@ -217,6 +219,8 @@ public class Transaction extends Event {
 
 	protected void setCommission(Amount commission) {
 		this.commission = commission;
+		BigDecimal count = commission.asBigDecimal().divide(BigDecimal.valueOf(commission.getBasis()));
+		this.commissionCount = count.longValue();
 	}
 
 	protected void setCommissionCount(Long commissionCount) {

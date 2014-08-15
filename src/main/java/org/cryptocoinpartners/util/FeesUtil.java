@@ -38,7 +38,7 @@ public class FeesUtil {
 		FeeMethod method = order.getMarket().getExchange().getFeeMethod();
 		double basis = order.getMarket().getPriceBasis();
 		Amount price = order.getLimitPrice();
-		Amount ammount = order.getVolume();
+		Amount ammount = order.getVolume().abs();
 		switch (method) {
 			case PercentagePerUnit:
 				return calculatePercentagePerUnit(price, ammount, rate);
@@ -58,7 +58,7 @@ public class FeesUtil {
 		fees = fees.divide(precision, BigDecimal.ROUND_UP);
 		long feeCount = fees.longValue();
 		DiscreteAmount newAmount = new DiscreteAmount(feeCount, price.getBasis());
-		return newAmount;
+		return newAmount.negate();
 
 	}
 
@@ -70,7 +70,7 @@ public class FeesUtil {
 		fees = fees.divide(precision, BigDecimal.ROUND_UP);
 		long feeCount = fees.longValue();
 		DiscreteAmount newAmount = new DiscreteAmount(feeCount, amount.getBasis());
-		return newAmount;
+		return newAmount.negate();
 
 	}
 
