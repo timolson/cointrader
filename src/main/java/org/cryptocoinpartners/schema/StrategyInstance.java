@@ -62,10 +62,12 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
 	public void afterAttach(Context context) {
 		// attach the actual Strategy instead of this StrategyInstance
 		// Set ourselves as the StrategyInstance
+		//		context.loadStatements("BasicPortfolioService");
 		strategy = context.attach(moduleName, new MapConfiguration(config), new Module() {
 			@Override
 			public void configure(Binder binder) {
 				binder.bind(Portfolio.class).toInstance(getPortfolio());
+				//				context.loadStatements("Portfolio");
 				binder.bind(BasicPortfolioService.class).toInstance(getPortfolioService());
 				binder.bind(StrategyInstance.class).toInstance(StrategyInstance.this);
 			}
