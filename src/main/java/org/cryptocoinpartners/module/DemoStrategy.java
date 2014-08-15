@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 import javax.inject.Inject;
 
 import org.apache.commons.configuration.Configuration;
+import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.DiscreteAmount;

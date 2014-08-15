@@ -9,6 +9,7 @@ import java.util.Set;
 import javax.annotation.Nullable;
 import javax.inject.Singleton;
 
+import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
