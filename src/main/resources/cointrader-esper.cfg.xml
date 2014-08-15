@@ -2,13 +2,6 @@
 <esper-configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns="http://www.espertech.com/schema/esper"
     xsi:schemaLocation="http://www.espertech.com/schema/esper/esper-configuration-4-0.xsd">
-	<event-type name="SubscribePortfolioEvent" class="org.cryptocoinpartners.schema.SubscribePortfolio"/>
-	<event-type name="Transaction" class="org.cryptocoinpartners.schema.Transaction"/>
-	
-	<event-type name="Portfolio" class="org.cryptocoinpartners.schema.Portfolio">
-		<legacy-type accessor-style="javabean" code-generation="enabled" property-resolution-style="case_sensitive" factory-method="org.cryptocoinpartners.schema.Portfolio$Factory.newInstance"/>
-	</event-type>
-	<auto-import import-name="org.cryptocoinpartners.esper.annotation.*"/>
 
 	<engine-settings>
 		<defaults>

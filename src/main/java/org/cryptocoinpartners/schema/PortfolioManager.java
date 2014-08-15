@@ -8,9 +8,9 @@ import javax.persistence.OneToOne;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.TransactionType;
-import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.Context;
+import org.cryptocoinpartners.module.When;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.slf4j.Logger;
 

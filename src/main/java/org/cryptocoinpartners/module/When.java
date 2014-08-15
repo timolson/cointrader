@@ -1,4 +1,4 @@
-package org.cryptocoinpartners.esper.annotation;
+package org.cryptocoinpartners.module;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

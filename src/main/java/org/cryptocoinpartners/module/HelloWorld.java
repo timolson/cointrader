@@ -6,7 +6,6 @@ import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Event;
 import org.slf4j.Logger;
 

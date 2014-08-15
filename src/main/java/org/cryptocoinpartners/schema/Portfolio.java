@@ -244,23 +244,6 @@ public class Portfolio extends EntityBase {
 		this.manager = manager;
 	}
 
-	public static final class Factory {
-		/**
-		 * Constructs a new instance of {@link Tick}.
-		 * @return new TickImpl()
-		 */
-		public static Portfolio newInstance() {
-			return new Portfolio();
-		}
-
-		public static Portfolio newInstance(String name, PortfolioManager manager) {
-			final Portfolio entity = new Portfolio(name, manager);
-			return entity;
-		}
-
-		// HibernateEntity.vsl merge-point
-	}
-
 	private PortfolioManager manager;
 
 	private String name;

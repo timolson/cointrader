@@ -1,21 +1,5 @@
-@Name('PORTFOLIO_WINDOW')
-create window
-	PortfolioWindow.std:groupwin(id).std:lastevent() 
-as
-	select *
-from
-	SubscribePortfolioEvent;
-	
-@Name('SUBSCRIBE_PORTFOLIO')
-insert into
-	PortfolioWindow
-select
-	portfolio.*
-from
-	SubscribePortfolioEvent;
-
-@Name('PROPERGATE_TRANSACTION')
-//@Subscriber(className='org.cryptocoinpartners.schema.PortfolioManager$handleTransaction')
-select
-	*
-	from Transaction
+@Name('GET_LAST_TICK')
+select 
+	* 
+from 
+	Trade.win:time(7 days).win:length(1) as Trade;

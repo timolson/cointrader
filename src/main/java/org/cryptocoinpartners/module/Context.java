@@ -2,7 +2,6 @@ package org.cryptocoinpartners.module;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -21,9 +20,6 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.ArrayUtils;
-import org.cryptocoinpartners.esper.annotation.Listeners;
-import org.cryptocoinpartners.esper.annotation.Subscriber;
-import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Event;
 import org.cryptocoinpartners.service.Service;
 import org.cryptocoinpartners.util.ConfigUtil;
@@ -40,8 +36,6 @@ import com.espertech.esper.client.EPServiceProviderManager;
 import com.espertech.esper.client.EPStatement;
 import com.espertech.esper.client.EventBean;
 import com.espertech.esper.client.SafeIterator;
-import com.espertech.esper.client.StatementAwareUpdateListener;
-import com.espertech.esper.client.UpdateListener;
 import com.espertech.esper.client.deploy.DeploymentException;
 import com.espertech.esper.client.deploy.DeploymentOptions;
 import com.espertech.esper.client.deploy.DeploymentResult;
@@ -224,41 +218,9 @@ public class Context {
 	public void subscribe(Object listener) {
 		if (listener == this)
 			return;
+		// todo search for EPL files and load them
 		for (Class<?> cls = listener.getClass(); cls != Object.class; cls = cls.getSuperclass())
 			subscribe(listener, cls);
-	}
-
-	private void processAnnotations(EPStatement statement) throws Exception {
-
-		Annotation[] annotations = statement.getAnnotations();
-		for (Annotation annotation : annotations) {
-			if (annotation instanceof Subscriber) {
-
-				Subscriber subscriber = (Subscriber) annotation;
-				Object obj = getSubscriber(subscriber.className());
-				statement.setSubscriber(obj);
-
-			} else if (annotation instanceof Listeners) {
-
-				Listeners listeners = (Listeners) annotation;
-				for (String className : listeners.classNames()) {
-					Class<?> cl = Class.forName(className);
-					Object obj = cl.newInstance();
-					if (obj instanceof StatementAwareUpdateListener) {
-						statement.addListener((StatementAwareUpdateListener) obj);
-					} else {
-						statement.addListener((UpdateListener) obj);
-					}
-				}
-
-			}
-		}
-	}
-
-	private Object getSubscriber(String fqdn) throws Exception {
-
-		Class<?> cl = Class.forName(fqdn);
-		return cl.newInstance();
 	}
 
 	private void subscribe(Object listener, Class<?> cls) {
@@ -295,16 +257,6 @@ public class Context {
 			try {
 				deployResult = deploymentAdmin.deploy(module, new DeploymentOptions());
 				List<EPStatement> statements = deployResult.getStatements();
-
-				for (EPStatement statement : statements) {
-
-					try {
-						processAnnotations(statement);
-					} catch (Exception e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
 				log.debug("deployed module " + source + ".epl");
 			} catch (DeploymentException e) {
 				System.out.println(e);

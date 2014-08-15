@@ -2,7 +2,6 @@ package org.cryptocoinpartners.module;
 
 import javax.annotation.Nullable;
 
-import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.BaseStrategy;
 import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Order;
