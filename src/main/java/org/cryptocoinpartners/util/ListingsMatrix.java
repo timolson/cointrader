@@ -99,7 +99,7 @@ public class ListingsMatrix {
 		ArgumentChecker.notNull(ccyToAdd, "Asset to add to the Listings matrix should not be null");
 		ArgumentChecker.notNull(ccyReference, "Reference currency should not be null");
 		ArgumentChecker.isTrue(!ccyToAdd.equals(ccyReference), "Currencies should be different");
-		if (_nbCurrencies == 0) { // Listings Matrix is empty.
+		if (_nbCurrencies == 0 && rate != 0) { // Listings Matrix is empty.
 			_currencies.put(ccyReference, 0);
 			_currencies.put(ccyToAdd, 1);
 			_currenciesLookup.put(0, ccyReference);
@@ -114,7 +114,7 @@ public class ListingsMatrix {
 			long inverseCrossRate = inverseRateBD.longValue();
 			_rates[0][1] = inverseCrossRate;
 			_nbCurrencies = 2;
-		} else {
+		} else if (rate != 0) {
 			ArgumentChecker.isTrue(_currencies.containsKey(ccyReference), "Reference currency {} not in the Listings matrix", ccyReference);
 			ArgumentChecker.isTrue(!_currencies.containsKey(ccyToAdd), "New currency {} already in the Listings matrix", ccyToAdd);
 			_currencies.put(ccyToAdd, _nbCurrencies);
