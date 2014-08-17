@@ -11,11 +11,14 @@ import javax.inject.Singleton;
 
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Book;
+import org.cryptocoinpartners.schema.Exchanges;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Offer;
 import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.service.QuoteService;
+import org.cryptocoinpartners.util.ListingsMatrix;
+import org.joda.time.Instant;
 
 /**
  * This service listens to the Context and caches the most recent Trades and Books
@@ -66,6 +69,8 @@ public class BasicQuoteService implements QuoteService {
 			if (bestBid == null || (testBestBid != null && testBestBid.getPrice().compareTo(bestBid.getPrice()) > 0))
 				bestBid = testBestBid;
 		}
+		bestBid = ((bestBid == null) ? getImpliedBestAskForListing(listing) : bestBid);
+
 		return bestBid;
 	}
 
@@ -90,14 +95,41 @@ public class BasicQuoteService implements QuoteService {
 	public @Nullable
 	Offer getBestAskForListing(Listing listing) {
 		Offer bestAsk = null;
-		for (Market market : marketsByListing.get(listing.getSymbol())) {
-			Book book = bestAskByMarket.get(market.getSymbol());
-			Offer testBestAsk = book.getBestAsk();
-			//noinspection ConstantConditions
-			if (bestAsk == null || (testBestAsk != null && testBestAsk.getPrice().compareTo(bestAsk.getPrice()) < 0))
-				bestAsk = testBestAsk;
+		if (marketsByListing.get(listing.getSymbol()) != null) {
+			for (Market market : marketsByListing.get(listing.getSymbol())) {
+				Book book = bestAskByMarket.get(market.getSymbol());
+				Offer testBestAsk = book.getBestAsk();
+				//noinspection ConstantConditions
+				if (bestAsk == null || (testBestAsk != null && testBestAsk.getPrice().compareTo(bestAsk.getPrice()) < 0))
+					bestAsk = testBestAsk;
+
+			}
+
 		}
+		bestAsk = ((bestAsk == null) ? getImpliedBestAskForListing(listing) : bestAsk);
+
 		return bestAsk;
+
+	}
+
+	@Override
+	public @Nullable
+	Offer getImpliedBestAskForListing(Listing listing) {
+
+		long bestImpliedAsk = impliedAskMatrix.getRate(listing.getBase(), listing.getQuote());
+		Market market = Market.findOrCreate(Exchanges.SELF, listing);
+		return new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
+
+	}
+
+	@Override
+	public @Nullable
+	Offer getImpliedBestBidForListing(Listing listing) {
+
+		long bestImpliedAsk = impliedBidMatrix.getRate(listing.getBase(), listing.getQuote());
+		Market market = Market.findOrCreate(Exchanges.SELF, listing);
+		return new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
+
 	}
 
 	@Override
@@ -133,12 +165,27 @@ public class BasicQuoteService implements QuoteService {
 		//noinspection ConstantConditions
 		if (bestBid != null && (lastBestBidBook == null || bestBid.getPrice().compareTo(lastBestBidBook.getBestBid().getPrice()) > 0))
 			bestBidByMarket.put(marketSymbol, b);
+		try {
+			impliedBidMatrix.getRate(b.getMarket().getBase(), b.getMarket().getQuote());
+			impliedBidMatrix.updateRates(b.getMarket().getBase(), b.getMarket().getQuote(), bestBid.getPriceCount());
+		} catch (java.lang.IllegalArgumentException e) {
+			impliedBidMatrix.addAsset(b.getMarket().getBase(), b.getMarket().getQuote(), bestBid.getPriceCount());
+
+		}
 
 		Offer bestAsk = b.getBestAsk();
 		Book lastBestAskBook = bestAskByMarket.get(marketSymbol);
 		//noinspection ConstantConditions
 		if (bestAsk != null && (lastBestAskBook == null || bestAsk.getPrice().compareTo(lastBestAskBook.getBestAsk().getPrice()) < 0))
 			bestAskByMarket.put(marketSymbol, b);
+		try {
+			impliedAskMatrix.getRate(b.getMarket().getBase(), b.getMarket().getQuote());
+			impliedAskMatrix.updateRates(b.getMarket().getBase(), b.getMarket().getQuote(), bestAsk.getPriceCount());
+		} catch (java.lang.IllegalArgumentException e) {
+			impliedAskMatrix.addAsset(b.getMarket().getBase(), b.getMarket().getQuote(), bestAsk.getPriceCount());
+
+		}
+
 	}
 
 	@When("select * from Trade")
@@ -168,6 +215,9 @@ public class BasicQuoteService implements QuoteService {
 		} else
 			markets.add(market);
 	}
+
+	private final ListingsMatrix impliedBidMatrix = new ListingsMatrix();
+	private final ListingsMatrix impliedAskMatrix = new ListingsMatrix();
 
 	private final Map<String, Trade> lastTradeByListing = new HashMap<>();
 	private final Map<String, Book> lastBookByListing = new HashMap<>();

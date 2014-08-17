@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.Offer;
 import org.cryptocoinpartners.schema.Trade;
 
 /**
@@ -50,5 +51,9 @@ public interface QuoteService {
 
 	public @Nullable
 	org.cryptocoinpartners.schema.Offer getLastAskForMarket(Market market);
+
+	Offer getImpliedBestAskForListing(Listing listing);
+
+	Offer getImpliedBestBidForListing(Listing listing);
 
 }

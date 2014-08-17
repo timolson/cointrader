@@ -52,14 +52,14 @@ public class DecimalAmount extends Amount {
 
 	@Override
 	public Amount times(Amount o, RemainderHandler remainderHandler) {
-		// todo
-		throw new Error("unimplemented");
+		return new DecimalAmount(bd.multiply(o.asBigDecimal()));
+
 	}
 
 	@Override
 	public Amount dividedBy(Amount o, RemainderHandler remainderHandler) {
-		// todo
-		throw new Error("unimplemented");
+		return new DecimalAmount(bd.divide(o.asBigDecimal(), BigDecimal.ROUND_HALF_EVEN));
+
 	}
 
 	@Override

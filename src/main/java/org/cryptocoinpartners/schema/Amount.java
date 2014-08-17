@@ -104,4 +104,9 @@ public abstract class Amount implements Comparable<Amount> {
 	public abstract Amount dividedBy(Amount o, RemainderHandler remainderHandler);
 
 	protected static final Logger log = LoggerFactory.getLogger(Amount.class);
+
+	public long asLong() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
 }

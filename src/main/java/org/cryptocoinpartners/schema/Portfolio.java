@@ -1,6 +1,5 @@
 package org.cryptocoinpartners.schema;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -9,8 +8,6 @@ import java.util.Iterator;
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
-
-import com.xeiam.xchange.dto.trade.Wallet;
 
 /**
  * Many Owners may have Stakes in the Portfolio, but there is only one PortfolioManager, who is not necessarily an Owner.  The
@@ -25,12 +22,6 @@ public class Portfolio extends EntityBase {
 	public @Transient
 	Collection<Position> getPositions() {
 		return positions;
-	}
-
-	/** returns all Positions, whether they are tied to an open Order or not.  Use getTradeablePositions() */
-	public @Transient
-	Collection<Balance> getBalances() {
-		return balances;
 	}
 
 	// public @OneToMany ConcurrentHashMap<BalanceType, List<Wallet>> getBalances() { return balances; }
@@ -139,21 +130,6 @@ public class Portfolio extends EntityBase {
 		return false;
 	}
 
-	private boolean merge(Balance balance) {
-		for (Balance b : balances) {
-			if (b.getExchange().equals(balance.getExchange()) && b.getWallet().getDescription().equals(balance.getWallet().getDescription())
-					&& b.getWallet().getCurrency().equals(balance.getWallet().getCurrency())) {
-				BigDecimal ammount = b.getWallet().getBalance().add(balance.getWallet().getBalance());
-				Wallet newWallet = new Wallet(balance.getWallet().getCurrency(), ammount, balance.getWallet().getDescription());
-
-				b.setWallet(newWallet);
-
-				return true;
-			}
-		}
-		return false;
-	}
-
 	public Portfolio(String name, PortfolioManager manager) {
 		this.name = name;
 		this.manager = manager;
@@ -194,20 +170,6 @@ public class Portfolio extends EntityBase {
 		}
 		if (!modifiedExistingPosition)
 			positions.add(position);
-	}
-
-	public void modifyBalance(Balance balance, Authorization authorization) {
-		assert authorization != null;
-		assert balance != null;
-		boolean modifiedExistingBalance = false;
-		for (Balance curBalance : balances) {
-			if (curBalance.merge(balance)) {
-				modifiedExistingBalance = true;
-				break;
-			}
-		}
-		if (!modifiedExistingBalance)
-			balances.add(balance);
 	}
 
 	@Override

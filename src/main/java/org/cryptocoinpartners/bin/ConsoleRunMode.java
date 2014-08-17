@@ -16,6 +16,7 @@ import org.cryptocoinpartners.command.Command;
 import org.cryptocoinpartners.command.CommandBase;
 import org.cryptocoinpartners.command.ConsoleWriter;
 import org.cryptocoinpartners.command.ParseError;
+import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
@@ -23,12 +24,13 @@ import org.cryptocoinpartners.module.MockOrderService;
 import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.module.xchange.XchangeData;
 import org.cryptocoinpartners.module.xchange.XchangeOrderService;
-import org.cryptocoinpartners.schema.Authorization;
-import org.cryptocoinpartners.schema.Balance;
+import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Currencies;
+import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Exchanges;
 import org.cryptocoinpartners.schema.Owner;
 import org.cryptocoinpartners.schema.Portfolio;
+import org.cryptocoinpartners.schema.Transaction;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
@@ -117,7 +119,11 @@ public class ConsoleRunMode extends RunMode {
 		Owner owner = new Owner("Console Portfolio");
 		Portfolio portfolio = owner.getPortfolio();
 		// Adjust the Owner's Portfolio to have some BTC & USD to play with.
-		portfolio.modifyBalance(new Balance(Exchanges.BITFINEX, Currencies.BTC, Balance.BalanceType.ACTUAL), new Authorization("Console Mock Portfolio Setup"));
+		Amount amount = new DiscreteAmount(10000000, Currencies.BTC.getBasis());
+		Amount price = new DiscreteAmount(0, Currencies.BTC.getBasis());
+		Transaction initialCredit = new Transaction(portfolio, Exchanges.BITFINEX, Currencies.BTC, TransactionType.CREDIT, amount, price);
+		context.publish(initialCredit);
+
 		context.attachInstance(owner);
 		context.attachInstance(new BasicPortfolioService(portfolio));
 

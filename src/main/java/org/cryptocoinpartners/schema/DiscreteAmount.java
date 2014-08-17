@@ -126,6 +126,12 @@ public class DiscreteAmount extends Amount {
 	}
 
 	@Override
+	public long asLong() {
+		return (count) / iBasis;
+
+	}
+
+	@Override
 	public DiscreteAmount toIBasis(long newIBasis, RemainderHandler remainderHandler) {
 		if (newIBasis % iBasis == 0) {
 			// new basis is a multiple of old basis and has higher resolution.  no remainder

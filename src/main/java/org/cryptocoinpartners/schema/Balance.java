@@ -1,89 +1,108 @@
 package org.cryptocoinpartners.schema;
 
-import java.math.BigDecimal;
-
-
-
-import com.xeiam.xchange.dto.trade.Wallet;
-
-import javax.persistence.Entity;
-import javax.persistence.Transient;
-
-
 /**
- * A Position represents an amount of some Asset within an Exchange.  If the Position is related to an Order
- * then the Position is being held in reserve (not tradeable) to cover the costs of the open Order.
+ * A Balance represents an amount of money in a given asset.
  *
- * @author Tim Olson
+ *
  */
-@Entity
-public class Balance extends Holding{
+public final class Balance {
 
+	private final Asset asset;
+	private final String description;
+	private final Amount amount;
 
-    public enum BalanceType {
-		ACTUAL,
-		RESERVED,
-		AVAILABLE
+	/**
+	 * Constructor
+	 * 
+	 * @param asset The underlying asset
+	 * @param amount The amount
+	 */
+	public Balance(Asset asset, Amount amount) {
+
+		this.asset = asset;
+		this.amount = amount;
+		this.description = "";
 	}
 
+	/**
+	 * Additional constructor with optional description
+	 * 
+	 * @param description Optional description to distinguish same asset Balances
+	 */
+	public Balance(Asset asset, Amount amount, String description) {
 
-    
-    public Balance(Exchange exchange,Asset asset,BalanceType type) {
-    	this.exchange=exchange;
-    	String ccy = asset.getSymbol().toString();
-		//this.currencyPair=Utils.getCurrencyPair(instrument);
-    	this.wallet=new Wallet(ccy, BigDecimal.ZERO, type.toString());
-		
-		
+		this.asset = asset;
+		this.amount = amount;
+		this.description = description;
 	}
-  
-	public Balance(Exchange exchange,Asset asset,Amount amount,BalanceType type ) {
-		
-		this.exchange=exchange;
-		String ccy = asset.getSymbol().toString();
-		this.wallet=new Wallet(ccy, amount.asBigDecimal(), type.toString());
-		
 
-		
+	public Asset getAsset() {
+
+		return asset;
 	}
-	    @Transient
-    public Wallet getWallet() {
-        
-        return wallet;
-    }
 
-    @Transient
-    public Exchange getExchange() {
-        
-        return exchange;
-    }
+	public Amount getAmount() {
 
-    
-   
+		return amount;
+	}
 
-    public boolean merge(Balance balance) {
-        if( !exchange.equals(balance.exchange) || !wallet.getDescription().equals(balance.wallet.getDescription()) || !wallet.getCurrency().equals(balance.wallet.getCurrency())  )
-            return false;
-        BigDecimal amount = this.wallet.getBalance().add(balance.wallet.getBalance())  ;   		
-        this.wallet= new Wallet(wallet.getCurrency(), amount, wallet.getDescription());
-        
-        return true;
-    }
+	public String getDescription() {
 
-    public String toString() {
-        return "Balance=[Exchange=" + exchange + ", wallet=" + wallet
-                        + "]";
-}
+		return description;
+	}
 
-    // JPA
-    protected Balance() { }
+	@Override
+	public String toString() {
 
+		return "Balance [asset=" + asset + ", amount=" + amount + ", description=" + description + "]";
+	}
 
-  
-	protected void setWallet(Wallet wallet) { this.wallet = wallet; }
-   
- 
-    private Wallet wallet;
+	@Override
+	public int hashCode() {
 
-    
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((amount == null) ? 0 : amount.hashCode());
+		result = prime * result + ((asset == null) ? 0 : asset.hashCode());
+		result = prime * result + ((description == null) ? 0 : description.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		Balance other = (Balance) obj;
+		if (amount == null) {
+			if (other.amount != null) {
+				return false;
+			}
+		} else if (!amount.equals(other.amount)) {
+			return false;
+		}
+		if (asset == null) {
+			if (other.asset != null) {
+				return false;
+			}
+		} else if (!asset.equals(other.asset)) {
+			return false;
+		}
+		if (description == null) {
+			if (other.description != null) {
+				return false;
+			}
+		} else if (!description.equals(other.description)) {
+			return false;
+		}
+		return true;
+	}
+
 }
