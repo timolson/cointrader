@@ -169,8 +169,11 @@ public class BasicQuoteService implements QuoteService {
 			impliedBidMatrix.getRate(b.getMarket().getBase(), b.getMarket().getQuote());
 			impliedBidMatrix.updateRates(b.getMarket().getBase(), b.getMarket().getQuote(), bestBid.getPriceCount());
 		} catch (java.lang.IllegalArgumentException e) {
-			impliedBidMatrix.addAsset(b.getMarket().getBase(), b.getMarket().getQuote(), bestBid.getPriceCount());
-
+			try {
+				impliedBidMatrix.addAsset(b.getMarket().getBase(), b.getMarket().getQuote(), bestBid.getPriceCount());
+			} catch (java.lang.IllegalArgumentException e2) {
+				//we not recived enouhg trades to create a link to other currecny
+			}
 		}
 
 		Offer bestAsk = b.getBestAsk();
@@ -182,7 +185,11 @@ public class BasicQuoteService implements QuoteService {
 			impliedAskMatrix.getRate(b.getMarket().getBase(), b.getMarket().getQuote());
 			impliedAskMatrix.updateRates(b.getMarket().getBase(), b.getMarket().getQuote(), bestAsk.getPriceCount());
 		} catch (java.lang.IllegalArgumentException e) {
-			impliedAskMatrix.addAsset(b.getMarket().getBase(), b.getMarket().getQuote(), bestAsk.getPriceCount());
+			try {
+				impliedAskMatrix.addAsset(b.getMarket().getBase(), b.getMarket().getQuote(), bestAsk.getPriceCount());
+			} catch (java.lang.IllegalArgumentException e2) {
+				//we not recived enouhg trades to create a link to other currecny
+			}
 
 		}
 

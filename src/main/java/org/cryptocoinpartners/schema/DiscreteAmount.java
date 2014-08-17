@@ -87,14 +87,24 @@ public class DiscreteAmount extends Amount {
 
 	@Override
 	public Amount plus(Amount o) {
-		// todo
-		throw new Error("unimplemented");
+		if (o instanceof DiscreteAmount) {
+			DiscreteAmount discreteOther = (DiscreteAmount) o;
+			if (iBasis == discreteOther.iBasis)
+				return new DiscreteAmount(count + discreteOther.count, iBasis);
+		}
+		return new DecimalAmount(asBigDecimal().add(o.asBigDecimal()));
+
 	}
 
 	@Override
 	public Amount minus(Amount o) {
-		// todo
-		throw new Error("unimplemented");
+		if (o instanceof DiscreteAmount) {
+			DiscreteAmount discreteOther = (DiscreteAmount) o;
+			if (iBasis == discreteOther.iBasis)
+				return new DiscreteAmount(count - discreteOther.count, iBasis);
+		}
+		return new DecimalAmount(asBigDecimal().subtract(o.asBigDecimal()));
+
 	}
 
 	@Override
