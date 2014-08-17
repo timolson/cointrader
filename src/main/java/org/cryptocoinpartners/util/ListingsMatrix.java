@@ -3,8 +3,9 @@ package org.cryptocoinpartners.util;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Arrays;
-import java.util.LinkedHashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang.ObjectUtils;
 import org.cryptocoinpartners.schema.Asset;
@@ -36,8 +37,8 @@ public class ListingsMatrix {
 	 * Constructor with no currency. The ListingsMatrix constructed has no currency and no rates.
 	 */
 	public ListingsMatrix() {
-		_currencies = new LinkedHashMap<Asset, Integer>();
-		_currenciesLookup = new LinkedHashMap<Integer, Asset>();
+		_currencies = new ConcurrentHashMap<Asset, Integer>();
+		_currenciesLookup = new ConcurrentHashMap<Integer, Asset>();
 		_rates = new long[0][0];
 		_nbCurrencies = 0;
 	}
@@ -48,8 +49,8 @@ public class ListingsMatrix {
 	 */
 	public ListingsMatrix(final Asset ccy) {
 		ArgumentChecker.notNull(ccy, "Asset");
-		_currencies = new LinkedHashMap<Asset, Integer>();
-		_currenciesLookup = new LinkedHashMap<Integer, Asset>();
+		_currencies = new ConcurrentHashMap<Asset, Integer>();
+		_currenciesLookup = new ConcurrentHashMap<Integer, Asset>();
 		_currencies.put(ccy, 0);
 		_currenciesLookup.put(0, ccy);
 
@@ -66,8 +67,8 @@ public class ListingsMatrix {
 	 * @param rate TheListings rate between ccy1 and the ccy2. It is 1 ccy1 = rate * ccy2. The Listings matrix will be completed with the ccy2/ccy1 rate.
 	 */
 	public ListingsMatrix(final Asset ccy1, final Asset ccy2, final long rate) {
-		_currencies = new LinkedHashMap<Asset, Integer>();
-		_currenciesLookup = new LinkedHashMap<Integer, Asset>();
+		_currencies = new ConcurrentHashMap<Asset, Integer>();
+		_currenciesLookup = new ConcurrentHashMap<Integer, Asset>();
 		_rates = new long[0][0];
 		addAsset(ccy1, ccy2, rate);
 	}
@@ -79,8 +80,8 @@ public class ListingsMatrix {
 	public ListingsMatrix(final ListingsMatrix ListingsMatrix) {
 		ArgumentChecker.notNull(ListingsMatrix, "ListingsMatrix");
 		_nbCurrencies = ListingsMatrix._nbCurrencies;
-		_currencies = new LinkedHashMap<Asset, Integer>(ListingsMatrix._currencies);
-		_currenciesLookup = new LinkedHashMap<Integer, Asset>(ListingsMatrix._currenciesLookup);
+		_currencies = new ConcurrentHashMap<Asset, Integer>(ListingsMatrix._currencies);
+		_currenciesLookup = new ConcurrentHashMap<Integer, Asset>(ListingsMatrix._currenciesLookup);
 		_rates = new long[_nbCurrencies][];
 		for (int loopc = 0; loopc < _nbCurrencies; loopc++) {
 			_rates[loopc] = ListingsMatrix._rates[loopc].clone();
@@ -121,7 +122,8 @@ public class ListingsMatrix {
 			_currenciesLookup.put(_nbCurrencies, ccyToAdd);
 
 			_nbCurrencies++;
-			final long[][] ratesNew = new long[_nbCurrencies][_nbCurrencies];
+			// cahnge some stuff here to use has maps.
+			long[][] ratesNew = new long[_nbCurrencies][_nbCurrencies];
 			// Copy the previous matrix
 			for (int loopccy = 0; loopccy < _nbCurrencies - 1; loopccy++) {
 				System.arraycopy(_rates[loopccy], 0, ratesNew[loopccy], 0, _nbCurrencies - 1);
@@ -129,19 +131,21 @@ public class ListingsMatrix {
 			ratesNew[_nbCurrencies - 1][_nbCurrencies - 1] = (long) (1 / _currenciesLookup.get(_nbCurrencies - 1).getBasis());
 
 			//final int indexRef = _currencies.get(ccyReference);
-			final int indexRef = _currencies.get(ccyReference);
-			for (int loopccy = 0; loopccy < _nbCurrencies - 1; loopccy++) {
+			int indexRef = _currencies.get(ccyReference);
+			Iterator<Integer> it = _currenciesLookup.keySet().iterator();
+			while (it.hasNext()) {
+				int loopccy = it.next();
+				if (loopccy < _currenciesLookup.size() - 1) {
+					long crossRate = Math.round((rate * _rates[indexRef][loopccy]) * (_currenciesLookup.get(_nbCurrencies - 1).getBasis()));
+					BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
+					BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1 / (_currenciesLookup.get(loopccy).getBasis()))).divide(crossRateBD,
+							_currenciesLookup.get(indexRef).getScale(), RoundingMode.HALF_EVEN));
+					inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(_currenciesLookup.get(_nbCurrencies - 1).getBasis()));
 
-				long crossRate = Math.round((rate * _rates[indexRef][loopccy]) * (_currenciesLookup.get(_nbCurrencies - 1).getBasis()));
-				BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
-				BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1 / _currenciesLookup.get(loopccy).getBasis())).divide(crossRateBD,
-						_currenciesLookup.get(indexRef).getScale(), RoundingMode.HALF_EVEN));
-				inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(_currenciesLookup.get(_nbCurrencies - 1).getBasis()));
-
-				long inverseCrossRate = inverseCrossRateBD.longValue();
-				ratesNew[_nbCurrencies - 1][loopccy] = crossRate;
-				ratesNew[loopccy][_nbCurrencies - 1] = inverseCrossRate;
-
+					long inverseCrossRate = inverseCrossRateBD.longValue();
+					ratesNew[_nbCurrencies - 1][loopccy] = crossRate;
+					ratesNew[loopccy][_nbCurrencies - 1] = inverseCrossRate;
+				}
 			}
 
 			_rates = ratesNew;
@@ -184,25 +188,28 @@ public class ListingsMatrix {
 	public void updateRates(final Asset ccyToUpdate, final Asset ccyReference, final long rate) {
 		ArgumentChecker.isTrue(_currencies.containsKey(ccyReference), "Reference Asset not in the Listings matrix");
 		ArgumentChecker.isTrue(_currencies.containsKey(ccyToUpdate), "Asset to update not in the Listings matrix");
-		final int indexUpdate = _currencies.get(ccyToUpdate);
-		final int indexRef = _currencies.get(ccyReference);
+		int indexUpdate = _currencies.get(ccyToUpdate);
+		int indexRef = _currencies.get(ccyReference);
+		if (rate != 0) {
+			Iterator<Integer> it = _currenciesLookup.keySet().iterator();
+			while (it.hasNext()) {
+				int loopccy = it.next();
 
-		for (int loopccy = 0; loopccy < _nbCurrencies; loopccy++) {
+				long crossRate = Math.round((rate * _rates[indexRef][loopccy]) * (_currenciesLookup.get(indexRef).getBasis()));
+				BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
+				BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1 / _currenciesLookup.get(loopccy).getBasis())).divide(crossRateBD,
+						_currenciesLookup.get(indexUpdate).getScale(), RoundingMode.HALF_EVEN));
+				inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(_currenciesLookup.get(indexUpdate).getBasis()));
 
-			long crossRate = Math.round((rate * _rates[indexRef][loopccy]) * (_currenciesLookup.get(indexRef).getBasis()));
-			BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
-			BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1 / _currenciesLookup.get(loopccy).getBasis())).divide(crossRateBD,
-					_currenciesLookup.get(indexUpdate).getScale(), RoundingMode.HALF_EVEN));
-			inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(_currenciesLookup.get(indexUpdate).getBasis()));
+				long inverseCrossRate = inverseCrossRateBD.longValue();
+				_rates[indexUpdate][loopccy] = crossRate;
+				_rates[loopccy][indexUpdate] = inverseCrossRate;
 
-			long inverseCrossRate = inverseCrossRateBD.longValue();
-			_rates[indexUpdate][loopccy] = crossRate;
-			_rates[loopccy][indexUpdate] = inverseCrossRate;
+			}
+
+			_rates[indexUpdate][indexUpdate] = (long) (1 / _currenciesLookup.get(indexUpdate).getBasis());
 
 		}
-
-		_rates[indexUpdate][indexUpdate] = (long) (1 / _currenciesLookup.get(indexUpdate).getBasis());
-
 	}
 
 	@Override
