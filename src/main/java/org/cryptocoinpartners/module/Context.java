@@ -448,28 +448,6 @@ public class Context {
 		});
 	}
 
-	/*  I was trying to use the subscribingListener to call context.subscribe() on all provisioned instances, but it
-	    wasn't working with all created instances for some reason (Guice bug?).  now all instances get subscribe()'d
-	    explicitly in the register methods
-
-	@SuppressWarnings("unchecked")
-	private Injector childInjector(final @Nullable Configuration configParams, Module... modules) {
-	    final int moduleLength = ArrayUtils.getLength(modules);
-	    if( moduleLength == 0 && configParams == null )
-	        return injector;
-	    int childModuleLength = moduleLength + 1;
-	    Module[] childModules = new Module[childModuleLength];
-	    if( !ArrayUtils.isEmpty(modules) ) {
-	        ArrayList<Module> childModuleList = new ArrayList<>(childModuleLength);
-	        childModuleList.add(subscribingModule);
-	        childModules = childModuleList.toArray(childModules);
-	    }
-	    Injector childInjector = injector.createChildInjector(childModules);
-	    if( configParams != null )
-	        childInjector.setConfig(configParams);
-	    return childInjector;
-	}
-	*/
 
 	@SuppressWarnings("unchecked")
 	private Injector childInjector(final @Nullable Configuration configParams, Module... modules) {
@@ -578,19 +556,5 @@ public class Context {
 		};
 		svc.schedule(garbageCollection, 1, TimeUnit.MILLISECONDS);
 	}
-
-	/*
-	private final Module subscribingModule = new Module() {
-	    public void configure(Binder binder) {
-	         // listen for any new instances and subscribe them to the esper
-	        binder.bindListener(Matchers.any(), new ProvisionListener() {
-	            public <T> void onProvision(ProvisionInvocation<T> provisionInvocation) {
-	                T provision = provisionInvocation.provision();
-	                subscribe(provision);
-	            }
-	        });
-	    }
-	};
-	*/
 
 }
