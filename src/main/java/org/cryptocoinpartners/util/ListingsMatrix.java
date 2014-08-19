@@ -90,10 +90,7 @@ public class ListingsMatrix {
 			ArgumentChecker.isTrue(!listings.containsKey(ccyToAdd), "New currency {} already in the Listings matrix", ccyToAdd);
 
 			Iterator<Asset> lit = listings.keySet().iterator();
-			if (ccyToAdd.getSymbol().equals("NXT") || ccyToAdd.getSymbol().equals("LTC") || ccyToAdd.getSymbol().equals("DOGE")
-					|| ccyToAdd.getSymbol().equals("CNY")) {
-				System.out.print("hello");
-			}
+
 			while (lit.hasNext()) {
 				Asset ccy = lit.next();
 				if (!ccyToAdd.equals(ccy)) {
