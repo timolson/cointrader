@@ -6,6 +6,7 @@ import org.cryptocoinpartners.enumeration.FeeMethod;
 import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Fill;
+import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +40,21 @@ public class FeesUtil {
 		double basis = order.getMarket().getPriceBasis();
 		Amount price = order.getLimitPrice();
 		Amount ammount = order.getVolume().abs();
+		switch (method) {
+			case PercentagePerUnit:
+				return calculatePercentagePerUnit(price, ammount, rate);
+			case PerUnit:
+				return calculatePerUnit(ammount, rate);
+			default:
+				log.error("No exchange fee method calcation for : " + method);
+				return null;
+		}
+
+	}
+
+	public static Amount getExchangeFees(Amount price, Amount ammount, Market market) {
+		double rate = market.getExchange().getFeeRate();
+		FeeMethod method = market.getExchange().getFeeMethod();
 		switch (method) {
 			case PercentagePerUnit:
 				return calculatePercentagePerUnit(price, ammount, rate);
