@@ -156,7 +156,7 @@ public class DiscreteAmount extends Amount {
 	}
 
 	@Override
-	public int getPrecision() {
+	public int getScale() {
 
 		int length = (int) (Math.log10(iBasis));
 		return length;
