@@ -138,7 +138,7 @@ public class DecimalAmount extends Amount {
 
 	@Transient
 	@Override
-	public int getPrecision() {
+	public int getScale() {
 		final BigDecimal bigDecimal = new BigDecimal("" + bd);
 		final String s = bigDecimal.toPlainString();
 		System.out.println(s);
