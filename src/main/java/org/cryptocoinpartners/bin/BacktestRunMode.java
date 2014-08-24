@@ -8,8 +8,7 @@ import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.MockOrderService;
 import org.cryptocoinpartners.module.xchange.XchangeAccountService;
-import org.cryptocoinpartners.schema.Amount;
-import org.cryptocoinpartners.schema.DecimalAmount;
+import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Holding;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.StrategyInstance;
@@ -60,10 +59,10 @@ public class BacktestRunMode extends RunMode {
 		if (positions.size() % 2 != 0) {
 			System.err.println("You must supply an even number of arguments to the position switch. " + positions);
 		}
-		for (int i = 0; i < positions.size();) {
+		for (int i = 0; i < positions.size() - 1;) {
 			Holding holding = Holding.forSymbol(positions.get(i++));
-			Amount amount = DecimalAmount.of(positions.get(i++));
-			Amount price = DecimalAmount.ZERO;
+			DiscreteAmount amount = new DiscreteAmount(1000000, 0.000001);
+			DiscreteAmount price = new DiscreteAmount(0, 0.000001);
 			Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
 			context.publish(initialCredit);
 

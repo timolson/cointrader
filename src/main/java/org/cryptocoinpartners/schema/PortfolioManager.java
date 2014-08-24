@@ -89,6 +89,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
 	@Inject
 	private Logger log;
+
 	private Portfolio portfolio;
 
 }

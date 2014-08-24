@@ -323,6 +323,10 @@ public class Context {
 		return injector;
 	}
 
+	public Configuration getConfig() {
+		return config;
+	}
+
 	//
 	// End of Public Interface
 	//

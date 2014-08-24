@@ -1,7 +1,5 @@
 package org.cryptocoinpartners.schema;
 
-import java.math.BigDecimal;
-
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.persistence.Entity;
@@ -44,8 +42,8 @@ public class Transaction extends Event {
 		this.setPortfolio(portfolio);
 		this.setExchange(exchange);
 		this.setPortfolioName(portfolio);
-		this.amountCount = DiscreteAmount.roundedCountForBasis(amount.asBigDecimal(), asset.getBasis());
-		this.priceCount = DiscreteAmount.roundedCountForBasis(price.asBigDecimal(), asset.getBasis());
+		//this.amountCount = DiscreteAmount.
+		//this.priceCount = DiscreteAmount.roundedCountForBasis(price.asBigDecimal(), asset.getBasis());
 
 	}
 
@@ -198,7 +196,7 @@ public class Transaction extends Event {
 
 		return "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Portfolio=" + getPortfolio() + SEPARATOR + "Exchange="
 				+ getExchange() + SEPARATOR + "type=" + getType() + SEPARATOR + "volume=" + getAmount()
-				+ (getAsset() != null ? (SEPARATOR + "asset=" + getAsset()) : "") + SEPARATOR + "price=" + getPrice();
+				+ (getAsset() != null ? (SEPARATOR + "asset=" + getAsset()) : "") + SEPARATOR + "price=" + (getPrice() != DecimalAmount.ZERO ? getPrice() : "");
 	}
 
 	protected void setAmount(Amount amount) {
@@ -219,8 +217,6 @@ public class Transaction extends Event {
 
 	protected void setCommission(Amount commission) {
 		this.commission = commission;
-		BigDecimal count = commission.asBigDecimal().divide(BigDecimal.valueOf(commission.getBasis()));
-		this.commissionCount = count.longValue();
 	}
 
 	protected void setCommissionCount(Long commissionCount) {

@@ -6,11 +6,8 @@ import javax.inject.Inject;
 
 import org.apache.commons.configuration.Configuration;
 import org.cryptocoinpartners.esper.annotation.When;
-import org.cryptocoinpartners.schema.Amount;
-import org.cryptocoinpartners.schema.Asset;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.DiscreteAmount;
-import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Offer;
 import org.cryptocoinpartners.schema.Order;
@@ -30,6 +27,7 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 
 	@Inject
 	public DemoStrategy(Context context, Configuration config) {
+
 		// String marketSymbol = config.getString("demostrategy.market","BITFINEX:BTC.USD");
 		String marketSymbol = ("BITFINEX:BTC.USD");
 
@@ -51,18 +49,11 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 				ready();
 				enterTrade();
 				exitTrade();
-				Amount cashbal = portfolioService.getCashBalance();
-				Amount matval = portfolioService.getMarketValue();
-				Amount totVal = cashbal.plus(matval);
-				//				log.info("Portfolio: " + portfolio + " Total Value :" + portfolioService.getCashBalance().plus(portfolioService.getMarketValue())
-				//					+ " (Cash Balance:" + portfolioService.getCashBalance() + " Open Trade Equity:" + portfolioService.getMarketValue() + ")");
+				log.info("Portfolio: " + portfolio + " Total Value (" + portfolio.getBaseAsset() + "):"
+						+ portfolioService.getCashBalance().plus(portfolioService.getMarketValue()) + " (Cash Balance:" + portfolioService.getCashBalance()
+						+ " Open Trade Equity:" + portfolioService.getMarketValue() + ")");
 			}
 		}
-		Asset USD = Asset.forSymbol("USD");
-		//Listing list=new Listing()
-		Listing mylisting = Listing.forPair(USD, b.getMarket().getBase());
-		Offer myrate = quotes.getBestAskForListing(mylisting);
-		log.info("Cross rate " + mylisting + ":" + quotes.getBestAskForListing(mylisting).getPrice());
 
 	}
 

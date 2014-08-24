@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.Iterator;
 
 import javax.persistence.Entity;
+import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
@@ -136,7 +137,6 @@ public class Portfolio extends EntityBase {
 		this.positions = new ArrayList<Position>();
 		this.balances = new ArrayList<Balance>();
 		this.transactions = new ArrayList<Transaction>();
-
 	}
 
 	public String getName() {
@@ -146,6 +146,11 @@ public class Portfolio extends EntityBase {
 	@OneToMany
 	public Collection<Stake> getStakes() {
 		return stakes;
+	}
+
+	@ManyToOne
+	public Asset getBaseAsset() {
+		return baseAsset;
 	}
 
 	@Transient
@@ -190,6 +195,10 @@ public class Portfolio extends EntityBase {
 		this.balances = balances;
 	}
 
+	public void setBaseAsset(Asset baseAsset) {
+		this.baseAsset = baseAsset;
+	}
+
 	protected void setTransactions(Collection<Transaction> transactions) {
 		this.transactions = transactions;
 	}
@@ -226,6 +235,7 @@ public class Portfolio extends EntityBase {
 	private PortfolioManager manager;
 
 	private String name;
+	private Asset baseAsset;
 	private Collection<Position> positions = Collections.emptyList();
 	private Collection<Balance> balances = Collections.emptyList();
 	private Collection<Transaction> transactions = Collections.emptyList();

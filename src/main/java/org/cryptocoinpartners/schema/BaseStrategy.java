@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema;
 import javax.inject.Inject;
 
 import org.cryptocoinpartners.module.BasicPortfolioService;
+import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.service.Strategy;
@@ -21,6 +22,8 @@ public class BaseStrategy implements Strategy {
 	@Inject
 	protected void setPortfolio(Portfolio portfolio) {
 		this.portfolio = portfolio;
+		Asset baseAsset = Asset.forSymbol(context.getConfig().getString("base.symbol", "USD"));
+		portfolio.setBaseAsset(baseAsset);
 		order = new OrderBuilder(portfolio, orderService);
 	}
 
@@ -44,6 +47,8 @@ public class BaseStrategy implements Strategy {
 	@Inject
 	protected QuoteService quotes;
 
+	@Inject
+	protected Context context;
 	@Inject
 	protected OrderService orderService;
 
