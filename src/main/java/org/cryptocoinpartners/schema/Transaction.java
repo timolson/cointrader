@@ -21,7 +21,7 @@ import org.slf4j.Logger;
  * @author Tim Olson
  */
 @Entity
-@Table(indexes = { @Index(columnList = "portfolioName"), @Index(columnList = "type") })
+@Table(indexes = { @Index(columnList = "type") })
 public class Transaction extends Event {
 
 	enum TransactionStatus {
@@ -33,10 +33,10 @@ public class Transaction extends Event {
 	// private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
 	private static final String SEPARATOR = ",";
 
-	public Transaction(Portfolio portfolio, Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price) {
+	public Transaction(Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount, Amount price) {
 
 		this.setAmount(amount);
-		this.setAsset(asset);
+		this.setCurrency(currency);
 		this.setPrice(price);
 		this.setType(type);
 		this.setPortfolio(portfolio);
@@ -52,17 +52,18 @@ public class Transaction extends Event {
 
 		TransactionType transactionType = fill.getVolume().isPositive() ? TransactionType.BUY : TransactionType.SELL;
 		//long quantity = Side.BUY.equals(fill.getSide()) ? fill.getQuantity() : -fill.getQuantity();
+		this.setAsset(fill.getMarket().getBase());
+		this.setCurrency(fill.getMarket().getQuote());
 
 		this.setAmount(fill.getVolume());
-		this.setAsset(fill.getMarket().getBase());
 		this.setPrice(fill.getPrice());
 		this.setPriceCount(fill.getPriceCount());
 		this.setAmountCount(fill.getVolumeCount());
 		this.setType(transactionType);
 		this.setPortfolio(portfolio);
 		this.setPortfolioName(portfolio);
-		this.setCurrency(fill.getMarket().getBase());
 		this.setCommission(fill.getCommission());
+		this.setCommissionCurrency(fill.getMarket().getQuote());
 		this.setMarket(fill.getMarket());
 		this.setExchange(fill.getMarket().getExchange());
 
@@ -76,11 +77,13 @@ public class Transaction extends Event {
 
 		this.setAmount(order.getVolume());
 		this.setAsset(order.getMarket().getBase());
+		this.setCurrency(order.getMarket().getQuote());
 		this.setPrice(order.getLimitPrice());
 		this.setType(transactionType);
 		this.setPortfolio(portfolio);
-		this.setCurrency(order.getMarket().getBase());
+		this.setCurrency(order.getMarket().getQuote());
 		this.setCommission(order.getForcastedCommission());
+		this.setCommissionCurrency(order.getMarket().getQuote());
 		this.setMarket(order.getMarket());
 		this.setPortfolioName(portfolio);
 		this.setExchange(order.getMarket().getExchange());
@@ -114,7 +117,8 @@ public class Transaction extends Event {
 		return value;
 	}
 
-	@ManyToOne(optional = false)
+	@Nullable
+	@ManyToOne(optional = true)
 	public Asset getAsset() {
 		return asset;
 	}
@@ -141,8 +145,7 @@ public class Transaction extends Event {
 
 	private Asset currency;
 
-	@Nullable
-	@ManyToOne(optional = true)
+	@ManyToOne(optional = false)
 	public Asset getCurrency() {
 		return currency;
 	}
@@ -157,13 +160,18 @@ public class Transaction extends Event {
 		return commission;
 	}
 
-	//@ManyToOne(optional = false)
+	@Nullable
+	@ManyToOne(optional = true)
+	public Asset getCommissionCurrency() {
+		return commissionCurrency;
+	}
 
 	@Transient
 	public Portfolio getPortfolio() {
 		return portfolio;
 	}
 
+	@Transient
 	public String getPortfolioName() {
 		return portfolioName;
 
@@ -181,8 +189,6 @@ public class Transaction extends Event {
 
 		return price;
 	}
-
-	private Exchange exchange;
 
 	@Nullable
 	@ManyToOne(optional = true)
@@ -235,6 +241,10 @@ public class Transaction extends Event {
 		this.currency = asset;
 	}
 
+	protected void setCommissionCurrency(Asset asset) {
+		this.commissionCurrency = asset;
+	}
+
 	protected void setPortfolioName(Portfolio portfolio) {
 		this.portfolioName = portfolio.getName();
 	}
@@ -265,7 +275,9 @@ public class Transaction extends Event {
 
 	private long priceCount;
 	private Amount commission;
+	private Exchange exchange;
 
+	private Asset commissionCurrency;
 	private Market market;
 	@Inject
 	private Logger log;

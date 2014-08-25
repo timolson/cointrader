@@ -34,7 +34,7 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 		market = Market.forSymbol(marketSymbol);
 		if (market == null)
 			throw new Error("Could not find Market for symbol " + marketSymbol);
-		BigDecimal volumeBD = new BigDecimal("0.00000100");// 100 satoshis
+		BigDecimal volumeBD = new BigDecimal("1");// 100 satoshis
 		volumeCount = DiscreteAmount.roundedCountForBasis(volumeBD, market.getVolumeBasis());
 	}
 
@@ -63,7 +63,7 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 		if (bestAsk == null)
 			return null;
 		DiscreteAmount limitPrice = bestBid.getPrice().decrement();
-		return order.create(market, volumeCount * 2).withLimitPrice(limitPrice);
+		return order.create(market, volumeCount).withLimitPrice(limitPrice);
 	}
 
 	@Override

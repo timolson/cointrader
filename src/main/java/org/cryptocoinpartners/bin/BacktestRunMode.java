@@ -61,7 +61,7 @@ public class BacktestRunMode extends RunMode {
 		}
 		for (int i = 0; i < positions.size() - 1;) {
 			Holding holding = Holding.forSymbol(positions.get(i++));
-			DiscreteAmount amount = new DiscreteAmount(1000000, 0.000001);
+			DiscreteAmount amount = new DiscreteAmount(0, 0.000001);
 			DiscreteAmount price = new DiscreteAmount(0, 0.000001);
 			Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
 			context.publish(initialCredit);

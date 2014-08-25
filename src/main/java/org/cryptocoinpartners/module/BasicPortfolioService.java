@@ -90,22 +90,20 @@ public class BasicPortfolioService implements PortfolioService {
 
 		// sum of all transactions that belongs to this strategy
 		//BigDecimal balance = BigDecimal.ZERO;
-		Amount balance;
+		Amount balance = DecimalAmount.ZERO;
+
 		//= DecimalAmount.ZERO;
 		ConcurrentHashMap<Asset, Amount> balances = new ConcurrentHashMap<Asset, Amount>();
 		Iterator<Transaction> itt = getTrades().iterator();
 		while (itt.hasNext()) {
 			Transaction transaction = itt.next();
-			if (balances.get(transaction.getAsset()) != null) {
+			if (balances.get(transaction.getCurrency()) != null) {
 
-				balance = balances.get(transaction.getAsset());
-			} else {
-				balance = DecimalAmount.ZERO;
-				balances.put(transaction.getAsset(), balance);
+				balance = balances.get(transaction.getCurrency());
 			}
 			Amount tranValue = transaction.getValue();
 			balance = balance.plus(tranValue);
-			balances.put(transaction.getAsset(), balance);
+			balances.put(transaction.getCurrency(), balance);
 
 		}
 
@@ -115,17 +113,13 @@ public class BasicPortfolioService implements PortfolioService {
 		Iterator<Transaction> itc = getCashFlows().iterator();
 		while (itc.hasNext()) {
 			Transaction cashFlowTransaction = itc.next();
-			if (balances.get(cashFlowTransaction.getAsset()) != null) {
+			if (balances.get(cashFlowTransaction.getCurrency()) != null) {
 
-				balance = balances.get(cashFlowTransaction.getAsset());
-			} else {
-				balance = DecimalAmount.ZERO;
-				balances.put(cashFlowTransaction.getAsset(), balance);
+				cashFlows = balances.get(cashFlowTransaction.getCurrency());
 			}
 			Amount tranValue = cashFlowTransaction.getValue();
-			balance = balance.plus(tranValue);
-			balances.put(cashFlowTransaction.getAsset(), balance);
 			cashFlows = cashFlows.plus(tranValue);
+			balances.put(cashFlowTransaction.getCurrency(), cashFlows);
 
 		}
 		//Amount amount = balance.plus(cashFlows);
@@ -206,7 +200,7 @@ public class BasicPortfolioService implements PortfolioService {
 	@Override
 	@Transient
 	public ConcurrentHashMap<Asset, Amount> getMarketValues() {
-		Amount marketValue;
+		Amount marketValue = DecimalAmount.ZERO;
 		ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<Asset, Amount>();
 
 		Iterator<Position> it = portfolio.getPositions().iterator();
@@ -215,12 +209,10 @@ public class BasicPortfolioService implements PortfolioService {
 			if (position.isOpen()) {
 				if (marketValues.get(position.getAsset()) != null) {
 					marketValue = marketValues.get(position.getAsset());
-				} else {
-					marketValue = DecimalAmount.ZERO;
 				}
 				marketValue = marketValue.plus(getMarketValue(position));
 
-				marketValues.put(position.getAsset(), marketValue);
+				marketValues.put(position.getMarket().getQuote(), marketValue);
 
 			}
 		}
@@ -235,7 +227,7 @@ public class BasicPortfolioService implements PortfolioService {
 		//Amount marketValue;
 		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<Asset, Amount>();
 		//portfolio.get
-		Asset quoteAsset = Asset.forSymbol("USD");
+		Asset quoteAsset = portfolio.getBaseAsset();
 		//Asset quoteAsset = list.getBase();
 		//Asset baseAsset=new Asset();
 		Amount baseMarketValue = DecimalAmount.ZERO;

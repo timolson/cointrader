@@ -40,6 +40,7 @@ public class Portfolio extends EntityBase {
 		return result;
 	}
 
+	@Transient
 	public boolean addTransactions(Transaction transaction) {
 		return this.transactions.add(transaction);
 	}
@@ -86,6 +87,7 @@ public class Portfolio extends EntityBase {
 	 * @param p the cost of the order.  could be a different fungible than the order's quote fungible
 	 * @throws IllegalArgumentException
 	 */
+	@Transient
 	public void reserve(SpecificOrder order, Position p) throws IllegalArgumentException {
 		for (Position position : positions) {
 			if (!position.isReserved() && position.getAsset().equals(order.getMarket().getQuote())
@@ -102,6 +104,7 @@ public class Portfolio extends EntityBase {
 		}
 	}
 
+	@Transient
 	public void release(SpecificOrder order) {
 		Iterator<Position> iterator = positions.iterator();
 		while (iterator.hasNext()) {
@@ -121,6 +124,7 @@ public class Portfolio extends EntityBase {
 	 * this method does not remove the position from the positions list.
 	 * @return true iff another position was found and merged
 	 */
+	@Transient
 	private boolean merge(Position position) {
 		for (Position p : positions) {
 			if (p.getExchange().equals(position.getExchange()) && p.getAsset().equals(position.getAsset())) {
@@ -139,6 +143,8 @@ public class Portfolio extends EntityBase {
 		this.transactions = new ArrayList<Transaction>();
 	}
 
+	private String name;
+
 	public String getName() {
 		return name;
 	}
@@ -153,7 +159,7 @@ public class Portfolio extends EntityBase {
 		return baseAsset;
 	}
 
-	@Transient
+	@ManyToOne
 	public PortfolioManager getManager() {
 		return manager;
 	}
@@ -163,6 +169,7 @@ public class Portfolio extends EntityBase {
 	 * @param position
 	 * @param authorization
 	 */
+	@Transient
 	protected void modifyPosition(Position position, Authorization authorization) {
 		assert authorization != null;
 		assert position != null;
@@ -234,7 +241,6 @@ public class Portfolio extends EntityBase {
 
 	private PortfolioManager manager;
 
-	private String name;
 	private Asset baseAsset;
 	private Collection<Position> positions = Collections.emptyList();
 	private Collection<Balance> balances = Collections.emptyList();
