@@ -2,6 +2,7 @@ package org.cryptocoinpartners.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 import javax.persistence.Transient;
@@ -67,5 +68,9 @@ public interface PortfolioService {
 	void handleSetMargin(Position position) throws Exception;
 
 	void handleSetMargins() throws Exception;
+
+	ConcurrentHashMap<Asset, Amount> getMarketValues();
+
+	ConcurrentHashMap<Asset, Amount> getCashBalances();
 
 }

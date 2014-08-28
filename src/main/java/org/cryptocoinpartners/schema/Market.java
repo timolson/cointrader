@@ -71,6 +71,13 @@ public class Market extends EntityBase {
 		return priceBasis;
 	}
 
+	@Transient
+	public int getScale() {
+
+		int length = (int) (Math.log10(getPriceBasis()));
+		return length;
+	}
+
 	@Basic(optional = false)
 	public double getVolumeBasis() {
 		return volumeBasis;

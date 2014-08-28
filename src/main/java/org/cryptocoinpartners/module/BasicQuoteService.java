@@ -115,20 +115,27 @@ public class BasicQuoteService implements QuoteService {
 	@Override
 	public @Nullable
 	Offer getImpliedBestAskForListing(Listing listing) {
+		try {
+			long bestImpliedAsk = impliedAskMatrix.getRate(listing.getBase(), listing.getQuote());
+			Market market = Market.findOrCreate(Exchanges.SELF, listing);
+			return new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
+		} catch (java.lang.IllegalArgumentException e) {
 
-		long bestImpliedAsk = impliedAskMatrix.getRate(listing.getBase(), listing.getQuote());
-		Market market = Market.findOrCreate(Exchanges.SELF, listing);
-		return new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
-
+			return getBestAskForListing(listing);
+		}
 	}
 
 	@Override
 	public @Nullable
 	Offer getImpliedBestBidForListing(Listing listing) {
+		try {
+			long bestImpliedAsk = impliedBidMatrix.getRate(listing.getBase(), listing.getQuote());
+			Market market = Market.findOrCreate(Exchanges.SELF, listing);
+			return new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
+		} catch (java.lang.IllegalArgumentException e) {
 
-		long bestImpliedAsk = impliedBidMatrix.getRate(listing.getBase(), listing.getQuote());
-		Market market = Market.findOrCreate(Exchanges.SELF, listing);
-		return new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
+			return getBestBidForListing(listing);
+		}
 
 	}
 
@@ -146,9 +153,11 @@ public class BasicQuoteService implements QuoteService {
 		return bestAsk;
 	}
 
+	//@Priority(10)
 	@When("select * from Book")
 	private void recordBook(Book b) {
 		Market market = b.getMarket();
+		handleMarket(market);
 
 		String listingSymbol = market.getListing().getSymbol();
 		Book lastBookForListing = lastBookByListing.get(listingSymbol);
@@ -166,13 +175,18 @@ public class BasicQuoteService implements QuoteService {
 		if (bestBid != null && (lastBestBidBook == null || bestBid.getPrice().compareTo(lastBestBidBook.getBestBid().getPrice()) > 0))
 			bestBidByMarket.put(marketSymbol, b);
 		try {
-			impliedBidMatrix.getRate(b.getMarket().getBase(), b.getMarket().getQuote());
-			impliedBidMatrix.updateRates(b.getMarket().getBase(), b.getMarket().getQuote(), bestBid.getPriceCount());
+			impliedBidMatrix.getRate(bestBid.getMarket().getBase(), bestBid.getMarket().getQuote());
+			impliedBidMatrix.updateRates(bestBid.getMarket().getBase(), bestBid.getMarket().getQuote(), bestBid.getPriceCount());
 		} catch (java.lang.IllegalArgumentException e) {
 			try {
-				impliedBidMatrix.addAsset(b.getMarket().getBase(), b.getMarket().getQuote(), bestBid.getPriceCount());
+				impliedBidMatrix.addAsset(bestBid.getMarket().getBase(), bestBid.getMarket().getQuote(), bestBid.getPriceCount());
 			} catch (java.lang.IllegalArgumentException e2) {
-				//we not recived enouhg trades to create a link to other currecny
+				//				//we not recived enouhg trades to create a link to other currecny
+				//				BigDecimal inverseRateBD = (((BigDecimal.valueOf(1 / (bestBid.getMarket().getQuote().getBasis()))).divide(
+				//						BigDecimal.valueOf(bestBid.getPriceCount()), bestBid.getMarket().getBase().getScale(), RoundingMode.HALF_EVEN)).divide(BigDecimal
+				//						.valueOf(bestBid.getMarket().getBase().getBasis())));
+				//				long inverseCrossRate = inverseRateBD.longValue();
+				//				impliedBidMatrix.addAsset(bestBid.getMarket().getQuote(), bestBid.getMarket().getBase(), inverseCrossRate);
 			}
 		}
 
@@ -182,13 +196,20 @@ public class BasicQuoteService implements QuoteService {
 		if (bestAsk != null && (lastBestAskBook == null || bestAsk.getPrice().compareTo(lastBestAskBook.getBestAsk().getPrice()) < 0))
 			bestAskByMarket.put(marketSymbol, b);
 		try {
-			impliedAskMatrix.getRate(b.getMarket().getBase(), b.getMarket().getQuote());
-			impliedAskMatrix.updateRates(b.getMarket().getBase(), b.getMarket().getQuote(), bestAsk.getPriceCount());
+			impliedAskMatrix.getRate(bestAsk.getMarket().getBase(), bestAsk.getMarket().getQuote());
+			impliedAskMatrix.updateRates(bestAsk.getMarket().getBase(), bestAsk.getMarket().getQuote(), bestAsk.getPriceCount());
 		} catch (java.lang.IllegalArgumentException e) {
 			try {
-				impliedAskMatrix.addAsset(b.getMarket().getBase(), b.getMarket().getQuote(), bestAsk.getPriceCount());
+				impliedAskMatrix.addAsset(bestAsk.getMarket().getBase(), bestAsk.getMarket().getQuote(), bestAsk.getPriceCount());
 			} catch (java.lang.IllegalArgumentException e2) {
 				//we not recived enouhg trades to create a link to other currecny
+				//we not recived enouhg trades to create a link to other currecny
+				//				BigDecimal inverseRateBD = (((BigDecimal.valueOf(1 / (bestAsk.getMarket().getQuote().getBasis()))).divide(
+				//						BigDecimal.valueOf(bestAsk.getPriceCount()), bestAsk.getMarket().getBase().getScale(), RoundingMode.HALF_EVEN)).divide(BigDecimal
+				//						.valueOf(bestAsk.getMarket().getBase().getBasis())));
+				//				long inverseCrossRate = inverseRateBD.longValue();
+				//				impliedBidMatrix.addAsset(bestAsk.getMarket().getQuote(), bestAsk.getMarket().getBase(), inverseCrossRate);
+
 			}
 
 		}

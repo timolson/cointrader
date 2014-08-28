@@ -41,7 +41,8 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
 		if (transaction.getPortfolio() == (portfolio)) {
 			Portfolio portfolio = transaction.getPortfolio();
-			Asset asset = transaction.getAsset();
+			Asset baseAsset = transaction.getAsset();
+			Asset quoteAsset = transaction.getCurrency();
 			Market market = transaction.getMarket();
 			Amount amount = transaction.getAmount();
 			TransactionType type = transaction.getType();
@@ -51,7 +52,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 			portfolio.addTransactions(transaction);
 			// update postion
 			if (type == TransactionType.BUY || type == TransactionType.SELL) {
-				Position position = new Position(portfolio, exchange, market, asset, amount, price);
+				Position position = new Position(portfolio, exchange, market, baseAsset, amount, price);
 				portfolio.modifyPosition(position, new Authorization("Fill for " + transaction.toString()));
 
 			}
@@ -89,6 +90,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
 	@Inject
 	private Logger log;
+
 	private Portfolio portfolio;
 
 }
