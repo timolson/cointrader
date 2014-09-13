@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.schema;
 
 import javax.inject.Inject;
+import javax.persistence.Transient;
 
 import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.Context;
@@ -30,6 +31,11 @@ public class BaseStrategy implements Strategy {
 	@Inject
 	protected void setPortfolioService(BasicPortfolioService portfolioService) {
 		this.portfolioService = portfolioService;
+	}
+
+	@Transient
+	protected BasicPortfolioService getPortfolioService() {
+		return this.portfolioService;
 	}
 
 	/** This tracks the assets you have for trading */

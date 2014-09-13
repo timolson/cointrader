@@ -300,7 +300,7 @@ public class BasicPortfolioService implements PortfolioService {
 		Market market = position.getMarket();
 		OrderBuilder orderBuilder = new OrderBuilder(position.getPortfolio(), orderService);
 		if (orderBuilder != null) {
-			SpecificOrderBuilder exitOrder = orderBuilder.create(market, amount.negate());
+			SpecificOrderBuilder exitOrder = orderBuilder.create(context.getTime(), market, amount.negate(), "Exit Order");
 			log.info("Entering trade with order " + exitOrder);
 			orderService.placeOrder(exitOrder.getOrder());
 		}

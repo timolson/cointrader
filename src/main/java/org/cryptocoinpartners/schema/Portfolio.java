@@ -22,6 +22,7 @@ public class Portfolio extends EntityBase {
 	/** returns all Positions, whether they are tied to an open Order or not.  Use getTradeablePositions() */
 	public @Transient
 	Collection<Position> getPositions() {
+
 		return positions;
 	}
 

@@ -7,6 +7,7 @@ import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Book;
@@ -32,6 +33,8 @@ public class MockOrderService extends BaseOrderService {
 	protected void handleSpecificOrder(SpecificOrder specificOrder) {
 		if (specificOrder.getStopPrice() != null)
 			reject(specificOrder, "Stop prices unsupported");
+		if (specificOrder.getFillType() != FillType.STOP_LIMIT && specificOrder.getFillType() != FillType.TRAILING_STOP_LIMIT)
+			PersitOrder(specificOrder);
 		pendingOrders.add(specificOrder);
 		updateOrderState(specificOrder, OrderState.PLACED);
 	}

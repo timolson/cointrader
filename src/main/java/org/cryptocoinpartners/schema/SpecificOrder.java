@@ -9,6 +9,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.util.Remainder;
+import org.joda.time.Instant;
 
 /**
  * SpecificOrders are bound to a Market and express their prices and volumes in DiscreteAmounts with the correct
@@ -21,25 +22,79 @@ import org.cryptocoinpartners.util.Remainder;
 @Entity
 public class SpecificOrder extends Order {
 
-	public SpecificOrder(Portfolio portfolio, Market market, long volumeCount) {
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount) {
+		super(time);
 		this.market = market;
 		this.volumeCount = volumeCount;
+		//super(time);
 		super.setPortfolio(portfolio);
 
 	}
 
-	public SpecificOrder(Portfolio portfolio, Market market, Amount volume) {
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount, String comment) {
+		super(time);
+		this.market = market;
+		this.volumeCount = volumeCount;
+		super.setComment(comment);
+		//super(time);
+		super.setPortfolio(portfolio);
+
+	}
+
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount, long stopPriceCount, String comment) {
+		super(time);
+		this.market = market;
+		this.volumeCount = volumeCount;
+		this.stopPriceCount = stopPriceCount;
+		super.setComment(comment);
+		super.setPortfolio(portfolio);
+
+	}
+
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount, long stopPriceCount, long trailingStopPriceCount, String comment) {
+		super(time);
+		this.market = market;
+		this.volumeCount = volumeCount;
+		this.stopPriceCount = stopPriceCount;
+		this.trailingStopPriceCount = trailingStopPriceCount;
+		super.setComment(comment);
+		super.setPortfolio(portfolio);
+
+	}
+
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, Amount volume, String comment) {
+		super(time);
 		this.market = market;
 		this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+		super.setComment(comment);
 		super.setPortfolio(portfolio);
 	}
 
-	public SpecificOrder(Portfolio portfolio, Market market, BigDecimal volume) {
-		this(portfolio, market, new DecimalAmount(volume));
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, Amount volume, Amount stopPrice, String comment) {
+		super(time);
+		this.market = market;
+		this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+		this.stopPriceCount = stopPrice.toBasis(market.getPriceBasis(), Remainder.DISCARD).getCount();
+		super.setComment(comment);
+		super.setPortfolio(portfolio);
 	}
 
-	public SpecificOrder(Portfolio portfolio, Market market, double volume) {
-		this(portfolio, market, new DecimalAmount(new BigDecimal(volume)));
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, Amount volume, Amount stopPrice, Amount trailingStopPrice, String comment) {
+		super(time);
+		this.market = market;
+		this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+		this.stopPriceCount = stopPrice.toBasis(market.getPriceBasis(), Remainder.DISCARD).getCount();
+		this.trailingStopPriceCount = trailingStopPrice.toBasis(market.getPriceBasis(), Remainder.DISCARD).getCount();
+		super.setComment(comment);
+		super.setPortfolio(portfolio);
+	}
+
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, BigDecimal volume, String comment) {
+		this(time, portfolio, market, new DecimalAmount(volume), comment);
+	}
+
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, double volume, String comment) {
+		this(time, portfolio, market, new DecimalAmount(new BigDecimal(volume)), comment);
 	}
 
 	@ManyToOne(optional = false)
@@ -72,6 +127,16 @@ public class SpecificOrder extends Order {
 		if (stopPrice == null)
 			stopPrice = amount().fromPriceCount(stopPriceCount);
 		return stopPrice;
+	}
+
+	@Transient
+	@Nullable
+	public DiscreteAmount getTrailingStopPrice() {
+		if (trailingStopPriceCount == 0)
+			return null;
+		if (trailingStopPrice == null)
+			trailingStopPrice = amount().fromPriceCount(trailingStopPriceCount);
+		return trailingStopPrice;
 	}
 
 	@Transient
@@ -119,6 +184,8 @@ public class SpecificOrder extends Order {
 			s += ", limitPriceCount=" + getLimitPrice();
 		if (stopPriceCount != 0)
 			s += ", stopPriceCount=" + getStopPrice();
+		if (trailingStopPriceCount != 0)
+			s += ", trailingStopPriceCount=" + getTrailingStopPrice();
 		if (hasFills())
 			s += ", averageFillPrice=" + averageFillPrice();
 		s += '}';
@@ -146,7 +213,12 @@ public class SpecificOrder extends Order {
 		return stopPriceCount;
 	}
 
-	protected SpecificOrder() {
+	protected long getTrailingStopPriceCount() {
+		return trailingStopPriceCount;
+	}
+
+	protected SpecificOrder(Instant time) {
+		super(time);
 	}
 
 	protected void setMarket(Market market) {
@@ -162,14 +234,29 @@ public class SpecificOrder extends Order {
 		volume = null;
 	}
 
-	protected void setLimitPriceCount(long limitPriceCount) {
+	public void setLimitPriceCount(long limitPriceCount) {
 		this.limitPriceCount = limitPriceCount;
 		limitPrice = null;
 	}
 
-	protected void setStopPriceCount(long stopPriceCount) {
+	public void setStopPriceCount(long stopPriceCount) {
 		this.stopPriceCount = stopPriceCount;
 		stopPrice = null;
+	}
+
+	public void removeStopPriceCount() {
+		this.stopPriceCount = 0;
+		stopPrice = null;
+	}
+
+	protected void setTrailingStopPriceCount(long trailingStopPriceCount) {
+		this.trailingStopPriceCount = trailingStopPriceCount;
+		trailingStopPrice = null;
+	}
+
+	public void removeTrailingStopPriceCount() {
+		this.trailingStopPriceCount = 0;
+		trailingStopPrice = null;
 	}
 
 	private Market.MarketAmountBuilder amount() {
@@ -182,10 +269,12 @@ public class SpecificOrder extends Order {
 	private DiscreteAmount volume;
 	private DiscreteAmount limitPrice;
 	private DiscreteAmount stopPrice;
+	private DiscreteAmount trailingStopPrice;
 	private Amount forcastedFees;
 	private long volumeCount;
 	private long limitPriceCount;
 	private long stopPriceCount;
+	private long trailingStopPriceCount;
 	private Market.MarketAmountBuilder amountBuilder;
 
 }

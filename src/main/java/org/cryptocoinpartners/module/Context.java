@@ -261,6 +261,10 @@ public class Context {
 		return cl.newInstance();
 	}
 
+	public Instant getTime() {
+		return new Instant(epRuntime.getCurrentTime());
+	}
+
 	private void subscribe(Object listener, Class<?> cls) {
 		for (Method method : cls.getDeclaredMethods()) {
 			When when = method.getAnnotation(When.class);

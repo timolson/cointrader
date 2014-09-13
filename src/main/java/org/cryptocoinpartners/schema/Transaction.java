@@ -265,7 +265,7 @@ public class Transaction extends Event {
 
 	private Amount value;
 	private Amount price;
-
+	@Nullable
 	private Portfolio portfolio;
 	private Asset asset;
 	private Amount amount;

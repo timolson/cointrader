@@ -2,16 +2,19 @@ package org.cryptocoinpartners.module;
 
 import java.math.BigDecimal;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 import org.apache.commons.configuration.Configuration;
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.DiscreteAmount;
+import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Offer;
 import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderBuilder;
+import org.cryptocoinpartners.schema.OrderBuilder.CommonOrderBuilder;
 
 /**
  * This simple Strategy first waits for Book data to arrive about the target Market, then it places a buy order
@@ -63,7 +66,7 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 		if (bestAsk == null)
 			return null;
 		DiscreteAmount limitPrice = bestBid.getPrice().decrement();
-		return order.create(market, volumeCount).withLimitPrice(limitPrice);
+		return order.create(context.getTime(), market, volumeCount).withLimitPrice(limitPrice);
 	}
 
 	@Override
@@ -72,7 +75,7 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 		if (bestBid == null)
 			return null;
 		DiscreteAmount limitPrice = bestAsk.getPrice().increment();
-		return order.create(market, -volumeCount).withLimitPrice(limitPrice);
+		return order.create(context.getTime(), market, -volumeCount).withLimitPrice(limitPrice);
 	}
 
 	//
@@ -80,4 +83,11 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 	private Offer bestAsk;
 	private final Market market;
 	private final long volumeCount;
+
+	@Override
+	@Nullable
+	protected CommonOrderBuilder buildStopOrder(Fill fill) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 }

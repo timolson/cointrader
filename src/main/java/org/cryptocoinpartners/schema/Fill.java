@@ -4,6 +4,7 @@ import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.enumeration.FillType;
 import org.joda.time.Instant;
 
 /**
@@ -63,9 +64,15 @@ public class Fill extends RemoteEvent {
 		return commission;
 	}
 
+	@Transient
+	public FillType getFillType() {
+		return getOrder().getFillType();
+	}
+
 	@Override
 	public String toString() {
-		return "Fill{" + "order=" + order.getId() + ", market=" + market + ", price=" + getPrice() + ", volume=" + getVolume() + '}';
+		return "Fill{" + "order=" + order.getId() + ", type=" + getFillType() + ", market=" + market + ", price=" + getPrice() + ", volume=" + getVolume()
+				+ '}';
 	}
 
 	// JPA
