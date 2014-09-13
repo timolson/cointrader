@@ -54,10 +54,10 @@ public enum FeeMethod {
 		return FeeMethod.names;
 	}
 
-	private static Map<String, FeeMethod> values = new LinkedHashMap<String, FeeMethod>(9, 1);
-	private static List<String> literals = new ArrayList<String>(9);
-	private static List<String> names = new ArrayList<String>(9);
-	private static List<FeeMethod> valueList = new ArrayList<FeeMethod>(9);
+	private static Map<String, FeeMethod> values = new LinkedHashMap<>(9, 1);
+	private static List<String> literals = new ArrayList<>(9);
+	private static List<String> names = new ArrayList<>(9);
+	private static List<FeeMethod> valueList = new ArrayList<>(9);
 
 	/**
 	 * Initializes the values.

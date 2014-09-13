@@ -106,6 +106,6 @@ public class RateLimiter implements Executor {
     private RunnablePump pump;
     private final Semaphore runnableCount = new Semaphore(0);
     private final Semaphore requestsAvailable = new Semaphore(0);
-    private final Queue<Runnable> waitingRunnables = new LinkedList<Runnable>();
+    private final Queue<Runnable> waitingRunnables = new LinkedList<>();
     private final Executor executor;
 }
