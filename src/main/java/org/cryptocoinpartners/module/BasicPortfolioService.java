@@ -93,7 +93,7 @@ public class BasicPortfolioService implements PortfolioService {
 		Amount balance = DecimalAmount.ZERO;
 
 		//= DecimalAmount.ZERO;
-		ConcurrentHashMap<Asset, Amount> balances = new ConcurrentHashMap<Asset, Amount>();
+		ConcurrentHashMap<Asset, Amount> balances = new ConcurrentHashMap<>();
 		Iterator<Transaction> itt = getTrades().iterator();
 		while (itt.hasNext()) {
 			Transaction transaction = itt.next();
@@ -132,7 +132,7 @@ public class BasicPortfolioService implements PortfolioService {
 	public List<Transaction> getCashFlows() {
 		// return all CREDIT,DEBIT,INTREST and FEES
 
-		ArrayList<Transaction> cashFlows = new ArrayList<Transaction>();
+		ArrayList<Transaction> cashFlows = new ArrayList<>();
 		Iterator<Transaction> it = portfolio.getTransactions().iterator();
 		while (it.hasNext()) {
 			Transaction transaction = it.next();
@@ -150,7 +150,7 @@ public class BasicPortfolioService implements PortfolioService {
 	@SuppressWarnings("null")
 	public List<Transaction> getTrades() {
 		//return all BUY and SELL
-		ArrayList<Transaction> trades = new ArrayList<Transaction>();
+		ArrayList<Transaction> trades = new ArrayList<>();
 		Iterator<Transaction> it = portfolio.getTransactions().iterator();
 		while (it.hasNext()) {
 			Transaction transaction = it.next();
@@ -201,7 +201,7 @@ public class BasicPortfolioService implements PortfolioService {
 	@Transient
 	public ConcurrentHashMap<Asset, Amount> getMarketValues() {
 		Amount marketValue = DecimalAmount.ZERO;
-		ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<Asset, Amount>();
+		ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
 
 		Iterator<Position> it = portfolio.getPositions().iterator();
 		while (it.hasNext()) {
@@ -225,7 +225,7 @@ public class BasicPortfolioService implements PortfolioService {
 	@Inject
 	public Amount getMarketValue() {
 		//Amount marketValue;
-		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<Asset, Amount>();
+		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
 		//portfolio.get
 		Asset quoteAsset = portfolio.getBaseAsset();
 		//Asset quoteAsset = list.getBase();
@@ -250,7 +250,7 @@ public class BasicPortfolioService implements PortfolioService {
 	@Transient
 	public Amount getCashBalance() {
 		//Amount marketValue;
-		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<Asset, Amount>();
+		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
 		//Listing list = Listing.forSymbol(config.getString("base.symbol", "USD"));
 		Asset quoteAsset = portfolio.getBaseAsset();
 		//Asset quoteAsset = list.getBase();

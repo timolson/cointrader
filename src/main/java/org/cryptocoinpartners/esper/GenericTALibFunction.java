@@ -62,9 +62,9 @@ public class GenericTALibFunction extends AggregationSupport {
 
 		super();
 		this.inputParamCount = 0;
-		this.inputParams = new ArrayList<CircularFifoBuffer<Number>>();
-		this.optInputParams = new ArrayList<Object>();
-		this.outputParams = new HashMap<String, Object>();
+		this.inputParams = new ArrayList<>();
+		this.optInputParams = new ArrayList<>();
+		this.outputParams = new HashMap<>();
 	}
 
 	@Override
@@ -91,7 +91,7 @@ public class GenericTALibFunction extends AggregationSupport {
 
 		// get the parameters
 		int paramCounter = 1;
-		Map<String, Class<?>> outputParamTypes = new HashMap<String, Class<?>>();
+		Map<String, Class<?>> outputParamTypes = new HashMap<>();
 		for (Annotation[] annotations : this.function.getParameterAnnotations()) {
 			for (Annotation annotation : annotations) {
 
@@ -220,7 +220,7 @@ public class GenericTALibFunction extends AggregationSupport {
 			}
 			// get the parameters
 			int paramCounter = 1;
-			Map<String, Class<?>> outputParamTypes = new HashMap<String, Class<?>>();
+			Map<String, Class<?>> outputParamTypes = new HashMap<>();
 			for (Annotation[] annotations : this.function.getParameterAnnotations()) {
 				for (Annotation annotation : annotations) {
 					if (annotation instanceof InputParameterInfo) {
