@@ -157,4 +157,11 @@ public class DecimalAmount extends Amount {
 		return 0;
 	}
 
+	@Transient
+	@Override
+	public long getCount() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 }

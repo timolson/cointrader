@@ -1,5 +1,9 @@
 package org.cryptocoinpartners.schema;
 
+// import java.util.logging.Logger;
+
+import java.util.Iterator;
+
 import javax.inject.Inject;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
@@ -12,7 +16,10 @@ import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.util.PersistUtil;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * PortfolioManagers are allowed to control the Positions within a Portfolio
@@ -62,7 +69,6 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 				throw new Error("Could not insert " + transaction, e);
 			}
 
-			log.info("Transaction Processed for: " + portfolio + " " + transaction);
 		} else {
 			return;
 		}
@@ -80,6 +86,28 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 		this.portfolioService = new BasicPortfolioService(portfolio);
 	}
 
+	public static class DataSubscriber {
+
+		private static Logger logger = LoggerFactory.getLogger(DataSubscriber.class.getName());
+		private static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+
+		@SuppressWarnings("rawtypes")
+		public void update(Long Timestamp, Portfolio portfolio) {
+			BasicPortfolioService portfolioService = portfolio.getManager().getPortfolioService();
+			portfolio.getPositions();
+			logger.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Portfolio: " + portfolio + " Total Value ("
+					+ portfolio.getBaseAsset() + "):" + portfolioService.getCashBalance().plus(portfolioService.getMarketValue()) + " (Cash Balance:"
+					+ portfolioService.getCashBalance() + " Open Trade Equity:" + portfolioService.getMarketValue() + ")");
+			Iterator<Position> itt = portfolio.getPositions().iterator();
+			while (itt.hasNext()) {
+				Position postion = itt.next();
+				logger.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Asset: " + postion.getAsset() + " Position: "
+						+ postion.getVolume());
+			}
+		}
+
+	}
+
 	// JPA
 	protected PortfolioManager() {
 	}
@@ -89,7 +117,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 	}
 
 	@Inject
-	private Logger log;
+	private static Logger log;
 
 	private Portfolio portfolio;
 

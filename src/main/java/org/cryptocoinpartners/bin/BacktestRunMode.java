@@ -46,8 +46,8 @@ public class BacktestRunMode extends RunMode {
 	public void run() {
 		//, // save ticks as csv
 		//	ConfigUtil.forModule("readtickscsv.filename", filename, "readtickscsv.na", allowNa));
-		Replay replay = Replay.between(start, end, true);
-		//Replay replay = Replay.all(true);
+		//Replay replay = Replay.between(start, end, true);
+		Replay replay = Replay.all(true);
 		context = replay.getContext();
 		context.attach(XchangeAccountService.class);
 		context.attach(BasicQuoteService.class);

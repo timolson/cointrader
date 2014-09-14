@@ -14,6 +14,8 @@ import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
 import org.joda.time.Instant;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 /**
  * This is the base class for GeneralOrder and SpecificOrder.  To create orders, see OrderBuilder or BaseStrategy.order
@@ -27,6 +29,10 @@ import org.joda.time.Instant;
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @SuppressWarnings({ "JpaDataSourceORMInspection", "UnusedDeclaration" })
 public abstract class Order extends Event {
+	protected static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+
+	// private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
+	protected static final String SEPARATOR = ",";
 
 	public void setParentOrder(GeneralOrder parentOrder) {
 		this.parentOrder = parentOrder;

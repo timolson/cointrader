@@ -34,6 +34,8 @@ public abstract class Amount implements Comparable<Amount> {
 
 	public abstract int getScale();
 
+	public abstract long getCount();
+
 	public DiscreteAmount toBasis(double newBasis, RemainderHandler remainderHandler) {
 		long newIBasis = DiscreteAmount.invertBasis(newBasis);
 		return toIBasis(newIBasis, remainderHandler);

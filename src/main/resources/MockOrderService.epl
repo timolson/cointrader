@@ -1,0 +1,20 @@
+create window
+	trades.std:lastevent() 
+as
+	select *
+from
+	Trade;
+
+	@Name('TRADE_BOOK')
+	insert into trades
+select
+	*
+from
+	Trade where  Trade.market=TurtelsStrategy.getMarket();
+//@Priority(7)	
+	//select max(priceAsDouble) from trades as lastPx;
+	
+@Priority(6)
+//@Subscriber(className='org.cryptocoinpartners.module.TurtelsStrategy$DataSubscriber')
+select * from Trade(market=TurtelsStrategy.getMarket())
+where priceAsDouble <= max((select max(priceAsDouble) from Trade(market=TurtelsStrategy.getMarket()).std:unique(priceAsDouble)) - 2, 150);

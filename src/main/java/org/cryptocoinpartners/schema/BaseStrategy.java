@@ -23,6 +23,8 @@ public class BaseStrategy implements Strategy {
 	@Inject
 	protected void setPortfolio(Portfolio portfolio) {
 		this.portfolio = portfolio;
+		SubscribePortfolio portfolioSubcribeEvent = new SubscribePortfolio(portfolio);
+		context.publish(portfolioSubcribeEvent);
 		Asset baseAsset = Asset.forSymbol(context.getConfig().getString("base.symbol", "USD"));
 		portfolio.setBaseAsset(baseAsset);
 		order = new OrderBuilder(portfolio, orderService);

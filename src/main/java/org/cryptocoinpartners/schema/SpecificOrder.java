@@ -178,18 +178,13 @@ public class SpecificOrder extends Order {
 
 	@Override
 	public String toString() {
-		String s = "SpecificOrder{" + "id=" + getId() + ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + ", portfolio="
-				+ getPortfolio() + ", market=" + market + ", volumeCount=" + getVolume();
-		if (limitPriceCount != 0)
-			s += ", limitPriceCount=" + getLimitPrice();
-		if (stopPriceCount != 0)
-			s += ", stopPriceCount=" + getStopPrice();
-		if (trailingStopPriceCount != 0)
-			s += ", trailingStopPriceCount=" + getTrailingStopPrice();
-		if (hasFills())
-			s += ", averageFillPrice=" + averageFillPrice();
-		s += '}';
-		return s;
+
+		return "SpecificOrder{ time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "id=" + getId() + SEPARATOR + "parentOrder="
+				+ (getParentOrder() == null ? "null" : getParentOrder().getId()) + SEPARATOR + "portfolio=" + getPortfolio() + SEPARATOR + "market=" + market
+				+ SEPARATOR + "volumeCount=" + getVolume() + (limitPriceCount != 0 ? (SEPARATOR + "limitPriceCount=" + getLimitPrice()) : "")
+				+ (stopPriceCount != 0 ? (SEPARATOR + "stopPriceCount=" + getStopPrice()) : "")
+				+ (trailingStopPriceCount != 0 ? (SEPARATOR + "trailingStopPriceCount=" + getTrailingStopPrice()) : "")
+				+ (hasFills() ? (SEPARATOR + "averageFillPrice=" + averageFillPrice()) : "") + "}";
 	}
 
 	// JPA
