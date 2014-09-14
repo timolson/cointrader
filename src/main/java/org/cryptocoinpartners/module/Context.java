@@ -165,7 +165,7 @@ public class Context {
 
 	public List<Object> loadStatementByName(String name) throws ParseException, DeploymentException, IOException {
 		EPStatement statement = epAdministrator.getStatement(name);
-		List<Object> list = new ArrayList<Object>();
+		List<Object> list = new ArrayList<>();
 		if (statement != null && statement.isStarted()) {
 			SafeIterator<EventBean> it = statement.safeIterator();
 			try {
