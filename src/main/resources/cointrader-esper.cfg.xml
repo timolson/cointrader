@@ -6,7 +6,6 @@
        <plugin-view factory-class="org.cryptocoinpartners.esper.OHLCBarPlugInViewFactory" name="ohlcbar" namespace="custom"/>  
       
 	<auto-import import-name="org.cryptocoinpartners.esper.annotation.*"/>
-		<auto-import import-name="org.cryptocoinpartners.module.TurtelsStrategy"/>
 		<auto-import import-name="java.lang.*"/>
 	<auto-import import-name="java.math.*"/>
 	<auto-import import-name="java.text.*"/>
