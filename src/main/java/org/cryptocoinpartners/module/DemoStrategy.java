@@ -48,14 +48,14 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 
 			bestBid = b.getBestBid();
 			bestAsk = b.getBestAsk();
-			if (bestBid != null && bestAsk != null) {
-				ready();
-				enterTrade();
-				exitTrade();
-				log.info("Portfolio: " + portfolio + " Total Value (" + portfolio.getBaseAsset() + "):"
-						+ portfolioService.getCashBalance().plus(portfolioService.getMarketValue()) + " (Cash Balance:" + portfolioService.getCashBalance()
-						+ " Open Trade Equity:" + portfolioService.getMarketValue() + ")");
-			}
+			//			if (bestBid != null && bestAsk != null) {
+			//				ready();
+			//				enterTrade();
+			//				exitTrade();
+			//				log.info("Portfolio: " + portfolio + " Total Value (" + portfolio.getBaseAsset() + "):"
+			//						+ portfolioService.getCashBalance().plus(portfolioService.getMarketValue()) + " (Cash Balance:" + portfolioService.getCashBalance()
+			//						+ " Open Trade Equity:" + portfolioService.getMarketValue() + ")");
+			//			}
 		}
 
 	}

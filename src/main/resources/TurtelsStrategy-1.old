@@ -1,0 +1,215 @@
+// Moving Average using of esper built in functions
+
+@Priority(3)
+@Name('TICK_WINDOW1')
+create window
+	HLWindow.win:time(1 hour) 
+as
+	select askPriceAsDouble as price, timestamp as timestamp
+	from
+	Book;
+
+	@Priority(5)
+@Name('BOOK_WINDOW')
+create window
+	BookWindow.std:groupwin(market).win:time(24 hour) 
+as
+	select *
+from
+	Book;
+
+	insert into BookWindow
+select
+	*
+from
+	Book;	
+	
+	//,method:TurtelsStrategy.getMarket() as strategyMarket
+// where Book.market=strategyMarket;
+
+	
+create window OHLCBar.std:groupwin(market).win:length(24)
+	as
+	select market as market, askPriceAsDouble as open,askPriceAsDouble as close, askPriceAsDouble as low, askPriceAsDouble as high
+	from Book;
+
+//@Name('RETRIEVE_BOOK')
+//on
+	//BookWindow as trigger
+//insert into
+	//OHLCBar
+//select  market as market, first as open, last as close, min as low, max as high
+//from   BookWindow.custom:ohlcbar(timestamp, askPriceAsDouble);
+//where trigger.market = BookWindow.market ;
+
+//where Book.market=strategyMarket;
+
+//	insert into OHLCBar
+//select Book.market as market, first as open, last as close, min as low, max as high
+//from Book.std:lastevent(), method:TurtelsStrategy.getMarket() as strategyMarket, Book.custom:ohlcbar(timestamp, askPriceAsDouble) where Book.market=strategyMarket;
+
+//where Book.market=strategyMarket;
+
+//where Book.market=strategyMarket;
+	
+// from Book, Book.win:time_batch(10 min).custom:ohlcbar(timestamp, askPriceAsDouble),method:TurtelsStrategy.getMarket() as strategyMarket where Book.market=strategyMarket;
+	
+	
+
+	
+//create window
+	//TickWindow.std:lastevent()
+	//(high double, low double);
+	//as
+	//select long as ind, price as high,price as low  from
+	//HLWindow;
+	//having ((last(HLWindow.timestamp) -  first(HLWindow.timestamp) >=21600000));
+
+	@Priority(1)
+@Name('SUBSCRIBE_TICK')
+insert into
+	HLWindow
+select
+	askPriceAsDouble as price, timestamp as timestamp
+	from Book,method:TurtelsStrategy.getMarket() as strategyMarket where Book.market=strategyMarket;
+	
+//	@Name('SUBSCRIBE_TICKd')
+//insert into
+//	TickWindow
+//select  max(HLWindow.price)  as high,  min(HLWindow.price) as low from
+//	HLWindow 
+//	having ((last(HLWindow.timestamp) -  first(HLWindow.timestamp) >=1440000));
+
+	
+
+	@Priority(2)
+@Name('RETRIVE BAR')
+@Subscriber(className='org.cryptocoinpartners.module.TurtelsStrategy$DataSubscriber')
+on
+	OHLCBar as OHLCtrigger
+	select OHLCBar.open, OHLCBar.high, OHLCBar.low, OHLCBar.close from OHLCBar where
+	OHLCtrigger.market = OHLCBar.market;
+	
+	//, method:TurtelsStrategy.getMarket() as strategyMarket where OHLCBar.market=strategyMarket;
+	
+	
+@Priority(2)
+@Name('RETRIVE TICK')
+//@Subscriber(className='org.cryptocoinpartners.module.TurtelsStrategy$DataSubscriber')
+//on
+	//TickWindow as trigger
+//select max(HLWindow.price)  as high,  min(HLWindow.price) as low from
+	//HLWindow as hlwindow
+	
+	//having ((last(HLWindow.timestamp) -  first(HLWindow.timestamp) >=21600000));
+//	and (lastPrice>high or lastPrice<low));
+
+//select max(HLWindow.price)  as high, last(TickWindow.price) as low from
+	//HLWindow , TickWindow;
+
+	//select * 
+    //talib("movingAverage",  TickWindow.low, cast((last(TickWindow.ind) -  first(TickWindow.ind)
+    //from HLWindow having (last(HLWindow.timestamp) -  first(HLWindow.timestamp) >=21600000)
+  //  ),double),"Sma")
+//  - talib("movingAverage", cast(longBook.askPriceAsDouble, double),2, "Sma") 
+ //as value, TickWindow.high
+ //from TickWindow;
+ //having ((last(HLWindow.timestamp) -  first(HLWindow.timestamp) >=21600000));
+ 
+ //where ((last(HLWindow.timestamp) -  first(HLWindow.timestamp) >=100));; 
+  
+
+
+//create context TimeContext start @now end after 60 seconds;
+//create context CtxEachMinute initiated by pattern [every timer:interval(30 minutes)] terminated after 30 minutes;
+//and pattern [every timer:interval(1 min)] 
+//terminated after 1 minute;
+
+//insert into LongTradeCache 
+//  select askPriceCountAsDouble as askPrice from Book.win:time(1 min) as book, method:TurtelsStrategy.getMarket() as strategyMarket
+//where book.market=strategyMarket;
+//@Priority(0)
+//create context CtxEachMinute as start @now ends after 1 minutes;
+ // initiated by pattern [every timer:interval(1 minute)]
+ // terminated after 1 minutes;
+  
+//select avg(askPriceCountAsDouble) as avgValue, count(askPriceCountAsDouble) as countValue, 
+//min(askPriceCountAsDouble) as minValue, max(askPriceCountAsDouble) as maxValue from Book.win:time(60 sec)
+
+//win:time_batch(60 sec)
+
+//select avg(askPriceAsDouble) as avgValue, count(askPriceAsDouble) as countValue, 
+//min(askPriceAsDouble) as minValue, max(askPriceAsDouble) as maxValue 
+//from Book.win:time_batch(1 min), method:TurtelsStrategy.getMarket() as strategyMarket where Book.market=strategyMarket;
+//@Name('MOVING_AVERAGE')
+//@Priority(1)
+
+//select avg(askPriceAsDouble) as avgValue, count(askPriceAsDouble) as countValue, 
+//min(askPriceAsDouble) as minValue, max(askPriceAsDouble) as maxValue 
+ //from Book.win:expr(oldest_timestamp > newest_timestamp - 60000),method:TurtelsStrategy.getMarket() as strategyMarket where Book.market=strategyMarket;
+
+//from Book.win:length(10);
+//from Book.win:time_batch(30 min),method:TurtelsStrategy.getMarket() as strategyMarket where Book.market=strategyMarket;
+
+//from Book.win:ext_timed(timestamp, 30 min),method:TurtelsStrategy.getMarket() as strategyMarket where Book.market=strategyMarket;
+
+//from Book.win:time(6 hours),method:TurtelsStrategy.getMarket() as strategyMarket where Book.market=strategyMarket;
+//output after 1 min;
+
+//and ((std:lastevent().timestamp - std:firstevent().timestamp) >=120000);
+//output after 2 min;
+//from Book.win:ext_timed(dateTime, 10 seconds);
+
+//win:time_batch(1 sec);
+//context CtxEachMinute select avg(askPriceAsDouble) as avgValue, count(askPriceAsDouble) as countValue, 
+//min(askPriceAsDouble) as minValue, max(askPriceAsDouble) as maxValue 
+//from Book, method:TurtelsStrategy.getMarket() as strategyMarket where Book.market=strategyMarket
+//output snapshot when terminated;
+
+//insert into Indicator
+//select
+
+//avgRound(askPriceAsBigDecimal) as avgPrice from Book;
+//cast(count(shortBook.askPrice), int)
+
+//talib("movingAverage",  cast(shortBook.askPriceAsDouble, double), 1,"Sma")
+//  - talib("movingAverage", cast(longBook.askPriceAsDouble, double),2, "Sma") 
+ // as value
+  //from Book.win:time(1 min) as shortBook, 
+  
+ //Book.win:time(2 min) as longBook, 
+ 
+ //(market String, open double,close double,  low double,  high double, timestamp long);
+	//as
+	//select market as market, askPriceAsDouble as open,askPriceAsDouble as close, askPriceAsDouble as low, askPriceAsDouble as high
+	//from Book where Book.market=TurtelsStrategy.getMarket();
+
+	
+//insert into OHLCBar
+//select BookWindow.market.toString() as market, first as open, last as close, min as low, max as high, minuteValue as timestamp
+
+//from BookWindow, method:TurtelsStrategy.getMarket() as strategyMarket, BookWindow.custom:ohlcbar(timestamp, askPriceAsDouble)
+//where BookWindow.market=strategyMarket;
+
+
+ 
+ //method:TurtelsStrategy.getMarket() as strategyMarket
+//where shortBook.market=strategyMarket 
+//and 
+//longBook.market=strategyMarket;
+  
+  
+//from LongTradeCache as l;
+
+
+//insert into Indicator
+
+//select talib("rsi", askPriceAsDouble, 14) as value from Book;
+	//OHLCBar.std:groupwin(Book.market) 
+
+	//OHLCBar.win:time(1 hour) 
+//talib("movingAverage", cast(shortBook.askPriceAsDouble, double),  cast(count(*), int), "Sma")
+ // - talib("movingAverage", cast(shortBook.askPriceAsDouble, double), 2, "Sma")  
+// as value
+//from Book.win:time_batch(1 min) as shortBook 
+//where (newest_timestamp - oldest_timestamp<2000);

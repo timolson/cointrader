@@ -41,6 +41,17 @@ public class SpecificOrder extends Order {
 
 	}
 
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount, Order parentOrder, String comment) {
+		super(time);
+		this.market = market;
+		this.volumeCount = volumeCount;
+		super.setComment(comment);
+		//super.setParentOrder(parentOrder);
+		//super(time);
+		super.setPortfolio(portfolio);
+
+	}
+
 	public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount, long stopPriceCount, String comment) {
 		super(time);
 		this.market = market;

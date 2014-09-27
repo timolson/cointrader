@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import javax.persistence.Basic;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
@@ -13,6 +14,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
+import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -169,6 +171,19 @@ public abstract class Order extends Event {
 	protected void setPortfolio(Portfolio portfolio) {
 		this.portfolio = portfolio;
 	}
+
+	@Type(type = "org.jadira.usertype.dateandtime.joda.PersistentInstantAsMillisLong")
+	@Basic(optional = true)
+	public Instant getEntryTime() {
+		return entryTime;
+	}
+
+	public void setEntryTime(Instant time) {
+		this.entryTime = time;
+
+	}
+
+	protected Instant entryTime;
 
 	private Portfolio portfolio;
 	private Collection<Fill> fills;

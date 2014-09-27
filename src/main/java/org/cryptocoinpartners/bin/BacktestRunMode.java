@@ -31,23 +31,21 @@ public class BacktestRunMode extends RunMode {
 	@Parameter(description = "Strategy name to load", arity = 1, required = true)
 	public List<String> strategyNames;
 	private Context context;
-	private final Instant start = new DateTime(2013, 4, 1, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
-	private final Instant end = new DateTime(2013, 4, 15, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+	private final Instant start = new DateTime(2013, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+	private final Instant end = new DateTime(2014, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 	//private final Instant start = new DateTime(2014, 9, 9, 23, 0, 0, 0, DateTimeZone.UTC).toInstant();
 	//private final Instant end = new DateTime(2014, 9, 10, 6, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
 	@Parameter(names = { "-p", "--position" }, arity = 2, description = "specify initial portfolio positions as {Exchange}:{Asset} {Amount} e.g. BITFINEX:BTC 1.0")
-	public List<String> positions = Arrays.asList("BITFINEX:BTC", "100000000");
+	public List<String> positions = Arrays.asList("BITFINEX:USD", "1000000");
 
 	@Parameter(names = { "-" }, description = "No-op switch used to end list of positions before supplying the strategy name")
 	boolean noop = false;
 
 	@Override
 	public void run() {
-		//, // save ticks as csv
-		//	ConfigUtil.forModule("readtickscsv.filename", filename, "readtickscsv.na", allowNa));
-		//Replay replay = Replay.between(start, end, true);
-		Replay replay = Replay.all(true);
+		Replay replay = Replay.between(start, end, true);
+		//Replay replay = Replay.all(true);
 		context = replay.getContext();
 		context.attach(XchangeAccountService.class);
 		context.attach(BasicQuoteService.class);
@@ -73,8 +71,8 @@ public class BacktestRunMode extends RunMode {
 		for (int i = 0; i < positions.size() - 1;) {
 			Holding holding = Holding.forSymbol(positions.get(i++));
 			//	Long str = (positions.get(i++));
-			DiscreteAmount amount = new DiscreteAmount(Long.parseLong(positions.get(i++)), 0.00000001);
-			DiscreteAmount price = new DiscreteAmount(0, 0.00000001);
+			DiscreteAmount amount = new DiscreteAmount(Long.parseLong(positions.get(i++)), 0.01);
+			DiscreteAmount price = new DiscreteAmount(0, 0.01);
 			Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
 			context.publish(initialCredit);
 

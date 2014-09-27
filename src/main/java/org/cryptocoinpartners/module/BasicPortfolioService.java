@@ -90,7 +90,10 @@ public class BasicPortfolioService implements PortfolioService {
 
 		// sum of all transactions that belongs to this strategy
 		//BigDecimal balance = BigDecimal.ZERO;
+		//DiscreteAmount(0, 0.01);
+		//Amount balance = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
 		Amount balance = DecimalAmount.ZERO;
+		//DecimalAmount.ZERO;
 
 		//= DecimalAmount.ZERO;
 		ConcurrentHashMap<Asset, Amount> balances = new ConcurrentHashMap<>();
@@ -100,6 +103,7 @@ public class BasicPortfolioService implements PortfolioService {
 			if (balances.get(transaction.getCurrency()) != null) {
 
 				balance = balances.get(transaction.getCurrency());
+
 			}
 			Amount tranValue = transaction.getValue();
 			balance = balance.plus(tranValue);
@@ -109,6 +113,7 @@ public class BasicPortfolioService implements PortfolioService {
 
 		// plus part of all cashFlows
 		Amount cashFlows = DecimalAmount.ZERO;
+		//Amount cashFlows = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
 
 		Iterator<Transaction> itc = getCashFlows().iterator();
 		while (itc.hasNext()) {
@@ -201,6 +206,8 @@ public class BasicPortfolioService implements PortfolioService {
 	@Transient
 	public ConcurrentHashMap<Asset, Amount> getMarketValues() {
 		Amount marketValue = DecimalAmount.ZERO;
+		
+		//Amount marketValue = new DiscreteAmount(0, 0.01);
 		ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
 
 		Iterator<Position> it = portfolio.getPositions().iterator();
@@ -230,7 +237,9 @@ public class BasicPortfolioService implements PortfolioService {
 		Asset quoteAsset = portfolio.getBaseAsset();
 		//Asset quoteAsset = list.getBase();
 		//Asset baseAsset=new Asset();
+	//	Amount baseMarketValue = new DiscreteAmount(0, 0.01);
 		Amount baseMarketValue = DecimalAmount.ZERO;
+		
 		ConcurrentHashMap<Asset, Amount> marketValues = getMarketValues();
 
 		Iterator<Asset> it = marketValues.keySet().iterator();
@@ -256,6 +265,9 @@ public class BasicPortfolioService implements PortfolioService {
 		//Asset quoteAsset = list.getBase();
 		//Asset baseAsset=new Asset();
 		Amount baseCashBalance = DecimalAmount.ZERO;
+		
+		//Amount baseCashBalance = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
+
 		ConcurrentHashMap<Asset, Amount> cashBalances = getCashBalances();
 
 		Iterator<Asset> it = cashBalances.keySet().iterator();

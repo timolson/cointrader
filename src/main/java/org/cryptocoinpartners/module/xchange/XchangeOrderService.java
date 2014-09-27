@@ -2,6 +2,7 @@ package org.cryptocoinpartners.module.xchange;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.Date;
 
 import javax.inject.Inject;
@@ -9,6 +10,7 @@ import javax.inject.Singleton;
 
 import org.cryptocoinpartners.module.BaseOrderService;
 import org.cryptocoinpartners.schema.OrderState;
+import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.util.XchangeUtil;
 import org.slf4j.Logger;
@@ -44,7 +46,7 @@ public class XchangeOrderService extends BaseOrderService {
 			LimitOrder limitOrder = new LimitOrder(orderType, tradeableVolume, currencyPair, id, timestamp, specificOrder.getLimitPrice().asBigDecimal());
 			// todo put on a queue
 			try {
-				PersitOrder(specificOrder);
+				PersitOrderFill(specificOrder);
 				tradeService.placeLimitOrder(limitOrder);
 				updateOrderState(specificOrder, OrderState.PLACED);
 			} catch (IOException e) {
@@ -55,7 +57,7 @@ public class XchangeOrderService extends BaseOrderService {
 			MarketOrder marketOrder = new MarketOrder(orderType, tradeableVolume, currencyPair, id, timestamp);
 			// todo put on a queue
 			try {
-				PersitOrder(specificOrder);
+				PersitOrderFill(specificOrder);
 				tradeService.placeMarketOrder(marketOrder);
 				updateOrderState(specificOrder, OrderState.PLACED);
 			} catch (IOException e) {
@@ -71,4 +73,23 @@ public class XchangeOrderService extends BaseOrderService {
 
 	@Inject
 	Logger log;
+
+	@Override
+	public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio) {
+		return null;
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleCancelSpecificOrder(SpecificOrder specificOrder) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleCancelAllSpecificOrders(Portfolio portfolio) {
+		// TODO Auto-generated method stub
+
+	}
 }

@@ -95,11 +95,13 @@ public abstract class SimpleStatefulStrategy extends BaseStrategy {
 		state = State.STOP;
 	}
 
-	@When("select * from Fill(Fill.fillType not in (FillType.STOP_LIMIT, FillType.TRAILING_STOP_LIMIT))")
+	@When("select * from Fill((Fill.fillType not in (FillType.STOP_LIMIT, FillType.TRAILING_STOP_LIMIT))) ")
 	protected void handleFill(Fill fill) {
-		stopTrade(fill);
 
-		log.info("Stop trade Entered at" + fill.getPrice());
+		if (fill.getOrder().getComment() == "Long Entry Order" || fill.getOrder().getComment() == "Short Entry Order") {
+			stopTrade(fill);
+		}
+		//log.info("Stop trade Entered at" + fill.getPrice());
 
 	}
 

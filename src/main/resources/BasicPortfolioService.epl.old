@@ -1,0 +1,5 @@
+@Name('GET_LAST_TICK')
+select 
+	* 
+from 
+	Trade.win:time(7 days).win:length(1) as Trade;

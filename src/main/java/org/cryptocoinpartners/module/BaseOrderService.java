@@ -2,6 +2,7 @@ package org.cryptocoinpartners.module;
 
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -26,6 +27,7 @@ import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderBuilder;
 import org.cryptocoinpartners.schema.OrderState;
 import org.cryptocoinpartners.schema.OrderUpdate;
+import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.schema.Transaction;
 import org.cryptocoinpartners.service.OrderService;
@@ -57,6 +59,7 @@ public abstract class BaseOrderService implements OrderService {
 				handleStopOrder(specificOrder);
 			} else {
 				handleSpecificOrder(specificOrder);
+
 			}
 			Amount fees = FeesUtil.getExchangeFees(specificOrder);
 			specificOrder.setForcastedCommission(fees);
@@ -80,7 +83,8 @@ public abstract class BaseOrderService implements OrderService {
 	private void handleStopOrder(SpecificOrder specificOrder) {
 		triggerOrders.put(specificOrder.getTimestamp(), specificOrder);
 		updateOrderState(specificOrder, OrderState.TRIGGER);
-		PersitOrder(specificOrder);
+		PersitOrderFill(specificOrder);
+		log.info("Stop trade Entered at " + specificOrder.getStopPrice());
 	}
 
 	@Override
@@ -94,6 +98,8 @@ public abstract class BaseOrderService implements OrderService {
 	@When("select * from Fill")
 	public void handleFill(Fill fill) {
 		Order order = fill.getOrder();
+		PersitOrderFill(fill);
+
 		if (log.isInfoEnabled())
 			log.info("Received Fill " + fill);
 		OrderState state = orderStateMap.get(order);
@@ -131,7 +137,7 @@ public abstract class BaseOrderService implements OrderService {
 		SpecificOrder specificOrder = convertGeneralOrderToSpecific(generalOrder, market);
 		log.info("Routing order " + generalOrder + " to " + market.getExchange().getSymbol());
 		handleSpecificOrder(specificOrder);
-		PersitOrder(generalOrder);
+		PersitOrderFill(generalOrder);
 		// todo reserve a Position to pay for the order
 		//specificOrder.getPortfolio().reserve(specificOrder,estimateCost(specificOrder));
 	}
@@ -140,6 +146,8 @@ public abstract class BaseOrderService implements OrderService {
 	@When("select * from Book")
 	private void handleBook(Book b) {
 		List<Fill> fills = new ArrayList<>();
+		Offer ask = b.getBestAsk();
+		Offer bid = b.getBestBid();
 
 		ConcurrentHashMap<Asset, Amount> balances = new ConcurrentHashMap<Asset, Amount>();
 		Iterator<Long> itt = triggerOrders.keySet().iterator();
@@ -149,36 +157,38 @@ public abstract class BaseOrderService implements OrderService {
 
 			if (order.getMarket().equals(b.getMarket())) {
 				if (order.isBid()) {
-					Offer ask = b.getBestAsk();
-					if (order.getStopPrice() != null && order.getStopPrice().getCount() <= ask.getPriceCount()) {
+					if (order.getStopPrice() != null && ask.getPriceCount() >= order.getStopPrice().getCount()) {
 						//convert order to limit order
 
-						handleSpecificOrder(convertStopOrderToLimitOrder(order));
+						handleSpecificOrder(convertStopOrderToLimitOrder(order, bid, ask));
 						triggerOrders.remove(order.getTimestamp());
 						logTrigger(order, ask);
 					} else if (order.getTrailingStopPrice() != null) {
+						//		&& ((ask.getPriceCount() + order.getTrailingStopPrice().getCount() < (order.getStopPrice().getCount())))) {
 						//current price is less than the stop price so I will update the stop price
-						order.setStopPriceCount(ask.getPriceCount() - order.getTrailingStopPrice().getCount());
+						long stopPrice = Math.min(order.getStopPrice().getCount(), (ask.getPriceCount() + order.getTrailingStopPrice().getCount()));
+						order.setStopPriceCount(stopPrice);
 					}
 
 				}
 				if (order.isAsk()) {
-					Offer bid = b.getBestBid();
-					if (order.getStopPrice() != null && order.getStopPrice().getCount() >= bid.getPriceCount()) {
+					if (order.getStopPrice() != null && bid.getPriceCount() <= order.getStopPrice().getCount()) {
 						//Place order
 
-						handleSpecificOrder(convertStopOrderToLimitOrder(order));
+						handleSpecificOrder(convertStopOrderToLimitOrder(order, bid, ask));
 						triggerOrders.remove(order.getTimestamp());
 						logTrigger(order, bid);
 					} else if (order.getTrailingStopPrice() != null) {
+						//&& ((bid.getPriceCount() + order.getTrailingStopPrice().getCount() > (order.getStopPrice().getCount())))) {
 						//current price is less than the stop price so I will update the stop price
-						order.setStopPriceCount(bid.getPriceCount() + order.getTrailingStopPrice().getCount());
+						long stopPrice = Math.max(order.getStopPrice().getCount(), (bid.getPriceCount() - order.getTrailingStopPrice().getCount()));
+
+						order.setStopPriceCount(stopPrice);
 					}
 
 				}
 			}
 		}
-
 	}
 
 	private void logTrigger(SpecificOrder order, Offer offer) {
@@ -220,9 +230,9 @@ public abstract class BaseOrderService implements OrderService {
 		return specificOrder;
 	}
 
-	private SpecificOrder convertStopOrderToLimitOrder(SpecificOrder stopOrder) {
+	private SpecificOrder convertStopOrderToLimitOrder(SpecificOrder stopOrder, Offer bid, Offer ask) {
 		//DiscreteAmount volume = generalOrder.getVolume().toBasis(market.getVolumeBasis(), Remainder.DISCARD);
-		DiscreteAmount limitPrice = stopOrder.isBid() ? stopOrder.getStopPrice().decrement() : stopOrder.getStopPrice().increment();
+		DiscreteAmount limitPrice = stopOrder.isBid() ? ask.getPrice().increment(2) : bid.getPrice().decrement(2);
 
 		stopOrder.removeStopPriceCount();
 		stopOrder.removeTrailingStopPriceCount();
@@ -236,6 +246,15 @@ public abstract class BaseOrderService implements OrderService {
 	}
 
 	protected abstract void handleSpecificOrder(SpecificOrder specificOrder);
+
+	@Override
+	public abstract Collection<SpecificOrder> getPendingOrders(Portfolio portfolio);
+
+	@Override
+	public abstract void handleCancelSpecificOrder(SpecificOrder specificOrder);
+
+	@Override
+	public abstract void handleCancelAllSpecificOrders(Portfolio portfolio);
 
 	protected void updateOrderState(Order order, OrderState state) {
 		OrderState oldState = orderStateMap.get(order);
@@ -295,7 +314,7 @@ public abstract class BaseOrderService implements OrderService {
 		}
 	}
 
-	protected static final void PersitOrder(EntityBase... entities) {
+	protected static final void PersitOrderFill(EntityBase... entities) {
 
 		try {
 			PersistUtil.insert(entities);

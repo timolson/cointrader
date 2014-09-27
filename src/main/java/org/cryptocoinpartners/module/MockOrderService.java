@@ -2,6 +2,7 @@ package org.cryptocoinpartners.module;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -15,6 +16,7 @@ import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Offer;
 import org.cryptocoinpartners.schema.OrderState;
 import org.cryptocoinpartners.schema.OrderUpdate;
+import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.FeesUtil;
@@ -33,10 +35,12 @@ public class MockOrderService extends BaseOrderService {
 	protected void handleSpecificOrder(SpecificOrder specificOrder) {
 		if (specificOrder.getStopPrice() != null)
 			reject(specificOrder, "Stop prices unsupported");
-		if (specificOrder.getFillType() != FillType.STOP_LIMIT && specificOrder.getFillType() != FillType.TRAILING_STOP_LIMIT)
-			PersitOrder(specificOrder);
+
 		pendingOrders.add(specificOrder);
 		updateOrderState(specificOrder, OrderState.PLACED);
+		specificOrder.setEntryTime(context.getTime());
+		if (specificOrder.getFillType() != FillType.STOP_LIMIT && specificOrder.getFillType() != FillType.TRAILING_STOP_LIMIT)
+			PersitOrderFill(specificOrder);
 	}
 
 	@SuppressWarnings("ConstantConditions")
@@ -102,4 +106,51 @@ public class MockOrderService extends BaseOrderService {
 
 	private final Collection<SpecificOrder> pendingOrders = new ArrayList<>();
 	private QuoteService quotes;
+
+	@Override
+	public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio) {
+		Iterator<SpecificOrder> it = pendingOrders.iterator();
+		Collection<SpecificOrder> portfolioPendingOrders = new ArrayList<>();
+
+		while (it.hasNext()) {
+			SpecificOrder pendingOrder = it.next();
+			if (pendingOrder.getPortfolio().equals(portfolio)) {
+
+				portfolioPendingOrders.add(pendingOrder);
+			}
+		}// TODO Auto-generated method stub
+		return portfolioPendingOrders;
+	}
+
+	@Override
+	public void handleCancelSpecificOrder(SpecificOrder specificOrder) {
+		Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
+
+		for (SpecificOrder pendingOrder : pendingOrders) {
+			if (pendingOrder.equals(specificOrder)) {
+				cancelledOrders.add(pendingOrder);
+			}
+		}
+		pendingOrders.removeAll(cancelledOrders);
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public void handleCancelAllSpecificOrders(Portfolio portfolio) {
+		//Iterator<SpecificOrder> it = pendingOrders.iterator();
+		Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
+
+		for (SpecificOrder pendingOrder : pendingOrders) {
+
+			if (pendingOrder.getPortfolio().equals(portfolio))
+			//	&& !(pendingOrder.getFillType().equals(FillType.STOP_LIMIT) || pendingOrder.getFillType().equals(FillType.TRAILING_STOP_LIMIT))) {
+			{
+				cancelledOrders.add(pendingOrder);
+			}
+
+		}
+		pendingOrders.removeAll(cancelledOrders);
+
+	}
 }

@@ -45,6 +45,10 @@ public class OrderBuilder {
 		return new SpecificOrderBuilder(time, market, volumeCount, comment);
 	}
 
+	public SpecificOrderBuilder create(Instant time, Market market, long volumeCount, Order parentOrder, String comment) {
+		return new SpecificOrderBuilder(time, market, volumeCount, parentOrder, comment);
+	}
+
 	/** @param volume to create a sell order, use a negative volume */
 	public SpecificOrderBuilder create(Instant time, Market market, Amount volume, String comment) {
 		return new SpecificOrderBuilder(time, market, volume, comment);
@@ -155,6 +159,10 @@ public class OrderBuilder {
 
 		public SpecificOrderBuilder(Instant time, Market market, long volumeCount, String comment) {
 			order = new SpecificOrder(time, portfolio, market, volumeCount, comment);
+		}
+
+		public SpecificOrderBuilder(Instant time, Market market, long volumeCount, Order parentOrder, String comment) {
+			order = new SpecificOrder(time, portfolio, market, volumeCount, parentOrder, comment);
 		}
 
 		public SpecificOrderBuilder withLimitPriceCount(long price /* units in basis of Market's quote fungible */) {
