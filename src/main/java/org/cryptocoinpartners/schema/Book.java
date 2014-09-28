@@ -202,6 +202,13 @@ public class Book extends MarketData implements Spread {
 			book.setMarket(market);
 		}
 
+		public void start(Instant time, Instant timeReceived, String remoteKey, Market market) {
+			book.setTime(time);
+			book.setTimeReceived(timeReceived);
+			book.setRemoteKey(remoteKey);
+			book.setMarket(market);
+		}
+
 		public Builder addBid(BigDecimal price, BigDecimal volume) {
 			Market market = book.getMarket();
 			book.bids.add(Offer.bid(market, book.getTime(), book.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),

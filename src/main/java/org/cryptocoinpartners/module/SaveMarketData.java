@@ -23,8 +23,8 @@ public class SaveMarketData {
 					trade.getRemoteKey());
 			if (duplicate == null)
 				PersistUtil.insert(trade);
-			else
-				log.warn("dropped duplicate Trade " + trade);
+			//else
+			//log.warn("dropped duplicate Trade " + trade);
 		} else {
 			// if not a Trade, persist unconditionally
 			try {

@@ -22,6 +22,7 @@ public class Portfolio extends EntityBase {
 	/** returns all Positions, whether they are tied to an open Order or not.  Use getTradeablePositions() */
 	public @Transient
 	Collection<Position> getPositions() {
+
 		return positions;
 	}
 
@@ -138,9 +139,9 @@ public class Portfolio extends EntityBase {
 	public Portfolio(String name, PortfolioManager manager) {
 		this.name = name;
 		this.manager = manager;
-		this.positions = new ArrayList<Position>();
-		this.balances = new ArrayList<Balance>();
-		this.transactions = new ArrayList<Transaction>();
+		this.positions = new ArrayList<>();
+		this.balances = new ArrayList<>();
+		this.transactions = new ArrayList<>();
 	}
 
 	private String name;

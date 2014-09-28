@@ -1,15 +1,24 @@
 package org.cryptocoinpartners.module;
 
 import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 import javax.inject.Inject;
 
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Amount;
+import org.cryptocoinpartners.schema.Asset;
+import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.DecimalAmount;
 import org.cryptocoinpartners.schema.DiscreteAmount;
+import org.cryptocoinpartners.schema.EntityBase;
 import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.GeneralOrder;
 import org.cryptocoinpartners.schema.Market;
@@ -18,11 +27,13 @@ import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderBuilder;
 import org.cryptocoinpartners.schema.OrderState;
 import org.cryptocoinpartners.schema.OrderUpdate;
+import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.schema.Transaction;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.FeesUtil;
+import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.cryptocoinpartners.util.RemainderHandler;
 import org.slf4j.Logger;
@@ -44,7 +55,12 @@ public abstract class BaseOrderService implements OrderService {
 			handleGeneralOrder(generalOrder);
 		} else if (order instanceof SpecificOrder) {
 			SpecificOrder specificOrder = (SpecificOrder) order;
-			handleSpecificOrder(specificOrder);
+			if (specificOrder.getStopPrice() != null) {
+				handleStopOrder(specificOrder);
+			} else {
+				handleSpecificOrder(specificOrder);
+
+			}
 			Amount fees = FeesUtil.getExchangeFees(specificOrder);
 			specificOrder.setForcastedCommission(fees);
 
@@ -64,6 +80,13 @@ public abstract class BaseOrderService implements OrderService {
 		}
 	}
 
+	private void handleStopOrder(SpecificOrder specificOrder) {
+		triggerOrders.put(specificOrder.getTimestamp(), specificOrder);
+		updateOrderState(specificOrder, OrderState.TRIGGER);
+		PersitOrderFill(specificOrder);
+		log.info("Stop trade Entered at " + specificOrder.getStopPrice());
+	}
+
 	@Override
 	public OrderState getOrderState(Order o) {
 		OrderState state = orderStateMap.get(o);
@@ -75,6 +98,8 @@ public abstract class BaseOrderService implements OrderService {
 	@When("select * from Fill")
 	public void handleFill(Fill fill) {
 		Order order = fill.getOrder();
+		PersitOrderFill(fill);
+
 		if (log.isInfoEnabled())
 			log.info("Received Fill " + fill);
 		OrderState state = orderStateMap.get(order);
@@ -112,15 +137,71 @@ public abstract class BaseOrderService implements OrderService {
 		SpecificOrder specificOrder = convertGeneralOrderToSpecific(generalOrder, market);
 		log.info("Routing order " + generalOrder + " to " + market.getExchange().getSymbol());
 		handleSpecificOrder(specificOrder);
+		PersitOrderFill(generalOrder);
 		// todo reserve a Position to pay for the order
 		//specificOrder.getPortfolio().reserve(specificOrder,estimateCost(specificOrder));
+	}
+
+	@SuppressWarnings("ConstantConditions")
+	@When("select * from Book")
+	private void handleBook(Book b) {
+		List<Fill> fills = new ArrayList<>();
+		Offer ask = b.getBestAsk();
+		Offer bid = b.getBestBid();
+
+		ConcurrentHashMap<Asset, Amount> balances = new ConcurrentHashMap<Asset, Amount>();
+		Iterator<Long> itt = triggerOrders.keySet().iterator();
+		while (itt.hasNext()) {
+			Long key = itt.next();
+			SpecificOrder order = triggerOrders.get(key);
+
+			if (order.getMarket().equals(b.getMarket())) {
+				if (order.isBid()) {
+					if (order.getStopPrice() != null && ask.getPriceCount() >= order.getStopPrice().getCount()) {
+						//convert order to limit order
+
+						handleSpecificOrder(convertStopOrderToLimitOrder(order, bid, ask));
+						triggerOrders.remove(order.getTimestamp());
+						logTrigger(order, ask);
+					} else if (order.getTrailingStopPrice() != null) {
+						//		&& ((ask.getPriceCount() + order.getTrailingStopPrice().getCount() < (order.getStopPrice().getCount())))) {
+						//current price is less than the stop price so I will update the stop price
+						long stopPrice = Math.min(order.getStopPrice().getCount(), (ask.getPriceCount() + order.getTrailingStopPrice().getCount()));
+						order.setStopPriceCount(stopPrice);
+					}
+
+				}
+				if (order.isAsk()) {
+					if (order.getStopPrice() != null && bid.getPriceCount() <= order.getStopPrice().getCount()) {
+						//Place order
+
+						handleSpecificOrder(convertStopOrderToLimitOrder(order, bid, ask));
+						triggerOrders.remove(order.getTimestamp());
+						logTrigger(order, bid);
+					} else if (order.getTrailingStopPrice() != null) {
+						//&& ((bid.getPriceCount() + order.getTrailingStopPrice().getCount() > (order.getStopPrice().getCount())))) {
+						//current price is less than the stop price so I will update the stop price
+						long stopPrice = Math.max(order.getStopPrice().getCount(), (bid.getPriceCount() - order.getTrailingStopPrice().getCount()));
+
+						order.setStopPriceCount(stopPrice);
+					}
+
+				}
+			}
+		}
+	}
+
+	private void logTrigger(SpecificOrder order, Offer offer) {
+		if (log.isDebugEnabled())
+			log.debug("Trigger Order " + order + " with Offer " + offer + ": " + order.getStopPrice());
 	}
 
 	private SpecificOrder convertGeneralOrderToSpecific(GeneralOrder generalOrder, Market market) {
 		DiscreteAmount volume = generalOrder.getVolume().toBasis(market.getVolumeBasis(), Remainder.DISCARD);
 
 		// the volume will already be negative for a sell order
-		OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(generalOrder.getPortfolio()).create(market, volume);
+		OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(generalOrder.getPortfolio()).create(generalOrder.getTime(), market, volume,
+				generalOrder.getComment());
 
 		RemainderHandler priceRemainderHandler = generalOrder.isBid() ? buyHandler : sellHandler;
 		final DecimalAmount limitPrice = generalOrder.getLimitPrice();
@@ -129,14 +210,34 @@ public abstract class BaseOrderService implements OrderService {
 			builder.withLimitPrice(discreteLimit);
 		}
 		final DecimalAmount stopPrice = generalOrder.getStopPrice();
+		final DecimalAmount trailingStopPrice = generalOrder.getTrailingStopPrice();
+
 		if (stopPrice != null) {
-			DiscreteAmount discreteStop = stopPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
-			builder.withStopPrice(discreteStop);
+			if (trailingStopPrice != null) {
+				DiscreteAmount discreteStop = stopPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
+				DiscreteAmount discreteTrailingStop = trailingStopPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
+				builder.withTrailingStopPrice(discreteStop, discreteTrailingStop);
+			} else {
+				DiscreteAmount discreteStop = stopPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
+				builder.withStopPrice(discreteStop);
+			}
 		}
+
 		SpecificOrder specificOrder = builder.getOrder();
 		specificOrder.copyCommonOrderProperties(generalOrder);
 		specificOrder.setParentOrder(generalOrder);
+
 		return specificOrder;
+	}
+
+	private SpecificOrder convertStopOrderToLimitOrder(SpecificOrder stopOrder, Offer bid, Offer ask) {
+		//DiscreteAmount volume = generalOrder.getVolume().toBasis(market.getVolumeBasis(), Remainder.DISCARD);
+		DiscreteAmount limitPrice = stopOrder.isBid() ? ask.getPrice().increment(2) : bid.getPrice().decrement(2);
+
+		stopOrder.removeStopPriceCount();
+		stopOrder.removeTrailingStopPriceCount();
+		stopOrder.setLimitPriceCount(limitPrice.getCount());
+		return stopOrder;
 	}
 
 	protected void reject(Order order, String message) {
@@ -146,6 +247,15 @@ public abstract class BaseOrderService implements OrderService {
 
 	protected abstract void handleSpecificOrder(SpecificOrder specificOrder);
 
+	@Override
+	public abstract Collection<SpecificOrder> getPendingOrders(Portfolio portfolio);
+
+	@Override
+	public abstract void handleCancelSpecificOrder(SpecificOrder specificOrder);
+
+	@Override
+	public abstract void handleCancelAllSpecificOrders(Portfolio portfolio);
+
 	protected void updateOrderState(Order order, OrderState state) {
 		OrderState oldState = orderStateMap.get(order);
 		if (oldState == null)
@@ -154,12 +264,15 @@ public abstract class BaseOrderService implements OrderService {
 		context.publish(new OrderUpdate(order, oldState, state));
 		if (order.getParentOrder() != null)
 			updateParentOrderState(order.getParentOrder(), order, state);
+		//Order(order);
 	}
 
 	private void updateParentOrderState(GeneralOrder order, Order childOrder, OrderState childOrderState) {
 		OrderState oldState = orderStateMap.get(order);
 		switch (childOrderState) {
 			case NEW:
+				break;
+			case TRIGGER:
 				break;
 			case ROUTED:
 				break;
@@ -201,6 +314,15 @@ public abstract class BaseOrderService implements OrderService {
 		}
 	}
 
+	protected static final void PersitOrderFill(EntityBase... entities) {
+
+		try {
+			PersistUtil.insert(entities);
+		} catch (Throwable e) {
+			throw new Error("Could not insert " + entities, e);
+		}
+	}
+
 	// rounding depends on whether it is a buy or sell order.  we round to the "best" price
 	private static final RemainderHandler sellHandler = new RemainderHandler() {
 		@Override
@@ -223,4 +345,7 @@ public abstract class BaseOrderService implements OrderService {
 	private final Map<Order, OrderState> orderStateMap = new HashMap<>();
 	@Inject
 	private QuoteService quotes;
+
+	private final ConcurrentSkipListMap<Long, SpecificOrder> triggerOrders = new ConcurrentSkipListMap<>();
+
 }

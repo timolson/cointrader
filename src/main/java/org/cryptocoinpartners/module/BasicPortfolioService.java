@@ -90,16 +90,20 @@ public class BasicPortfolioService implements PortfolioService {
 
 		// sum of all transactions that belongs to this strategy
 		//BigDecimal balance = BigDecimal.ZERO;
+		//DiscreteAmount(0, 0.01);
+		//Amount balance = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
 		Amount balance = DecimalAmount.ZERO;
+		//DecimalAmount.ZERO;
 
 		//= DecimalAmount.ZERO;
-		ConcurrentHashMap<Asset, Amount> balances = new ConcurrentHashMap<Asset, Amount>();
+		ConcurrentHashMap<Asset, Amount> balances = new ConcurrentHashMap<>();
 		Iterator<Transaction> itt = getTrades().iterator();
 		while (itt.hasNext()) {
 			Transaction transaction = itt.next();
 			if (balances.get(transaction.getCurrency()) != null) {
 
 				balance = balances.get(transaction.getCurrency());
+
 			}
 			Amount tranValue = transaction.getValue();
 			balance = balance.plus(tranValue);
@@ -109,6 +113,7 @@ public class BasicPortfolioService implements PortfolioService {
 
 		// plus part of all cashFlows
 		Amount cashFlows = DecimalAmount.ZERO;
+		//Amount cashFlows = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
 
 		Iterator<Transaction> itc = getCashFlows().iterator();
 		while (itc.hasNext()) {
@@ -132,7 +137,7 @@ public class BasicPortfolioService implements PortfolioService {
 	public List<Transaction> getCashFlows() {
 		// return all CREDIT,DEBIT,INTREST and FEES
 
-		ArrayList<Transaction> cashFlows = new ArrayList<Transaction>();
+		ArrayList<Transaction> cashFlows = new ArrayList<>();
 		Iterator<Transaction> it = portfolio.getTransactions().iterator();
 		while (it.hasNext()) {
 			Transaction transaction = it.next();
@@ -150,7 +155,7 @@ public class BasicPortfolioService implements PortfolioService {
 	@SuppressWarnings("null")
 	public List<Transaction> getTrades() {
 		//return all BUY and SELL
-		ArrayList<Transaction> trades = new ArrayList<Transaction>();
+		ArrayList<Transaction> trades = new ArrayList<>();
 		Iterator<Transaction> it = portfolio.getTransactions().iterator();
 		while (it.hasNext()) {
 			Transaction transaction = it.next();
@@ -201,7 +206,9 @@ public class BasicPortfolioService implements PortfolioService {
 	@Transient
 	public ConcurrentHashMap<Asset, Amount> getMarketValues() {
 		Amount marketValue = DecimalAmount.ZERO;
-		ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<Asset, Amount>();
+		
+		//Amount marketValue = new DiscreteAmount(0, 0.01);
+		ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
 
 		Iterator<Position> it = portfolio.getPositions().iterator();
 		while (it.hasNext()) {
@@ -225,12 +232,14 @@ public class BasicPortfolioService implements PortfolioService {
 	@Inject
 	public Amount getMarketValue() {
 		//Amount marketValue;
-		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<Asset, Amount>();
+		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
 		//portfolio.get
 		Asset quoteAsset = portfolio.getBaseAsset();
 		//Asset quoteAsset = list.getBase();
 		//Asset baseAsset=new Asset();
+	//	Amount baseMarketValue = new DiscreteAmount(0, 0.01);
 		Amount baseMarketValue = DecimalAmount.ZERO;
+		
 		ConcurrentHashMap<Asset, Amount> marketValues = getMarketValues();
 
 		Iterator<Asset> it = marketValues.keySet().iterator();
@@ -250,12 +259,15 @@ public class BasicPortfolioService implements PortfolioService {
 	@Transient
 	public Amount getCashBalance() {
 		//Amount marketValue;
-		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<Asset, Amount>();
+		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
 		//Listing list = Listing.forSymbol(config.getString("base.symbol", "USD"));
 		Asset quoteAsset = portfolio.getBaseAsset();
 		//Asset quoteAsset = list.getBase();
 		//Asset baseAsset=new Asset();
 		Amount baseCashBalance = DecimalAmount.ZERO;
+		
+		//Amount baseCashBalance = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
+
 		ConcurrentHashMap<Asset, Amount> cashBalances = getCashBalances();
 
 		Iterator<Asset> it = cashBalances.keySet().iterator();
@@ -300,7 +312,7 @@ public class BasicPortfolioService implements PortfolioService {
 		Market market = position.getMarket();
 		OrderBuilder orderBuilder = new OrderBuilder(position.getPortfolio(), orderService);
 		if (orderBuilder != null) {
-			SpecificOrderBuilder exitOrder = orderBuilder.create(market, amount.negate());
+			SpecificOrderBuilder exitOrder = orderBuilder.create(context.getTime(), market, amount.negate(), "Exit Order");
 			log.info("Entering trade with order " + exitOrder);
 			orderService.placeOrder(exitOrder.getOrder());
 		}

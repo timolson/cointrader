@@ -7,6 +7,7 @@ import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Transient;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.cryptocoinpartners.util.RemainderHandler;
 
 /** Best used for I/O */
@@ -150,11 +151,16 @@ public class DecimalAmount extends Amount {
 
 	}
 
-	@Transient
 	@Override
+	@Transient
 	public double getBasis() {
-		// TODO Auto-generated method stub
-		return 0;
+		throw new NotImplementedException(DecimalAmount.class);
+	}
+
+	@Override
+	@Transient
+	public long getCount() {
+		throw new NotImplementedException(DecimalAmount.class);
 	}
 
 }

@@ -38,7 +38,7 @@ public class FeesUtil {
 		double rate = order.getMarket().getExchange().getFeeRate();
 		FeeMethod method = order.getMarket().getExchange().getFeeMethod();
 		double basis = order.getMarket().getPriceBasis();
-		Amount price = order.getLimitPrice();
+		Amount price = (order.getLimitPrice() == null) ? order.getStopPrice() : order.getLimitPrice();
 		Amount ammount = order.getVolume().abs();
 		switch (method) {
 			case PercentagePerUnit:

@@ -64,10 +64,10 @@ public enum TransactionType {
 		return TransactionType.names;
 	}
 
-	private static Map<String, TransactionType> values = new LinkedHashMap<String, TransactionType>(9, 1);
-	private static List<String> literals = new ArrayList<String>(9);
-	private static List<String> names = new ArrayList<String>(9);
-	private static List<TransactionType> valueList = new ArrayList<TransactionType>(9);
+	private static Map<String, TransactionType> values = new LinkedHashMap<>(9, 1);
+	private static List<String> literals = new ArrayList<>(9);
+	private static List<String> names = new ArrayList<>(9);
+	private static List<TransactionType> valueList = new ArrayList<>(9);
 
 	/**
 	 * Initializes the values.

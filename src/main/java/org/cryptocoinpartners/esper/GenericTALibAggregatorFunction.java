@@ -25,7 +25,7 @@ public class GenericTALibAggregatorFunction extends GenericTALibFunction {
 		this.optInputParams = optInputParams;
 		this.outputParams = outputParams;
 
-		this.inputParams = new ArrayList<CircularFifoBuffer<Number>>();
+		this.inputParams = new ArrayList<>();
 
 		for (int i = 0; i < inputParamCount; i++) {
 			this.inputParams.add(new CircularFifoBuffer<Number>(lookbackPeriod));

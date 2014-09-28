@@ -4,7 +4,10 @@ import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.enumeration.FillType;
 import org.joda.time.Instant;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 /**
  * A Fill represents some completion of an Order.  The volume of the Fill might be less than the requested volume of the
@@ -14,6 +17,10 @@ import org.joda.time.Instant;
  */
 @Entity
 public class Fill extends RemoteEvent {
+	private static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+
+	// private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
+	private static final String SEPARATOR = ",";
 
 	public Fill(SpecificOrder order, Instant time, Market market, long priceCount, long volumeCount) {
 		this.order = order;
@@ -63,9 +70,16 @@ public class Fill extends RemoteEvent {
 		return commission;
 	}
 
+	@Transient
+	public FillType getFillType() {
+		return getOrder().getFillType();
+	}
+
 	@Override
 	public String toString() {
-		return "Fill{" + "order=" + order.getId() + ", market=" + market + ", price=" + getPrice() + ", volume=" + getVolume() + '}';
+
+		return "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "OrderID=" + order.getId() + SEPARATOR + "Type=" + getFillType()
+				+ SEPARATOR + "Market=" + market + SEPARATOR + "Price=" + getPrice() + SEPARATOR + "Volume=" + getVolume();
 	}
 
 	// JPA

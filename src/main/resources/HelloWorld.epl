@@ -1,2 +1,0 @@
-@Name("getAvgTrade")
-select * from Trade.win:time(10 sec)

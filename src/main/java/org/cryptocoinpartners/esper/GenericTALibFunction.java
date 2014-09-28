@@ -62,9 +62,9 @@ public class GenericTALibFunction extends AggregationSupport {
 
 		super();
 		this.inputParamCount = 0;
-		this.inputParams = new ArrayList<CircularFifoBuffer<Number>>();
-		this.optInputParams = new ArrayList<Object>();
-		this.outputParams = new HashMap<String, Object>();
+		this.inputParams = new ArrayList<>();
+		this.optInputParams = new ArrayList<>();
+		this.outputParams = new HashMap<>();
 	}
 
 	@Override
@@ -91,7 +91,7 @@ public class GenericTALibFunction extends AggregationSupport {
 
 		// get the parameters
 		int paramCounter = 1;
-		Map<String, Class<?>> outputParamTypes = new HashMap<String, Class<?>>();
+		Map<String, Class<?>> outputParamTypes = new HashMap<>();
 		for (Annotation[] annotations : this.function.getParameterAnnotations()) {
 			for (Annotation annotation : annotations) {
 
@@ -99,7 +99,11 @@ public class GenericTALibFunction extends AggregationSupport {
 				if (annotation instanceof InputParameterInfo) {
 					InputParameterInfo inputParameterInfo = (InputParameterInfo) annotation;
 					if (inputParameterInfo.type().equals(InputParameterType.TA_Input_Real)) {
-						if (paramTypes[paramCounter].equals(double.class) || paramTypes[paramCounter].equals(Double.class)) {
+						if (paramTypes[paramCounter] == null) {
+							return;
+						}
+
+						else if (paramTypes[paramCounter].equals(double.class) || paramTypes[paramCounter].equals(Double.class)) {
 							this.inputParamCount++;
 							paramCounter++;
 						} else {
@@ -130,7 +134,12 @@ public class GenericTALibFunction extends AggregationSupport {
 				} else if (annotation instanceof OptInputParameterInfo) {
 					OptInputParameterInfo optInputParameterInfo = (OptInputParameterInfo) annotation;
 					if (optInputParameterInfo.type().equals(OptInputParameterType.TA_OptInput_IntegerRange)) {
-						this.optInputParams.add(getConstant(validationContext, paramCounter, Integer.class));
+						if (validationContext.getConstantValues()[paramCounter] == null) {
+							return;
+						} else {
+
+							this.optInputParams.add(getConstant(validationContext, paramCounter, Integer.class));
+						}
 					} else if (optInputParameterInfo.type().equals(OptInputParameterType.TA_OptInput_RealRange)) {
 						this.optInputParams.add(getConstant(validationContext, paramCounter, Double.class));
 					} else if (optInputParameterInfo.type().equals(OptInputParameterType.TA_OptInput_IntegerList)) {
@@ -211,7 +220,7 @@ public class GenericTALibFunction extends AggregationSupport {
 			}
 			// get the parameters
 			int paramCounter = 1;
-			Map<String, Class<?>> outputParamTypes = new HashMap<String, Class<?>>();
+			Map<String, Class<?>> outputParamTypes = new HashMap<>();
 			for (Annotation[] annotations : this.function.getParameterAnnotations()) {
 				for (Annotation annotation : annotations) {
 					if (annotation instanceof InputParameterInfo) {
@@ -315,9 +324,8 @@ public class GenericTALibFunction extends AggregationSupport {
 
 	@Override
 	public void leave(Object obj) {
-		this.inputParams.add(new CircularFifoBuffer<Number>(3));
-
 		// Remove the last element of each buffer
+		//init = false;
 		for (CircularFifoBuffer<Number> buffer : this.inputParams) {
 			if (buffer.contains(obj)) {
 				buffer.remove(obj);
@@ -429,6 +437,7 @@ public class GenericTALibFunction extends AggregationSupport {
 	public void clear() {
 
 		// clear all elements from the buffers
+		//	init = false;
 		for (CircularFifoBuffer<Number> buffer : this.inputParams) {
 			buffer.clear();
 		}

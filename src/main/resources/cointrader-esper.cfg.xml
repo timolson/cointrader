@@ -2,11 +2,17 @@
 <esper-configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns="http://www.espertech.com/schema/esper"
     xsi:schemaLocation="http://www.espertech.com/schema/esper/esper-configuration-4-0.xsd">
-    <plugin-aggregation-function name="talib" function-class="org.cryptocoinpartners.esper.GenericTALibFunction"/>   
-     
-
+    <plugin-aggregation-function name="talib" function-class="org.cryptocoinpartners.esper.GenericTALibFunction"/>  
+       <plugin-view factory-class="org.cryptocoinpartners.esper.OHLCBarPlugInViewFactory" name="ohlcbar" namespace="custom"/>  
+      
 	<auto-import import-name="org.cryptocoinpartners.esper.annotation.*"/>
-	
+		<auto-import import-name="java.lang.*"/>
+	<auto-import import-name="java.math.*"/>
+	<auto-import import-name="java.text.*"/>
+	<auto-import import-name="java.util.*"/>	
+	<auto-import import-name="org.cryptocoinpartners.schema.*"/>	
+	<auto-import import-name="org.cryptocoinpartners.enumeration.*"/>
+	<auto-import import-name="org.joda.time.*"/>	
 
 	<engine-settings>
 		<defaults>

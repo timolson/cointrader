@@ -22,7 +22,7 @@ public class ListingsMatrix {
 	 * Constructor with no currency. The ListingsMatrix constructed has no currency and no rates.
 	 */
 	public ListingsMatrix() {
-		listings = new ConcurrentHashMap<Asset, ConcurrentHashMap<Asset, Long>>();
+		listings = new ConcurrentHashMap<>();
 
 	}
 
@@ -32,7 +32,7 @@ public class ListingsMatrix {
 	 */
 	public ListingsMatrix(final Asset ccy) {
 		ArgumentChecker.notNull(ccy, "Asset");
-		listings = new ConcurrentHashMap<Asset, ConcurrentHashMap<Asset, Long>>();
+		listings = new ConcurrentHashMap<>();
 		listings.put(ccy, new ConcurrentHashMap<Asset, Long>());
 		listings.get(ccy).put(ccy, (long) (1 / ccy.getBasis()));
 
@@ -45,7 +45,7 @@ public class ListingsMatrix {
 	 * @param rate TheListings rate between ccy1 and the ccy2. It is 1 ccy1 = rate * ccy2. The Listings matrix will be completed with the ccy2/ccy1 rate.
 	 */
 	public ListingsMatrix(final Asset ccy1, final Asset ccy2, final long rate) {
-		listings = new ConcurrentHashMap<Asset, ConcurrentHashMap<Asset, Long>>();
+		listings = new ConcurrentHashMap<>();
 
 		addAsset(ccy1, ccy2, rate);
 	}
@@ -57,7 +57,7 @@ public class ListingsMatrix {
 	public ListingsMatrix(final ListingsMatrix ListingsMatrix) {
 		ArgumentChecker.notNull(ListingsMatrix, "ListingsMatrix");
 
-		listings = new ConcurrentHashMap<Asset, ConcurrentHashMap<Asset, Long>>(ListingsMatrix.listings);
+		listings = new ConcurrentHashMap<>(ListingsMatrix.listings);
 
 	}
 

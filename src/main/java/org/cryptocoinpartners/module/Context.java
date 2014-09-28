@@ -154,7 +154,7 @@ public class Context {
 
 	public void attach(Class c, Object instance) {
 		ConfigUtil.applyConfiguration(instance, config);
-		loadStatements(instance.getClass().getSimpleName());
+		//	loadStatements(instance.getClass().getSimpleName());
 		subscribe(instance);
 		registerBindings(c, instance);
 		if (AttachListener.class.isAssignableFrom(c)) {
@@ -165,7 +165,7 @@ public class Context {
 
 	public List<Object> loadStatementByName(String name) throws ParseException, DeploymentException, IOException {
 		EPStatement statement = epAdministrator.getStatement(name);
-		List<Object> list = new ArrayList<Object>();
+		List<Object> list = new ArrayList<>();
 		if (statement != null && statement.isStarted()) {
 			SafeIterator<EventBean> it = statement.safeIterator();
 			try {
@@ -261,8 +261,18 @@ public class Context {
 		return cl.newInstance();
 	}
 
+	public Instant getTime() {
+		return new Instant(epRuntime.getCurrentTime());
+	}
+
 	private void subscribe(Object listener, Class<?> cls) {
+		String classname = null;
 		for (Method method : cls.getDeclaredMethods()) {
+			if (classname == null || !classname.equals(method.getDeclaringClass().getSimpleName())) {
+				// we have a new class so let's try to load the epl files
+				classname = method.getDeclaringClass().getSimpleName();
+				loadStatements(classname);
+			}
 			When when = method.getAnnotation(When.class);
 			if (when != null) {
 				String statement = when.value();
