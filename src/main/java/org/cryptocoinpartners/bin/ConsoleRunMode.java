@@ -125,7 +125,6 @@ public class ConsoleRunMode extends RunMode {
 		context.publish(initialCredit);
 
 		context.attachInstance(owner);
-		context.attachInstance(new BasicPortfolioService(portfolio));
 
 		Terminal terminal = TerminalFactory.get();
 		try {
