@@ -10,7 +10,8 @@
 	<auto-import import-name="java.math.*"/>
 	<auto-import import-name="java.text.*"/>
 	<auto-import import-name="java.util.*"/>	
-	<auto-import import-name="org.cryptocoinpartners.schema.*"/>	
+	<auto-import import-name="org.cryptocoinpartners.schema.*"/>
+	<auto-import import-name="org.cryptocoinpartners.module.*"/>	
 	<auto-import import-name="org.cryptocoinpartners.enumeration.*"/>
 	<auto-import import-name="org.joda.time.*"/>	
 
