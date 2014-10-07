@@ -55,8 +55,15 @@ public class BasicPortfolioService implements PortfolioService {
 	@Override
 	@Nullable
 	public ArrayList<Position> getPositions() {
-		//log.info("Last Tick Recived: " + getLastTrade(portfolio).toString());
 		return (ArrayList<Position>) portfolio.getPositions();
+	}
+
+	public long getLongPosition(Asset asset, Exchange exchange) {
+		return portfolio.getLongPosition(asset, exchange);
+	}
+
+	public long getShortPosition(Asset asset, Exchange exchange) {
+		return portfolio.getShortPosition(asset, exchange);
 	}
 
 	@Override
@@ -206,13 +213,14 @@ public class BasicPortfolioService implements PortfolioService {
 	@Transient
 	public ConcurrentHashMap<Asset, Amount> getMarketValues() {
 		Amount marketValue = DecimalAmount.ZERO;
-		
+
 		//Amount marketValue = new DiscreteAmount(0, 0.01);
 		ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
-
+		//portfolio.getPositions().keySet()
 		Iterator<Position> it = portfolio.getPositions().iterator();
 		while (it.hasNext()) {
 			Position position = it.next();
+
 			if (position.isOpen()) {
 				if (marketValues.get(position.getAsset()) != null) {
 					marketValue = marketValues.get(position.getAsset());
@@ -223,6 +231,7 @@ public class BasicPortfolioService implements PortfolioService {
 
 			}
 		}
+
 		return marketValues;
 
 	}
@@ -237,9 +246,9 @@ public class BasicPortfolioService implements PortfolioService {
 		Asset quoteAsset = portfolio.getBaseAsset();
 		//Asset quoteAsset = list.getBase();
 		//Asset baseAsset=new Asset();
-	//	Amount baseMarketValue = new DiscreteAmount(0, 0.01);
+		//	Amount baseMarketValue = new DiscreteAmount(0, 0.01);
 		Amount baseMarketValue = DecimalAmount.ZERO;
-		
+
 		ConcurrentHashMap<Asset, Amount> marketValues = getMarketValues();
 
 		Iterator<Asset> it = marketValues.keySet().iterator();
@@ -265,7 +274,7 @@ public class BasicPortfolioService implements PortfolioService {
 		//Asset quoteAsset = list.getBase();
 		//Asset baseAsset=new Asset();
 		Amount baseCashBalance = DecimalAmount.ZERO;
-		
+
 		//Amount baseCashBalance = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
 
 		ConcurrentHashMap<Asset, Amount> cashBalances = getCashBalances();
@@ -329,7 +338,7 @@ public class BasicPortfolioService implements PortfolioService {
 		if (position == null) {
 			throw new PortfolioServiceException("position does not exist: ");
 		}
-		if (!force && position.getExitPrice() == null) {
+		if (!force && (position.getLongExitPrice() == null || position.getShortExitPrice() == null)) {
 			log.warn("no exit value was set for position: " + position);
 			return;
 		}
@@ -341,11 +350,11 @@ public class BasicPortfolioService implements PortfolioService {
 		}
 
 		if (!force) {
-			if (position.isShort() && exitPrice.compareTo(position.getExitPrice()) > 0) {
-				log.warn("exit value " + exitPrice + " is higher than existing exit value " + position.getExitPrice() + " of short position " + position);
+			if (position.isShort() && exitPrice.compareTo(position.getShortExitPrice()) > 0) {
+				log.warn("exit value " + exitPrice + " is higher than existing exit value " + position.getShortExitPrice() + " of short position " + position);
 				return;
-			} else if (position.isLong() && exitPrice.compareTo(position.getExitPrice()) < 0) {
-				log.warn("exit value " + exitPrice + " is lower than existing exit value " + position.getExitPrice() + " of long position " + position);
+			} else if (position.isLong() && exitPrice.compareTo(position.getLongExitPrice()) < 0) {
+				log.warn("exit value " + exitPrice + " is lower than existing exit value " + position.getLongExitPrice() + " of long position " + position);
 				return;
 			}
 		}
@@ -359,7 +368,7 @@ public class BasicPortfolioService implements PortfolioService {
 			throw new PortfolioServiceException("ExitValue (" + exitPrice + ") for long-position " + position + " is higher than currentValue: " + currentPrice);
 		}
 
-		position.setExitPrice(exitPrice);
+		//position.setExitPrice(exitPrice);
 
 		log.info("set exit value " + position + " to " + exitPrice);
 	}
