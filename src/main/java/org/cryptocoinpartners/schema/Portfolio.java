@@ -4,11 +4,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
+
+import org.apache.commons.lang.NotImplementedException;
 
 /**
  * Many Owners may have Stakes in the Portfolio, but there is only one PortfolioManager, who is not necessarily an Owner.  The
@@ -22,8 +25,76 @@ public class Portfolio extends EntityBase {
 	/** returns all Positions, whether they are tied to an open Order or not.  Use getTradeablePositions() */
 	public @Transient
 	Collection<Position> getPositions() {
+		ArrayList<Position> allPositions = new ArrayList<Position>();
+		Iterator<Asset> it = positions.keySet().iterator();
+		while (it.hasNext()) {
+			Asset asset = it.next();
+			Iterator<Exchange> ite = positions.get(asset).keySet().iterator();
+			while (ite.hasNext()) {
+				Exchange exchange = ite.next();
+				Iterator<Amount> itp = positions.get(asset).get(exchange).keySet().iterator();
+				while (itp.hasNext()) {
+					Amount price = itp.next();
+					ArrayList<Position> detailPositions = positions.get(asset).get(exchange).get(price);
+					for (Position pos : detailPositions) {
+						allPositions.add(pos);
+					}
 
-		return positions;
+				}
+			}
+		}
+		return allPositions;
+	}
+
+	public @Transient
+	Collection<Position> getPositions(Asset asset, Exchange exchange) {
+		ArrayList<Position> allPositions = new ArrayList<Position>();
+		Iterator<Amount> itp = positions.get(asset).get(exchange).keySet().iterator();
+		while (itp.hasNext()) {
+			Amount price = itp.next();
+			ArrayList<Position> detailPositions = positions.get(asset).get(exchange).get(price);
+			for (Position pos : detailPositions) {
+				allPositions.add(pos);
+			}
+
+		}
+
+		return allPositions;
+	}
+
+	public @Transient
+	long getLongPosition(Asset asset, Exchange exchange) {
+		long longVolumeCount = 0;
+		if (positions.get(asset) != null && positions.get(asset).get(exchange) != null) {
+			Iterator<Amount> itp = positions.get(asset).get(exchange).keySet().iterator();
+			while (itp.hasNext()) {
+				Amount price = itp.next();
+				ArrayList<Position> detailPositions = positions.get(asset).get(exchange).get(price);
+				for (Position pos : detailPositions) {
+					longVolumeCount += pos.getLongVolumeCount();
+				}
+
+			}
+		}
+
+		return longVolumeCount;
+	}
+
+	public @Transient
+	long getShortPosition(Asset asset, Exchange exchange) {
+		long shortVolumeCount = 0;
+		if (positions.get(asset) != null && positions.get(asset).get(exchange) != null) {
+			Iterator<Amount> itp = positions.get(asset).get(exchange).keySet().iterator();
+			while (itp.hasNext()) {
+				Amount price = itp.next();
+				ArrayList<Position> detailPositions = positions.get(asset).get(exchange).get(price);
+				for (Position pos : detailPositions) {
+					shortVolumeCount += pos.getShortVolumeCount();
+				}
+
+			}
+		}
+		return shortVolumeCount;
 	}
 
 	// public @OneToMany ConcurrentHashMap<BalanceType, List<Wallet>> getBalances() { return balances; }
@@ -33,12 +104,7 @@ public class Portfolio extends EntityBase {
 	 */
 	@Transient
 	public Collection<Position> getTradeablePositions() {
-		ArrayList<Position> result = new ArrayList<>();
-		for (Position position : positions) {
-			if (!position.isReserved())
-				result.add(position);
-		}
-		return result;
+		throw new NotImplementedException();
 	}
 
 	@Transient
@@ -56,12 +122,7 @@ public class Portfolio extends EntityBase {
 	 */
 	@Transient
 	public Collection<Position> getReservePositions() {
-		ArrayList<Position> result = new ArrayList<>();
-		for (Position position : positions) {
-			if (position.isReserved())
-				result.add(position);
-		}
-		return result;
+		throw new NotImplementedException();
 	}
 
 	/**
@@ -71,12 +132,8 @@ public class Portfolio extends EntityBase {
 	 */
 	@Transient
 	public Collection<Position> getTradeablePositionsOf(Asset f) {
-		ArrayList<Position> result = new ArrayList<>();
-		for (Position position : positions) {
-			if (position.getAsset().equals(f) && !position.isReserved())
-				result.add(position);
-		}
-		return result;
+
+		throw new NotImplementedException();
 	}
 
 	/**
@@ -90,33 +147,12 @@ public class Portfolio extends EntityBase {
 	 */
 	@Transient
 	public void reserve(SpecificOrder order, Position p) throws IllegalArgumentException {
-		for (Position position : positions) {
-			if (!position.isReserved() && position.getAsset().equals(order.getMarket().getQuote())
-					&& position.getExchange().equals(order.getMarket().getExchange())) {
-				if (position.getVolumeCount() < p.getVolumeCount())
-					throw new IllegalArgumentException("Insufficient funds");
-				// subtract the reserve from the existing Position
-				position.setVolumeCount(position.getVolumeCount() - p.getVolumeCount());
-				// add a new reserve Position
-				Position reserve = new Position(p.getPortfolio(), p.getExchange(), p.getMarket(), p.getAsset(), p.getVolume(), p.getPrice());
-				reserve.setOrder(order);
-				positions.add(reserve);
-			}
-		}
+		throw new NotImplementedException();
 	}
 
 	@Transient
 	public void release(SpecificOrder order) {
-		Iterator<Position> iterator = positions.iterator();
-		while (iterator.hasNext()) {
-			Position position = iterator.next();
-			SpecificOrder positionOrder = position.getOrder();
-			if (positionOrder != null && positionOrder.equals(order)) {
-				position.setOrder(null);
-				if (merge(position))
-					iterator.remove();
-			}
-		}
+		throw new NotImplementedException();
 	}
 
 	/**
@@ -127,19 +163,65 @@ public class Portfolio extends EntityBase {
 	 */
 	@Transient
 	private boolean merge(Position position) {
-		for (Position p : positions) {
-			if (p.getExchange().equals(position.getExchange()) && p.getAsset().equals(position.getAsset())) {
-				p.setVolumeCount(p.getVolumeCount() + position.getVolumeCount());
+		ConcurrentHashMap<Exchange, ConcurrentHashMap<Amount, ArrayList<Position>>> assetPosition = positions.get(position.asset);
+		if (assetPosition == null) {
+			ArrayList<Position> detailPosition = new ArrayList<Position>();
+			detailPosition.add(position);
+			ConcurrentHashMap<Amount, ArrayList<Position>> pricePosition = new ConcurrentHashMap<Amount, ArrayList<Position>>();
+			pricePosition.put(position.getPrice(), detailPosition);
+			assetPosition = new ConcurrentHashMap<Exchange, ConcurrentHashMap<Amount, ArrayList<Position>>>();
+			assetPosition.put(position.getExchange(), pricePosition);
+			positions.put(position.asset, assetPosition);
+			return true;
+		} else {
+			//asset is present, so check the market
+			ConcurrentHashMap<Amount, ArrayList<Position>> exchangePosition = assetPosition.get(position.getExchange());
+			if (exchangePosition == null) {
+				ArrayList<Position> detailPosition = new ArrayList<Position>();
+				detailPosition.add(position);
+				ConcurrentHashMap<Amount, ArrayList<Position>> pricePosition = new ConcurrentHashMap<Amount, ArrayList<Position>>();
+				pricePosition.put(position.getPrice(), detailPosition);
+				assetPosition.put(position.getExchange(), pricePosition);
 				return true;
+			} else {
+				// market is present so we have detailed postions
+				ArrayList<Position> pricePosition = exchangePosition.get(position.getPrice());
+				if (pricePosition == null) {
+					ArrayList<Position> detailPosition = new ArrayList<Position>();
+					detailPosition.add(position);
+					exchangePosition.put(position.getPrice(), detailPosition);
+					return true;
+				} else {
+
+					for (Position p : pricePosition) {
+						if (p.getExchange().equals(position.getExchange()) && p.getAsset().equals(position.getAsset())
+								&& (p.getPrice().compareTo(position.getPrice()) == 0)) {
+							p.setLongVolumeCount(p.getLongVolumeCount() + position.getLongVolumeCount());
+							p.setShortVolumeCount(p.getShortVolumeCount() + position.getShortVolumeCount());
+							// if the long and short volumes are zero we can remove the position
+							if (p.getShortVolumeCount() == 0 && p.getLongVolumeCount() == 0) {
+								positions.get(p.asset).get(p.exchange).remove(p.getPrice());
+
+							}
+							return true;
+						} else {
+							// Exiting array of postions I need to add to
+							pricePosition.add(position);
+							return true;
+						}
+					}
+
+				}
 			}
 		}
+
 		return false;
 	}
 
 	public Portfolio(String name, PortfolioManager manager) {
 		this.name = name;
 		this.manager = manager;
-		this.positions = new ArrayList<>();
+		this.positions = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Amount, ArrayList<Position>>>>();
 		this.balances = new ArrayList<>();
 		this.transactions = new ArrayList<>();
 	}
@@ -175,14 +257,18 @@ public class Portfolio extends EntityBase {
 		assert authorization != null;
 		assert position != null;
 		boolean modifiedExistingPosition = false;
-		for (Position curPosition : positions) {
-			if (curPosition.merge(position)) {
-				modifiedExistingPosition = true;
-				break;
-			}
-		}
-		if (!modifiedExistingPosition)
-			positions.add(position);
+		merge(position);
+
+		// if 
+
+		//		for (Position curPosition : positions) {
+		//			if (curPosition.merge(position)) {
+		//				modifiedExistingPosition = true;
+		//				break;
+		//			}
+		//		}
+		//		if (!modifiedExistingPosition)
+		//			positions.add(position);
 	}
 
 	@Override
@@ -195,7 +281,7 @@ public class Portfolio extends EntityBase {
 	protected Portfolio() {
 	}
 
-	protected void setPositions(Collection<Position> positions) {
+	protected void setPositions(ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Amount, ArrayList<Position>>>> positions) {
 		this.positions = positions;
 	}
 
@@ -243,7 +329,7 @@ public class Portfolio extends EntityBase {
 	private PortfolioManager manager;
 
 	private Asset baseAsset;
-	private Collection<Position> positions = Collections.emptyList();
+	private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Amount, ArrayList<Position>>>> positions;
 	private Collection<Balance> balances = Collections.emptyList();
 	private Collection<Transaction> transactions = Collections.emptyList();
 	private Collection<Stake> stakes = Collections.emptyList();

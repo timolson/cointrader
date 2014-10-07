@@ -111,4 +111,28 @@ public abstract class Amount implements Comparable<Amount> {
 		// TODO Auto-generated method stub
 		return 0;
 	}
+
+	@Override
+	public boolean equals(Object object) {
+		boolean result = false;
+		if (object == null || object.getClass() != getClass()) {
+			result = false;
+		} else {
+			Amount amount = (Amount) object;
+			if (this.getCount() == amount.getCount() && this.getBasis() == amount.getBasis()) {
+				result = true;
+			}
+		}
+		return result;
+	}
+
+	// just omitted null checks
+	@Override
+	public int hashCode() {
+		int hash = 3;
+		hash = 7 * hash + Long.valueOf(this.getCount()).hashCode();
+		hash = 7 * hash + Double.valueOf(this.getBasis()).hashCode();
+		return hash;
+	}
+
 }

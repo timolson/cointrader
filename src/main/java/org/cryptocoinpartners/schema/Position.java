@@ -5,7 +5,8 @@ import javax.persistence.Entity;
 import javax.persistence.OneToOne;
 import javax.persistence.Transient;
 
-import org.cryptocoinpartners.util.Remainder;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 /**
  * A Position represents an amount of some Asset within an Exchange.  If the Position is related to an Order
@@ -17,13 +18,33 @@ import org.cryptocoinpartners.util.Remainder;
 public class Position extends Holding {
 
 	private Portfolio portfolio;
+	protected static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+
+	// private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
+	protected static final String SEPARATOR = ",";
 
 	public Position(Portfolio portfolio, Exchange exchange, Market market, Asset asset, Amount volume, Amount price) {
 
 		this.exchange = exchange;
 		this.market = market;
-		this.volumeCount = volume.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount();
-		this.priceCount = price.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount();
+		this.longVolume = volume.isPositive() ? volume : null;
+		this.shortVolume = volume.isNegative() ? volume : null;
+		this.price = price;
+		this.asset = asset;
+		this.portfolio = portfolio;
+	}
+
+	public Position(Portfolio portfolio, Exchange exchange, Market market, Asset asset, Amount volume, Amount price, Amount exitPrice) {
+
+		this.exchange = exchange;
+		this.market = market;
+		this.longVolume = volume.isPositive() ? volume : this.longVolume;
+		this.longVolumeCount = volume.isPositive() ? volume.getCount() : this.longVolumeCount;
+		this.shortVolume = volume.isNegative() ? volume : this.shortVolume;
+		this.shortVolumeCount = volume.isNegative() ? volume.getCount() : this.shortVolumeCount;
+		this.price = price;
+		this.longExitPrice = volume.isPositive() ? exitPrice : this.longExitPrice;
+		this.shortExitPrice = volume.isNegative() ? exitPrice : this.shortExitPrice;
 		this.asset = asset;
 		this.portfolio = portfolio;
 	}
@@ -53,12 +74,6 @@ public class Position extends Holding {
 	}
 
 	@Transient
-	public Amount getExitPrice() {
-
-		return exitPrice;
-	}
-
-	@Transient
 	public Market getMarket() {
 
 		return market;
@@ -82,16 +97,44 @@ public class Position extends Holding {
 
 	@Transient
 	public Amount getVolume() {
-		if (volume == null)
-			volume = new DiscreteAmount(volumeCount, asset.getBasis());
-		return volume;
+
+		if (getLongVolume() != null && getShortVolume() != null) {
+			return getLongVolume().plus(getShortVolume());
+		} else if (getLongVolume() != null) {
+			return getLongVolume();
+		} else {
+			return getShortVolume();
+		}
+
+	}
+
+	@Transient
+	public Amount getLongVolume() {
+		if (longVolume == null)
+			longVolume = new DiscreteAmount(longVolumeCount, asset.getBasis());
+		return longVolume;
+	}
+
+	@Transient
+	public Amount getShortVolume() {
+		if (shortVolume == null)
+			shortVolume = new DiscreteAmount(shortVolumeCount, asset.getBasis());
+		return shortVolume;
 	}
 
 	@Transient
 	protected Amount getPrice() {
-		if (price == null)
-			price = new DiscreteAmount(priceCount, asset.getBasis());
 		return price;
+	}
+
+	@Transient
+	public Amount getShortExitPrice() {
+		return shortExitPrice;
+	}
+
+	@Transient
+	public Amount getLongExitPrice() {
+		return longExitPrice;
 	}
 
 	/** If the SpecificOrder is not null, then this Position is being held in reserve as payment for that Order */
@@ -113,46 +156,77 @@ public class Position extends Holding {
 	 * has modified its volume by the amount in the position argument.
 	 */
 	protected boolean merge(Position position) {
-		if (!exchange.equals(position.exchange) || !asset.equals(position.asset))
+		if (!exchange.equals(position.exchange) || !asset.equals(position.asset) || !price.equals(position.getPrice()))
 			return false;
 
-		volumeCount += position.volumeCount;
-		setVolumeCount(volumeCount);
+		longVolumeCount += position.longVolumeCount;
+		shortVolumeCount += position.shortVolumeCount;
+		setLongVolumeCount(longVolumeCount);
+		setShortVolumeCount(shortVolumeCount);
 		return true;
 	}
 
 	@Override
 	public String toString() {
-		return "Position=[Exchange=" + exchange + ", qty=" + getVolume().toString() + ", entyDate=" + ", instrument=" + asset + "]";
+		return "Position=[Exchange=" + exchange + ", Price=" + price + (getShortVolume() != null ? (SEPARATOR + ", short qty=" + getShortVolume()) : "")
+				+ (getLongVolume() != null ? (SEPARATOR + "long qty=" + getLongVolume()) : "") + ", net qty=" + getVolume().toString() + ",  entyDate="
+				+ ", instrument=" + asset + (longExitPrice != null ? (SEPARATOR + " longExitPrice=" + getLongExitPrice()) : "")
+				+ (shortExitPrice != null ? (SEPARATOR + " shortExitPrice=" + getShortExitPrice()) : "") + "]";
 	}
 
 	// JPA
 	protected Position() {
 	}
 
+	@Transient
 	protected long getVolumeCount() {
-		return volumeCount;
+		return longVolumeCount + shortVolumeCount;
 	}
 
-	protected void setVolumeCount(long volumeCount) {
-		this.volumeCount = volumeCount;
-		this.volume = null;
+	protected long getLongVolumeCount() {
+		return longVolumeCount;
+	}
+
+	protected long getShortVolumeCount() {
+		return shortVolumeCount;
+	}
+
+	protected void setLongVolumeCount(long longVolumeCount) {
+		this.longVolumeCount = longVolumeCount;
+		this.longVolume = null;
+	}
+
+	protected void setShortVolumeCount(long shortVolumeCount) {
+		this.shortVolumeCount = shortVolumeCount;
+		this.shortVolume = null;
+	}
+
+	public void setLongExitPriceCount(long longExitPriceCount) {
+		this.longExitPriceCount = longExitPriceCount;
+		this.longExitPrice = null;
+	}
+
+	public void setShortExitPriceCount(long shortExitPriceCount) {
+		this.shortExitPriceCount = shortExitPriceCount;
+		this.shortExitPrice = null;
 	}
 
 	protected void setOrder(SpecificOrder order) {
 		this.order = order;
 	}
 
-	public void setExitPrice(Amount exitPrice) {
-		this.exitPrice = exitPrice;
-	}
-
-	private Amount volume;
+	private Amount longVolume;
+	private Amount shortVolume;
 	private Market market;
 	private Amount price;
-	private Amount exitPrice;
+	private Amount shortExitPrice;
+	private Amount longExitPrice;
 	private Amount marginAmount;
-	private long volumeCount;
+	private long longVolumeCount;
+	private long shortVolumeCount;
 	private long priceCount;
+	private long shortExitPriceCount;
+	private long longExitPriceCount;
 	private SpecificOrder order;
+
 }

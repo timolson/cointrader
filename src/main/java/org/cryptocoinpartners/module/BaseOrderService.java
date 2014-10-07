@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.module;
 
+import java.io.IOException;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -11,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import javax.inject.Inject;
+import javax.persistence.Transient;
 
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Amount;
@@ -37,6 +39,9 @@ import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.cryptocoinpartners.util.RemainderHandler;
 import org.slf4j.Logger;
+
+import com.espertech.esper.client.deploy.DeploymentException;
+import com.espertech.esper.client.deploy.ParseException;
 
 /**
  * This depends on a QuoteService being attached to the Context first.
@@ -167,7 +172,10 @@ public abstract class BaseOrderService implements OrderService {
 						//		&& ((ask.getPriceCount() + order.getTrailingStopPrice().getCount() < (order.getStopPrice().getCount())))) {
 						//current price is less than the stop price so I will update the stop price
 						long stopPrice = Math.min(order.getStopPrice().getCount(), (ask.getPriceCount() + order.getTrailingStopPrice().getCount()));
+						long trailingStopPrice = (long) (2 * getATR());
+
 						order.setStopPriceCount(stopPrice);
+						order.setTrailingStopPriceCount(trailingStopPrice);
 					}
 
 				}
@@ -182,8 +190,11 @@ public abstract class BaseOrderService implements OrderService {
 						//&& ((bid.getPriceCount() + order.getTrailingStopPrice().getCount() > (order.getStopPrice().getCount())))) {
 						//current price is less than the stop price so I will update the stop price
 						long stopPrice = Math.max(order.getStopPrice().getCount(), (bid.getPriceCount() - order.getTrailingStopPrice().getCount()));
+						long trailingStopPrice = (long) (2 * getATR());
 
 						order.setStopPriceCount(stopPrice);
+						order.setTrailingStopPriceCount(trailingStopPrice);
+
 					}
 
 				}
@@ -243,6 +254,33 @@ public abstract class BaseOrderService implements OrderService {
 	protected void reject(Order order, String message) {
 		log.warn("Order " + order + " rejected: " + message);
 		updateOrderState(order, OrderState.REJECTED);
+	}
+
+	@Transient
+	public double getATR() {
+		List<Object> events = null;
+		double atr = 0;
+		try {
+			events = context.loadStatementByName("GET_ATR");
+			if (events.size() > 0) {
+				HashMap value = ((HashMap) events.get(events.size() - 1));
+				if (value.get("atr") != null) {
+					atr = (double) value.get("atr");
+				}
+
+			}
+		} catch (ParseException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (DeploymentException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		return atr;
+
 	}
 
 	protected abstract void handleSpecificOrder(SpecificOrder specificOrder);

@@ -2,8 +2,6 @@ package org.cryptocoinpartners.schema;
 
 // import java.util.logging.Logger;
 
-import java.util.Iterator;
-
 import javax.inject.Inject;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
@@ -57,9 +55,15 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 			Exchange exchange = transaction.getExchange();
 			// Add transaction to approraite portfolio
 			portfolio.addTransactions(transaction);
+			Position position;
 			// update postion
 			if (type == TransactionType.BUY || type == TransactionType.SELL) {
-				Position position = new Position(portfolio, exchange, market, baseAsset, amount, price);
+				if (transaction.getOrder().getExitPrice() != null) {
+					position = new Position(portfolio, exchange, market, baseAsset, amount, price, transaction.getOrder().getExitPrice());
+				} else {
+					position = new Position(portfolio, exchange, market, baseAsset, amount, price);
+				}
+
 				portfolio.modifyPosition(position, new Authorization("Fill for " + transaction.toString()));
 
 			}
@@ -94,16 +98,17 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 		@SuppressWarnings("rawtypes")
 		public void update(Long Timestamp, Portfolio portfolio) {
 			BasicPortfolioService portfolioService = portfolio.getManager().getPortfolioService();
-			portfolio.getPositions();
+			//portfolio.getPositions();
 			logger.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Portfolio: " + portfolio + " Total Value ("
 					+ portfolio.getBaseAsset() + "):" + portfolioService.getCashBalance().plus(portfolioService.getMarketValue()) + " (Cash Balance:"
 					+ portfolioService.getCashBalance() + " Open Trade Equity:" + portfolioService.getMarketValue() + ")");
-			Iterator<Position> itt = portfolio.getPositions().iterator();
-			while (itt.hasNext()) {
-				Position postion = itt.next();
-				logger.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Asset: " + postion.getAsset() + " Position: "
-						+ postion.getVolume());
-			}
+			logger.info(portfolio.getPositions().toString());
+			//			Object itt = portfolio.getPositions().iterator();
+			//			while (itt.hasNext()) {
+			//				Position postion = itt.next();
+			//				logger.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Asset: " + postion.getAsset() + " Position: "
+			//						+ postion.getVolume());
+			//			}
 		}
 
 	}
