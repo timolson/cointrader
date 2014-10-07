@@ -177,6 +177,11 @@ public class OrderBuilder {
 			return this;
 		}
 
+		public SpecificOrderBuilder withExitPriceCount(long price /* units in basis of Market's quote fungible */) {
+			order.setExitPriceCount(price);
+			return this;
+		}
+
 		public SpecificOrderBuilder withTrailingStopPriceCount(long price, long trailingPrice) {
 			order.setStopPriceCount(price);
 			order.setTrailingStopPriceCount(trailingPrice);

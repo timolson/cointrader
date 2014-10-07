@@ -54,7 +54,7 @@ public class Transaction extends Event {
 		//long quantity = Side.BUY.equals(fill.getSide()) ? fill.getQuantity() : -fill.getQuantity();
 		this.setAsset(fill.getMarket().getBase());
 		this.setCurrency(fill.getMarket().getQuote());
-
+		this.setOrder(fill.getOrder());
 		this.setAmount(fill.getVolume());
 		this.setPrice(fill.getPrice());
 		this.setPriceCount(fill.getPriceCount());
@@ -74,7 +74,7 @@ public class Transaction extends Event {
 
 		TransactionType transactionType = order.getVolume().isPositive() ? TransactionType.BUY_RESERVATION : TransactionType.SELL_RESERVATION;
 		//long quantity = Side.BUY.equals(fill.getSide()) ? fill.getQuantity() : -fill.getQuantity();
-
+		this.setOrder(order);
 		this.setAmount(order.getVolume());
 		this.setAsset(order.getMarket().getBase());
 		this.setCurrency(order.getMarket().getQuote());
@@ -166,6 +166,12 @@ public class Transaction extends Event {
 		return commissionCurrency;
 	}
 
+	@Nullable
+	@Transient
+	public SpecificOrder getOrder() {
+		return order;
+	}
+
 	@Transient
 	public Portfolio getPortfolio() {
 		return portfolio;
@@ -211,6 +217,11 @@ public class Transaction extends Event {
 
 	protected void setPortfolio(Portfolio portfolio) {
 		this.portfolio = portfolio;
+	}
+
+	protected void setOrder(SpecificOrder order) {
+		this.order = order;
+
 	}
 
 	protected void setExchange(Exchange exchange) {
@@ -267,6 +278,8 @@ public class Transaction extends Event {
 	private Amount price;
 	@Nullable
 	private Portfolio portfolio;
+	@Nullable
+	private SpecificOrder order;
 	private Asset asset;
 	private Amount amount;
 	private Long commissionCount;

@@ -142,6 +142,16 @@ public class SpecificOrder extends Order {
 
 	@Transient
 	@Nullable
+	public DiscreteAmount getExitPrice() {
+		if (exitPriceCount == 0)
+			return null;
+		if (exitPrice == null)
+			exitPrice = amount().fromPriceCount(exitPriceCount);
+		return exitPrice;
+	}
+
+	@Transient
+	@Nullable
 	public DiscreteAmount getTrailingStopPrice() {
 		if (trailingStopPriceCount == 0)
 			return null;
@@ -195,6 +205,7 @@ public class SpecificOrder extends Order {
 				+ SEPARATOR + "volumeCount=" + getVolume() + (limitPriceCount != 0 ? (SEPARATOR + "limitPriceCount=" + getLimitPrice()) : "")
 				+ (stopPriceCount != 0 ? (SEPARATOR + "stopPriceCount=" + getStopPrice()) : "")
 				+ (trailingStopPriceCount != 0 ? (SEPARATOR + "trailingStopPriceCount=" + getTrailingStopPrice()) : "")
+				+ (exitPriceCount != 0 ? (SEPARATOR + "exitPriceCount=" + getExitPrice()) : "")
 				+ (hasFills() ? (SEPARATOR + "averageFillPrice=" + averageFillPrice()) : "") + "}";
 	}
 
@@ -248,6 +259,12 @@ public class SpecificOrder extends Order {
 	public void setStopPriceCount(long stopPriceCount) {
 		this.stopPriceCount = stopPriceCount;
 		stopPrice = null;
+		
+	}
+
+	public void setExitPriceCount(long exitPriceCount) {
+		this.exitPriceCount = exitPriceCount;
+		exitPrice = null;
 	}
 
 	public void removeStopPriceCount() {
@@ -255,7 +272,8 @@ public class SpecificOrder extends Order {
 		stopPrice = null;
 	}
 
-	protected void setTrailingStopPriceCount(long trailingStopPriceCount) {
+	@Nullable
+	public void setTrailingStopPriceCount(long trailingStopPriceCount) {
 		this.trailingStopPriceCount = trailingStopPriceCount;
 		trailingStopPrice = null;
 	}
@@ -275,11 +293,13 @@ public class SpecificOrder extends Order {
 	private DiscreteAmount volume;
 	private DiscreteAmount limitPrice;
 	private DiscreteAmount stopPrice;
+	private DiscreteAmount exitPrice;
 	private DiscreteAmount trailingStopPrice;
 	private Amount forcastedFees;
 	private long volumeCount;
 	private long limitPriceCount;
 	private long stopPriceCount;
+	private long exitPriceCount;
 	private long trailingStopPriceCount;
 	private Market.MarketAmountBuilder amountBuilder;
 
