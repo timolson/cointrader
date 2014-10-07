@@ -49,7 +49,6 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 	private Double max;
 	private Double min;
 	private EventBean lastEvent;
-	private final Boolean continuousPublishing = true;
 
 	public OHLCBarPlugInView(AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext, ExprNode timestampExpression, ExprNode valueExpression) {
 		this.agentInstanceViewFactoryContext = agentInstanceViewFactoryContext;
@@ -60,7 +59,6 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 
 	@Override
 	public void update(EventBean[] newData, EventBean[] oldData) {
-
 		if (newData == null) {
 			return;
 		}
@@ -133,22 +131,13 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 	}
 
 	private static long removeSeconds(long timestamp) {
-		//set to 5 min bars
 		Calendar cal = GregorianCalendar.getInstance();
 		cal.setTimeInMillis(timestamp);
+
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
 		cal.set(Calendar.SECOND, 0);
 		cal.set(Calendar.MILLISECOND, 0);
-		int modulo = cal.get(Calendar.MINUTE) % 5;
-		if (modulo > 0) {
-
-			cal.add(Calendar.MINUTE, -modulo);
-		}
-
-		//cal.set(Calendar.HOUR_OF_DAY, 0);
-		//cal.set(Calendar.HOUR, 0);
-		//cal.set(Calendar.MINUTE, 0);
-		//cal.set(Calendar.SECOND, 0);
-		//cal.set(Calendar.MILLISECOND, 0);
 		return cal.getTimeInMillis();
 	}
 
@@ -158,24 +147,17 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 			agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().remove(handle, scheduleSlot);
 			handle = null;
 		}
-		long targetTime;
+
 		long currentTime = agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime();
 		long currentRemoveSeconds = removeSeconds(currentTime);
-
-		//targetTime = currentTimestampMinute + (LATE_EVENT_SLACK_SECONDS * 1000); // leave some seconds for late comers
-		//} else {
-		targetTime = currentRemoveSeconds + (300 + LATE_EVENT_SLACK_SECONDS) * 1000; // leave some seconds for late comers
-
-		//	}
+		long targetTime = currentRemoveSeconds + (86400 + LATE_EVENT_SLACK_SECONDS) * 1000; // leave some seconds for late comers
 		long scheduleAfterMSec = targetTime - currentTime;
 
 		ScheduleHandleCallback callback = new ScheduleHandleCallback() {
 			@Override
 			public void scheduledTrigger(ExtensionServicesContext extensionServicesContext) {
-				if (!continuousPublishing)
-					handle = null; // clear out schedule handle
+				handle = null; // clear out schedule handle
 				OHLCBarPlugInView.this.postData();
-				scheduleCallback();
 			}
 		};
 
@@ -184,18 +166,6 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 	}
 
 	private void postData() {
-		if (lastEvent != null && first == null && last == null && max == null && min == null && currentTimestampMinute == null) {
-			//Create a continour bar fro the previous data as no new data has come in
-			Bar previousBar = (Bar) lastEvent.getUnderlying();
-			first = previousBar.getFirst();
-			last = previousBar.getLast();
-			max = previousBar.getMax();
-			min = previousBar.getMin();
-			//if (continuousPublishing) {
-			//	cutoffTimestampMinute = currentRemoveSeconds + (300 * 1000);
-			currentTimestampMinute = cutoffTimestampMinute + (300 * 1000);
-		}
-
 		Bar barValue = new Bar(currentTimestampMinute, first, last, max, min);
 		EventBean outgoing = agentInstanceViewFactoryContext.getStatementContext().getEventAdapterService().adapterForBean(barValue);
 		if (lastEvent == null) {
@@ -204,7 +174,6 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 			this.updateChildren(new EventBean[] { outgoing }, new EventBean[] { lastEvent });
 		}
 		lastEvent = outgoing;
-		Bar previousBar = (Bar) lastEvent.getUnderlying();
 
 		cutoffTimestampMinute = currentTimestampMinute;
 		first = null;
