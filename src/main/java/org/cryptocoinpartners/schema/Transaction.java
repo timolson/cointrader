@@ -69,7 +69,7 @@ public class Transaction extends Event {
 
 	}
 
-	public Transaction(SpecificOrder order) throws Exception {
+	public Transaction(Order order) throws Exception {
 		Portfolio portfolio = order.getPortfolio();
 
 		TransactionType transactionType = order.getVolume().isPositive() ? TransactionType.BUY_RESERVATION : TransactionType.SELL_RESERVATION;
@@ -168,7 +168,7 @@ public class Transaction extends Event {
 
 	@Nullable
 	@Transient
-	public SpecificOrder getOrder() {
+	public Order getOrder() {
 		return order;
 	}
 
@@ -219,7 +219,7 @@ public class Transaction extends Event {
 		this.portfolio = portfolio;
 	}
 
-	protected void setOrder(SpecificOrder order) {
+	protected void setOrder(Order order) {
 		this.order = order;
 
 	}
@@ -279,7 +279,7 @@ public class Transaction extends Event {
 	@Nullable
 	private Portfolio portfolio;
 	@Nullable
-	private SpecificOrder order;
+	private Order order;
 	private Asset asset;
 	private Amount amount;
 	private Long commissionCount;

@@ -58,8 +58,8 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 			Position position;
 			// update postion
 			if (type == TransactionType.BUY || type == TransactionType.SELL) {
-				if (transaction.getOrder().getExitPrice() != null) {
-					position = new Position(portfolio, exchange, market, baseAsset, amount, price, transaction.getOrder().getExitPrice());
+				if (transaction.getOrder().getStopPrice() != null) {
+					position = new Position(portfolio, exchange, market, baseAsset, amount, price, transaction.getOrder().getStopPrice());
 				} else {
 					position = new Position(portfolio, exchange, market, baseAsset, amount, price);
 				}

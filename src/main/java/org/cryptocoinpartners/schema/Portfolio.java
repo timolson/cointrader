@@ -32,31 +32,25 @@ public class Portfolio extends EntityBase {
 			Iterator<Exchange> ite = positions.get(asset).keySet().iterator();
 			while (ite.hasNext()) {
 				Exchange exchange = ite.next();
-				Iterator<Amount> itp = positions.get(asset).get(exchange).keySet().iterator();
+				Iterator<Position> itp = positions.get(asset).get(exchange).iterator();
 				while (itp.hasNext()) {
-					Amount price = itp.next();
-					ArrayList<Position> detailPositions = positions.get(asset).get(exchange).get(price);
-					for (Position pos : detailPositions) {
-						allPositions.add(pos);
-					}
-
+					Position pos = itp.next();
+					allPositions.add(pos);
 				}
+
 			}
 		}
+
 		return allPositions;
 	}
 
 	public @Transient
 	Collection<Position> getPositions(Asset asset, Exchange exchange) {
 		ArrayList<Position> allPositions = new ArrayList<Position>();
-		Iterator<Amount> itp = positions.get(asset).get(exchange).keySet().iterator();
+		Iterator<Position> itp = positions.get(asset).get(exchange).iterator();
 		while (itp.hasNext()) {
-			Amount price = itp.next();
-			ArrayList<Position> detailPositions = positions.get(asset).get(exchange).get(price);
-			for (Position pos : detailPositions) {
-				allPositions.add(pos);
-			}
-
+			Position pos = itp.next();
+			allPositions.add(pos);
 		}
 
 		return allPositions;
@@ -66,33 +60,43 @@ public class Portfolio extends EntityBase {
 	long getLongPosition(Asset asset, Exchange exchange) {
 		long longVolumeCount = 0;
 		if (positions.get(asset) != null && positions.get(asset).get(exchange) != null) {
-			Iterator<Amount> itp = positions.get(asset).get(exchange).keySet().iterator();
+			Iterator<Position> itp = positions.get(asset).get(exchange).iterator();
 			while (itp.hasNext()) {
-				Amount price = itp.next();
-				ArrayList<Position> detailPositions = positions.get(asset).get(exchange).get(price);
-				for (Position pos : detailPositions) {
-					longVolumeCount += pos.getLongVolumeCount();
-				}
-
+				Position pos = itp.next();
+				longVolumeCount += pos.getLongVolumeCount();
 			}
+
 		}
 
 		return longVolumeCount;
 	}
 
 	public @Transient
+	long getPosition(Asset asset, Exchange exchange) {
+		long netVolumeCount = 0;
+		if (positions.get(asset) != null && positions.get(asset).get(exchange) != null) {
+			Iterator<Position> itp = positions.get(asset).get(exchange).iterator();
+			while (itp.hasNext()) {
+				Position pos = itp.next();
+				netVolumeCount += pos.getVolumeCount();
+			}
+
+		}
+
+		return netVolumeCount;
+	}
+
+	public @Transient
 	long getShortPosition(Asset asset, Exchange exchange) {
 		long shortVolumeCount = 0;
 		if (positions.get(asset) != null && positions.get(asset).get(exchange) != null) {
-			Iterator<Amount> itp = positions.get(asset).get(exchange).keySet().iterator();
-			while (itp.hasNext()) {
-				Amount price = itp.next();
-				ArrayList<Position> detailPositions = positions.get(asset).get(exchange).get(price);
-				for (Position pos : detailPositions) {
-					shortVolumeCount += pos.getShortVolumeCount();
-				}
+			Iterator<Position> itp = positions.get(asset).get(exchange).iterator();
 
+			while (itp.hasNext()) {
+				Position pos = itp.next();
+				shortVolumeCount += pos.getShortVolumeCount();
 			}
+
 		}
 		return shortVolumeCount;
 	}
@@ -163,65 +167,51 @@ public class Portfolio extends EntityBase {
 	 */
 	@Transient
 	private boolean merge(Position position) {
-		ConcurrentHashMap<Exchange, ConcurrentHashMap<Amount, ArrayList<Position>>> assetPosition = positions.get(position.asset);
+		ConcurrentHashMap<Exchange, ArrayList<Position>> assetPosition = positions.get(position.asset);
 		if (assetPosition == null) {
 			ArrayList<Position> detailPosition = new ArrayList<Position>();
 			detailPosition.add(position);
-			ConcurrentHashMap<Amount, ArrayList<Position>> pricePosition = new ConcurrentHashMap<Amount, ArrayList<Position>>();
-			pricePosition.put(position.getPrice(), detailPosition);
-			assetPosition = new ConcurrentHashMap<Exchange, ConcurrentHashMap<Amount, ArrayList<Position>>>();
-			assetPosition.put(position.getExchange(), pricePosition);
+			assetPosition = new ConcurrentHashMap<Exchange, ArrayList<Position>>();
+			assetPosition.put(position.getExchange(), detailPosition);
 			positions.put(position.asset, assetPosition);
 			return true;
 		} else {
 			//asset is present, so check the market
-			ConcurrentHashMap<Amount, ArrayList<Position>> exchangePosition = assetPosition.get(position.getExchange());
-			if (exchangePosition == null) {
+			ArrayList<Position> exchangePositions = assetPosition.get(position.getExchange());
+			if (exchangePositions == null) {
 				ArrayList<Position> detailPosition = new ArrayList<Position>();
 				detailPosition.add(position);
-				ConcurrentHashMap<Amount, ArrayList<Position>> pricePosition = new ConcurrentHashMap<Amount, ArrayList<Position>>();
-				pricePosition.put(position.getPrice(), detailPosition);
-				assetPosition.put(position.getExchange(), pricePosition);
+				assetPosition.put(position.getExchange(), detailPosition);
 				return true;
 			} else {
-				// market is present so we have detailed postions
-				ArrayList<Position> pricePosition = exchangePosition.get(position.getPrice());
-				if (pricePosition == null) {
-					ArrayList<Position> detailPosition = new ArrayList<Position>();
-					detailPosition.add(position);
-					exchangePosition.put(position.getPrice(), detailPosition);
-					return true;
-				} else {
 
-					for (Position p : pricePosition) {
-						if (p.getExchange().equals(position.getExchange()) && p.getAsset().equals(position.getAsset())
-								&& (p.getPrice().compareTo(position.getPrice()) == 0)) {
-							p.setLongVolumeCount(p.getLongVolumeCount() + position.getLongVolumeCount());
-							p.setShortVolumeCount(p.getShortVolumeCount() + position.getShortVolumeCount());
-							// if the long and short volumes are zero we can remove the position
-							if (p.getShortVolumeCount() == 0 && p.getLongVolumeCount() == 0) {
-								positions.get(p.asset).get(p.exchange).remove(p.getPrice());
-
-							}
-							return true;
-						} else {
-							// Exiting array of postions I need to add to
-							pricePosition.add(position);
-							return true;
+				for (Position p : exchangePositions) {
+					if (p.getExchange().equals(position.getExchange()) && p.getAsset().equals(position.getAsset())) {
+						p.setLongVolumeCount(p.getLongVolumeCount() + position.getLongVolumeCount());
+						p.setShortVolumeCount(p.getShortVolumeCount() + position.getShortVolumeCount());
+						// if the long and short volumes are zero we can remove the position
+						if (p.getShortVolumeCount() * -1 == p.getLongVolumeCount()) {
+							exchangePositions.remove(p);
 						}
-					}
+						return true;
+					} else {
+						return false;
 
+					}
 				}
+				exchangePositions.add(position);
+				return true;
+
 			}
+
 		}
 
-		return false;
 	}
 
 	public Portfolio(String name, PortfolioManager manager) {
 		this.name = name;
 		this.manager = manager;
-		this.positions = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Amount, ArrayList<Position>>>>();
+		this.positions = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ArrayList<Position>>>();
 		this.balances = new ArrayList<>();
 		this.transactions = new ArrayList<>();
 	}
@@ -281,7 +271,7 @@ public class Portfolio extends EntityBase {
 	protected Portfolio() {
 	}
 
-	protected void setPositions(ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Amount, ArrayList<Position>>>> positions) {
+	protected void setPositions(ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ArrayList<Position>>> positions) {
 		this.positions = positions;
 	}
 
@@ -329,7 +319,7 @@ public class Portfolio extends EntityBase {
 	private PortfolioManager manager;
 
 	private Asset baseAsset;
-	private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Amount, ArrayList<Position>>>> positions;
+	private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ArrayList<Position>>> positions;
 	private Collection<Balance> balances = Collections.emptyList();
 	private Collection<Transaction> transactions = Collections.emptyList();
 	private Collection<Stake> stakes = Collections.emptyList();

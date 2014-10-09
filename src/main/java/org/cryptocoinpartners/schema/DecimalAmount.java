@@ -7,7 +7,6 @@ import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Transient;
 
-import org.apache.commons.lang.NotImplementedException;
 import org.cryptocoinpartners.util.RemainderHandler;
 
 /** Best used for I/O */
@@ -137,8 +136,8 @@ public class DecimalAmount extends Amount {
 
 	private BigDecimal bd;
 
-	@Transient
 	@Override
+	@Transient
 	public int getScale() {
 		final BigDecimal bigDecimal = new BigDecimal("" + bd);
 		final String s = bigDecimal.toPlainString();
@@ -149,18 +148,6 @@ public class DecimalAmount extends Amount {
 		}
 		return s.length() - 1 - index;
 
-	}
-
-	@Override
-	@Transient
-	public double getBasis() {
-		throw new NotImplementedException(DecimalAmount.class);
-	}
-
-	@Override
-	@Transient
-	public long getCount() {
-		throw new NotImplementedException(DecimalAmount.class);
 	}
 
 }

@@ -5,6 +5,7 @@ import javax.persistence.Entity;
 import javax.persistence.OneToOne;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.util.Remainder;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -27,8 +28,10 @@ public class Position extends Holding {
 
 		this.exchange = exchange;
 		this.market = market;
-		this.longVolume = volume.isPositive() ? volume : null;
-		this.shortVolume = volume.isNegative() ? volume : null;
+		this.longVolume = volume.isPositive() ? volume : this.longVolume;
+		this.longVolumeCount = volume.isPositive() ? volume.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount() : this.longVolumeCount;
+		this.shortVolume = volume.isNegative() ? volume : this.shortVolume;
+		this.shortVolumeCount = volume.isNegative() ? volume.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount() : this.shortVolumeCount;
 		this.price = price;
 		this.asset = asset;
 		this.portfolio = portfolio;
@@ -39,9 +42,9 @@ public class Position extends Holding {
 		this.exchange = exchange;
 		this.market = market;
 		this.longVolume = volume.isPositive() ? volume : this.longVolume;
-		this.longVolumeCount = volume.isPositive() ? volume.getCount() : this.longVolumeCount;
+		this.longVolumeCount = volume.isPositive() ? volume.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount() : this.longVolumeCount;
 		this.shortVolume = volume.isNegative() ? volume : this.shortVolume;
-		this.shortVolumeCount = volume.isNegative() ? volume.getCount() : this.shortVolumeCount;
+		this.shortVolumeCount = volume.isNegative() ? volume.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount() : this.shortVolumeCount;
 		this.price = price;
 		this.longExitPrice = volume.isPositive() ? exitPrice : this.longExitPrice;
 		this.shortExitPrice = volume.isNegative() ? exitPrice : this.shortExitPrice;
@@ -156,7 +159,7 @@ public class Position extends Holding {
 	 * has modified its volume by the amount in the position argument.
 	 */
 	protected boolean merge(Position position) {
-		if (!exchange.equals(position.exchange) || !asset.equals(position.asset) || !price.equals(position.getPrice()))
+		if (!exchange.equals(position.exchange) || !asset.equals(position.asset))
 			return false;
 
 		longVolumeCount += position.longVolumeCount;

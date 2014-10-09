@@ -3,6 +3,9 @@ package org.cryptocoinpartners.schema;
 import java.math.BigDecimal;
 import java.math.MathContext;
 
+import javax.persistence.MappedSuperclass;
+import javax.persistence.Transient;
+
 import org.cryptocoinpartners.util.RemainderHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +22,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Tim Olson
  */
+@MappedSuperclass
 public abstract class Amount implements Comparable<Amount> {
 
 	public static final MathContext mc = MathContext.DECIMAL128; //  IEEE 128-bit decimal, scale 34
@@ -30,11 +34,8 @@ public abstract class Amount implements Comparable<Amount> {
 
 	public abstract BigDecimal asBigDecimal();
 
-	public abstract double getBasis();
-
+	@Transient
 	public abstract int getScale();
-
-	public abstract long getCount();
 
 	public DiscreteAmount toBasis(double newBasis, RemainderHandler remainderHandler) {
 		long newIBasis = DiscreteAmount.invertBasis(newBasis);
@@ -62,22 +63,30 @@ public abstract class Amount implements Comparable<Amount> {
 		return isNegative() ? negate() : this;
 	}
 
+	@Transient
 	public abstract boolean isPositive();
 
+	@Transient
 	public abstract boolean isZero();
 
+	@Transient
 	public abstract boolean isNegative();
 
+	@Transient
 	public abstract Amount negate();
 
+	@Transient
 	public abstract Amount plus(Amount o);
 
+	@Transient
 	public abstract Amount minus(Amount o);
 
+	@Transient
 	public DecimalAmount times(BigDecimal o, RemainderHandler remainderHandler) {
 		return new DecimalAmount(asBigDecimal().multiply(o, remainderHandler.getMathContext()));
 	}
 
+	@Transient
 	public DecimalAmount dividedBy(BigDecimal o, RemainderHandler remainderHandler) {
 		BigDecimal[] divideAndRemainder = asBigDecimal().divideAndRemainder(o, remainderHandler.getMathContext());
 		DecimalAmount result = new DecimalAmount(divideAndRemainder[0]);
@@ -85,54 +94,32 @@ public abstract class Amount implements Comparable<Amount> {
 		return result;
 	}
 
+	@Transient
 	public Amount times(int o, RemainderHandler remainderHandler) {
 		return times(new BigDecimal(o), remainderHandler);
 	}
 
+	@Transient
 	public Amount dividedBy(int o, RemainderHandler remainderHandler) {
 		return dividedBy(new BigDecimal(o), remainderHandler);
 	}
 
+	@Transient
 	public Amount times(double o, RemainderHandler remainderHandler) {
 		return times(new BigDecimal(o), remainderHandler);
 	}
 
+	@Transient
 	public Amount dividedBy(double o, RemainderHandler remainderHandler) {
 		return dividedBy(new BigDecimal(o), remainderHandler);
 	}
 
+	@Transient
 	public abstract Amount times(Amount o, RemainderHandler remainderHandler);
 
+	@Transient
 	public abstract Amount dividedBy(Amount o, RemainderHandler remainderHandler);
 
 	protected static final Logger log = LoggerFactory.getLogger(Amount.class);
-
-	public long asLong() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public boolean equals(Object object) {
-		boolean result = false;
-		if (object == null || object.getClass() != getClass()) {
-			result = false;
-		} else {
-			Amount amount = (Amount) object;
-			if (this.getCount() == amount.getCount() && this.getBasis() == amount.getBasis()) {
-				result = true;
-			}
-		}
-		return result;
-	}
-
-	// just omitted null checks
-	@Override
-	public int hashCode() {
-		int hash = 3;
-		hash = 7 * hash + Long.valueOf(this.getCount()).hashCode();
-		hash = 7 * hash + Double.valueOf(this.getBasis()).hashCode();
-		return hash;
-	}
 
 }

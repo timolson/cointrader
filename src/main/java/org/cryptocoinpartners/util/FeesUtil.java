@@ -7,7 +7,7 @@ import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Market;
-import org.cryptocoinpartners.schema.SpecificOrder;
+import org.cryptocoinpartners.schema.Order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,9 +24,9 @@ public class FeesUtil {
 		Amount ammount = fill.getVolume();
 		switch (method) {
 			case PercentagePerUnit:
-				return calculatePercentagePerUnit(price, ammount, rate);
+				return calculatePercentagePerUnit(price, ammount, rate, fill.getMarket());
 			case PerUnit:
-				return calculatePerUnit(ammount, rate);
+				return calculatePerUnit(ammount, rate, fill.getMarket());
 			default:
 				log.error("No exchange fee method calcation for : " + method);
 				return null;
@@ -34,21 +34,25 @@ public class FeesUtil {
 
 	}
 
-	public static Amount getExchangeFees(SpecificOrder order) {
-		double rate = order.getMarket().getExchange().getFeeRate();
-		FeeMethod method = order.getMarket().getExchange().getFeeMethod();
-		double basis = order.getMarket().getPriceBasis();
-		Amount price = (order.getLimitPrice() == null) ? order.getStopPrice() : order.getLimitPrice();
-		Amount ammount = order.getVolume().abs();
-		switch (method) {
-			case PercentagePerUnit:
-				return calculatePercentagePerUnit(price, ammount, rate);
-			case PerUnit:
-				return calculatePerUnit(ammount, rate);
-			default:
-				log.error("No exchange fee method calcation for : " + method);
-				return null;
+	public static Amount getExchangeFees(Order order) {
+		if (order.getMarket() != null) {
+
+			double rate = order.getMarket().getExchange().getFeeRate();
+			FeeMethod method = order.getMarket().getExchange().getFeeMethod();
+			double basis = order.getMarket().getPriceBasis();
+			Amount price = order.getLimitPrice();
+			Amount ammount = order.getVolume().abs();
+			switch (method) {
+				case PercentagePerUnit:
+					return calculatePercentagePerUnit(price, ammount, rate, order.getMarket());
+				case PerUnit:
+					return calculatePerUnit(ammount, rate, order.getMarket());
+				default:
+					log.error("No exchange fee method calcation for : " + method);
+					return null;
+			}
 		}
+		return null;
 
 	}
 
@@ -57,9 +61,9 @@ public class FeesUtil {
 		FeeMethod method = market.getExchange().getFeeMethod();
 		switch (method) {
 			case PercentagePerUnit:
-				return calculatePercentagePerUnit(price, ammount, rate);
+				return calculatePercentagePerUnit(price, ammount, rate, market);
 			case PerUnit:
-				return calculatePerUnit(ammount, rate);
+				return calculatePerUnit(ammount, rate, market);
 			default:
 				log.error("No exchange fee method calcation for : " + method);
 				return null;
@@ -67,25 +71,25 @@ public class FeesUtil {
 
 	}
 
-	private static Amount calculatePercentagePerUnit(Amount price, Amount amount, double rate) {
+	private static Amount calculatePercentagePerUnit(Amount price, Amount amount, double rate, Market market) {
 		Amount notional = (price.times(amount, Remainder.ROUND_EVEN)).times(rate, Remainder.ROUND_EVEN).abs();
 		BigDecimal fees = notional.asBigDecimal().setScale(price.getScale(), BigDecimal.ROUND_UP);
-		BigDecimal precision = BigDecimal.valueOf(price.getBasis());
+		BigDecimal precision = BigDecimal.valueOf(market.getPriceBasis());
 		fees = fees.divide(precision, BigDecimal.ROUND_UP);
 		long feeCount = fees.longValue();
-		DiscreteAmount newAmount = new DiscreteAmount(feeCount, price.getBasis());
+		DiscreteAmount newAmount = new DiscreteAmount(feeCount, market.getPriceBasis());
 		return newAmount.negate();
 
 	}
 
-	private static Amount calculatePerUnit(Amount amount, double rate) {
+	private static Amount calculatePerUnit(Amount amount, double rate, Market market) {
 
 		Amount notional = (amount.times(rate, Remainder.ROUND_EVEN)).abs();
 		BigDecimal fees = notional.asBigDecimal().setScale(amount.getScale(), BigDecimal.ROUND_UP);
-		BigDecimal precision = BigDecimal.valueOf(amount.getBasis());
+		BigDecimal precision = BigDecimal.valueOf(market.getPriceBasis());
 		fees = fees.divide(precision, BigDecimal.ROUND_UP);
 		long feeCount = fees.longValue();
-		DiscreteAmount newAmount = new DiscreteAmount(feeCount, amount.getBasis());
+		DiscreteAmount newAmount = new DiscreteAmount(feeCount, market.getPriceBasis());
 		return newAmount.negate();
 
 	}

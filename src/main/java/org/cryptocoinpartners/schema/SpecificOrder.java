@@ -8,6 +8,7 @@ import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.cryptocoinpartners.util.Remainder;
 import org.joda.time.Instant;
 
@@ -26,7 +27,6 @@ public class SpecificOrder extends Order {
 		super(time);
 		this.market = market;
 		this.volumeCount = volumeCount;
-		//super(time);
 		super.setPortfolio(portfolio);
 
 	}
@@ -36,39 +36,16 @@ public class SpecificOrder extends Order {
 		this.market = market;
 		this.volumeCount = volumeCount;
 		super.setComment(comment);
-		//super(time);
 		super.setPortfolio(portfolio);
 
 	}
 
-	public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount, Order parentOrder, String comment) {
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount, GeneralOrder parentOrder, String comment) {
 		super(time);
 		this.market = market;
 		this.volumeCount = volumeCount;
 		super.setComment(comment);
-		//super.setParentOrder(parentOrder);
-		//super(time);
-		super.setPortfolio(portfolio);
-
-	}
-
-	public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount, long stopPriceCount, String comment) {
-		super(time);
-		this.market = market;
-		this.volumeCount = volumeCount;
-		this.stopPriceCount = stopPriceCount;
-		super.setComment(comment);
-		super.setPortfolio(portfolio);
-
-	}
-
-	public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount, long stopPriceCount, long trailingStopPriceCount, String comment) {
-		super(time);
-		this.market = market;
-		this.volumeCount = volumeCount;
-		this.stopPriceCount = stopPriceCount;
-		this.trailingStopPriceCount = trailingStopPriceCount;
-		super.setComment(comment);
+		super.setParentOrder(parentOrder);
 		super.setPortfolio(portfolio);
 
 	}
@@ -81,25 +58,6 @@ public class SpecificOrder extends Order {
 		super.setPortfolio(portfolio);
 	}
 
-	public SpecificOrder(Instant time, Portfolio portfolio, Market market, Amount volume, Amount stopPrice, String comment) {
-		super(time);
-		this.market = market;
-		this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
-		this.stopPriceCount = stopPrice.toBasis(market.getPriceBasis(), Remainder.DISCARD).getCount();
-		super.setComment(comment);
-		super.setPortfolio(portfolio);
-	}
-
-	public SpecificOrder(Instant time, Portfolio portfolio, Market market, Amount volume, Amount stopPrice, Amount trailingStopPrice, String comment) {
-		super(time);
-		this.market = market;
-		this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
-		this.stopPriceCount = stopPrice.toBasis(market.getPriceBasis(), Remainder.DISCARD).getCount();
-		this.trailingStopPriceCount = trailingStopPrice.toBasis(market.getPriceBasis(), Remainder.DISCARD).getCount();
-		super.setComment(comment);
-		super.setPortfolio(portfolio);
-	}
-
 	public SpecificOrder(Instant time, Portfolio portfolio, Market market, BigDecimal volume, String comment) {
 		this(time, portfolio, market, new DecimalAmount(volume), comment);
 	}
@@ -108,11 +66,13 @@ public class SpecificOrder extends Order {
 		this(time, portfolio, market, new DecimalAmount(new BigDecimal(volume)), comment);
 	}
 
+	@Override
 	@ManyToOne(optional = false)
 	public Market getMarket() {
 		return market;
 	}
 
+	@Override
 	@Transient
 	public DiscreteAmount getVolume() {
 		if (volume == null)
@@ -120,6 +80,7 @@ public class SpecificOrder extends Order {
 		return volume;
 	}
 
+	@Override
 	@Transient
 	@Nullable
 	public DiscreteAmount getLimitPrice() {
@@ -130,34 +91,19 @@ public class SpecificOrder extends Order {
 		return limitPrice;
 	}
 
+	@Override
 	@Transient
 	@Nullable
 	public DiscreteAmount getStopPrice() {
-		if (stopPriceCount == 0)
-			return null;
-		if (stopPrice == null)
-			stopPrice = amount().fromPriceCount(stopPriceCount);
-		return stopPrice;
+		return null;
 	}
 
-	@Transient
-	@Nullable
-	public DiscreteAmount getExitPrice() {
-		if (exitPriceCount == 0)
-			return null;
-		if (exitPrice == null)
-			exitPrice = amount().fromPriceCount(exitPriceCount);
-		return exitPrice;
-	}
-
+	@Override
 	@Transient
 	@Nullable
 	public DiscreteAmount getTrailingStopPrice() {
-		if (trailingStopPriceCount == 0)
-			return null;
-		if (trailingStopPrice == null)
-			trailingStopPrice = amount().fromPriceCount(trailingStopPriceCount);
-		return trailingStopPrice;
+
+		return null;
 	}
 
 	@Transient
@@ -203,9 +149,8 @@ public class SpecificOrder extends Order {
 		return "SpecificOrder{ time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "id=" + getId() + SEPARATOR + "parentOrder="
 				+ (getParentOrder() == null ? "null" : getParentOrder().getId()) + SEPARATOR + "portfolio=" + getPortfolio() + SEPARATOR + "market=" + market
 				+ SEPARATOR + "volumeCount=" + getVolume() + (limitPriceCount != 0 ? (SEPARATOR + "limitPriceCount=" + getLimitPrice()) : "")
-				+ (stopPriceCount != 0 ? (SEPARATOR + "stopPriceCount=" + getStopPrice()) : "")
-				+ (trailingStopPriceCount != 0 ? (SEPARATOR + "trailingStopPriceCount=" + getTrailingStopPrice()) : "")
-				+ (exitPriceCount != 0 ? (SEPARATOR + "exitPriceCount=" + getExitPrice()) : "")
+				+ (getComment().isEmpty() ? "" : (SEPARATOR + "Comment=" + getComment()))
+				+ (getFillType().getValue().isEmpty() ? "" : (SEPARATOR + "Order Type=" + getFillType()))
 				+ (hasFills() ? (SEPARATOR + "averageFillPrice=" + averageFillPrice()) : "") + "}";
 	}
 
@@ -219,31 +164,13 @@ public class SpecificOrder extends Order {
 		return limitPriceCount;
 	}
 
-	@Transient
-	public Amount getForcastedCommission() {
-		return forcastedFees;
-
-	}
-
-	/** 0 if no limit is set */
-	protected long getStopPriceCount() {
-		return stopPriceCount;
-	}
-
-	protected long getTrailingStopPriceCount() {
-		return trailingStopPriceCount;
-	}
-
 	protected SpecificOrder(Instant time) {
 		super(time);
 	}
 
-	protected void setMarket(Market market) {
+	@Override
+	public void setMarket(Market market) {
 		this.market = market;
-	}
-
-	public void setForcastedCommission(Amount forcastedFees) {
-		this.forcastedFees = forcastedFees;
 	}
 
 	protected void setVolumeCount(long volumeCount) {
@@ -256,31 +183,16 @@ public class SpecificOrder extends Order {
 		limitPrice = null;
 	}
 
-	public void setStopPriceCount(long stopPriceCount) {
-		this.stopPriceCount = stopPriceCount;
-		stopPrice = null;
-		
+	@Override
+	public void setStopPrice(DecimalAmount stopPrice) {
+		throw new NotImplementedException();
+
 	}
 
-	public void setExitPriceCount(long exitPriceCount) {
-		this.exitPriceCount = exitPriceCount;
-		exitPrice = null;
-	}
+	@Override
+	public void setTrailingStopPrice(DecimalAmount stopPrice) {
+		throw new NotImplementedException();
 
-	public void removeStopPriceCount() {
-		this.stopPriceCount = 0;
-		stopPrice = null;
-	}
-
-	@Nullable
-	public void setTrailingStopPriceCount(long trailingStopPriceCount) {
-		this.trailingStopPriceCount = trailingStopPriceCount;
-		trailingStopPrice = null;
-	}
-
-	public void removeTrailingStopPriceCount() {
-		this.trailingStopPriceCount = 0;
-		trailingStopPrice = null;
 	}
 
 	private Market.MarketAmountBuilder amount() {
@@ -292,15 +204,10 @@ public class SpecificOrder extends Order {
 	private Market market;
 	private DiscreteAmount volume;
 	private DiscreteAmount limitPrice;
-	private DiscreteAmount stopPrice;
-	private DiscreteAmount exitPrice;
-	private DiscreteAmount trailingStopPrice;
-	private Amount forcastedFees;
+
 	private long volumeCount;
 	private long limitPriceCount;
-	private long stopPriceCount;
-	private long exitPriceCount;
-	private long trailingStopPriceCount;
+
 	private Market.MarketAmountBuilder amountBuilder;
 
 }

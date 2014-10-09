@@ -3,7 +3,6 @@ package org.cryptocoinpartners.schema;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 
-
 /**
  * When Orders change OrderState, this Event is published
  *
@@ -12,29 +11,43 @@ import javax.persistence.ManyToOne;
 @Entity
 public class OrderUpdate extends Event {
 
+	@ManyToOne
+	public Order getOrder() {
+		return order;
+	}
 
-    @ManyToOne
-    public Order getOrder() { return order; }
-    public OrderState getLastState() { return lastState; }
-    public OrderState getState() { return state; }
+	public OrderState getLastState() {
+		return lastState;
+	}
 
+	public OrderState getState() {
+		return state;
+	}
 
-    public OrderUpdate(Order order, OrderState lastState, OrderState state) {
-        this.order = order;
-        this.lastState = lastState;
-        this.state = state;
-    }
+	public OrderUpdate(Order order, OrderState lastState, OrderState state) {
+		this.order = order;
+		this.lastState = lastState;
+		this.state = state;
+	}
 
+	// JPA
+	protected OrderUpdate() {
+	}
 
-    // JPA
-    protected OrderUpdate() { }
-    protected void setOrder(Order order) { this.order = order; }
-    protected void setLastState(OrderState lastState) { this.lastState = lastState; }
-    protected void setState(OrderState state) { this.state = state; }
+	protected void setOrder(Order order) {
+		this.order = order;
+	}
 
+	protected void setLastState(OrderState lastState) {
+		this.lastState = lastState;
+	}
 
-    private Order order;
-    private OrderState lastState;
-    private OrderState state;
+	protected void setState(OrderState state) {
+		this.state = state;
+	}
+
+	private Order order;
+	private OrderState lastState;
+	private OrderState state;
 
 }

@@ -113,7 +113,7 @@ public class DiscreteAmount extends Amount {
 		if (o instanceof DiscreteAmount) {
 			DiscreteAmount discreteOther = (DiscreteAmount) o;
 			if (iBasis == discreteOther.iBasis)
-				return new DiscreteAmount(count * discreteOther.count, iBasis);
+				return new DiscreteAmount(count * discreteOther.count, iBasis * discreteOther.iBasis);
 		}
 		return new DecimalAmount(asBigDecimal().multiply(o.asBigDecimal()));
 	}
@@ -135,7 +135,6 @@ public class DiscreteAmount extends Amount {
 		return bd;
 	}
 
-	@Override
 	public long asLong() {
 		return (count) / iBasis;
 
@@ -162,7 +161,6 @@ public class DiscreteAmount extends Amount {
 		return length;
 	}
 
-	@Override
 	public double getBasis() {
 
 		BigDecimal bd = new BigDecimal(iBasis);
@@ -199,6 +197,28 @@ public class DiscreteAmount extends Amount {
 	@Override
 	public boolean isNegative() {
 		return count < 0;
+	}
+
+	@Override
+	public boolean equals(Object object) {
+		boolean result = false;
+		if (object == null || object.getClass() != getClass()) {
+			result = false;
+		} else {
+			DiscreteAmount amount = (DiscreteAmount) object;
+			if (this.getCount() == amount.getCount() && this.getBasis() == amount.getBasis()) {
+				result = true;
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public int hashCode() {
+		int hash = 3;
+		hash = 7 * hash + Long.valueOf(this.getCount()).hashCode();
+		hash = 7 * hash + Double.valueOf(this.getBasis()).hashCode();
+		return hash;
 	}
 
 	/**
