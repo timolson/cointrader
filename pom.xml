@@ -25,10 +25,10 @@
 
     <dependencies>
         <dependency>
-          <groupId>junit</groupId>
-          <artifactId>junit</artifactId>
-          <version>4.11</version>
-          <scope>test</scope>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.11</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -50,28 +50,26 @@
             <artifactId>commons-configuration</artifactId>
             <version>1.6</version>
         </dependency>
-
-                <dependency>
-                        <groupId>net.sourceforge.collections</groupId>
-                        <artifactId>collections-generic</artifactId>
-                        <version>4.01</version>
-                        
-                </dependency>
-<dependency>
-	<groupId>commons-lang</groupId>
-	<artifactId>commons-lang</artifactId>
-	<version>2.6</version>
-</dependency>
-<dependency>
-	<groupId>com.tictactec</groupId>
-	<artifactId>ta-lib</artifactId>
-	<version>0.4.0</version>
-</dependency>
-                <dependency>
-	<groupId>javassist</groupId>
-	<artifactId>javassist</artifactId>
-	<version>3.12.1.GA</version>
-</dependency>
+        <dependency>
+            <groupId>net.sourceforge.collections</groupId>
+            <artifactId>collections-generic</artifactId>
+            <version>4.01</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>2.6</version>
+        </dependency>
+        <dependency>
+            <groupId>com.tictactec</groupId>
+            <artifactId>ta-lib</artifactId>
+            <version>0.4.0</version>
+        </dependency>
+        <dependency>
+            <groupId>javassist</groupId>
+            <artifactId>javassist</artifactId>
+            <version>3.12.1.GA</version>
+        </dependency>
         <dependency>
             <groupId>com.espertech</groupId>
             <artifactId>esper</artifactId>
@@ -112,22 +110,22 @@
             <artifactId>xchange-btce</artifactId>
             <version>${xchange.version}</version>
         </dependency>
-		<dependency>
+        <dependency>
             <groupId>com.xeiam.xchange</groupId>
             <artifactId>xchange-cryptsy</artifactId>
             <version>${xchange.version}</version>
         </dependency>
-		<dependency>
+        <dependency>
             <groupId>com.xeiam.xchange</groupId>
             <artifactId>xchange-coinbase</artifactId>
             <version>${xchange.version}</version>
         </dependency>
-		<dependency>
+        <dependency>
             <groupId>com.xeiam.xchange</groupId>
             <artifactId>xchange-bter</artifactId>
             <version>${xchange.version}</version>
         </dependency>
-		<dependency>
+        <dependency>
             <groupId>com.xeiam.xchange</groupId>
             <artifactId>xchange-campbx</artifactId>
             <version>${xchange.version}</version>
@@ -153,9 +151,9 @@
             <version>${hibernate.version}</version>
         </dependency>
         <dependency>
-        	<groupId>mysql</groupId>
-        	<artifactId>mysql-connector-java</artifactId>
-        	<version>5.1.29</version>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.29</version>
         </dependency>
         <dependency>
             <groupId>org.reflections</groupId>
@@ -173,9 +171,9 @@
             <version>1.0</version>
         </dependency>
         <dependency>
-        	<groupId>net.sf.opencsv</groupId>
-        	<artifactId>opencsv</artifactId>
-        	<version>2.0</version>
+            <groupId>net.sf.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>2.0</version>
         </dependency>
         <dependency>
             <groupId>com.clutch.dates</groupId>
@@ -183,9 +181,9 @@
             <version>1.0.6</version>
         </dependency>
         <dependency>
-          <groupId>org.antlr</groupId>
-          <artifactId>antlr4-runtime</artifactId>
-          <version>${antlr.version}</version>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr4-runtime</artifactId>
+            <version>${antlr.version}</version>
         </dependency>
         <dependency>
             <groupId>jline</groupId>
@@ -277,12 +275,12 @@
                 <artifactId>antlr4-maven-plugin</artifactId>
                 <version>${antlr.version}</version>
                 <executions>
-                  <execution>
-                    <id>antlr</id>
-                    <goals>
-                      <goal>antlr4</goal>
-                    </goals>
-                  </execution>
+                    <execution>
+                        <id>antlr</id>
+                        <goals>
+                            <goal>antlr4</goal>
+                        </goals>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>

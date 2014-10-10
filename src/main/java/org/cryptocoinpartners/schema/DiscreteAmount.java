@@ -1,6 +1,8 @@
 package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 
 import org.cryptocoinpartners.util.RemainderHandler;
 
@@ -28,7 +30,7 @@ public class DiscreteAmount extends Amount {
 	}
 
 	public static long roundedCountForBasis(BigDecimal amount, double basis) {
-		return amount.divide(new BigDecimal(basis), mc).round(mc).longValue();
+        return amount.divide(new BigDecimal(basis), mc).setScale(0, RoundingMode.HALF_UP).longValue();
 	}
 
 	public static class DiscreteAmountBuilder {
