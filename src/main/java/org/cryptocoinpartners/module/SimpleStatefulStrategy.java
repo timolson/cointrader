@@ -101,7 +101,7 @@ public abstract class SimpleStatefulStrategy extends BaseStrategy {
 		if (fill.getOrder().getComment() == "Long Entry Order" || fill.getOrder().getComment() == "Short Entry Order") {
 			stopTrade(fill);
 		}
-		//log.info("Stop trade Entered at" + fill.getPrice());
+		log.info("Stop trade Entered at" + fill.getPrice());
 
 	}
 

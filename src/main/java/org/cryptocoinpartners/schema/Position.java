@@ -29,9 +29,9 @@ public class Position extends Holding {
 		this.exchange = exchange;
 		this.market = market;
 		this.longVolume = volume.isPositive() ? volume : this.longVolume;
-		this.longVolumeCount = volume.isPositive() ? volume.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount() : this.longVolumeCount;
+		this.longVolumeCount = volume.isPositive() ? volume.toBasis(asset.getBasis(), Remainder.ROUND_EVEN).getCount() : this.longVolumeCount;
 		this.shortVolume = volume.isNegative() ? volume : this.shortVolume;
-		this.shortVolumeCount = volume.isNegative() ? volume.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount() : this.shortVolumeCount;
+		this.shortVolumeCount = volume.isNegative() ? volume.toBasis(asset.getBasis(), Remainder.ROUND_EVEN).getCount() : this.shortVolumeCount;
 		this.price = price;
 		this.asset = asset;
 		this.portfolio = portfolio;
@@ -42,9 +42,9 @@ public class Position extends Holding {
 		this.exchange = exchange;
 		this.market = market;
 		this.longVolume = volume.isPositive() ? volume : this.longVolume;
-		this.longVolumeCount = volume.isPositive() ? volume.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount() : this.longVolumeCount;
+		this.longVolumeCount = volume.isPositive() ? volume.toBasis(asset.getBasis(), Remainder.ROUND_EVEN).getCount() : this.longVolumeCount;
 		this.shortVolume = volume.isNegative() ? volume : this.shortVolume;
-		this.shortVolumeCount = volume.isNegative() ? volume.toBasis(asset.getBasis(), Remainder.TO_HOUSE).getCount() : this.shortVolumeCount;
+		this.shortVolumeCount = volume.isNegative() ? volume.toBasis(asset.getBasis(), Remainder.ROUND_EVEN).getCount() : this.shortVolumeCount;
 		this.price = price;
 		this.longExitPrice = volume.isPositive() ? exitPrice : this.longExitPrice;
 		this.shortExitPrice = volume.isNegative() ? exitPrice : this.shortExitPrice;

@@ -3,15 +3,12 @@ package org.cryptocoinpartners.schema;
 import java.math.BigDecimal;
 import java.util.List;
 
-import javax.annotation.Nullable;
-import javax.persistence.AttributeOverride;
-import javax.persistence.Column;
-import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.enumeration.FillType;
 import org.joda.time.Instant;
 
 /**
@@ -25,14 +22,43 @@ import org.joda.time.Instant;
 @Entity
 public class GeneralOrder extends Order {
 
-	public GeneralOrder(Instant time, Listing listing, BigDecimal volume) {
+	public GeneralOrder(Instant time, Portfolio portfolio, Listing listing, BigDecimal volume) {
 		super(time);
+		super.setPortfolio(portfolio);
 		this.listing = listing;
 		this.volume = DecimalAmount.of(volume);
 	}
 
-	public GeneralOrder(Instant time, Listing listing, String volume) {
+	public GeneralOrder(Instant time, Portfolio portfolio, GeneralOrder parentOrder, Listing listing, BigDecimal volume) {
 		super(time);
+		super.setPortfolio(portfolio);
+		super.setParentOrder(parentOrder);
+		this.listing = listing;
+		this.volume = DecimalAmount.of(volume);
+	}
+
+	public GeneralOrder(Instant time, Portfolio portfolio, Market market, BigDecimal volume, FillType type) {
+		super(time);
+		super.setPortfolio(portfolio);
+		this.market = market;
+		this.listing = market.getListing();
+		this.volume = DecimalAmount.of(volume);
+		this.fillType = type;
+	}
+
+	public GeneralOrder(Instant time, Portfolio portfolio, GeneralOrder parentOrder, Market market, BigDecimal volume, FillType type) {
+		super(time);
+		super.setPortfolio(portfolio);
+		super.setParentOrder(parentOrder);
+		this.market = market;
+		this.listing = market.getListing();
+		this.volume = DecimalAmount.of(volume);
+		this.fillType = type;
+	}
+
+	public GeneralOrder(Instant time, Portfolio portfolio, Listing listing, String volume) {
+		super(time);
+		super.setPortfolio(portfolio);
 		this.listing = listing;
 		this.volume = DecimalAmount.of(volume);
 	}
@@ -42,33 +68,56 @@ public class GeneralOrder extends Order {
 		return listing;
 	}
 
-	@Embedded
-	@AttributeOverride(name = "bd", column = @Column(name = "volume"))
-	@SuppressWarnings("JpaDataSourceORMInspection")
+	@Override
+	@ManyToOne(optional = true)
+	public Market getMarket() {
+		return market;
+	}
+
+	public BigDecimal getVolumeDecimal() {
+		return volume.asBigDecimal();
+	}
+
+	public BigDecimal getLimitPriceDecimal() {
+		if (limitPrice == null)
+			return null;
+		return limitPrice.asBigDecimal();
+
+	}
+
+	public BigDecimal getStopPriceDecimal() {
+		if (stopPrice == null)
+			return null;
+		return stopPrice.asBigDecimal();
+
+	}
+
+	public BigDecimal getTrailingStopPriceDecimal() {
+		if (trailingStopPrice == null)
+			return null;
+		return trailingStopPrice.asBigDecimal();
+	}
+
+	@Override
+	@Transient
 	public DecimalAmount getVolume() {
 		return volume;
 	}
 
-	@Nullable
-	@Embedded
-	@AttributeOverride(name = "bd", column = @Column(name = "limitPrice"))
-	@SuppressWarnings("JpaDataSourceORMInspection")
+	@Override
+	@Transient
 	public DecimalAmount getLimitPrice() {
 		return limitPrice;
 	}
 
-	@Nullable
-	@Embedded
-	@AttributeOverride(name = "bd", column = @Column(name = "stopPrice"))
-	@SuppressWarnings("JpaDataSourceORMInspection")
+	@Override
+	@Transient
 	public DecimalAmount getStopPrice() {
 		return stopPrice;
 	}
 
-	@Nullable
-	@Embedded
-	@AttributeOverride(name = "bd", column = @Column(name = "trailingStopPrice"))
-	@SuppressWarnings("JpaDataSourceORMInspection")
+	@Override
+	@Transient
 	public DecimalAmount getTrailingStopPrice() {
 		return trailingStopPrice;
 	}
@@ -94,7 +143,7 @@ public class GeneralOrder extends Order {
 	}
 
 	@OneToMany
-	public List<SpecificOrder> getChildren() {
+	public List<Order> getChildren() {
 		return children;
 	}
 
@@ -102,13 +151,16 @@ public class GeneralOrder extends Order {
 	public String toString() {
 		String s = "GeneralOrder{" + "id=" + getId() + ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + ", listing="
 				+ listing + ", volume=" + volume;
-		if (limitPrice != null)
+		if (limitPrice != null && limitPrice.asBigDecimal() != null)
 			s += ", limitPrice=" + limitPrice;
-		if (stopPrice != null)
+		if (stopPrice != null && stopPrice.asBigDecimal() != null)
 			s += ", stopPrice=" + stopPrice;
-		if (trailingStopPrice != null)
+		if (trailingStopPrice != null && trailingStopPrice.asBigDecimal() != null)
 			s += ", trailingStopPrice=" + trailingStopPrice;
-
+		if (comment != null)
+			s += ", comment=" + comment;
+		if (fillType != null)
+			s += ", type=" + fillType;
 		if (hasFills())
 			s += ", averageFillPrice=" + averageFillPrice();
 		s += '}';
@@ -123,31 +175,64 @@ public class GeneralOrder extends Order {
 		this.volume = volume;
 	}
 
+	protected void setVolumeDecimal(BigDecimal volume) {
+		this.volume = new DecimalAmount(volume);
+	}
+
 	protected void setLimitPrice(DecimalAmount limitPrice) {
 		this.limitPrice = limitPrice;
 	}
 
-	protected void setStopPrice(DecimalAmount stopPrice) {
+	protected void setLimitPriceDecimal(BigDecimal limitPrice) {
+		if (limitPrice != null) {
+			this.limitPrice = DecimalAmount.of(limitPrice);
+		}
+	}
+
+	@Override
+	public void setStopPrice(DecimalAmount stopPrice) {
 		this.stopPrice = stopPrice;
 	}
 
-	protected void setTrailingStopPrice(DecimalAmount trailingStopPrice) {
+	public void setStopPriceDecimal(BigDecimal stopPrice) {
+		if (stopPrice != null) {
+			this.stopPrice = DecimalAmount.of(stopPrice);
+		}
+	}
+
+	@Override
+	public void setTrailingStopPrice(DecimalAmount trailingStopPrice) {
 		this.trailingStopPrice = trailingStopPrice;
+	}
+
+	public void setTrailingStopPriceDecimal(BigDecimal trailingStopPrice) {
+		if (trailingStopPrice != null) {
+			this.trailingStopPrice = DecimalAmount.of(trailingStopPrice);
+		}
 	}
 
 	protected void setListing(Listing listing) {
 		this.listing = listing;
+		this.market = null;
 	}
 
-	protected void setChildren(List<SpecificOrder> children) {
+	@Override
+	public void setMarket(Market market) {
+		this.market = market;
+		this.listing = market.getListing();
+	}
+
+	protected void setChildren(List<Order> children) {
 		this.children = children;
 	}
 
-	private List<SpecificOrder> children;
+	private List<Order> children;
 	private Listing listing;
+	private Market market;
 	private DecimalAmount volume;
 	private DecimalAmount limitPrice;
 	private DecimalAmount stopPrice;
 	private DecimalAmount trailingStopPrice;
+	private Amount forcastedFees;
 
 }

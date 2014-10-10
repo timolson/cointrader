@@ -4,10 +4,13 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import javax.annotation.Nullable;
 import javax.persistence.Basic;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Table;
@@ -25,6 +28,7 @@ import org.joda.time.format.DateTimeFormatter;
  * @author Mike Olson
  * @author Tim Olson
  */
+
 @Entity
 @Table(name = "\"Order\"")
 // This is required because ORDER is a SQL keyword and must be escaped
@@ -58,15 +62,39 @@ public abstract class Order extends Event {
 		return portfolio;
 	}
 
-	//	public enum FillType {
-	//		GOOD_TIL_CANCELLED, // Order stays open until explicitly cancelled or expired
-	//		GTC_OR_MARGIN_CAP, // Order stays open until explicitly cancelled, expired, or the order is filled to the capacity of the currently available Positions
-	//		CANCEL_REMAINDER, // This will cancel any remaining volume after a partial fill
-	//		LIMIT, // Order stays open until quanity is filled at limit price or better
-	//		STOP_LIMIT, // This will trigger a limit order at the specficed stop price
-	//		TRAILING_STOP_LIMIT, // // This will trigger a limit order at the specficed stop price and will move the stop price by the trailing stop ammount as the price changes
-	//
-	//	}
+	@Transient
+	public Amount getForcastedCommission() {
+		return forcastedFees;
+	}
+
+	@Nullable
+	@Transient
+	@Column(insertable = false, updatable = false)
+	public abstract Amount getLimitPrice();
+
+	@ManyToOne(optional = true)
+	@JoinColumn(insertable = false, updatable = false)
+	public abstract Market getMarket();
+
+	@Nullable
+	@Transient
+	@Column(insertable = false, updatable = false)
+	public abstract Amount getStopPrice();
+
+	@Nullable
+	@Transient
+	@Column(insertable = false, updatable = false)
+	public abstract Amount getTrailingStopPrice();
+
+	@Transient
+	@Column(insertable = false, updatable = false)
+	public abstract Amount getVolume();
+
+	public abstract void setStopPrice(DecimalAmount stopPrice);
+
+	public abstract void setTrailingStopPrice(DecimalAmount trailingStopPrice);
+
+	public abstract void setMarket(Market market);
 
 	public FillType getFillType() {
 		return fillType;
@@ -148,6 +176,10 @@ public abstract class Order extends Event {
 		this.fillType = fillType;
 	}
 
+	public void setForcastedCommission(Amount forcastedFees) {
+		this.forcastedFees = forcastedFees;
+	}
+
 	protected void setComment(String comment) {
 		this.comment = comment;
 	}
@@ -187,11 +219,14 @@ public abstract class Order extends Event {
 
 	private Portfolio portfolio;
 	private Collection<Fill> fills;
-	private FillType fillType;
+	protected FillType fillType;
 	private MarginType marginType;
-	private String comment;
+	protected String comment;
 	private Instant expiration;
+	private Amount forcastedFees;
+
 	private boolean force; // allow this order to override various types of panic
 	private boolean emulation; // ("allow order type emulation" [default, true] or "only use exchange's native functionality")
 	protected GeneralOrder parentOrder;
+
 }

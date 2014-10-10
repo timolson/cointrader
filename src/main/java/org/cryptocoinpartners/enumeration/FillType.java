@@ -30,7 +30,9 @@ public enum FillType {
 	/** This will trigger a limit order at the specficed stop price */
 	STOP_LIMIT("STOP_LIMIT"),
 	/** TThis will trigger a limit order at the specficed stop price and will move the stop price by the trailing stop ammount as the price changes */
-	TRAILING_STOP_LIMIT("TRAILING_STOP_LIMIT");
+	TRAILING_STOP_LIMIT("TRAILING_STOP_LIMIT"),
+	/** This place a limit order and will limit losses on the filled order by selling at the stop price */
+	STOP_LOSS("STOP_LOSS");
 
 	private final String enumValue;
 
@@ -124,6 +126,7 @@ public enum FillType {
 			FillType.values.put(LIMIT.enumValue, LIMIT);
 			FillType.values.put(STOP_LIMIT.enumValue, STOP_LIMIT);
 			FillType.values.put(TRAILING_STOP_LIMIT.enumValue, TRAILING_STOP_LIMIT);
+			FillType.values.put(STOP_LOSS.enumValue, STOP_LOSS);
 
 		}
 		synchronized (FillType.valueList) {
@@ -133,6 +136,7 @@ public enum FillType {
 			FillType.valueList.add(LIMIT);
 			FillType.valueList.add(STOP_LIMIT);
 			FillType.valueList.add(TRAILING_STOP_LIMIT);
+			FillType.valueList.add(STOP_LOSS);
 			FillType.valueList = Collections.unmodifiableList(valueList);
 		}
 		synchronized (FillType.literals) {
@@ -142,6 +146,7 @@ public enum FillType {
 			FillType.literals.add(LIMIT.enumValue);
 			FillType.literals.add(STOP_LIMIT.enumValue);
 			FillType.literals.add(TRAILING_STOP_LIMIT.enumValue);
+			FillType.literals.add(STOP_LOSS.enumValue);
 			FillType.literals = Collections.unmodifiableList(literals);
 		}
 		synchronized (FillType.names) {
@@ -151,6 +156,7 @@ public enum FillType {
 			FillType.names.add("LIMIT");
 			FillType.names.add("STOP_LIMIT");
 			FillType.names.add("TRAILING_STOP_LIMIT");
+			FillType.names.add("STOP_LOSS");
 			FillType.names = Collections.unmodifiableList(names);
 		}
 	}

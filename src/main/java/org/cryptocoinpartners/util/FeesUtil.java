@@ -40,6 +40,7 @@ public class FeesUtil {
 			double rate = order.getMarket().getExchange().getFeeRate();
 			FeeMethod method = order.getMarket().getExchange().getFeeMethod();
 			double basis = order.getMarket().getPriceBasis();
+
 			Amount price = order.getLimitPrice();
 			Amount ammount = order.getVolume().abs();
 			switch (method) {

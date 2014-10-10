@@ -123,7 +123,7 @@ public class MockOrderService extends BaseOrderService {
 	}
 
 	@Override
-	public void handleCancelSpecificOrder(SpecificOrder specificOrder) {
+	public void handleCancelSpecificOrders(SpecificOrder specificOrder) {
 		Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
 
 		for (SpecificOrder pendingOrder : pendingOrders) {

@@ -82,7 +82,7 @@ public class XchangeOrderService extends BaseOrderService {
 	}
 
 	@Override
-	public void handleCancelSpecificOrder(SpecificOrder specificOrder) {
+	public void handleCancelSpecificOrders(SpecificOrder specificOrder) {
 		// TODO Auto-generated method stub
 
 	}
@@ -92,4 +92,5 @@ public class XchangeOrderService extends BaseOrderService {
 		// TODO Auto-generated method stub
 
 	}
+
 }

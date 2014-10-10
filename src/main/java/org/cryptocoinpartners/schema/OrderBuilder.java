@@ -2,6 +2,7 @@ package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.service.OrderService;
 import org.joda.time.Instant;
@@ -31,6 +32,14 @@ public class OrderBuilder {
 		return new GeneralOrderBuilder(time, listing, volume);
 	}
 
+	public GeneralOrderBuilder create(Instant time, Market market, BigDecimal volume, FillType type) {
+		return new GeneralOrderBuilder(time, market, volume, type);
+	}
+
+	public GeneralOrderBuilder create(Instant time, GeneralOrder parentOrder, Market market, BigDecimal volume, FillType type) {
+		return new GeneralOrderBuilder(time, parentOrder, market, volume, type);
+	}
+
 	/** @param volume to create a sell order, use a negative volume */
 	public SpecificOrderBuilder create(Instant time, Market market, BigDecimal volume, String comment) {
 		return new SpecificOrderBuilder(time, market, volume, comment);
@@ -45,7 +54,7 @@ public class OrderBuilder {
 		return new SpecificOrderBuilder(time, market, volumeCount, comment);
 	}
 
-	public SpecificOrderBuilder create(Instant time, Market market, long volumeCount, Order parentOrder, String comment) {
+	public SpecificOrderBuilder create(Instant time, Market market, long volumeCount, GeneralOrder parentOrder, String comment) {
 		return new SpecificOrderBuilder(time, market, volumeCount, parentOrder, comment);
 	}
 
@@ -102,26 +111,27 @@ public class OrderBuilder {
 	public class GeneralOrderBuilder extends CommonOrderBuilder<GeneralOrderBuilder> {
 
 		public GeneralOrderBuilder(Instant time, Listing listing, BigDecimal volume) {
-			order = new GeneralOrder(time, listing, volume);
+			order = new GeneralOrder(time, portfolio, listing, volume);
+		}
+
+		public GeneralOrderBuilder(Instant time, GeneralOrder parentOrder, Listing listing, BigDecimal volume) {
+			order = new GeneralOrder(time, portfolio, parentOrder, listing, volume);
+		}
+
+		public GeneralOrderBuilder(Instant time, Market market, BigDecimal volume, FillType type) {
+			order = new GeneralOrder(time, portfolio, market, volume, type);
+		}
+
+		public GeneralOrderBuilder(Instant time, GeneralOrder parentOrder, Market market, BigDecimal volume, FillType type) {
+			order = new GeneralOrder(time, portfolio, parentOrder, market, volume, type);
 		}
 
 		public GeneralOrderBuilder(Instant time, Listing listing, String volume) {
-			order = new GeneralOrder(time, listing, volume);
+			order = new GeneralOrder(time, portfolio, listing, volume);
 		}
 
 		public GeneralOrderBuilder withLimitPrice(String price) {
 			order.setLimitPrice(DecimalAmount.of(price));
-			return this;
-		}
-
-		public GeneralOrderBuilder withStopPrice(String price) {
-			order.setStopPrice(DecimalAmount.of(price));
-			return this;
-		}
-
-		public GeneralOrderBuilder withTrailingStopPrice(String price, String trailingStopPrice) {
-			order.setStopPrice(DecimalAmount.of(price));
-			order.setTrailingStopPrice(DecimalAmount.of(trailingStopPrice));
 			return this;
 		}
 
@@ -130,8 +140,43 @@ public class OrderBuilder {
 			return this;
 		}
 
+		public GeneralOrderBuilder withStopPrice(String price) {
+			if (order.fillType.equals(FillType.STOP_LIMIT) || order.fillType.equals(FillType.STOP_LOSS) || order.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
+				order.setStopPrice(DecimalAmount.of(price));
+				return this;
+			}
+			throw new NotImplementedException();
+		}
+
 		public GeneralOrderBuilder withStopPrice(BigDecimal price) {
-			order.setStopPrice(DecimalAmount.of(price));
+			if (order.fillType.equals(FillType.STOP_LIMIT) || order.fillType.equals(FillType.STOP_LOSS) || order.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
+				order.setStopPrice(DecimalAmount.of(price));
+				return this;
+			}
+
+			throw new NotImplementedException();
+		}
+
+		public GeneralOrderBuilder withTrailingStopPrice(BigDecimal price, BigDecimal trailingStopPrice) {
+			if (order.fillType.equals(FillType.STOP_LIMIT) || order.fillType.equals(FillType.STOP_LOSS) || order.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
+				order.setStopPrice(DecimalAmount.of(price));
+				order.setTrailingStopPrice(DecimalAmount.of(trailingStopPrice));
+				return this;
+			}
+			throw new NotImplementedException();
+		}
+
+		public GeneralOrderBuilder withTrailingStopPrice(String price, String trailingStopPrice) {
+			if (order.fillType.equals(FillType.STOP_LIMIT) || order.fillType.equals(FillType.STOP_LOSS) || order.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
+				order.setStopPrice(DecimalAmount.of(price));
+				order.setTrailingStopPrice(DecimalAmount.of(trailingStopPrice));
+				return this;
+			}
+			throw new NotImplementedException();
+		}
+
+		public GeneralOrderBuilder withComment(String comment) {
+			order.setComment(comment);
 			return this;
 		}
 
@@ -161,7 +206,7 @@ public class OrderBuilder {
 			order = new SpecificOrder(time, portfolio, market, volumeCount, comment);
 		}
 
-		public SpecificOrderBuilder(Instant time, Market market, long volumeCount, Order parentOrder, String comment) {
+		public SpecificOrderBuilder(Instant time, Market market, long volumeCount, GeneralOrder parentOrder, String comment) {
 			order = new SpecificOrder(time, portfolio, market, volumeCount, parentOrder, comment);
 		}
 
@@ -171,39 +216,9 @@ public class OrderBuilder {
 			return this;
 		}
 
-		public SpecificOrderBuilder withStopPriceCount(long price /* units in basis of Market's quote fungible */) {
-			order.setStopPriceCount(price);
-			order.setFillType(FillType.STOP_LIMIT);
-			return this;
-		}
-
-		public SpecificOrderBuilder withExitPriceCount(long price /* units in basis of Market's quote fungible */) {
-			order.setExitPriceCount(price);
-			return this;
-		}
-
-		public SpecificOrderBuilder withTrailingStopPriceCount(long price, long trailingPrice) {
-			order.setStopPriceCount(price);
-			order.setTrailingStopPriceCount(trailingPrice);
-			order.setFillType(FillType.TRAILING_STOP_LIMIT);
-			return this;
-		}
-
 		public SpecificOrderBuilder withLimitPrice(DiscreteAmount price) {
 			price.assertBasis(order.getMarket().getPriceBasis());
 			return withLimitPriceCount(price.getCount());
-		}
-
-		public SpecificOrderBuilder withStopPrice(DiscreteAmount price) {
-			price.assertBasis(order.getMarket().getPriceBasis());
-			return withStopPriceCount(price.getCount());
-		}
-
-		public SpecificOrderBuilder withTrailingStopPrice(DiscreteAmount price, DiscreteAmount trailingPrice) {
-			price.assertBasis(order.getMarket().getPriceBasis());
-			trailingPrice.assertBasis(order.getMarket().getPriceBasis());
-
-			return withTrailingStopPriceCount(price.getCount(), trailingPrice.getCount());
 		}
 
 		@Override

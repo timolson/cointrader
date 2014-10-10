@@ -15,7 +15,9 @@ public interface OrderService {
 
 	public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio);
 
-	public void handleCancelSpecificOrder(SpecificOrder specificOrder);
+	public void handleCancelSpecificOrders(SpecificOrder specificOrder);
+
+	public void handleCancelAllStopOrders(Portfolio portfolio);
 
 	public void handleCancelAllSpecificOrders(Portfolio portfolio);
 
@@ -41,4 +43,5 @@ public interface OrderService {
 	//                 - this can be based on data from time of placement, or from the current data interface
 
 	public OrderState getOrderState(Order o);
+
 }

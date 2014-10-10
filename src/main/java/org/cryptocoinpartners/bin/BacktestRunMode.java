@@ -31,13 +31,13 @@ public class BacktestRunMode extends RunMode {
 	@Parameter(description = "Strategy name to load", arity = 1, required = true)
 	public List<String> strategyNames;
 	private Context context;
-	private final Instant start = new DateTime(2013, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
-	private final Instant end = new DateTime(2014, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+	private final Instant start = new DateTime(2013, 1, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+	private final Instant end = new DateTime(2014, 1, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 	//private final Instant start = new DateTime(2014, 9, 9, 23, 0, 0, 0, DateTimeZone.UTC).toInstant();
 	//private final Instant end = new DateTime(2014, 9, 10, 6, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
 	@Parameter(names = { "-p", "--position" }, arity = 2, description = "specify initial portfolio positions as {Exchange}:{Asset} {Amount} e.g. BITFINEX:BTC 1.0")
-	public List<String> positions = Arrays.asList("BITFINEX:USD", "1000000");
+	public List<String> positions = Arrays.asList("BITFINEX:USD", "10000");
 
 	@Parameter(names = { "-" }, description = "No-op switch used to end list of positions before supplying the strategy name")
 	boolean noop = false;

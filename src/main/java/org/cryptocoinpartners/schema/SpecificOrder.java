@@ -93,14 +93,12 @@ public class SpecificOrder extends Order {
 
 	@Override
 	@Transient
-	@Nullable
 	public DiscreteAmount getStopPrice() {
 		return null;
 	}
 
 	@Override
 	@Transient
-	@Nullable
 	public DiscreteAmount getTrailingStopPrice() {
 
 		return null;
