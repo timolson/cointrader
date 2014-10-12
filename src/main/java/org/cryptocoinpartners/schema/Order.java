@@ -44,7 +44,7 @@ public abstract class Order extends Event {
 		this.parentOrder = parentOrder;
 	}
 
-	@ManyToOne
+	@ManyToOne(optional = true)
 	public GeneralOrder getParentOrder() {
 		return parentOrder;
 	}
