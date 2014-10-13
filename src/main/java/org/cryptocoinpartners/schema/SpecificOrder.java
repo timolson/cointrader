@@ -58,6 +58,15 @@ public class SpecificOrder extends Order {
 		super.setPortfolio(portfolio);
 	}
 
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, Amount volume, GeneralOrder parentOrder, String comment) {
+		super(time);
+		this.market = market;
+		this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+		super.setComment(comment);
+		super.setParentOrder(parentOrder);
+		super.setPortfolio(portfolio);
+	}
+
 	public SpecificOrder(Instant time, Portfolio portfolio, Market market, BigDecimal volume, String comment) {
 		this(time, portfolio, market, new DecimalAmount(volume), comment);
 	}

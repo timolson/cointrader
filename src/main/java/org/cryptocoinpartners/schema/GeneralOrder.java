@@ -147,6 +147,15 @@ public class GeneralOrder extends Order {
 		return children;
 	}
 
+	public void copyCommonFillProperties(Fill fill) {
+		setTime(fill.getTime());
+		setEmulation(fill.getOrder().isEmulation());
+		setExpiration(fill.getOrder().getExpiration());
+		setPortfolio(fill.getOrder().getPortfolio());
+		setMarginType(fill.getOrder().getMarginType());
+		setPanicForce(fill.getOrder().getPanicForce());
+	}
+
 	@Override
 	public String toString() {
 		String s = "GeneralOrder{" + "id=" + getId() + ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + ", listing="

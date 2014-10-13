@@ -46,7 +46,6 @@ public class XchangeOrderService extends BaseOrderService {
 			LimitOrder limitOrder = new LimitOrder(orderType, tradeableVolume, currencyPair, id, timestamp, specificOrder.getLimitPrice().asBigDecimal());
 			// todo put on a queue
 			try {
-				PersitOrderFill(specificOrder);
 				tradeService.placeLimitOrder(limitOrder);
 				updateOrderState(specificOrder, OrderState.PLACED);
 			} catch (IOException e) {
@@ -57,7 +56,6 @@ public class XchangeOrderService extends BaseOrderService {
 			MarketOrder marketOrder = new MarketOrder(orderType, tradeableVolume, currencyPair, id, timestamp);
 			// todo put on a queue
 			try {
-				PersitOrderFill(specificOrder);
 				tradeService.placeMarketOrder(marketOrder);
 				updateOrderState(specificOrder, OrderState.PLACED);
 			} catch (IOException e) {

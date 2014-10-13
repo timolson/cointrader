@@ -8,7 +8,6 @@ import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Book;
@@ -39,8 +38,6 @@ public class MockOrderService extends BaseOrderService {
 		pendingOrders.add(specificOrder);
 		updateOrderState(specificOrder, OrderState.PLACED);
 		specificOrder.setEntryTime(context.getTime());
-		if (specificOrder.getFillType() != FillType.STOP_LIMIT && specificOrder.getFillType() != FillType.TRAILING_STOP_LIMIT)
-			PersitOrderFill(specificOrder);
 	}
 
 	@SuppressWarnings("ConstantConditions")

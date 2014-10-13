@@ -2,6 +2,7 @@ package org.cryptocoinpartners.service;
 
 import java.util.Collection;
 
+import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderState;
 import org.cryptocoinpartners.schema.Portfolio;
@@ -20,6 +21,8 @@ public interface OrderService {
 	public void handleCancelAllStopOrders(Portfolio portfolio);
 
 	public void handleCancelAllSpecificOrders(Portfolio portfolio);
+
+	public void adjustStopLoss(Amount amount);
 
 	// DO PLENTY OF LOGGING IN THIS METHOD
 	// initialize data interface with Xchange

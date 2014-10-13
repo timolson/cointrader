@@ -29,6 +29,7 @@ import org.cryptocoinpartners.schema.Offer;
 import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderBuilder;
 import org.cryptocoinpartners.schema.OrderBuilder.CommonOrderBuilder;
+import org.cryptocoinpartners.schema.OrderBuilder.GeneralOrderBuilder;
 import org.cryptocoinpartners.schema.OrderState;
 import org.cryptocoinpartners.schema.OrderUpdate;
 import org.cryptocoinpartners.schema.Portfolio;
@@ -90,6 +91,24 @@ public abstract class BaseOrderService implements OrderService {
 	}
 
 	@Override
+	public void adjustStopLoss(Amount amount) {
+		// loop over our  tigger orders
+		Iterator<Long> ito = triggerOrders.keySet().iterator();
+		while (ito.hasNext()) {
+			Long timestamp = ito.next();
+			GeneralOrder order = triggerOrders.get(timestamp);
+
+			if (order.getParentOrder().getFillType().equals(FillType.STOP_LOSS)) {
+				DecimalAmount stopPrice = DecimalAmount.of(order.getStopPrice().plus(amount));
+
+				order.setStopPrice(stopPrice);
+
+			}
+
+		}
+	}
+
+	@Override
 	public OrderState getOrderState(Order o) {
 		OrderState state = orderStateMap.get(o);
 		if (state == null)
@@ -97,10 +116,38 @@ public abstract class BaseOrderService implements OrderService {
 		return state;
 	}
 
+	@When("@Priority(9) select * from OrderUpdate")
+	public void handleOrderUpdate(OrderUpdate orderUpdate) {
+		OrderState orderState = orderUpdate.getState();
+		switch (orderState) {
+			case NEW:
+				PersitOrderFill(orderUpdate.getOrder());
+				break;
+			case TRIGGER:
+				break;
+			case ROUTED:
+				break;
+			case PLACED:
+				break;
+			case PARTFILLED:
+				break;
+			case FILLED:
+				break;
+			case CANCELLING:
+				break;
+			case CANCELLED:
+				break;
+			case EXPIRED:
+				break;
+			case REJECTED:
+				break;
+		}
+
+	}
+
 	@When("select * from Fill")
 	public void handleFill(Fill fill) {
 		Order order = fill.getOrder();
-		PersitOrderFill(fill);
 		if (order.getParentOrder() != null) {
 			switch (order.getParentOrder().getFillType()) {
 				case GOOD_TIL_CANCELLED:
@@ -117,6 +164,7 @@ public abstract class BaseOrderService implements OrderService {
 					break;
 				case STOP_LOSS:
 					//Place a stop order at the stop price
+
 					OrderBuilder.CommonOrderBuilder orderBuilder = buildStopLimitOrder(fill);
 					if (orderBuilder != null) {
 						Order stopOrder = orderBuilder.getOrder();
@@ -141,6 +189,8 @@ public abstract class BaseOrderService implements OrderService {
 			updateOrderState(order, newState);
 		}
 		Transaction transaction;
+		PersitOrderFill(fill);
+		
 		try {
 			transaction = new Transaction(fill);
 			log.info("Created new transaction " + transaction);
@@ -159,10 +209,12 @@ public abstract class BaseOrderService implements OrderService {
 		if (fill.getOrder().getParentOrder().getStopPrice() != null) {
 			BigDecimal bdVolume = fill.getVolume().asBigDecimal();
 			BigDecimal bdStopPrice = fill.getOrder().getParentOrder().getStopPrice().asBigDecimal();
-
-			return order.create(context.getTime(), fill.getOrder().getParentOrder(), fill.getMarket(), bdVolume.negate(), FillType.STOP_LIMIT)
+			GeneralOrderBuilder generalOrder = order
+					.create(context.getTime(), fill.getOrder().getParentOrder(), fill.getMarket(), bdVolume.negate(), FillType.STOP_LIMIT)
 					.withComment("Stop Order").withStopPrice(bdStopPrice).withLimitPrice(bdStopPrice);
 
+			generalOrder.getOrder().copyCommonFillProperties(fill);
+			return generalOrder;
 		}
 		return null;
 	}
@@ -191,26 +243,23 @@ public abstract class BaseOrderService implements OrderService {
 			case LIMIT:
 				specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
 				log.info("Routing Limit order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
-				handleSpecificOrder(specificOrder);
-				PersitOrderFill(generalOrder);
+				log.info("Order State" + orderStateMap.get(generalOrder).toString());
+				placeOrder(specificOrder);
 				break;
 			case STOP_LIMIT:
 				triggerOrders.put(generalOrder.getTimestamp(), generalOrder);
 				updateOrderState(generalOrder, OrderState.TRIGGER);
-				PersitOrderFill(generalOrder);
 				log.info("Stop trade Entered at " + generalOrder.getStopPrice());
 				break;
 			case TRAILING_STOP_LIMIT:
 				triggerOrders.put(generalOrder.getTimestamp(), generalOrder);
 				updateOrderState(generalOrder, OrderState.TRIGGER);
-				PersitOrderFill(generalOrder);
 				log.info("Trailing Stop trade Entered at " + generalOrder.getStopPrice());
 				break;
 			case STOP_LOSS:
-				PersitOrderFill(generalOrder);
 				specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
 				log.info("Routing Stop Loss order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
-				handleSpecificOrder(specificOrder);
+				placeOrder(specificOrder);
 				break;
 
 		}
@@ -237,7 +286,7 @@ public abstract class BaseOrderService implements OrderService {
 						//convert order to specfic order
 						SpecificOrder specificOrder = convertGeneralOrderToSpecific((GeneralOrder) order, order.getMarket());
 						log.info("Routing order " + order + " to " + order.getMarket().getExchange().getSymbol());
-						handleSpecificOrder(specificOrder);
+						placeOrder(specificOrder);
 						triggerOrders.remove(order.getTimestamp());
 						log.debug(order + " triggered as specificOrder " + specificOrder);
 					} else if (order.getTrailingStopPrice() != null) {
@@ -256,7 +305,7 @@ public abstract class BaseOrderService implements OrderService {
 						//Place order
 						SpecificOrder specificOrder = convertGeneralOrderToSpecific((GeneralOrder) order, order.getMarket());
 						log.info("Routing order " + order + " to " + order.getMarket().getExchange().getSymbol());
-						handleSpecificOrder(specificOrder);
+						placeOrder(specificOrder);
 						triggerOrders.remove(order.getTimestamp());
 						log.debug(order + " triggered as specificOrder " + specificOrder);
 
@@ -284,18 +333,35 @@ public abstract class BaseOrderService implements OrderService {
 		final DecimalAmount trailingStopPrice = generalOrder.getTrailingStopPrice();
 
 		// the volume will already be negative for a sell order
-		OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(generalOrder.getPortfolio()).create(generalOrder.getTime(), market, volume,
+		OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(generalOrder.getPortfolio()).create(generalOrder.getTime(), market, volume, generalOrder,
 				generalOrder.getComment());
 
-		if (limitPrice != null) {
-			DiscreteAmount discreteLimit = limitPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
-			builder.withLimitPrice(discreteLimit);
+		switch (generalOrder.getFillType()) {
+			case GOOD_TIL_CANCELLED:
+				break;
+			case GTC_OR_MARGIN_CAP:
+				break;
+			case CANCEL_REMAINDER:
+				break;
+			case LIMIT:
+				DiscreteAmount discreteLimit = limitPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
+				builder.withLimitPrice(discreteLimit);
+				break;
+			case STOP_LIMIT:
+				DiscreteAmount discreteStopLimit = stopPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
+				builder.withLimitPrice(discreteStopLimit);
+				break;
+			case TRAILING_STOP_LIMIT:
+				break;
+			case STOP_LOSS:
+				DiscreteAmount discreteStopLossLimit = limitPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
+				builder.withLimitPrice(discreteStopLossLimit);
+				break;
+
 		}
 
 		SpecificOrder specificOrder = builder.getOrder();
 		specificOrder.copyCommonOrderProperties(generalOrder);
-		specificOrder.setParentOrder(generalOrder);
-
 		return specificOrder;
 	}
 
@@ -319,6 +385,7 @@ public abstract class BaseOrderService implements OrderService {
 		OrderState oldState = orderStateMap.get(order);
 		if (oldState == null)
 			oldState = OrderState.NEW;
+
 		orderStateMap.put(order, state);
 		context.publish(new OrderUpdate(order, oldState, state));
 		if (order.getParentOrder() != null)

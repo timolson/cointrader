@@ -13,15 +13,9 @@ import java.util.concurrent.FutureTask;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
-import javax.persistence.LockTimeoutException;
 import javax.persistence.NoResultException;
-import javax.persistence.NonUniqueResultException;
 import javax.persistence.Persistence;
-import javax.persistence.PersistenceException;
-import javax.persistence.PessimisticLockException;
 import javax.persistence.Query;
-import javax.persistence.QueryTimeoutException;
-import javax.persistence.TransactionRequiredException;
 import javax.persistence.TypedQuery;
 
 import org.cryptocoinpartners.schema.Currencies;
@@ -288,48 +282,24 @@ public class PersistUtil implements Callable<String> {
 				for (EntityBase entity : entities)
 					em.persist(entity);
 				transaction.commit();
-			} catch (Error t) {
-				transaction.rollback();
-				throw t;
-			} catch (NoResultException e) {
-				//- if there is no result}
-				e.printStackTrace();
-			} catch (NonUniqueResultException e) {
-				//- if more than one result
-				e.printStackTrace();
-			} catch (IllegalStateException e) {
-				//- if called for a Java Persistence query language UPDATE or DELETE statement
-				e.printStackTrace();
-			} catch (QueryTimeoutException e) {
-				// - if the query execution exceeds the query timeout value set and only the statement is rolled back
-				e.printStackTrace();
-			} catch (TransactionRequiredException e) {
-				// - if a lock mode has been set and there is no transaction
-				e.printStackTrace();
-			} catch (PessimisticLockException e) {
-				//- if pessimistic locking fails and the transaction is rolled back
-				e.printStackTrace();
-			} catch (LockTimeoutException e) {
-				// - if pessimistic locking fails and only the statement is rolled back
-				e.printStackTrace();
-			} catch (PersistenceException e) {
-				// - if the query execution exceeds the query timeout value set and the transaction is rolled back
-				//	e.getCause()==PersistenceException.this.
-				e.printStackTrace();
+			} catch (RuntimeException e) {
+				if (transaction != null)
+					transaction.rollback();
+				throw e;
 			}
-			return "Complete";
+
 		} finally {
 
 			if (em != null)
 				em.close();
 
 		}
-
+		return "Complete";
 	}
 
 	private static EntityManagerFactory entityManagerFactory;
 	private static final int defaultBatchSize = 20;
-	static ExecutorService service = Executors.newFixedThreadPool(100);
+	static ExecutorService service = Executors.newSingleThreadScheduledExecutor();
 	private final EntityBase[] entities;
 
 }

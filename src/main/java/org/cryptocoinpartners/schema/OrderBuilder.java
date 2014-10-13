@@ -63,6 +63,10 @@ public class OrderBuilder {
 		return new SpecificOrderBuilder(time, market, volume, comment);
 	}
 
+	public SpecificOrderBuilder create(Instant time, Market market, Amount volume, GeneralOrder parentOrder, String comment) {
+		return new SpecificOrderBuilder(time, market, volume, parentOrder, comment);
+	}
+
 	@SuppressWarnings("unchecked")
 	public abstract class CommonOrderBuilder<T> {
 
@@ -196,6 +200,10 @@ public class OrderBuilder {
 
 		public SpecificOrderBuilder(Instant time, Market market, Amount volume, String comment) {
 			order = new SpecificOrder(time, portfolio, market, volume, comment);
+		}
+
+		public SpecificOrderBuilder(Instant time, Market market, Amount volume, GeneralOrder parentOrder, String comment) {
+			order = new SpecificOrder(time, portfolio, market, volume, parentOrder, comment);
 		}
 
 		public SpecificOrderBuilder(Instant time, Market market, long volumeCount) {
