@@ -99,7 +99,12 @@ public class Transaction extends Event {
 	public Amount getValue() {
 
 		if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
-			value = (getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN)).plus(getCommission());
+
+			Amount notional = getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN);
+			//Amount cost = notional.dividedBy(getExchange().getMargin(), Remainder.ROUND_EVEN);
+			Amount totalcost = notional.plus(getCommission());
+
+			value = totalcost;
 		} else if (getType().equals(TransactionType.BUY_RESERVATION) || getType().equals(TransactionType.SELL_RESERVATION)) {
 			value = (getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN)).minus(getCommission());
 
