@@ -24,7 +24,7 @@ public class Exchange extends EntityBase {
 		return found;
 	}
 
-	public static Exchange forSymbolOrCreate(String symbol, double margin, double feeRate, FeeMethod feeMethod) {
+	public static Exchange forSymbolOrCreate(String symbol, int margin, double feeRate, FeeMethod feeMethod) {
 		Exchange found = forSymbol(symbol);
 		if (found == null) {
 			found = new Exchange(symbol, margin, feeRate, feeMethod);
@@ -33,7 +33,7 @@ public class Exchange extends EntityBase {
 		return found;
 	}
 
-	public static Exchange forSymbolOrCreate(String symbol, double margin, double feeRate, FeeMethod feeMethod, double marginFeeRate, FeeMethod marginFeeMethod) {
+	public static Exchange forSymbolOrCreate(String symbol, int margin, double feeRate, FeeMethod feeMethod, double marginFeeRate, FeeMethod marginFeeMethod) {
 		Exchange found = forSymbol(symbol);
 		if (found == null) {
 			found = new Exchange(symbol, margin, feeRate, feeMethod, marginFeeRate, marginFeeMethod);
@@ -97,11 +97,12 @@ public class Exchange extends EntityBase {
 	}
 
 	@Basic(optional = false)
-	public double getMargin() {
-		return margin;
+	public int getMargin() {
+		return Math.max(margin, 1);
+
 	}
 
-	protected void setMargin(double margin) {
+	protected void setMargin(int margin) {
 		this.margin = margin;
 	}
 
@@ -118,14 +119,14 @@ public class Exchange extends EntityBase {
 		this.symbol = symbol;
 	}
 
-	private Exchange(String symbol, double margin, double feeRate, FeeMethod feeMethod) {
+	private Exchange(String symbol, int margin, double feeRate, FeeMethod feeMethod) {
 		this.symbol = symbol;
 		this.margin = margin;
 		this.feeRate = feeRate;
 		this.feeMethod = feeMethod;
 	}
 
-	private Exchange(String symbol, double margin, double feeRate, FeeMethod feeMethod, double marginFeeRate, FeeMethod marginFeeMethod) {
+	private Exchange(String symbol, int margin, double feeRate, FeeMethod feeMethod, double marginFeeRate, FeeMethod marginFeeMethod) {
 		this.symbol = symbol;
 		this.margin = margin;
 		this.feeRate = feeRate;
@@ -140,7 +141,7 @@ public class Exchange extends EntityBase {
 	}
 
 	private String symbol;
-	private double margin;
+	private int margin;
 	private double feeRate;
 	private double marginFeeRate;
 

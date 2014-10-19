@@ -69,8 +69,9 @@ public class Currencies {
 	public static final Currency PTS = crypto("PTS", 1e-8);
 	public static final Currency QRK = crypto("QRK", 1e-8);
 	public static final Currency quute = crypto("quute", 1e-8);
-    public static final Currency RDD = crypto("RDD", 1e-8);
-    public static final Currency RED = crypto("RED", 1e-8);
+	public static final Currency RDD = crypto("RDD", 1e-8);
+	public static final Currency CANN = crypto("CANN", 1e-8);
+	public static final Currency RED = crypto("RED", 1e-8);
 	public static final Currency SLM = crypto("SLM", 1e-8);
 	public static final Currency SRC = crypto("SRC", 1e-8);
 	public static final Currency TAG = crypto("TAG", 1e-8);
