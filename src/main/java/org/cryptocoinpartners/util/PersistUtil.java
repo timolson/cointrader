@@ -283,8 +283,10 @@ public class PersistUtil implements Callable<String> {
 					em.persist(entity);
 				transaction.commit();
 			} catch (RuntimeException e) {
+				e.printStackTrace();
 				if (transaction != null)
 					transaction.rollback();
+
 				throw e;
 			}
 
