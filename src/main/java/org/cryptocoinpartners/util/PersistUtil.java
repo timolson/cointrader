@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -32,7 +34,12 @@ public class PersistUtil implements Callable<String> {
 	private static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
 
 	private PersistUtil(EntityBase... entities) {
-		this.entities = entities;
+		try {
+			blockingQueue.put(entities);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public static void insert(EntityBase... entities) {
@@ -44,9 +51,7 @@ public class PersistUtil implements Callable<String> {
 			while (true) {
 
 				if (futureTask1.isDone()) {
-					for (EntityBase entity : entities) {
-						log.debug(entity.getClass().getSimpleName() + " saved to database");
-					}
+
 					return;
 				}
 			}
@@ -274,6 +279,7 @@ public class PersistUtil implements Callable<String> {
 	@Override
 	public String call() throws Exception {
 		EntityManager em = null;
+		EntityBase[] entities = blockingQueue.take();
 		try {
 			em = createEntityManager();
 			EntityTransaction transaction = em.getTransaction();
@@ -296,12 +302,17 @@ public class PersistUtil implements Callable<String> {
 				em.close();
 
 		}
+		for (EntityBase entity : entities) {
+			log.debug(entity.getClass().getSimpleName() + " saved to database");
+		}
 		return "Complete";
 	}
 
 	private static EntityManagerFactory entityManagerFactory;
 	private static final int defaultBatchSize = 20;
 	static ExecutorService service = Executors.newSingleThreadScheduledExecutor();
-	private final EntityBase[] entities;
+	//private final EntityBase[] entities;
+
+	private final BlockingQueue<EntityBase[]> blockingQueue = new ArrayBlockingQueue<EntityBase[]>(10000);
 
 }
