@@ -6,6 +6,7 @@
 * Control console (text)
 * Basic order routing
 * Simulated trading
+* Live order execution
 * Schema and persistence
 * CSV output of market data
 * Ad-hoc table reports
@@ -15,7 +16,6 @@ Coin Trader's future goals include:
 
 * Accounting and reconciliation
 * Backtesting
-* Live order execution
 * Flexible data output
 * Library of quantitative indicators
 * Web console & graphing
@@ -129,7 +129,6 @@ ct> exit
 $
 ```
 
-_Coin Trader does not send live orders to exchanges yet.  The above demo uses simulated order filling for testing._
 
 #### Automated Trading
 
