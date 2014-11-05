@@ -58,7 +58,9 @@ public class DecimalAmount extends Amount {
 
 	@Override
 	public Amount dividedBy(Amount o, RemainderHandler remainderHandler) {
-		return new DecimalAmount(bd.divide(o.asBigDecimal(), BigDecimal.ROUND_HALF_EVEN));
+
+		int scale = Math.min(o.asBigDecimal().scale(), mc.getPrecision());
+		return new DecimalAmount(bd.divide(o.asBigDecimal(), remainderHandler.getRoundingMode()).setScale(scale, remainderHandler.getRoundingMode()));
 
 	}
 
@@ -141,7 +143,6 @@ public class DecimalAmount extends Amount {
 	public int getScale() {
 		final BigDecimal bigDecimal = new BigDecimal("" + bd);
 		final String s = bigDecimal.toPlainString();
-		System.out.println(s);
 		final int index = s.indexOf('.');
 		if (index < 0) {
 			return 0;

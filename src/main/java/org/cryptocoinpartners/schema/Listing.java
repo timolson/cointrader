@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.Nullable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.NoResultException;
@@ -26,10 +27,15 @@ public class Listing extends EntityBase {
 		return quote;
 	}
 
+	@Nullable
+	public String getPrompt() {
+		return prompt;
+	}
+
 	/** will create the listing if it doesn't exist */
 	public static Listing forPair(Asset base, Asset quote) {
 		try {
-			Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2", base, quote);
+			Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2 and prompt IS NULL", base, quote);
 			if (listing == null) {
 				listing = new Listing(base, quote);
 				PersistUtil.insert(listing);
@@ -42,6 +48,21 @@ public class Listing extends EntityBase {
 		}
 	}
 
+	public static Listing forPair(Asset base, Asset quote, String prompt) {
+		try {
+			Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2 and prompt=?3", base, quote, prompt);
+			if (listing == null) {
+				listing = new Listing(base, quote, prompt);
+				PersistUtil.insert(listing);
+			}
+			return listing;
+		} catch (NoResultException e) {
+			final Listing listing = new Listing(base, quote, prompt);
+			PersistUtil.insert(listing);
+			return listing;
+		}
+	}
+
 	@Override
 	public String toString() {
 		return getSymbol();
@@ -49,6 +70,8 @@ public class Listing extends EntityBase {
 
 	@Transient
 	public String getSymbol() {
+		if (prompt != null)
+			return base.getSymbol() + '.' + quote.getSymbol() + '.' + prompt;
 		return base.getSymbol() + '.' + quote.getSymbol();
 	}
 
@@ -72,12 +95,23 @@ public class Listing extends EntityBase {
 		this.quote = quote;
 	}
 
+	protected void setPrompt(String prompt) {
+		this.prompt = prompt;
+	}
+
 	protected Asset base;
 	protected Asset quote;
+	private String prompt;
 
 	public Listing(Asset base, Asset quote) {
 		this.base = base;
 		this.quote = quote;
+	}
+
+	public Listing(Asset base, Asset quote, String prompt) {
+		this.base = base;
+		this.quote = quote;
+		this.prompt = prompt;
 	}
 
 	public static Listing forSymbol(String symbol) {
@@ -89,10 +123,15 @@ public class Listing extends EntityBase {
 		Asset base = Asset.forSymbol(baseSymbol);
 		if (base == null)
 			throw new IllegalArgumentException("Invalid base symbol: \"" + baseSymbol + "\"");
-		final String quoteSymbol = symbol.substring(dot + 1, symbol.length());
+		int len = symbol.substring(dot + 1, symbol.length()).indexOf('.');
+		len = (len != -1) ? Math.min(symbol.length(), dot + 1 + symbol.substring(dot + 1, symbol.length()).indexOf('.')) : symbol.length();
+		final String quoteSymbol = symbol.substring(dot + 1, len);
+		final String prompt = (symbol.length() > len) ? symbol.substring(len + 1, symbol.length()) : null;
 		Asset quote = Asset.forSymbol(quoteSymbol);
 		if (quote == null)
 			throw new IllegalArgumentException("Invalid quote symbol: \"" + quoteSymbol + "\"");
-		return Listing.forPair(base, quote);
+		if (prompt == null)
+			return Listing.forPair(base, quote);
+		return Listing.forPair(base, quote, prompt);
 	}
 }

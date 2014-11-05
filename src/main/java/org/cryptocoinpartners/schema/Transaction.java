@@ -101,9 +101,33 @@ public class Transaction extends Event {
 		if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
 
 			Amount notional = getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN);
-			//Amount cost = notional.dividedBy(getExchange().getMargin(), Remainder.ROUND_EVEN);
-			Amount totalcost = notional.plus(getCommission());
+			Amount totalvalue = notional.plus(getCommission());
+			value = totalvalue;
+		} else if (getType().equals(TransactionType.BUY_RESERVATION) || getType().equals(TransactionType.SELL_RESERVATION)) {
+			value = (getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN)).minus(getCommission());
 
+		} else if (getType().equals(TransactionType.CREDIT) || getType().equals(TransactionType.INTREST)) {
+			value = (getAmount());
+		} else if (getType().equals(TransactionType.DEBIT) || getType().equals(TransactionType.FEES)) {
+			value = getAmount().negate();
+		} else if (getType().equals(TransactionType.REBALANCE)) {
+			value = getAmount().times(getPrice(), Remainder.ROUND_EVEN);
+
+		} else {
+			throw new IllegalArgumentException("unsupported transactionType: " + getType());
+		}
+
+		return value;
+	}
+
+	@Transient
+	public Amount getCost() {
+
+		if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
+
+			Amount notional = getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN);
+			Amount cost = notional.dividedBy(getExchange().getMargin(), Remainder.ROUND_EVEN);
+			Amount totalcost = cost.plus(getCommission());
 			value = totalcost;
 		} else if (getType().equals(TransactionType.BUY_RESERVATION) || getType().equals(TransactionType.SELL_RESERVATION)) {
 			value = (getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN)).minus(getCommission());

@@ -19,6 +19,8 @@
 		<defaults>
 			<threading>
 				<internal-timer enabled="false" msec-resolution="200"/>
+				 <listener-dispatch preserve-order="true" timeout-msec="100000" locking="spin"/>
+ 
 			</threading>
 			<expression udf-cache="false"/>
 			<execution prioritized="true"/>			

@@ -6,11 +6,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -29,32 +27,40 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Tim Olson
  */
-public class PersistUtil implements Callable<String> {
+public class PersistUtil implements Runnable {
 
 	private static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
+	private static EntityManagerFactory entityManagerFactory;
+	private static final int defaultBatchSize = 20;
+	static ExecutorService service = Executors.newSingleThreadExecutor();
+	//private final EntityBase[] entities;
+
+	private static final BlockingQueue<EntityBase[]> blockingQueue = new ArrayBlockingQueue<EntityBase[]>(10000);
+	static {
+		final PersistUtil persistanceThread = new PersistUtil();
+		service.execute(persistanceThread);
+	}
+
+	private PersistUtil() {
+	}
 
 	private PersistUtil(EntityBase... entities) {
-		try {
-			blockingQueue.put(entities);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 
 	public static void insert(EntityBase... entities) {
-		PersistUtil persistanceThread = new PersistUtil(entities);
-		FutureTask<String> futureTask1 = new FutureTask<String>(persistanceThread);
+
+		//	PersistUtil persistanceThread = new PersistUtil(entities);
+		//FutureTask<String> futureTask1 = new FutureTask<String>(persistanceThread);
 		// FutureTask<String> futureTask2 = new FutureTask<String>(callable2);
 		try {
-			service.execute(futureTask1);
-			while (true) {
 
-				if (futureTask1.isDone()) {
+			blockingQueue.put(entities);
+			//service.execute(futureTask1);
 
-					return;
-				}
-			}
+			//if (futureTask1.isDone()) {
+
+			//	}
+
 		} catch (Exception e) {
 			if (e instanceof InterruptedException) {
 				log.error("Cointrader Database Peristnace had an error, the details are:  {}.", e);
@@ -277,42 +283,44 @@ public class PersistUtil implements Callable<String> {
 	}
 
 	@Override
-	public String call() throws Exception {
+	public void run() {
 		EntityManager em = null;
-		EntityBase[] entities = blockingQueue.take();
-		try {
-			em = createEntityManager();
-			EntityTransaction transaction = em.getTransaction();
-			transaction.begin();
+		EntityBase[] entities = null;
+		while (true) {
+
 			try {
-				for (EntityBase entity : entities)
-					em.persist(entity);
-				transaction.commit();
-			} catch (RuntimeException e) {
-				e.printStackTrace();
-				if (transaction != null)
-					transaction.rollback();
-
-				throw e;
+				entities = blockingQueue.take();
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
 			}
+			try {
+				em = createEntityManager();
+				EntityTransaction transaction = em.getTransaction();
+				transaction.begin();
+				try {
+					for (EntityBase entity : entities)
+						em.persist(entity);
+					transaction.commit();
+				} catch (RuntimeException e) {
+					e.printStackTrace();
+					if (transaction != null)
+						transaction.rollback();
 
-		} finally {
+					throw e;
+				}
 
-			if (em != null)
-				em.close();
+			} finally {
 
+				if (em != null)
+					em.close();
+
+			}
+			for (EntityBase entity : entities) {
+				log.debug(entity.getClass().getSimpleName() + " saved to database");
+			}
 		}
-		for (EntityBase entity : entities) {
-			log.debug(entity.getClass().getSimpleName() + " saved to database");
-		}
-		return "Complete";
+		//return "Complete";
 	}
-
-	private static EntityManagerFactory entityManagerFactory;
-	private static final int defaultBatchSize = 20;
-	static ExecutorService service = Executors.newSingleThreadScheduledExecutor();
-	//private final EntityBase[] entities;
-
-	private final BlockingQueue<EntityBase[]> blockingQueue = new ArrayBlockingQueue<EntityBase[]>(10000);
 
 }

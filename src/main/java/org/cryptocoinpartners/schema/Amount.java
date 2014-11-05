@@ -95,6 +95,14 @@ public abstract class Amount implements Comparable<Amount> {
 	}
 
 	@Transient
+	public DecimalAmount divide(BigDecimal o, RemainderHandler remainderHandler) {
+		o.setScale(Math.min(o.scale(), mc.getPrecision()));
+		BigDecimal division = asBigDecimal().divide(o, remainderHandler.getRoundingMode());
+		DecimalAmount result = DecimalAmount.of(division);
+		return result;
+	}
+
+	@Transient
 	public Amount times(int o, RemainderHandler remainderHandler) {
 		return times(new BigDecimal(o), remainderHandler);
 	}
@@ -102,6 +110,14 @@ public abstract class Amount implements Comparable<Amount> {
 	@Transient
 	public Amount dividedBy(int o, RemainderHandler remainderHandler) {
 		return dividedBy(new BigDecimal(o), remainderHandler);
+	}
+
+	@Transient
+	public DecimalAmount divide(int o, RemainderHandler remainderHandler) {
+
+		BigDecimal division = asBigDecimal().divide(BigDecimal.valueOf(o), remainderHandler.getRoundingMode());
+		DecimalAmount result = DecimalAmount.of(division);
+		return result;
 	}
 
 	@Transient

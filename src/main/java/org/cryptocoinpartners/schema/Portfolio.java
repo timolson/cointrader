@@ -12,6 +12,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.cryptocoinpartners.util.Remainder;
 
 /**
  * Many Owners may have Stakes in the Portfolio, but there is only one PortfolioManager, who is not necessarily an Owner.  The
@@ -187,6 +188,35 @@ public class Portfolio extends EntityBase {
 
 				for (Position p : exchangePositions) {
 					if (p.getExchange().equals(position.getExchange()) && p.getAsset().equals(position.getAsset())) {
+						Amount totalQuantity = p.getVolume().plus(position.getVolume());
+						Amount totalLongQuantity = p.getLongVolume().plus(position.getLongVolume());
+						Amount totalShortQuantity = p.getShortVolume().plus(position.getShortVolume());
+
+						if (!totalQuantity.isZero()) {
+
+							Amount avgPrice = ((p.getAvgPrice().times(p.getVolume(), Remainder.ROUND_EVEN)).plus(position.getVolume().times(
+									position.getAvgPrice(), Remainder.ROUND_EVEN))).dividedBy(totalQuantity, Remainder.ROUND_EVEN);
+							p.setAvgPrice(avgPrice);
+						}
+
+						if (!position.getLongVolume().isZero()) {
+
+							Amount longAvgPrice = ((p.getLongAvgPrice().times(p.getLongVolume(), Remainder.ROUND_EVEN)).plus(position.getLongVolume().times(
+									position.getLongAvgPrice(), Remainder.ROUND_EVEN))).dividedBy(totalLongQuantity, Remainder.ROUND_EVEN);
+							p.setLongAvgPrice(longAvgPrice);
+						}
+
+						if (!position.getShortVolume().isZero()) {
+
+							Amount shortAvgPrice = ((p.getShortAvgPrice().times(p.getShortVolume(), Remainder.ROUND_EVEN)).plus(position.getShortVolume()
+									.times(position.getShortAvgPrice(), Remainder.ROUND_EVEN))).dividedBy(totalShortQuantity, Remainder.ROUND_EVEN);
+							p.setShortAvgPrice(shortAvgPrice);
+						}
+
+						//	Long avgPriceCount = (long) avgPrice.divide(BigDecimal.valueOf(p.getMarket().getPriceBasis()), Remainder.ROUND_EVEN).asDouble();
+						//avgPrice = new DiscreteAmount(avgPriceCount, p.getMarket().getPriceBasis());
+						//DiscreteAmount avgDiscretePrice = new DiscreteAmount((long) avgPrice.times(p.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)
+						//	.asDouble(), (long) (p.getMarket().getPriceBasis()));
 						p.setLongVolumeCount(p.getLongVolumeCount() + position.getLongVolumeCount());
 						p.setShortVolumeCount(p.getShortVolumeCount() + position.getShortVolumeCount());
 						// if the long and short volumes are zero we can remove the position

@@ -1,5 +1,7 @@
 package org.cryptocoinpartners.module.xchange;
 
+import java.util.ArrayList;
+
 import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.marketdata.Trades;
 
@@ -8,9 +10,12 @@ import com.xeiam.xchange.dto.marketdata.Trades;
 public class BitfinexHelper extends XchangeDataHelperBase
 {
     /** Send the lastTradeTime in millis as the first parameter to getTrades() */
-    public Object[] getTradesParameters( CurrencyPair pair, long lastTradeTime, long lastTradeId )
+    public ArrayList<Object> getTradesParameters( CurrencyPair pair, final long lastTradeTime, long lastTradeId )
     {
-        return new Object[] {lastTradeTime};
+    	return new ArrayList<Object>() {{ add(lastTradeTime);  }};
+    	
+    	
+        		
     }
 
 

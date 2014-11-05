@@ -72,9 +72,9 @@ public class XchangeData {
 	    module package).
 	 */
 	public interface Helper {
-		Object[] getTradesParameters(CurrencyPair pair, long lastTradeTime, long lastTradeId);
+		ArrayList<Object> getTradesParameters(CurrencyPair pair, long lastTradeTime, long lastTradeId);
 
-		Object[] getOrderBookParameters(CurrencyPair pair);
+		ArrayList<Object> getOrderBookParameters(CurrencyPair pair);
 
 		void handleTrades(Trades tradeSpec);
 
@@ -108,6 +108,7 @@ public class XchangeData {
 		Collection<Market> markets = new ArrayList<>(listings.size());
 		for (Object listingSymbol : listings) {
 			Listing listing = Listing.forSymbol(listingSymbol.toString().toUpperCase());
+
 			final Market market = Market.findOrCreate(coinTraderExchange, listing);
 			markets.add(market);
 		}
@@ -126,6 +127,7 @@ public class XchangeData {
 			this.rateLimiter = rateLimiter;
 			this.dataService = dataService;
 			this.helper = helper;
+			this.prompt = market.getListing().getPrompt();
 			pair = XchangeUtil.getCurrencyPairForListing(market.getListing());
 			lastTradeTime = 0;
 			lastTradeId = 0;
@@ -164,11 +166,19 @@ public class XchangeData {
 
 		protected void getTrades() {
 			try {
-				Object[] params;
+				ArrayList<Object> args;
 				if (helper != null)
-					params = helper.getTradesParameters(pair, lastTradeTime, lastTradeId);
+					args = helper.getTradesParameters(pair, lastTradeTime, lastTradeId);
+
 				else
-					params = new Object[] {};
+					args = new ArrayList<Object>();
+
+				if (prompt != null)
+					args.add(0, prompt);
+				// convert the array list
+				Object[] params = new Object[args.size()];
+				params = args.toArray(params);
+
 				Trades tradeSpec = dataService.getTrades(pair, params);
 				if (helper != null)
 					helper.handleTrades(tradeSpec);
@@ -192,11 +202,17 @@ public class XchangeData {
 
 		protected void getBook() {
 			try {
-				Object[] params;
+				ArrayList<Object> args;
 				if (helper != null)
-					params = helper.getOrderBookParameters(pair);
+					args = helper.getOrderBookParameters(pair);
 				else
-					params = new Object[0];
+					args = new ArrayList<Object>();
+
+				if (prompt != null)
+					args.add(0, prompt);
+				Object[] params = new Object[args.size()];
+				params = args.toArray(params);
+
 				final OrderBook orderBook = dataService.getOrderBook(pair, params);
 				if (helper != null)
 					helper.handleOrderBook(orderBook);
@@ -222,6 +238,7 @@ public class XchangeData {
 		private final Market market;
 		private final CurrencyPair pair;
 		private long lastTradeTime;
+		private final String prompt;
 		private long lastTradeId;
 	}
 

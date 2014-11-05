@@ -20,3 +20,5 @@ from
 on pattern
 	[every timer:interval(1 day)]
 	select current_timestamp,portfolio from PortfolioWindow;
+
+	

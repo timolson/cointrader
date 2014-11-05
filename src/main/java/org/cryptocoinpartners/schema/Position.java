@@ -33,6 +33,9 @@ public class Position extends Holding {
 		this.shortVolume = volume.isNegative() ? volume : this.shortVolume;
 		this.shortVolumeCount = volume.isNegative() ? volume.toBasis(asset.getBasis(), Remainder.ROUND_EVEN).getCount() : this.shortVolumeCount;
 		this.price = price;
+		this.avgPrice = price;
+		this.longAvgPrice = volume.isPositive() ? price : this.longAvgPrice;
+		this.shortAvgPrice = volume.isNegative() ? price : this.shortAvgPrice;
 		this.asset = asset;
 		this.portfolio = portfolio;
 	}
@@ -49,6 +52,9 @@ public class Position extends Holding {
 		this.longExitPrice = volume.isPositive() ? exitPrice : this.longExitPrice;
 		this.shortExitPrice = volume.isNegative() ? exitPrice : this.shortExitPrice;
 		this.asset = asset;
+		this.avgPrice = price;
+		this.longAvgPrice = volume.isPositive() ? price : this.longAvgPrice;
+		this.shortAvgPrice = volume.isNegative() ? price : this.shortAvgPrice;
 		this.portfolio = portfolio;
 	}
 
@@ -131,6 +137,25 @@ public class Position extends Holding {
 	}
 
 	@Transient
+	protected Amount getAvgPrice() {
+		return avgPrice;
+	}
+
+	@Transient
+	protected Amount getLongAvgPrice() {
+		if (longAvgPrice == null)
+			longAvgPrice = DecimalAmount.ZERO;
+		return longAvgPrice;
+	}
+
+	@Transient
+	protected Amount getShortAvgPrice() {
+		if (shortAvgPrice == null)
+			shortAvgPrice = DecimalAmount.ZERO;
+		return shortAvgPrice;
+	}
+
+	@Transient
 	public Amount getShortExitPrice() {
 		return shortExitPrice;
 	}
@@ -171,10 +196,13 @@ public class Position extends Holding {
 
 	@Override
 	public String toString() {
-		return "Position=[Exchange=" + exchange + ", Price=" + price + (getShortVolume() != null ? (SEPARATOR + ", short qty=" + getShortVolume()) : "")
-				+ (getLongVolume() != null ? (SEPARATOR + "long qty=" + getLongVolume()) : "") + ", net qty=" + getVolume().toString() + ",  entyDate="
-				+ ", instrument=" + asset + (longExitPrice != null ? (SEPARATOR + " longExitPrice=" + getLongExitPrice()) : "")
-				+ (shortExitPrice != null ? (SEPARATOR + " shortExitPrice=" + getShortExitPrice()) : "") + "]";
+		return "Position=[Exchange=" + exchange + ", Price=" + price + ", Average Price=" + avgPrice
+				+ (getShortVolume() != null ? (SEPARATOR + ", Short Qty=" + getShortVolume()) : "")
+				+ (getShortAvgPrice() != null ? (SEPARATOR + ", Short Avg Price=" + getShortAvgPrice()) : "")
+				+ (getLongVolume() != null ? (SEPARATOR + "Long Qty=" + getLongVolume()) : "")
+				+ (getLongAvgPrice() != null ? (SEPARATOR + "Long Avg Price=" + getLongAvgPrice()) : "") + ", Net Qty=" + getVolume().toString()
+				+ ",  Entry Date=" + ", Instrument=" + asset + (longExitPrice != null ? (SEPARATOR + " Long Exit Price=" + getLongExitPrice()) : "")
+				+ (shortExitPrice != null ? (SEPARATOR + " Short Exit Price=" + getShortExitPrice()) : "") + "]";
 	}
 
 	// JPA
@@ -209,6 +237,18 @@ public class Position extends Holding {
 		this.longExitPrice = null;
 	}
 
+	public void setAvgPrice(Amount avgPrice) {
+		this.avgPrice = avgPrice;
+	}
+
+	public void setLongAvgPrice(Amount longAvgPrice) {
+		this.longAvgPrice = longAvgPrice;
+	}
+
+	public void setShortAvgPrice(Amount shortAvgPrice) {
+		this.shortAvgPrice = shortAvgPrice;
+	}
+
 	public void setShortExitPriceCount(long shortExitPriceCount) {
 		this.shortExitPriceCount = shortExitPriceCount;
 		this.shortExitPrice = null;
@@ -222,6 +262,9 @@ public class Position extends Holding {
 	private Amount shortVolume;
 	private Market market;
 	private Amount price;
+	private Amount avgPrice;
+	private Amount longAvgPrice;
+	private Amount shortAvgPrice;
 	private Amount shortExitPrice;
 	private Amount longExitPrice;
 	private Amount marginAmount;
