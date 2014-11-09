@@ -103,16 +103,15 @@ public class ReadTicksCsv {
 
 				Trade trade = Trade.fromDoubles(market, instant, instant, csvtrade.getTime().toString(), csvtrade.getLast(), csvtrade.getVol());
 				bookBuilder.start(instant, instant, csvtrade.getTime().toString(), market);
-
-				//				for (LimitOrder limitOrder : orderBook.getBids())
 				bookBuilder.addBid(BigDecimal.valueOf(csvtrade.getBidprice1()), BigDecimal.valueOf(csvtrade.getBidvol1()));
-				//				for (LimitOrder limitOrder : orderBook.getAsks())
 				bookBuilder.addAsk(BigDecimal.valueOf(csvtrade.getAskprice1()), BigDecimal.valueOf(csvtrade.getAskvol1()));
-				//				// bookBuilder.
+				// bookBuilder.
+				// bookBuilder.
 				Book book = bookBuilder.build();
+				//TODO create insertion and deltion blobs from book.
+				context.publish(book);
+				context.publish(trade);
 
-				dbPersistance.handleMarketData(trade);
-				dbPersistance.handleMarketData(book);
 			}
 
 		} catch (IOException e) {
