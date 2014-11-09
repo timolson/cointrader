@@ -22,7 +22,8 @@ public enum TransactionType {
 	FEES("FEES"), //7
 	REBALANCE("REBALANCE"), //8
 	TRANSFER("TRANSFER"), //9
-	PURCHASE("PURCHASE");//10
+	PURCHASE("PURCHASE"), //10
+	REALISED_PROFIT_LOSS("REALISED_PROFIT_LOSS");//11
 
 	private final String enumValue;
 
@@ -85,6 +86,7 @@ public enum TransactionType {
 			TransactionType.values.put(REBALANCE.enumValue, REBALANCE); //8
 			TransactionType.values.put(TRANSFER.enumValue, TRANSFER); //9
 			TransactionType.values.put(PURCHASE.enumValue, PURCHASE); //10
+			TransactionType.values.put(REALISED_PROFIT_LOSS.enumValue, REALISED_PROFIT_LOSS); //11
 		}
 		synchronized (TransactionType.valueList) {
 			TransactionType.valueList.add(BUY);
@@ -98,6 +100,7 @@ public enum TransactionType {
 			TransactionType.valueList.add(REBALANCE);
 			TransactionType.valueList.add(TRANSFER);
 			TransactionType.valueList.add(PURCHASE);
+			TransactionType.valueList.add(REALISED_PROFIT_LOSS);
 			TransactionType.valueList = Collections.unmodifiableList(valueList);
 		}
 		synchronized (TransactionType.literals) {
@@ -112,6 +115,7 @@ public enum TransactionType {
 			TransactionType.literals.add(REBALANCE.enumValue);
 			TransactionType.literals.add(TRANSFER.enumValue);
 			TransactionType.literals.add(PURCHASE.enumValue);
+			TransactionType.literals.add(REALISED_PROFIT_LOSS.enumValue);
 			TransactionType.literals = Collections.unmodifiableList(literals);
 		}
 		synchronized (TransactionType.names) {
@@ -126,6 +130,7 @@ public enum TransactionType {
 			TransactionType.names.add("REBALANCE");
 			TransactionType.names.add("TRANSFER");
 			TransactionType.names.add("PURCHASE");
+			TransactionType.names.add("REALISED_PROFIT_LOSS");
 			TransactionType.names = Collections.unmodifiableList(names);
 		}
 	}
