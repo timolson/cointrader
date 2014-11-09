@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.Lob;
@@ -298,8 +299,12 @@ public class Book extends MarketData implements Spread {
 	}
 
 	// These getters and setters are for conversion in JPA
-	protected @ManyToOne
-	Book getParent() {
+	//@ManyToOne(cascade = CascadeType.MERGE)
+	@Nullable
+	@ManyToOne(optional = true, cascade = { CascadeType.REMOVE, CascadeType.MERGE })
+	//, fetch = FetchType.EAGER)
+	//@JoinColumn(name = "parent", insertable = false, updatable = false)
+	protected Book getParent() {
 		return parent;
 	}
 
