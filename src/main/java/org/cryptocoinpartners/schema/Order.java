@@ -3,9 +3,12 @@ package org.cryptocoinpartners.schema;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 import javax.annotation.Nullable;
 import javax.persistence.Basic;
+import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
@@ -40,12 +43,12 @@ public abstract class Order extends Event {
 	// private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
 	protected static final String SEPARATOR = ",";
 
-	public void setParentOrder(GeneralOrder parentOrder) {
+	public void setParentOrder(Order parentOrder) {
 		this.parentOrder = parentOrder;
 	}
 
-	@ManyToOne(optional = true)
-	public GeneralOrder getParentOrder() {
+	@ManyToOne(optional = true, cascade = { CascadeType.ALL })
+	public Order getParentOrder() {
 		return parentOrder;
 	}
 
@@ -129,20 +132,39 @@ public abstract class Order extends Event {
 		return emulation;
 	}
 
-	@OneToMany
+	@Nullable
+	@OneToMany(orphanRemoval = true)
 	public Collection<Fill> getFills() {
 		if (fills == null)
-			fills = new ArrayList<>();
+			fills = Collections.synchronizedList(new ArrayList<Fill>());
 		return fills;
+	}
+
+	@Nullable
+	@OneToMany(orphanRemoval = true)
+	public Collection<Order> getChildren() {
+		if (children == null)
+			children = Collections.synchronizedList(new ArrayList<Order>());
+
+		return children;
 	}
 
 	public void addFill(Fill fill) {
 		getFills().add(fill);
 	}
 
+	public void addChild(Order order) {
+		getChildren().add(order);
+	}
+
 	@Transient
 	public boolean hasFills() {
 		return !getFills().isEmpty();
+	}
+
+	@Transient
+	public boolean hasChildren() {
+		return !getChildren().isEmpty();
 	}
 
 	@Transient
@@ -161,6 +183,10 @@ public abstract class Order extends Event {
 			volume = volume.add(volumeBd);
 		}
 		return new DecimalAmount(sumProduct.divide(volume, Amount.mc));
+	}
+
+	protected Order() {
+
 	}
 
 	protected Order(Instant time) {
@@ -215,6 +241,12 @@ public abstract class Order extends Event {
 
 	}
 
+	protected void setChildren(List<Order> children) {
+		this.children = children;
+	}
+
+	private Collection<Order> children;
+
 	protected Instant entryTime;
 
 	private Portfolio portfolio;
@@ -227,6 +259,6 @@ public abstract class Order extends Event {
 
 	private boolean force; // allow this order to override various types of panic
 	private boolean emulation; // ("allow order type emulation" [default, true] or "only use exchange's native functionality")
-	protected GeneralOrder parentOrder;
+	protected Order parentOrder;
 
 }
