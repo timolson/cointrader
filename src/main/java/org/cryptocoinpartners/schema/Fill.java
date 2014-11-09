@@ -1,6 +1,8 @@
 package org.cryptocoinpartners.schema;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
 
@@ -37,7 +39,9 @@ public class Fill extends RemoteEvent {
 		this.commission = commission;
 	}
 
-	public @ManyToOne
+	public @ManyToOne(cascade = { CascadeType.ALL })
+	//(cascade = { CascadeType.ALL })
+	@JoinColumn(name = "`order`")
 	SpecificOrder getOrder() {
 		return order;
 	}

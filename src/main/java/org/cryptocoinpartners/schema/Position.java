@@ -2,6 +2,7 @@ package org.cryptocoinpartners.schema;
 
 import javax.annotation.Nullable;
 import javax.persistence.Entity;
+import javax.persistence.JoinColumn;
 import javax.persistence.OneToOne;
 import javax.persistence.Transient;
 
@@ -168,6 +169,7 @@ public class Position extends Holding {
 	/** If the SpecificOrder is not null, then this Position is being held in reserve as payment for that Order */
 	@OneToOne
 	@Nullable
+	@JoinColumn(name = "`order`")
 	protected SpecificOrder getOrder() {
 		return order;
 	}
