@@ -40,12 +40,13 @@ public class SpecificOrder extends Order {
 
 	}
 
-	public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount, GeneralOrder parentOrder, String comment) {
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount, Order parentOrder, String comment) {
 		super(time);
 		this.market = market;
 		this.volumeCount = volumeCount;
 		super.setComment(comment);
 		super.setParentOrder(parentOrder);
+		parentOrder.addChild(this);
 		super.setPortfolio(portfolio);
 
 	}
@@ -56,14 +57,16 @@ public class SpecificOrder extends Order {
 		this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
 		super.setComment(comment);
 		super.setPortfolio(portfolio);
+
 	}
 
-	public SpecificOrder(Instant time, Portfolio portfolio, Market market, Amount volume, GeneralOrder parentOrder, String comment) {
+	public SpecificOrder(Instant time, Portfolio portfolio, Market market, Amount volume, Order parentOrder, String comment) {
 		super(time);
 		this.market = market;
 		this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
 		super.setComment(comment);
 		super.setParentOrder(parentOrder);
+		parentOrder.addChild(this);
 		super.setPortfolio(portfolio);
 	}
 
@@ -169,6 +172,10 @@ public class SpecificOrder extends Order {
 	/** 0 if no limit is set */
 	protected long getLimitPriceCount() {
 		return limitPriceCount;
+	}
+
+	protected SpecificOrder() {
+
 	}
 
 	protected SpecificOrder(Instant time) {
