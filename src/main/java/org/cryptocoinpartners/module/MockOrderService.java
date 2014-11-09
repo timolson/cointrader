@@ -2,6 +2,7 @@ package org.cryptocoinpartners.module;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -43,7 +44,8 @@ public class MockOrderService extends BaseOrderService {
 	@SuppressWarnings("ConstantConditions")
 	@When("select * from Book")
 	private void handleBook(Book b) {
-		List<Fill> fills = new ArrayList<>();
+		List<Fill> fills = Collections.synchronizedList(new ArrayList<Fill>());
+
 		// todo multiple Orders may be filled with the same Offer.  We should deplete the Offers as we fill
 		for (SpecificOrder order : pendingOrders) {
 			if (order.getMarket().equals(b.getMarket())) {
