@@ -36,7 +36,7 @@ public class OrderBuilder {
 		return new GeneralOrderBuilder(time, market, volume, type);
 	}
 
-	public GeneralOrderBuilder create(Instant time, GeneralOrder parentOrder, Market market, BigDecimal volume, FillType type) {
+	public GeneralOrderBuilder create(Instant time, Order parentOrder, Market market, BigDecimal volume, FillType type) {
 		return new GeneralOrderBuilder(time, parentOrder, market, volume, type);
 	}
 
@@ -54,7 +54,7 @@ public class OrderBuilder {
 		return new SpecificOrderBuilder(time, market, volumeCount, comment);
 	}
 
-	public SpecificOrderBuilder create(Instant time, Market market, long volumeCount, GeneralOrder parentOrder, String comment) {
+	public SpecificOrderBuilder create(Instant time, Market market, long volumeCount, Order parentOrder, String comment) {
 		return new SpecificOrderBuilder(time, market, volumeCount, parentOrder, comment);
 	}
 
@@ -63,7 +63,7 @@ public class OrderBuilder {
 		return new SpecificOrderBuilder(time, market, volume, comment);
 	}
 
-	public SpecificOrderBuilder create(Instant time, Market market, Amount volume, GeneralOrder parentOrder, String comment) {
+	public SpecificOrderBuilder create(Instant time, Market market, Amount volume, Order parentOrder, String comment) {
 		return new SpecificOrderBuilder(time, market, volume, parentOrder, comment);
 	}
 
@@ -118,7 +118,7 @@ public class OrderBuilder {
 			order = new GeneralOrder(time, portfolio, listing, volume);
 		}
 
-		public GeneralOrderBuilder(Instant time, GeneralOrder parentOrder, Listing listing, BigDecimal volume) {
+		public GeneralOrderBuilder(Instant time, Order parentOrder, Listing listing, BigDecimal volume) {
 			order = new GeneralOrder(time, portfolio, parentOrder, listing, volume);
 		}
 
@@ -126,7 +126,7 @@ public class OrderBuilder {
 			order = new GeneralOrder(time, portfolio, market, volume, type);
 		}
 
-		public GeneralOrderBuilder(Instant time, GeneralOrder parentOrder, Market market, BigDecimal volume, FillType type) {
+		public GeneralOrderBuilder(Instant time, Order parentOrder, Market market, BigDecimal volume, FillType type) {
 			order = new GeneralOrder(time, portfolio, parentOrder, market, volume, type);
 		}
 
@@ -202,7 +202,7 @@ public class OrderBuilder {
 			order = new SpecificOrder(time, portfolio, market, volume, comment);
 		}
 
-		public SpecificOrderBuilder(Instant time, Market market, Amount volume, GeneralOrder parentOrder, String comment) {
+		public SpecificOrderBuilder(Instant time, Market market, Amount volume, Order parentOrder, String comment) {
 			order = new SpecificOrder(time, portfolio, market, volume, parentOrder, comment);
 		}
 
@@ -214,7 +214,7 @@ public class OrderBuilder {
 			order = new SpecificOrder(time, portfolio, market, volumeCount, comment);
 		}
 
-		public SpecificOrderBuilder(Instant time, Market market, long volumeCount, GeneralOrder parentOrder, String comment) {
+		public SpecificOrderBuilder(Instant time, Market market, long volumeCount, Order parentOrder, String comment) {
 			order = new SpecificOrder(time, portfolio, market, volumeCount, parentOrder, comment);
 		}
 
