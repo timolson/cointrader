@@ -21,6 +21,7 @@ import javax.persistence.TypedQuery;
 import org.cryptocoinpartners.schema.Currencies;
 import org.cryptocoinpartners.schema.EntityBase;
 import org.cryptocoinpartners.schema.Exchanges;
+import org.hibernate.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,13 +33,18 @@ public class PersistUtil implements Runnable {
 	private static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
 	private static EntityManagerFactory entityManagerFactory;
 	private static final int defaultBatchSize = 20;
+
 	static ExecutorService service = Executors.newSingleThreadExecutor();
+
 	//private final EntityBase[] entities;
 
 	private static final BlockingQueue<EntityBase[]> blockingQueue = new ArrayBlockingQueue<EntityBase[]>(10000);
+
 	static {
-		final PersistUtil persistanceThread = new PersistUtil();
-		service.execute(persistanceThread);
+
+		PersistUtil persistanceThread = new PersistUtil();
+		service.submit(persistanceThread);
+
 	}
 
 	private PersistUtil() {
@@ -263,9 +269,11 @@ public class PersistUtil implements Runnable {
 		properties.put("hibernate.connection.url", ConfigUtil.combined().getString("db.url"));
 		properties.put("hibernate.connection.username", ConfigUtil.combined().getString("db.username"));
 		properties.put("hibernate.connection.password", ConfigUtil.combined().getString("db.password"));
+		properties.put("hibernate.ejb.naming_strategy", "org.hibernate.cfg.ImprovedNamingStrategy");
 
 		try {
 			entityManagerFactory = Persistence.createEntityManagerFactory("org.cryptocoinpartners.schema", properties);
+
 			ensureSingletonsExist();
 		} catch (Throwable t) {
 			if (entityManagerFactory != null) {
@@ -282,14 +290,69 @@ public class PersistUtil implements Runnable {
 		Exchanges.BITFINEX.getSymbol(); // this should load all the singletons in Exchanges
 	}
 
+	public static void purgeTransactions() {
+
+		EntityManager em = null;
+		try {
+			em = createEntityManager();
+			EntityTransaction transaction = em.getTransaction();
+
+			transaction.begin();
+
+			Session session = em.unwrap(Session.class);
+			session.createSQLQuery("delete from transaction").executeUpdate();
+			session.createSQLQuery("delete from order_fills").executeUpdate();
+			session.createSQLQuery("delete from fill").executeUpdate();
+			session.createSQLQuery("delete from specific_order").executeUpdate();
+			session.createSQLQuery("delete from order_children").executeUpdate();
+			session.createSQLQuery("delete from general_order").executeUpdate();
+			transaction.commit();
+		} catch (RuntimeException e) {
+			e.printStackTrace();
+
+		} finally {
+
+			if (em != null)
+				em.close();
+
+		}
+
+		//EntityTransaction transaction = em.getTransaction();
+
+		//			transaction.begin();
+		//			try {
+		//				em.createQuery("delete from Fill f");
+		//				em.createQuery("delete from SpecificOrder s");
+		//				em.createQuery("delete from GeneralOrder g");
+		//				em.createQuery("delete from Transaction t");
+		//
+		//				transaction.commit();
+		//			} catch (RuntimeException e) {
+		//				e.printStackTrace();
+		//				if (transaction.isActive())
+		//					transaction.rollback();
+		//
+		//			}
+		//
+		//		} finally {
+		//
+		//			if (em != null)
+		//				em.close();
+		//
+		//		}
+	}
+
 	@Override
 	public void run() {
 		EntityManager em = null;
 		EntityBase[] entities = null;
+
 		while (true) {
+			boolean persited = true;
 
 			try {
 				entities = blockingQueue.take();
+
 			} catch (InterruptedException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -299,28 +362,36 @@ public class PersistUtil implements Runnable {
 				EntityTransaction transaction = em.getTransaction();
 				transaction.begin();
 				try {
+					EntityBase refresh = null;
 					for (EntityBase entity : entities)
+						//refresh = entity;
+
 						em.persist(entity);
+					em.flush();
+
 					transaction.commit();
+
 				} catch (RuntimeException e) {
+
 					e.printStackTrace();
-					if (transaction != null)
+
+					if (transaction.isActive())
 						transaction.rollback();
 
-					throw e;
+					//throw e;
 				}
 
 			} finally {
-
 				if (em != null)
 					em.close();
 
 			}
-			for (EntityBase entity : entities) {
-				log.debug(entity.getClass().getSimpleName() + " saved to database");
-			}
+			if (persited)
+				for (EntityBase entity : entities) {
+
+					log.debug(entity.getClass().getSimpleName() + " saved to database");
+				}
 		}
 		//return "Complete";
 	}
-
 }
