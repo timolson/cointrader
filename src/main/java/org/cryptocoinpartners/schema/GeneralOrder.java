@@ -1,11 +1,9 @@
 package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
@@ -29,10 +27,11 @@ public class GeneralOrder extends Order {
 		this.volume = DecimalAmount.of(volume);
 	}
 
-	public GeneralOrder(Instant time, Portfolio portfolio, GeneralOrder parentOrder, Listing listing, BigDecimal volume) {
+	public GeneralOrder(Instant time, Portfolio portfolio, Order parentOrder, Listing listing, BigDecimal volume) {
 		super(time);
 		super.setPortfolio(portfolio);
 		super.setParentOrder(parentOrder);
+		parentOrder.addChild(this);
 		this.listing = listing;
 		this.volume = DecimalAmount.of(volume);
 	}
@@ -46,10 +45,12 @@ public class GeneralOrder extends Order {
 		this.fillType = type;
 	}
 
-	public GeneralOrder(Instant time, Portfolio portfolio, GeneralOrder parentOrder, Market market, BigDecimal volume, FillType type) {
+	public GeneralOrder(Instant time, Portfolio portfolio, Order parentOrder, Market market, BigDecimal volume, FillType type) {
 		super(time);
 		super.setPortfolio(portfolio);
 		super.setParentOrder(parentOrder);
+		parentOrder.addChild(this);
+
 		this.market = market;
 		this.listing = market.getListing();
 		this.volume = DecimalAmount.of(volume);
@@ -64,6 +65,7 @@ public class GeneralOrder extends Order {
 	}
 
 	@ManyToOne(optional = false)
+	//@EmbeddedId
 	public Listing getListing() {
 		return listing;
 	}
@@ -75,7 +77,11 @@ public class GeneralOrder extends Order {
 	}
 
 	public BigDecimal getVolumeDecimal() {
+
+		if (volume == null)
+			volume = DecimalAmount.of(BigDecimal.ZERO);
 		return volume.asBigDecimal();
+
 	}
 
 	public BigDecimal getLimitPriceDecimal() {
@@ -142,11 +148,6 @@ public class GeneralOrder extends Order {
 		return !volume.isNegative();
 	}
 
-	@OneToMany
-	public List<Order> getChildren() {
-		return children;
-	}
-
 	public void copyCommonFillProperties(Fill fill) {
 		setTime(fill.getTime());
 		setEmulation(fill.getOrder().isEmulation());
@@ -174,6 +175,9 @@ public class GeneralOrder extends Order {
 			s += ", averageFillPrice=" + averageFillPrice();
 		s += '}';
 		return s;
+	}
+
+	protected GeneralOrder() {
 	}
 
 	protected GeneralOrder(Instant time) {
@@ -231,11 +235,6 @@ public class GeneralOrder extends Order {
 		this.listing = market.getListing();
 	}
 
-	protected void setChildren(List<Order> children) {
-		this.children = children;
-	}
-
-	private List<Order> children;
 	private Listing listing;
 	private Market market;
 	private DecimalAmount volume;
