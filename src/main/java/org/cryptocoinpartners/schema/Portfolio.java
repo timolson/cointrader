@@ -6,13 +6,16 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javax.inject.Inject;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.util.Remainder;
+import org.slf4j.Logger;
 
 /**
  * Many Owners may have Stakes in the Portfolio, but there is only one PortfolioManager, who is not necessarily an Owner.  The
@@ -169,20 +172,39 @@ public class Portfolio extends EntityBase {
 	@Transient
 	private boolean merge(Position position) {
 		ConcurrentHashMap<Exchange, ArrayList<Position>> assetPosition = positions.get(position.asset);
+		ConcurrentHashMap<Exchange, Amount> assetRealisedProfits = realisedProfits.get(position.asset);
 		if (assetPosition == null) {
 			ArrayList<Position> detailPosition = new ArrayList<Position>();
 			detailPosition.add(position);
 			assetPosition = new ConcurrentHashMap<Exchange, ArrayList<Position>>();
 			assetPosition.put(position.getExchange(), detailPosition);
 			positions.put(position.asset, assetPosition);
+
+			Amount profits = DecimalAmount.ZERO;
+			assetRealisedProfits = new ConcurrentHashMap<Exchange, Amount>();
+			assetRealisedProfits.put(position.getExchange(), profits);
+			realisedProfits.put(position.asset, assetRealisedProfits);
+			if (realisedProfits.get(position.getMarket().getQuote()) == null) {
+				assetRealisedProfits = new ConcurrentHashMap<Exchange, Amount>();
+				assetRealisedProfits.put(position.getExchange(), profits);
+				realisedProfits.put(position.getMarket().getQuote(), assetRealisedProfits);
+			}
 			return true;
 		} else {
 			//asset is present, so check the market
 			ArrayList<Position> exchangePositions = assetPosition.get(position.getExchange());
+			Amount exchangeRealisedProfits = assetRealisedProfits.get(position.getExchange());
+
 			if (exchangePositions == null) {
 				ArrayList<Position> detailPosition = new ArrayList<Position>();
 				detailPosition.add(position);
 				assetPosition.put(position.getExchange(), detailPosition);
+				Amount profits = DecimalAmount.ZERO;
+				assetRealisedProfits.put(position.getExchange(), profits);
+				if (realisedProfits.get(position.getMarket().getQuote()).get(position.getExchange()) == null) {
+					realisedProfits.get(position.getMarket().getQuote()).put(position.getExchange(), profits);
+				}
+
 				return true;
 			} else {
 
@@ -191,9 +213,27 @@ public class Portfolio extends EntityBase {
 						Amount totalQuantity = p.getVolume().plus(position.getVolume());
 						Amount totalLongQuantity = p.getLongVolume().plus(position.getLongVolume());
 						Amount totalShortQuantity = p.getShortVolume().plus(position.getShortVolume());
+						Amount ShortRealisedPnL = DecimalAmount.ZERO;
+						Amount LongRealisedPnL = DecimalAmount.ZERO;
+						//	Amount ShortRealisedPnL;
+						if ((position.isLong() && p.isShort()) || position.isShort() && p.isLong()) {
+							ShortRealisedPnL = (position.getShortAvgPrice().minus(p.getLongAvgPrice())).times(position.getShortVolume().negate(),
+									Remainder.ROUND_EVEN);
+							LongRealisedPnL = (position.getLongAvgPrice().minus(p.getShortAvgPrice())).times(position.getLongVolume().negate(),
+									Remainder.ROUND_EVEN);
+							// long average price - 
+						}
+						Amount RealisedPnL = ShortRealisedPnL.plus(LongRealisedPnL);
+						if (!RealisedPnL.isZero()) {
+							Amount TotalRealisedPnL = RealisedPnL.plus(realisedProfits.get(position.getMarket().getQuote()).get(position.getExchange()));
+							realisedProfits.get(position.getMarket().getQuote()).put(position.getExchange(), TotalRealisedPnL);
+
+						}
 
 						if (!totalQuantity.isZero()) {
-
+							//generate PnL
+							//Update postion Quanitty
+							//Recculate Avaerge Price
 							Amount avgPrice = ((p.getAvgPrice().times(p.getVolume(), Remainder.ROUND_EVEN)).plus(position.getVolume().times(
 									position.getAvgPrice(), Remainder.ROUND_EVEN))).dividedBy(totalQuantity, Remainder.ROUND_EVEN);
 							p.setAvgPrice(avgPrice);
@@ -212,16 +252,20 @@ public class Portfolio extends EntityBase {
 									.times(position.getShortAvgPrice(), Remainder.ROUND_EVEN))).dividedBy(totalShortQuantity, Remainder.ROUND_EVEN);
 							p.setShortAvgPrice(shortAvgPrice);
 						}
+						p.setLongVolumeCount(p.getLongVolumeCount() + position.getLongVolumeCount());
+						p.setShortVolumeCount(p.getShortVolumeCount() + position.getShortVolumeCount());
 
 						//	Long avgPriceCount = (long) avgPrice.divide(BigDecimal.valueOf(p.getMarket().getPriceBasis()), Remainder.ROUND_EVEN).asDouble();
 						//avgPrice = new DiscreteAmount(avgPriceCount, p.getMarket().getPriceBasis());
 						//DiscreteAmount avgDiscretePrice = new DiscreteAmount((long) avgPrice.times(p.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)
 						//	.asDouble(), (long) (p.getMarket().getPriceBasis()));
-						p.setLongVolumeCount(p.getLongVolumeCount() + position.getLongVolumeCount());
-						p.setShortVolumeCount(p.getShortVolumeCount() + position.getShortVolumeCount());
+						// I need to net the amounts
+
 						// if the long and short volumes are zero we can remove the position
 						if (p.getShortVolumeCount() * -1 == p.getLongVolumeCount()) {
 							exchangePositions.remove(p);
+							// publish realised PnL for the long and short posiotion
+							//TODO: we are merging postions based on the order they were creted (FIFO), might want to have a comparator to merge using LIFO, or some other algo
 						}
 						return true;
 					} else {
@@ -242,6 +286,7 @@ public class Portfolio extends EntityBase {
 		this.name = name;
 		this.manager = manager;
 		this.positions = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ArrayList<Position>>>();
+		this.realisedProfits = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, Amount>>();
 		this.balances = new ArrayList<>();
 		this.transactions = new ArrayList<>();
 	}
@@ -321,6 +366,7 @@ public class Portfolio extends EntityBase {
 		this.name = name;
 	}
 
+
 	protected void setStakes(Collection<Stake> stakes) {
 		this.stakes = stakes;
 	}
@@ -347,10 +393,16 @@ public class Portfolio extends EntityBase {
 	}
 
 	private PortfolioManager manager;
-
+	@Inject
+	private Logger log;
 	private Asset baseAsset;
 	private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ArrayList<Position>>> positions;
+	private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, Amount>> realisedProfits;
 	private Collection<Balance> balances = Collections.emptyList();
 	private Collection<Transaction> transactions = Collections.emptyList();
 	private Collection<Stake> stakes = Collections.emptyList();
+	//private ConcurrentHashMap<Market, ConcurrentSkipListMap<Long,ArrayList<TaxLot>>> longTaxLots;
+	//private ConcurrentHashMap<Market, ConcurrentSkipListMap<Long,ArrayList<TaxLot>>> shortTaxLots;
+	private final Collection<Balance> trades = Collections.emptyList();
+
 }
