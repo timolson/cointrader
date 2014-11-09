@@ -121,7 +121,8 @@ public abstract class BaseOrderService implements OrderService {
 		OrderState orderState = orderUpdate.getState();
 		switch (orderState) {
 			case NEW:
-				PersitOrderFill(orderUpdate.getOrder());
+				//TODO Order persitantce, keep getting TransientPropertyValueException  errors
+				//PersitOrderFill(orderUpdate.getOrder());
 				break;
 			case TRIGGER:
 				break;
@@ -148,6 +149,8 @@ public abstract class BaseOrderService implements OrderService {
 	@When("select * from Fill")
 	public void handleFill(Fill fill) {
 		Order order = fill.getOrder();
+		PersitOrderFill(order);
+		//PersitOrderFill(fill);
 		if (order.getParentOrder() != null) {
 			switch (order.getParentOrder().getFillType()) {
 				case GOOD_TIL_CANCELLED:
@@ -189,8 +192,7 @@ public abstract class BaseOrderService implements OrderService {
 			updateOrderState(order, newState);
 		}
 		Transaction transaction;
-		PersitOrderFill(fill);
-		
+
 		try {
 			transaction = new Transaction(fill);
 			log.info("Created new transaction " + transaction);
@@ -200,6 +202,7 @@ public abstract class BaseOrderService implements OrderService {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		//PersitOrderFill(order);
 
 	}
 
@@ -392,7 +395,7 @@ public abstract class BaseOrderService implements OrderService {
 			updateParentOrderState(order.getParentOrder(), order, state);
 	}
 
-	private void updateParentOrderState(GeneralOrder order, Order childOrder, OrderState childOrderState) {
+	private void updateParentOrderState(Order order, Order childOrder, OrderState childOrderState) {
 		OrderState oldState = orderStateMap.get(order);
 		switch (childOrderState) {
 			case NEW:
