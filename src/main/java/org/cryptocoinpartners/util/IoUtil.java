@@ -98,7 +98,7 @@ public class IoUtil {
     }
 
 
-    protected static void dumpTicks(String filename, @Nullable Instant start, @Nullable Instant end, boolean allowNa) {
+    public static void dumpTicks(String filename, @Nullable Instant start, @Nullable Instant end, boolean allowNa) {
         Replay replay;
         if( start == null ) {
             if( end == null )
