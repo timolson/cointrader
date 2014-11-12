@@ -30,8 +30,6 @@ public class Transaction extends Event {
 	}
 
 	private static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
-
-	// private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
 	private static final String SEPARATOR = ",";
 
 	public Transaction(Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount, Amount price) {
@@ -43,18 +41,14 @@ public class Transaction extends Event {
 		this.setPortfolio(portfolio);
 		this.setExchange(exchange);
 		this.setPortfolioName(portfolio);
-		//this.amountCount = DiscreteAmount.
-		//this.priceCount = DiscreteAmount.roundedCountForBasis(price.asBigDecimal(), asset.getBasis());
-
 	}
 
 	public Transaction(Fill fill) throws Exception {
 		Portfolio portfolio = fill.getOrder().getPortfolio();
-
 		TransactionType transactionType = fill.getVolume().isPositive() ? TransactionType.BUY : TransactionType.SELL;
-		//long quantity = Side.BUY.equals(fill.getSide()) ? fill.getQuantity() : -fill.getQuantity();
 		this.setAsset(fill.getMarket().getBase());
 		this.setCurrency(fill.getMarket().getQuote());
+		this.fill = fill;
 		fill.addTransaction(this);
 		this.setAmount(fill.getVolume());
 		this.setPrice(fill.getPrice());
@@ -74,7 +68,6 @@ public class Transaction extends Event {
 		Portfolio portfolio = order.getPortfolio();
 
 		TransactionType transactionType = order.getVolume().isPositive() ? TransactionType.BUY_RESERVATION : TransactionType.SELL_RESERVATION;
-		//long quantity = Side.BUY.equals(fill.getSide()) ? fill.getQuantity() : -fill.getQuantity();
 		order.addTransaction(this);
 		this.setAmount(order.getVolume());
 		this.setAsset(order.getMarket().getBase());
