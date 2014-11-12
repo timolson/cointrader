@@ -164,12 +164,6 @@ public class Position extends Holding {
 	}
 
 	/** If the SpecificOrder is not null, then this Position is being held in reserve as payment for that Order */
-	//	@OneToOne
-	//	@Nullable
-	//	@JoinColumn(name = "`order`")
-	//	protected SpecificOrder getOrder() {
-	//		return order;
-	//	}
 
 	@Transient
 	protected boolean isReserved() {
