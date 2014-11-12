@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.persistence.Entity;
 import javax.persistence.Index;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -54,7 +55,7 @@ public class Transaction extends Event {
 		//long quantity = Side.BUY.equals(fill.getSide()) ? fill.getQuantity() : -fill.getQuantity();
 		this.setAsset(fill.getMarket().getBase());
 		this.setCurrency(fill.getMarket().getQuote());
-		this.setOrder(fill.getOrder());
+		fill.addTransaction(this);
 		this.setAmount(fill.getVolume());
 		this.setPrice(fill.getPrice());
 		this.setPriceCount(fill.getPriceCount());
@@ -74,7 +75,7 @@ public class Transaction extends Event {
 
 		TransactionType transactionType = order.getVolume().isPositive() ? TransactionType.BUY_RESERVATION : TransactionType.SELL_RESERVATION;
 		//long quantity = Side.BUY.equals(fill.getSide()) ? fill.getQuantity() : -fill.getQuantity();
-		this.setOrder(order);
+		order.addTransaction(this);
 		this.setAmount(order.getVolume());
 		this.setAsset(order.getMarket().getBase());
 		this.setCurrency(order.getMarket().getQuote());
@@ -195,10 +196,15 @@ public class Transaction extends Event {
 		return commissionCurrency;
 	}
 
-	@Nullable
-	@Transient
-	public Order getOrder() {
+	public @ManyToOne(optional = true)
+	@JoinColumn(name = "`order`")
+	Order getOrder() {
 		return order;
+	}
+
+	public @ManyToOne(optional = true)
+	Fill getFill() {
+		return fill;
 	}
 
 	@Transient
@@ -250,6 +256,11 @@ public class Transaction extends Event {
 
 	protected void setOrder(Order order) {
 		this.order = order;
+
+	}
+
+	protected void setFill(Fill fill) {
+		this.fill = fill;
 
 	}
 
@@ -309,6 +320,8 @@ public class Transaction extends Event {
 	private Portfolio portfolio;
 	@Nullable
 	private Order order;
+	@Nullable
+	private Fill fill;
 	private Asset asset;
 	private Amount amount;
 	private Long commissionCount;

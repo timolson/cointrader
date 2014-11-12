@@ -1,9 +1,15 @@
 package org.cryptocoinpartners.schema;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+
+import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
@@ -20,11 +26,12 @@ import org.joda.time.format.DateTimeFormatter;
 @Entity
 public class Fill extends RemoteEvent {
 	private static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
-
+	private static Object lock = new Object();
 	// private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
 	private static final String SEPARATOR = ",";
 
 	public Fill(SpecificOrder order, Instant time, Market market, long priceCount, long volumeCount) {
+		order.addFill(this);
 		this.order = order;
 		this.market = market;
 		this.priceCount = priceCount;
@@ -32,6 +39,7 @@ public class Fill extends RemoteEvent {
 	}
 
 	public Fill(SpecificOrder order, Instant time, Market market, long priceCount, long volumeCount, Amount commission) {
+		order.addFill(this);
 		this.order = order;
 		this.market = market;
 		this.priceCount = priceCount;
@@ -39,11 +47,33 @@ public class Fill extends RemoteEvent {
 		this.commission = commission;
 	}
 
-	public @ManyToOne(cascade = { CascadeType.ALL })
-	//(cascade = { CascadeType.ALL })
+	public @ManyToOne(cascade = { CascadeType.MERGE })
 	@JoinColumn(name = "`order`")
 	SpecificOrder getOrder() {
 		return order;
+	}
+
+	@Nullable
+	@OneToMany(cascade = { CascadeType.MERGE })
+	//, mappedBy = "fill")
+	//(fetch = FetchType.EAGER)
+	public Collection<Transaction> getTransactions() {
+		if (transactions == null)
+			transactions = Collections.synchronizedList(new ArrayList<Transaction>());
+		synchronized (lock) {
+			return transactions;
+		}
+	}
+
+	public void addTransaction(Transaction transaction) {
+
+		synchronized (lock) {
+			getTransactions().add(transaction);
+		}
+	}
+
+	protected void setTransactions(Collection<Transaction> transactions) {
+		this.transactions = transactions;
 	}
 
 	@ManyToOne
@@ -82,15 +112,15 @@ public class Fill extends RemoteEvent {
 	@Override
 	public String toString() {
 
-		return "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "OrderID=" + order.getId() + SEPARATOR + "Type=" + getFillType()
-				+ SEPARATOR + "Market=" + market + SEPARATOR + "Price=" + getPrice() + SEPARATOR + "Volume=" + getVolume();
+		return "FillID" + getId() + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "OrderID=" + order.getId() + SEPARATOR
+				+ "Type=" + getFillType() + SEPARATOR + "Market=" + market + SEPARATOR + "Price=" + getPrice() + SEPARATOR + "Volume=" + getVolume();
 	}
 
 	// JPA
 	protected Fill() {
 	}
 
-	protected void setOrder(SpecificOrder order) {
+	public void setOrder(SpecificOrder order) {
 		this.order = order;
 	}
 
@@ -115,5 +145,6 @@ public class Fill extends RemoteEvent {
 	private long priceCount;
 	private long volumeCount;
 	private Amount commission;
+	private Collection<Transaction> transactions;
 
 }

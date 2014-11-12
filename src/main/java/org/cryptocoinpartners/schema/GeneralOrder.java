@@ -30,7 +30,6 @@ public class GeneralOrder extends Order {
 	public GeneralOrder(Instant time, Portfolio portfolio, Order parentOrder, Listing listing, BigDecimal volume) {
 		super(time);
 		super.setPortfolio(portfolio);
-		super.setParentOrder(parentOrder);
 		parentOrder.addChild(this);
 		this.listing = listing;
 		this.volume = DecimalAmount.of(volume);
@@ -48,9 +47,7 @@ public class GeneralOrder extends Order {
 	public GeneralOrder(Instant time, Portfolio portfolio, Order parentOrder, Market market, BigDecimal volume, FillType type) {
 		super(time);
 		super.setPortfolio(portfolio);
-		super.setParentOrder(parentOrder);
 		parentOrder.addChild(this);
-
 		this.market = market;
 		this.listing = market.getListing();
 		this.volume = DecimalAmount.of(volume);

@@ -39,15 +39,11 @@ import org.joda.time.format.DateTimeFormatter;
 @SuppressWarnings({ "JpaDataSourceORMInspection", "UnusedDeclaration" })
 public abstract class Order extends Event {
 	protected static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
-
+	private static Object lock = new Object();
 	// private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
 	protected static final String SEPARATOR = ",";
 
-	public void setParentOrder(Order parentOrder) {
-		this.parentOrder = parentOrder;
-	}
-
-	@ManyToOne(optional = true, cascade = { CascadeType.ALL })
+	@ManyToOne(optional = true, cascade = { CascadeType.MERGE })
 	public Order getParentOrder() {
 		return parentOrder;
 	}
@@ -99,6 +95,10 @@ public abstract class Order extends Event {
 
 	public abstract void setMarket(Market market);
 
+	protected void setParentOrder(Order order) {
+		this.parentOrder = order;
+	}
+
 	public FillType getFillType() {
 		return fillType;
 	}
@@ -133,24 +133,44 @@ public abstract class Order extends Event {
 	}
 
 	@Nullable
-	@OneToMany(orphanRemoval = true)
+	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE }, mappedBy = "order")
 	public Collection<Fill> getFills() {
 		if (fills == null)
 			fills = Collections.synchronizedList(new ArrayList<Fill>());
-		return fills;
+		synchronized (lock) {
+			return fills;
+		}
 	}
 
 	@Nullable
-	@OneToMany(orphanRemoval = true)
+	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE }, mappedBy = "order")
+	public Collection<Transaction> getTransactions() {
+		if (transactions == null)
+			transactions = Collections.synchronizedList(new ArrayList<Transaction>());
+		synchronized (lock) {
+			return transactions;
+		}
+	}
+
+	@Nullable
+	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public Collection<Order> getChildren() {
 		if (children == null)
-			children = Collections.synchronizedList(new ArrayList<Order>());
+			children = new ArrayList<Order>();
 
 		return children;
 	}
 
 	public void addFill(Fill fill) {
-		getFills().add(fill);
+		synchronized (lock) {
+			getFills().add(fill);
+		}
+	}
+
+	public void addTransaction(Transaction transaction) {
+		synchronized (lock) {
+			getTransactions().add(transaction);
+		}
 	}
 
 	public void addChild(Order order) {
@@ -196,6 +216,10 @@ public abstract class Order extends Event {
 
 	protected void setFills(Collection<Fill> fills) {
 		this.fills = fills;
+	}
+
+	protected void setTransactions(Collection<Transaction> transactions) {
+		this.transactions = transactions;
 	}
 
 	protected void setFillType(FillType fillType) {
@@ -251,6 +275,7 @@ public abstract class Order extends Event {
 
 	private Portfolio portfolio;
 	private Collection<Fill> fills;
+	private Collection<Transaction> transactions;
 	protected FillType fillType;
 	private MarginType marginType;
 	protected String comment;

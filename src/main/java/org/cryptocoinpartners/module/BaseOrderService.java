@@ -53,6 +53,8 @@ public abstract class BaseOrderService implements OrderService {
 
 	@Override
 	public void placeOrder(Order order) {
+		CreateTransaction(order);
+		PersitOrderFill(order);
 		updateOrderState(order, OrderState.NEW);
 		log.info("Created new order " + order);
 		if (order instanceof GeneralOrder) {
@@ -64,17 +66,6 @@ public abstract class BaseOrderService implements OrderService {
 		}
 		Amount fees = FeesUtil.getExchangeFees(order);
 		order.setForcastedCommission(fees);
-		Transaction transaction;
-		try {
-
-			transaction = new Transaction(order);
-			log.info("Created new transaction " + transaction);
-			context.publish(transaction);
-
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 
 	}
 
@@ -116,7 +107,7 @@ public abstract class BaseOrderService implements OrderService {
 		return state;
 	}
 
-	@When("@Priority(9) select * from OrderUpdate")
+	@When("@Priority(6) select * from OrderUpdate")
 	public void handleOrderUpdate(OrderUpdate orderUpdate) {
 		OrderState orderState = orderUpdate.getState();
 		switch (orderState) {
@@ -129,6 +120,7 @@ public abstract class BaseOrderService implements OrderService {
 			case ROUTED:
 				break;
 			case PLACED:
+				//	PersitOrderFill(orderUpdate.getOrder());
 				break;
 			case PARTFILLED:
 				break;
@@ -146,11 +138,11 @@ public abstract class BaseOrderService implements OrderService {
 
 	}
 
-	@When("select * from Fill")
+	@When("@Priority(9) select * from Fill")
 	public void handleFill(Fill fill) {
 		Order order = fill.getOrder();
-		PersitOrderFill(order);
-		//PersitOrderFill(fill);
+
+		//PersitOrderFill(order);
 		if (order.getParentOrder() != null) {
 			switch (order.getParentOrder().getFillType()) {
 				case GOOD_TIL_CANCELLED:
@@ -191,18 +183,9 @@ public abstract class BaseOrderService implements OrderService {
 			OrderState newState = order.isFilled() ? OrderState.FILLED : OrderState.PARTFILLED;
 			updateOrderState(order, newState);
 		}
-		Transaction transaction;
 
-		try {
-			transaction = new Transaction(fill);
-			log.info("Created new transaction " + transaction);
-			context.publish(transaction);
-
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		//PersitOrderFill(order);
+		PersitOrderFill(fill);
+		CreateTransaction(fill);
 
 	}
 
@@ -288,7 +271,7 @@ public abstract class BaseOrderService implements OrderService {
 							&& ask.getPriceCount() >= (order.getStopPrice().toBasis(order.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()) {
 						//convert order to specfic order
 						SpecificOrder specificOrder = convertGeneralOrderToSpecific((GeneralOrder) order, order.getMarket());
-						log.info("Routing order " + order + " to " + order.getMarket().getExchange().getSymbol());
+						log.info("Routing trigger order " + order + " to " + order.getMarket().getExchange().getSymbol());
 						placeOrder(specificOrder);
 						triggerOrders.remove(order.getTimestamp());
 						log.debug(order + " triggered as specificOrder " + specificOrder);
@@ -307,7 +290,7 @@ public abstract class BaseOrderService implements OrderService {
 							&& bid.getPriceCount() <= (order.getStopPrice().toBasis(order.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()) {
 						//Place order
 						SpecificOrder specificOrder = convertGeneralOrderToSpecific((GeneralOrder) order, order.getMarket());
-						log.info("Routing order " + order + " to " + order.getMarket().getExchange().getSymbol());
+						log.info("Routing trigger order " + order + " to " + order.getMarket().getExchange().getSymbol());
 						placeOrder(specificOrder);
 						triggerOrders.remove(order.getTimestamp());
 						log.debug(order + " triggered as specificOrder " + specificOrder);
@@ -449,6 +432,37 @@ public abstract class BaseOrderService implements OrderService {
 		} catch (Throwable e) {
 			throw new Error("Could not insert " + entities, e);
 		}
+	}
+
+	protected final void CreateTransaction(EntityBase entity) {
+		Transaction transaction = null;
+		switch (entity.getClass().getSimpleName()) {
+			case "GeneralOrder":
+				Order order = (Order) entity;
+				try {
+					transaction = new Transaction(order);
+					log.info("Created new transaction " + transaction);
+					context.publish(transaction);
+				} catch (Exception e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+
+				break;
+			case "Fill":
+				Fill fill = (Fill) entity;
+				try {
+					transaction = new Transaction(fill);
+					log.info("Created new transaction " + transaction);
+					context.publish(transaction);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				break;
+
+		}
+
 	}
 
 	// rounding depends on whether it is a buy or sell order.  we round to the "best" price

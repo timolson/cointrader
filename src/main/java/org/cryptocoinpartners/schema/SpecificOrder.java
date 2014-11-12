@@ -45,7 +45,6 @@ public class SpecificOrder extends Order {
 		this.market = market;
 		this.volumeCount = volumeCount;
 		super.setComment(comment);
-		super.setParentOrder(parentOrder);
 		parentOrder.addChild(this);
 		super.setPortfolio(portfolio);
 
@@ -65,7 +64,6 @@ public class SpecificOrder extends Order {
 		this.market = market;
 		this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
 		super.setComment(comment);
-		super.setParentOrder(parentOrder);
 		parentOrder.addChild(this);
 		super.setPortfolio(portfolio);
 	}
