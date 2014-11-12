@@ -11,6 +11,7 @@ import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.Writer;
@@ -93,17 +94,22 @@ public class IoUtil {
         }
 
 
+        dumpTicks(filename, new Instant(start), new Instant(end), allowNa);
+    }
+
+
+    public static void dumpTicks(String filename, @Nullable Instant start, @Nullable Instant end, boolean allowNa) {
         Replay replay;
         if( start == null ) {
             if( end == null )
                 replay = Replay.all(false);
             else
-                replay = Replay.until(new Instant(end),false);
+                replay = Replay.until(end,false);
         }
         else if( end == null )
-            replay = Replay.since(new Instant(start),false);
+            replay = Replay.since(start,false);
         else
-            replay = Replay.between(new Instant(start), new Instant(end),false);
+            replay = Replay.between(start,end,false);
 
 
         Context context = replay.getContext();
