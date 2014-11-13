@@ -6,7 +6,9 @@ import java.util.Collection;
 import java.util.List;
 
 import javax.persistence.Basic;
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.ManyToOne;
 import javax.persistence.NoResultException;
 import javax.persistence.Transient;
@@ -61,7 +63,7 @@ public class Market extends EntityBase {
 		return exchange;
 	}
 
-	@ManyToOne(optional = false)
+	@ManyToOne(optional = false, cascade = { CascadeType.MERGE, CascadeType.REMOVE }, fetch = FetchType.EAGER)
 	public Listing getListing() {
 		return listing;
 	}

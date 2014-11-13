@@ -48,7 +48,6 @@ public class Transaction extends Event {
 		TransactionType transactionType = fill.getVolume().isPositive() ? TransactionType.BUY : TransactionType.SELL;
 		this.setAsset(fill.getMarket().getBase());
 		this.setCurrency(fill.getMarket().getQuote());
-		this.fill = fill;
 		fill.addTransaction(this);
 		this.setAmount(fill.getVolume());
 		this.setPrice(fill.getPrice());
@@ -61,6 +60,7 @@ public class Transaction extends Event {
 		this.setCommissionCurrency(fill.getMarket().getQuote());
 		this.setMarket(fill.getMarket());
 		this.setExchange(fill.getMarket().getExchange());
+		this.fill = fill;
 
 	}
 
@@ -81,6 +81,7 @@ public class Transaction extends Event {
 		this.setMarket(order.getMarket());
 		this.setPortfolioName(portfolio);
 		this.setExchange(order.getMarket().getExchange());
+		//this.order = order;
 
 	}
 

@@ -17,9 +17,11 @@ import java.util.Map;
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
 import javax.persistence.PostLoad;
 import javax.persistence.PostPersist;
 import javax.persistence.PrePersist;
@@ -53,6 +55,8 @@ public class Book extends MarketData implements Spread {
 	public static void findAll(Visitor<Book> visitor) {
 		PersistUtil.queryEach(Book.class, visitor, "select b from Book b");
 	}
+
+	private static Object lock = new Object();
 
 	@Transient
 	public List<Offer> getBids() {
@@ -247,6 +251,8 @@ public class Book extends MarketData implements Spread {
 					parentBook = chain.previousBook;
 					chain.chainLength++;
 				}
+				//if (parentBook != null)
+				//parentBook.addChild(book);
 				book.setParent(parentBook);
 				chain.previousBook = book;
 			}
@@ -298,9 +304,29 @@ public class Book extends MarketData implements Spread {
 	protected Book() {
 	}
 
-	protected @ManyToOne
-	Book getParent() {
+	// These getters and setters are for conversion in JPA
+	//@ManyToOne(cascade = CascadeType.MERGE)
+	@Nullable
+	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE, }, fetch = FetchType.EAGER)
+	//@JoinColumn(name = "parent", insertable = false, updatable = false)
+	public Book getParent() {
 		return parent;
+	}
+
+	@Nullable
+	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	public Collection<Book> getChildren() {
+		if (children == null)
+			children = new ArrayList<Book>();
+		synchronized (lock) {
+			return children;
+		}
+	}
+
+	public void addChild(Book book) {
+		synchronized (lock) {
+			getChildren().add(book);
+		}
 	}
 
 	protected @Lob
@@ -321,6 +347,10 @@ public class Book extends MarketData implements Spread {
 	protected @Lob
 	byte[] getAskInsertionsBlob() {
 		return askInsertionsBlob;
+	}
+
+	protected void setChildren(List<Book> children) {
+		this.children = children;
 	}
 
 	protected void setParent(Book parent) {
@@ -564,4 +594,6 @@ public class Book extends MarketData implements Spread {
 	private byte[] bidInsertionsBlob;
 	private byte[] askInsertionsBlob;
 	private boolean needToResolveDiff;
+	private Collection<Book> children;
+
 }

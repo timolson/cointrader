@@ -157,8 +157,9 @@ public abstract class Order extends Event {
 	public Collection<Order> getChildren() {
 		if (children == null)
 			children = new ArrayList<Order>();
-
-		return children;
+		synchronized (lock) {
+			return children;
+		}
 	}
 
 	public void addFill(Fill fill) {
@@ -174,7 +175,9 @@ public abstract class Order extends Event {
 	}
 
 	public void addChild(Order order) {
-		getChildren().add(order);
+		synchronized (lock) {
+			getChildren().add(order);
+		}
 	}
 
 	@Transient
