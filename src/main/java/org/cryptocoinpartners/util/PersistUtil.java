@@ -9,6 +9,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -33,8 +34,9 @@ public class PersistUtil implements Runnable {
 	private static EntityManagerFactory entityManagerFactory;
 	private static final int defaultBatchSize = 20;
 	private static boolean running = false;
-
-	static ExecutorService service = Executors.newSingleThreadExecutor();
+	private static boolean shutdown = false;
+	private static ExecutorService service;
+	private static FutureTask persitanceTask = null;
 
 	//private final EntityBase[] entities;
 
@@ -82,34 +84,38 @@ public class PersistUtil implements Runnable {
 
 	public static void insert(EntityBase... entities) {
 
-		if (!running) {
-			persit(entities);
+		if (!running && !shutdown) {
 
-		} else {
+			service = Executors.newSingleThreadExecutor();
+			PersistUtil persistanceThread = new PersistUtil(entityManagerFactory);
+			persitanceTask = (FutureTask) service.submit(persistanceThread);
+			running = true;
+			shutdown = false;
 
-			//	PersistUtil persistanceThread = new PersistUtil(entities);
-			//FutureTask<String> futureTask1 = new FutureTask<String>(persistanceThread);
-			// FutureTask<String> futureTask2 = new FutureTask<String>(callable2);
-			try {
+		}
+		persit(entities);
+		//	PersistUtil persistanceThread = new PersistUtil(entities);
+		//FutureTask<String> futureTask1 = new FutureTask<String>(persistanceThread);
+		// FutureTask<String> futureTask2 = new FutureTask<String>(callable2);
+		try {
 
-				blockingQueue.put(entities);
-				//service.execute(futureTask1);
+			//	blockingQueue.put(entities);
+			//service.execute(futureTask1);
 
-				//if (futureTask1.isDone()) {
+			//if (futureTask1.isDone()) {
 
-				//	}
+			//	}
 
-			} catch (Exception e) {
-				if (e instanceof InterruptedException) {
-					log.error("Cointrader Database Peristnace had an error, the details are:  {}.", e);
+		} catch (Exception e) {
+			if (e instanceof InterruptedException) {
+				log.error("Cointrader Database Peristnace had an error, the details are:  {}.", e);
 
-				} else if (e instanceof ExecutionException) {
-					log.info("Cointrader Database Peristnace had an error, the details are: {}.", e);
+			} else if (e instanceof ExecutionException) {
+				log.info("Cointrader Database Peristnace had an error, the details are: {}.", e);
 
-				} else {
-					log.info("Cointrader Database Peristnace had an error, the details are: {}.", e);
+			} else {
+				log.info("Cointrader Database Peristnace had an error, the details are: {}.", e);
 
-				}
 			}
 		}
 
@@ -270,18 +276,21 @@ public class PersistUtil implements Runnable {
 
 	public static void init() {
 		init(false);
-		if (!running) {
-			PersistUtil persistanceThread = new PersistUtil(entityManagerFactory);
-			service.submit(persistanceThread);
-			running = true;
-		}
 
 	}
 
 	public static void shutdown() {
+		if (persitanceTask != null) {
+			shutdown = true;
+			while (persitanceTask.isDone()) {
+				log.info("waiting for persitance thread to shutdown");
+			}
+			running = false;
+			service.shutdown();
+		}
 		if (entityManagerFactory != null)
-			//	service.shutdown();
 			entityManagerFactory.close();
+
 	}
 
 	private static void init(boolean resetDatabase) {
@@ -290,6 +299,7 @@ public class PersistUtil implements Runnable {
 				log.warn("entityManagerFactory was closed.  Re-initializing");
 				entityManagerFactory = null;
 			} else if (!resetDatabase) {
+
 				// entityManagerFactory exists, is open, and a reset is not requested.  continue to use existing EMF
 				return;
 			}
@@ -387,22 +397,14 @@ public class PersistUtil implements Runnable {
 	@Override
 	public void run() {
 		EntityBase[] entities = null;
-		EntityManager em = createEntityManager();
 
-		while (true) {
-			boolean persited = true;
+		while (!shutdown) {
 
 			try {
 				entities = blockingQueue.take();
-				EntityTransaction transaction = em.getTransaction();
-				transaction.begin();
-
-				for (EntityBase entity : entities)
-					em.persist(entity);
-				transaction.commit();
+				persit(entities);
 
 			} catch (RuntimeException e) {
-				persited = false;
 				e.printStackTrace();
 				for (EntityBase entity : entities)
 					log.error(entity.getClass().getSimpleName() + " not saved to database");
@@ -411,16 +413,9 @@ public class PersistUtil implements Runnable {
 
 			} finally {
 
-				em.flush();
-				em.close();
 			}
-			if (persited)
-				for (EntityBase entity : entities) {
-
-					log.debug(entity.getClass().getSimpleName() + " saved to database");
-				}
 
 		}
-		//return "Complete";
+
 	}
 }
