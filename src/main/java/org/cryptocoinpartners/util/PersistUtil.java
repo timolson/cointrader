@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
+import javax.persistence.PersistenceContext;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
@@ -28,6 +29,8 @@ import org.slf4j.LoggerFactory;
  * @author Tim Olson
  */
 public class PersistUtil implements Runnable {
+	@PersistenceContext(unitName = "org.cryptocoinpartners.schema")
+	EntityManager eml;
 
 	private static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
 	//	private static EntityManagerFactory entityManagerFactory;
@@ -57,8 +60,12 @@ public class PersistUtil implements Runnable {
 			PersistUtilHelper.beginTransaction();
 
 			try {
-				for (EntityBase entity : entities)
+				for (EntityBase entity : entities) {
+					if (em.find(entity.getClass(), entity.getId()) != null) {
+						em.merge(entity);
+					}
 					em.persist(entity);
+				}
 				PersistUtilHelper.commit();
 			} catch (RuntimeException e) {
 				persited = false;
@@ -121,7 +128,7 @@ public class PersistUtil implements Runnable {
 
 	public static void insert(EntityBase... entities) {
 
-		if (!shutdown && running && persitanceTask == null) {
+		if (!shutdown && running && persitanceTask == null && !running) {
 			//EntityManager em = createEntityManager();
 
 			service = Executors.newSingleThreadExecutor();
@@ -144,16 +151,15 @@ public class PersistUtil implements Runnable {
 		//	PersistUtil persistanceThread = new PersistUtil(entities);
 		//FutureTask<String> futureTask1 = new FutureTask<String>(persistanceThread);
 		// FutureTask<String> futureTask2 = new FutureTask<String>(callable2);
-		else if (!running) {
+		else if (!running || running) {
 			EntityManager em = null;
 			try {
-				em = createEntityManager();
+
 				for (EntityBase entity : entities)
 					//em.merge(entity);
-					persit(em, entities);
+					persit(entities);
 			} finally {
-				if (em != null)
-					PersistUtilHelper.closeEntityManager();
+
 			}
 
 		} else {
@@ -304,6 +310,7 @@ public class PersistUtil implements Runnable {
 	public static <T> T queryZeroOne(Class<T> resultType, String queryStr, Object... params) {
 		EntityManager em = null;
 		try {
+
 			em = createEntityManager();
 			final TypedQuery<T> query = em.createQuery(queryStr, resultType);
 			if (params != null) {
@@ -474,7 +481,7 @@ public class PersistUtil implements Runnable {
 	@Override
 	public void run() {
 		EntityBase[] entities = null;
-		PersistUtilHelper.evictAll();
+		//PersistUtilHelper.evictAll();
 		//EntityManager em = null;
 		//		boolean persited;
 		//		//let's reset teh cache
@@ -509,7 +516,7 @@ public class PersistUtil implements Runnable {
 						PersistUtilHelper.rollback();
 					//rollback();
 				} finally {
-
+					//FlushModeType myflush = em.getFlushMode();
 					if (peristed)
 						for (EntityBase entity : entities)
 							log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
@@ -526,7 +533,6 @@ public class PersistUtil implements Runnable {
 		PersistUtilHelper.closeEntityManager();
 
 	}
-
 	//	public static EntityManager getEntityManager() {
 	//		EntityManager em = threadLocal.get();
 	//
