@@ -481,6 +481,8 @@ public class Book extends MarketData implements Spread {
 	}
 
 	private List<Offer> convertDatabaseBlobToQuoteList(byte[] bytes) {
+        if( bytes == null )
+            return new ArrayList<>();
 		List<Offer> result = new ArrayList<>();
 		ByteArrayInputStream bin = new ByteArrayInputStream(bytes);
 		//noinspection EmptyCatchBlock
