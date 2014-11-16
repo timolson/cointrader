@@ -15,9 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
@@ -313,13 +311,15 @@ public class Book extends MarketData implements Spread {
 	//@JoinColumn(name = "parent", insertable = false, updatable = false)
 
 	@Nullable
-	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE, }, fetch = FetchType.EAGER)
+	@ManyToOne(optional = true)
+	//, cascade = { CascadeType.MERGE, CascadeType.REMOVE, }, fetch = FetchType.EAGER)
 	public Book getParent() {
 		return parent;
 	}
 
 	@Nullable
-	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@OneToMany
+	//(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public Collection<Book> getChildren() {
 		if (children == null)
 			children = new ArrayList<Book>();
@@ -486,8 +486,8 @@ public class Book extends MarketData implements Spread {
 	}
 
 	private List<Offer> convertDatabaseBlobToQuoteList(byte[] bytes) {
-        if( bytes == null )
-            return new ArrayList<>();
+		if (bytes == null)
+			return new ArrayList<>();
 		List<Offer> result = new ArrayList<>();
 		ByteArrayInputStream bin = new ByteArrayInputStream(bytes);
 		//noinspection EmptyCatchBlock

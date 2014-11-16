@@ -18,6 +18,7 @@ import org.cryptocoinpartners.util.PersistUtil;
 @SuppressWarnings("UnusedDeclaration")
 @Entity
 public class Listing extends EntityBase {
+
 	@ManyToOne(optional = false, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public Asset getBase() {
 		return base;
@@ -135,4 +136,29 @@ public class Listing extends EntityBase {
 			return Listing.forPair(base, quote);
 		return Listing.forPair(base, quote, prompt);
 	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof Listing) {
+			Listing listing = (Listing) obj;
+
+			if (!listing.getBase().equals(getBase())) {
+				return false;
+			}
+
+			if (!listing.getQuote().equals(getQuote())) {
+				return false;
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	@Override
+	public int hashCode() {
+		return getQuote().hashCode() + getBase().hashCode();
+	}
+
 }
