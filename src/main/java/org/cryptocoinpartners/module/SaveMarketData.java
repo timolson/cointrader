@@ -4,6 +4,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.cryptocoinpartners.esper.annotation.When;
+import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.MarketData;
 import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.util.PersistUtil;
@@ -25,8 +26,17 @@ public class SaveMarketData {
 				PersistUtil.insert(trade);
 			//else
 			//log.warn("dropped duplicate Trade " + trade);
-		} else {
-			// if not a Trade, persist unconditionally
+			//	} else if (m instanceof Book) {
+
+		}
+
+		else if (m instanceof Book) {
+			Book book = (Book) m;
+			if (book.getParent() != null)
+				PersistUtil.insert(book.getParent());
+			PersistUtil.insert(book);
+
+		} else { // if not a Trade, persist unconditionally
 			try {
 				PersistUtil.insert(m);
 			} catch (Throwable e) {

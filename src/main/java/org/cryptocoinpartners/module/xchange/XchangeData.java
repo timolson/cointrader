@@ -19,6 +19,7 @@ import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.MarketDataError;
+import org.cryptocoinpartners.util.PersistUtilHelper;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.RateLimiter;
 import org.cryptocoinpartners.util.XchangeUtil;
@@ -147,7 +148,7 @@ public class XchangeData {
 						lastTradeId = remoteId;
 				}
 			} finally {
-				entityManager.close();
+				PersistUtilHelper.closeEntityManager();
 			}
 		}
 

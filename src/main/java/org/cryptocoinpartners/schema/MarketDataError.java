@@ -1,9 +1,9 @@
 package org.cryptocoinpartners.schema;
 
 import javax.annotation.Nullable;
+import javax.persistence.CascadeType;
 import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
-
 
 /**
  * This event is posted when there are any problems retreiving market data
@@ -13,34 +13,36 @@ import javax.persistence.MappedSuperclass;
 @MappedSuperclass
 public class MarketDataError extends Event {
 
-    public MarketDataError(Market market) {
-        this(market,null);
-    }
+	public MarketDataError(Market market) {
+		this(market, null);
+	}
 
+	public MarketDataError(Market market, @Nullable Exception exception) {
+		this.exception = exception;
+		this.market = market;
+	}
 
-    public MarketDataError(Market market, @Nullable Exception exception) {
-        this.exception = exception;
-        this.market = market;
-    }
+	@Nullable
+	public Exception getException() {
+		return exception;
+	}
 
+	@ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	public Market getMarket() {
+		return market;
+	}
 
-    @Nullable
-    public Exception getException() {
-        return exception;
-    }
+	protected MarketDataError() {
+	}
 
+	protected void setException(@Nullable Exception exception) {
+		this.exception = exception;
+	}
 
-    @ManyToOne
-    public Market getMarket() {
-        return market;
-    }
+	protected void setMarket(Market market) {
+		this.market = market;
+	}
 
-
-    protected MarketDataError() {}
-    protected void setException(@Nullable Exception exception) { this.exception = exception; }
-    protected void setMarket(Market market) { this.market = market; }
-
-
-    private Exception exception;
-    private Market market;
+	private Exception exception;
+	private Market market;
 }

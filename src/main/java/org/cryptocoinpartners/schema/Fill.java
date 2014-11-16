@@ -47,14 +47,14 @@ public class Fill extends RemoteEvent {
 		this.commission = commission;
 	}
 
-	public @ManyToOne(cascade = { CascadeType.MERGE })
+	public @ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	@JoinColumn(name = "`order`")
 	SpecificOrder getOrder() {
 		return order;
 	}
 
 	@Nullable
-	@OneToMany(cascade = { CascadeType.MERGE })
+	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	//, mappedBy = "fill")
 	//(fetch = FetchType.EAGER)
 	public Collection<Transaction> getTransactions() {
@@ -76,7 +76,7 @@ public class Fill extends RemoteEvent {
 		this.transactions = transactions;
 	}
 
-	@ManyToOne
+	@ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public Market getMarket() {
 		return market;
 	}

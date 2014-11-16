@@ -43,7 +43,7 @@ public abstract class Order extends Event {
 	// private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
 	protected static final String SEPARATOR = ",";
 
-	@ManyToOne(optional = true, cascade = { CascadeType.MERGE })
+	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public Order getParentOrder() {
 		return parentOrder;
 	}
@@ -71,7 +71,7 @@ public abstract class Order extends Event {
 	@Column(insertable = false, updatable = false)
 	public abstract Amount getLimitPrice();
 
-	@ManyToOne(optional = true)
+	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	@JoinColumn(insertable = false, updatable = false)
 	public abstract Market getMarket();
 

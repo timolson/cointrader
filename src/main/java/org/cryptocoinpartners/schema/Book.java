@@ -251,9 +251,13 @@ public class Book extends MarketData implements Spread {
 					parentBook = chain.previousBook;
 					chain.chainLength++;
 				}
-				//if (parentBook != null)
-				//parentBook.addChild(book);
+				if (parentBook != null) {
+					//	//parentBook.addChild(book);
+					//book.setParent(parentBook);
+				}
 				book.setParent(parentBook);
+
+				//	
 				chain.previousBook = book;
 			}
 
@@ -306,9 +310,10 @@ public class Book extends MarketData implements Spread {
 
 	// These getters and setters are for conversion in JPA
 	//@ManyToOne(cascade = CascadeType.MERGE)
+	//@JoinColumn(name = "parent", insertable = false, updatable = false)
+
 	@Nullable
 	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE, }, fetch = FetchType.EAGER)
-	//@JoinColumn(name = "parent", insertable = false, updatable = false)
 	public Book getParent() {
 		return parent;
 	}

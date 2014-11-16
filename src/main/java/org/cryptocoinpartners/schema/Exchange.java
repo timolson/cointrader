@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema;
 import java.util.List;
 
 import javax.persistence.Basic;
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 
@@ -74,7 +75,7 @@ public class Exchange extends EntityBase {
 		this.marginFeeRate = marginFeeRate;
 	}
 
-	@ManyToOne(optional = false)
+	@ManyToOne(optional = false, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	private FeeMethod feeMethod;
 
 	public FeeMethod getFeeMethod() {
@@ -85,7 +86,7 @@ public class Exchange extends EntityBase {
 		this.feeMethod = feeMethod;
 	}
 
-	@ManyToOne(optional = true)
+	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	private FeeMethod marginFeeMethod;
 
 	public FeeMethod getMarginFeeMethod() {

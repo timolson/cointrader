@@ -1,12 +1,13 @@
 package org.cryptocoinpartners.schema;
 
-import org.joda.time.Instant;
+import java.util.List;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
-import java.util.List;
 
+import org.joda.time.Instant;
 
 /**
  * Adjustments are records of reconciliation where internal records of Positions in an Account do not match external
@@ -17,57 +18,65 @@ import java.util.List;
 @Entity
 public class Adjustment extends EntityBase {
 
+	public Adjustment(Authorization authorization, List<Position> deltas) {
+		this.authorization = authorization;
+		this.deltas = deltas;
+	}
 
-    public Adjustment(Authorization authorization,
-                      List<Position> deltas) {
-        this.authorization = authorization;
-        this.deltas = deltas;
-    }
+	/** You must call this method to enact the Adjustment and modify the relevant Portfolio Positions.  Only the first
+	 * call to apply() has any effect, and subsequent invocations are ignored.
+	 */
+	/* UNIMPLEMENTED
+	public void apply() {
+	    if( timeApplied != null )
+	        return;
+	    timeApplied = Instant.now();
 
+	    try {
+	        for( Position delta : deltas ) {
+	            delta.getPortfolio().modifyPosition( delta, authorization );
+	        }
+	        // todo modify Portfolios' Positions
+	    }
+	    catch( Throwable e ) {
+	        timeApplied = null;
+	        throw e;
+	    }
+	}
+	*/
 
-    /** You must call this method to enact the Adjustment and modify the relevant Portfolio Positions.  Only the first
-     * call to apply() has any effect, and subsequent invocations are ignored.
-     */
-    /* UNIMPLEMENTED
-    public void apply() {
-        if( timeApplied != null )
-            return;
-        timeApplied = Instant.now();
+	/** this will be null if apply() has not yet been called */
+	public Instant getTimeApplied() {
+		return timeApplied;
+	}
 
-        try {
-            for( Position delta : deltas ) {
-                delta.getPortfolio().modifyPosition( delta, authorization );
-            }
-            // todo modify Portfolios' Positions
-        }
-        catch( Throwable e ) {
-            timeApplied = null;
-            throw e;
-        }
-    }
-    */
+	@OneToOne(optional = false)
+	public Authorization getAuthorization() {
+		return authorization;
+	}
 
+	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	public List<Position> getDeltas() {
+		return deltas;
+	}
 
-    /** this will be null if apply() has not yet been called */
-    public Instant getTimeApplied() { return timeApplied; }
+	// JPA
+	protected Adjustment() {
+	}
 
+	protected void setAuthorization(Authorization authorization) {
+		this.authorization = authorization;
+	}
 
-    @OneToOne(optional = false)
-    public Authorization getAuthorization() { return authorization; }
+	protected void setDeltas(List<Position> deltas) {
+		this.deltas = deltas;
+	}
 
+	protected void setTimeApplied(Instant timeApplied) {
+		this.timeApplied = timeApplied;
+	}
 
-    @OneToMany
-    public List<Position> getDeltas() { return deltas; }
-
-
-    // JPA
-    protected Adjustment() { }
-    protected void setAuthorization(Authorization authorization) { this.authorization = authorization; }
-    protected void setDeltas(List<Position> deltas) { this.deltas = deltas; }
-    protected void setTimeApplied(Instant timeApplied) { this.timeApplied = timeApplied; }
-
-
-    private Instant timeApplied;
-    private Authorization authorization;
-    private List<Position> deltas;
+	private Instant timeApplied;
+	private Authorization authorization;
+	private List<Position> deltas;
 }

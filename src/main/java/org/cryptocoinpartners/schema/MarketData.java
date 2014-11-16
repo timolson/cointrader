@@ -1,7 +1,6 @@
 package org.cryptocoinpartners.schema;
 
 import javax.annotation.Nullable;
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 
@@ -22,7 +21,7 @@ public abstract class MarketData extends RemoteEvent {
 		this.market = market;
 	}
 
-	@ManyToOne(optional = false, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne(optional = false)
 	public Market getMarket() {
 		return market;
 	}

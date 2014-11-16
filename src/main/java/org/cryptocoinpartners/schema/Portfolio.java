@@ -7,13 +7,13 @@ import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.inject.Inject;
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.apache.commons.lang.NotImplementedException;
-import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
 
@@ -297,17 +297,17 @@ public class Portfolio extends EntityBase {
 		return name;
 	}
 
-	@OneToMany
+	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public Collection<Stake> getStakes() {
 		return stakes;
 	}
 
-	@ManyToOne
+	@ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public Asset getBaseAsset() {
 		return baseAsset;
 	}
 
-	@ManyToOne
+	@ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public PortfolioManager getManager() {
 		return manager;
 	}
@@ -365,7 +365,6 @@ public class Portfolio extends EntityBase {
 	protected void setName(String name) {
 		this.name = name;
 	}
-
 
 	protected void setStakes(Collection<Stake> stakes) {
 		this.stakes = stakes;
