@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.inject.Inject;
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
@@ -297,17 +296,17 @@ public class Portfolio extends EntityBase {
 		return name;
 	}
 
-	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@OneToMany
 	public Collection<Stake> getStakes() {
 		return stakes;
 	}
 
-	@ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne
 	public Asset getBaseAsset() {
 		return baseAsset;
 	}
 
-	@ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne
 	public PortfolioManager getManager() {
 		return manager;
 	}

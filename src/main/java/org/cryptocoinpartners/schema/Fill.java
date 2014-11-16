@@ -5,7 +5,6 @@ import java.util.Collection;
 import java.util.Collections;
 
 import javax.annotation.Nullable;
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
@@ -47,14 +46,14 @@ public class Fill extends RemoteEvent {
 		this.commission = commission;
 	}
 
-	public @ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	public @ManyToOne
 	@JoinColumn(name = "`order`")
 	SpecificOrder getOrder() {
 		return order;
 	}
 
 	@Nullable
-	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@OneToMany
 	//, mappedBy = "fill")
 	//(fetch = FetchType.EAGER)
 	public Collection<Transaction> getTransactions() {
@@ -76,7 +75,7 @@ public class Fill extends RemoteEvent {
 		this.transactions = transactions;
 	}
 
-	@ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne
 	public Market getMarket() {
 		return market;
 	}

@@ -3,7 +3,6 @@ package org.cryptocoinpartners.schema;
 import java.math.BigDecimal;
 
 import javax.annotation.Nullable;
-import javax.persistence.CascadeType;
 import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;
@@ -35,7 +34,7 @@ public abstract class OrderPrice extends Temporal {
 		this.priceCount = DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis());
 	}
 
-	@ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne
 	public Market getMarket() {
 		return market;
 	}

@@ -1,6 +1,5 @@
 package org.cryptocoinpartners.schema;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 
@@ -12,7 +11,7 @@ import javax.persistence.ManyToOne;
 @Entity
 public class OrderUpdate extends Event {
 
-	@ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne
 	public Order getOrder() {
 		return order;
 	}

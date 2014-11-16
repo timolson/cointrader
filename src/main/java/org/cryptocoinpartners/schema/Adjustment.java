@@ -2,7 +2,6 @@ package org.cryptocoinpartners.schema;
 
 import java.util.List;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
@@ -55,7 +54,7 @@ public class Adjustment extends EntityBase {
 		return authorization;
 	}
 
-	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@OneToMany
 	public List<Position> getDeltas() {
 		return deltas;
 	}

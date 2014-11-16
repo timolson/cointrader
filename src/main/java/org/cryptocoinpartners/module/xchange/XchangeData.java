@@ -20,7 +20,6 @@ import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.MarketDataError;
 import org.cryptocoinpartners.util.PersistUtil;
-import org.cryptocoinpartners.util.PersistUtilHelper;
 import org.cryptocoinpartners.util.RateLimiter;
 import org.cryptocoinpartners.util.XchangeUtil;
 import org.joda.time.Duration;
@@ -148,7 +147,7 @@ public class XchangeData {
 						lastTradeId = remoteId;
 				}
 			} finally {
-				PersistUtilHelper.closeEntityManager();
+				entityManager.close();
 			}
 		}
 
@@ -215,6 +214,7 @@ public class XchangeData {
 				params = args.toArray(params);
 
 				final OrderBook orderBook = dataService.getOrderBook(pair, params);
+				log.warn(orderBook.toString());
 				if (helper != null)
 					helper.handleOrderBook(orderBook);
 				bookBuilder.start(new Instant(orderBook.getTimeStamp()), null, market);

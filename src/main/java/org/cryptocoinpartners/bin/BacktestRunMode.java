@@ -13,7 +13,6 @@ import org.cryptocoinpartners.schema.Holding;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.StrategyInstance;
 import org.cryptocoinpartners.schema.Transaction;
-import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Replay;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -46,7 +45,7 @@ public class BacktestRunMode extends RunMode {
 	@Override
 	public void run() {
 		//Replay replay = Replay.between(start, end, true);
-		PersistUtil.purgeTransactions();
+		//PersistUtil.purgeTransactions();
 		Replay replay = Replay.all(true);
 		context = replay.getContext();
 		context.attach(XchangeAccountService.class);

@@ -2,7 +2,6 @@ package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
@@ -21,7 +20,7 @@ public class Stake extends EntityBase {
 		this.portfolio = portfolio;
 	}
 
-	@ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne
 	public Owner getOwner() {
 		return owner;
 	}
@@ -31,7 +30,7 @@ public class Stake extends EntityBase {
 		return stake;
 	}
 
-	@ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne
 	public Portfolio getPortfolio() {
 		return portfolio;
 	}

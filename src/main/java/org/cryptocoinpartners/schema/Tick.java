@@ -1,7 +1,6 @@
 package org.cryptocoinpartners.schema;
 
 import javax.annotation.Nullable;
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
@@ -25,7 +24,7 @@ public class Tick extends PriceData implements Spread {
 		return getTime();
 	}
 
-	@ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne
 	public Book getLastBook() {
 		return lastBook;
 	}

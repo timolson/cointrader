@@ -32,8 +32,8 @@ public class SaveMarketData {
 
 		else if (m instanceof Book) {
 			Book book = (Book) m;
-			if (book.getParent() != null)
-				PersistUtil.insert(book.getParent());
+			//if (book.getParent() != null)
+			//PersistUtil.insert(book.getParent());
 			PersistUtil.insert(book);
 
 		} else { // if not a Trade, persist unconditionally

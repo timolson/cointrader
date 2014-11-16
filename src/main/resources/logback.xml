@@ -18,13 +18,13 @@
         <appender-ref ref="CONSOLE"/>
     </root>
 
-   <!-- <logger name="org.hibernate.ejb.HibernatePersistence" level="debug"/>-->
-   <!-- <logger name="org.hibernate.type" level="ALL" />-->
- <!-- <logger name="org.hibernate" level="DEBUG" />-->
+    <!--<logger name="org.hibernate.ejb.HibernatePersistence" level="debug"/>-->
+    <!--<logger name="org.hibernate.type" level="ALL" />-->
+ 	<!--<logger name="org.hibernate" level="DEBUG" />-->
 
     <logger name="org.cryptocoinpartners" level="debug"/>
     <!--<logger name="org.cryptocoinpartners.module" level="debug"/>-->
-    <!--<logger name="org.hibernate.tool.hbm2ddl.SchemaExport" level="off"/>-->
+   <!-- <logger name="org.hibernate.tool.hbm2ddl.SchemaExport" level="off"/>-->
     <!--<logger name="org.cryptocoinpartners.util.ConfigUtil" level="debug"/>-->
 
 </configuration>

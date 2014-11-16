@@ -8,7 +8,6 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 import javax.persistence.Basic;
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
@@ -43,7 +42,7 @@ public abstract class Order extends Event {
 	// private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
 	protected static final String SEPARATOR = ",";
 
-	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne(optional = true)
 	public Order getParentOrder() {
 		return parentOrder;
 	}
@@ -71,7 +70,7 @@ public abstract class Order extends Event {
 	@Column(insertable = false, updatable = false)
 	public abstract Amount getLimitPrice();
 
-	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne(optional = true)
 	@JoinColumn(insertable = false, updatable = false)
 	public abstract Market getMarket();
 
@@ -133,7 +132,7 @@ public abstract class Order extends Event {
 	}
 
 	@Nullable
-	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE }, mappedBy = "order")
+	@OneToMany(mappedBy = "order")
 	public Collection<Fill> getFills() {
 		if (fills == null)
 			fills = Collections.synchronizedList(new ArrayList<Fill>());
@@ -143,7 +142,7 @@ public abstract class Order extends Event {
 	}
 
 	@Nullable
-	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE }, mappedBy = "order")
+	@OneToMany(mappedBy = "order")
 	public Collection<Transaction> getTransactions() {
 		if (transactions == null)
 			transactions = Collections.synchronizedList(new ArrayList<Transaction>());
@@ -153,7 +152,7 @@ public abstract class Order extends Event {
 	}
 
 	@Nullable
-	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@OneToMany
 	public Collection<Order> getChildren() {
 		if (children == null)
 			children = new ArrayList<Order>();

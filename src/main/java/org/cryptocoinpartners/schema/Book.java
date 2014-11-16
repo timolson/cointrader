@@ -26,6 +26,8 @@ import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import jline.internal.Log;
+
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Visitor;
 import org.joda.time.Instant;
@@ -442,6 +444,11 @@ public class Book extends MarketData implements Spread {
 	private void resolveDiff() {
 		if (!needToResolveDiff)
 			return;
+		// no difference between books
+		//if (bidDeletionsBlob == null || askDeletionsBlob == null)
+		//return;
+		if (bidDeletionsBlob == null)
+			Log.debug("null blob");
 		// add any non-deleted entries from the parent
 		List<Integer> bidDeletionIndexes = convertDatabaseBlobToIndexList(bidDeletionsBlob); // these should be already sorted
 		List<Offer> parentBids = parent.getBids();
@@ -487,7 +494,7 @@ public class Book extends MarketData implements Spread {
 
 	private List<Offer> convertDatabaseBlobToQuoteList(byte[] bytes) {
 		if (bytes == null)
-			return new ArrayList<>();
+		return new ArrayList<>();
 		List<Offer> result = new ArrayList<>();
 		ByteArrayInputStream bin = new ByteArrayInputStream(bytes);
 		//noinspection EmptyCatchBlock

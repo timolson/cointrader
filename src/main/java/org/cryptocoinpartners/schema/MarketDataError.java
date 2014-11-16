@@ -1,7 +1,6 @@
 package org.cryptocoinpartners.schema;
 
 import javax.annotation.Nullable;
-import javax.persistence.CascadeType;
 import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
 
@@ -27,7 +26,7 @@ public class MarketDataError extends Event {
 		return exception;
 	}
 
-	@ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne
 	public Market getMarket() {
 		return market;
 	}

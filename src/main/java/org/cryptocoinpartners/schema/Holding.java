@@ -3,7 +3,6 @@ package org.cryptocoinpartners.schema;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.persistence.CascadeType;
 import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.OneToOne;
@@ -28,7 +27,7 @@ public class Holding extends EntityBase {
 		this.asset = asset;
 	}
 
-	@ManyToOne(optional = false, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne(optional = false)
 	public Exchange getExchange() {
 		return exchange;
 	}

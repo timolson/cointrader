@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 import javax.persistence.Basic;
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.OneToMany;
 
@@ -28,7 +27,7 @@ public class Owner extends PortfolioManager {
 		return name;
 	}
 
-	@OneToMany(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@OneToMany
 	public Collection<Stake> getStakes() {
 		return stakes;
 	}
