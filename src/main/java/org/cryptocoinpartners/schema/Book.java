@@ -7,6 +7,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -17,9 +18,9 @@ import java.util.Map;
 import javax.annotation.Nullable;
 import javax.persistence.Entity;
 import javax.persistence.Index;
+import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
 import javax.persistence.PostLoad;
 import javax.persistence.PostPersist;
 import javax.persistence.PrePersist;
@@ -252,7 +253,7 @@ public class Book extends MarketData implements Spread {
 					chain.chainLength++;
 				}
 				if (parentBook != null) {
-					//	//parentBook.addChild(book);
+					//parentBook.addChild(book);
 					//book.setParent(parentBook);
 				}
 				book.setParent(parentBook);
@@ -314,27 +315,27 @@ public class Book extends MarketData implements Spread {
 
 	@Nullable
 	@ManyToOne(optional = true)
-	//, cascade = { CascadeType.MERGE, CascadeType.REMOVE, }, fetch = FetchType.EAGER)
+	@JoinColumn(updatable = false)
 	public Book getParent() {
 		return parent;
 	}
 
-	@Nullable
-	@OneToMany
-	//(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
-	public Collection<Book> getChildren() {
-		if (children == null)
-			children = new ArrayList<Book>();
-		synchronized (lock) {
-			return children;
-		}
-	}
-
-	public void addChild(Book book) {
-		synchronized (lock) {
-			getChildren().add(book);
-		}
-	}
+	//	@Nullable
+	//	@OneToMany
+	//	//(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	//	public Collection<Book> getChildren() {
+	//		if (children == null)
+	//			children = new ArrayList<Book>();
+	//		synchronized (lock) {
+	//			return children;
+	//		}
+	//	}
+	//
+	//	public void addChild(Book book) {
+	//		synchronized (lock) {
+	//			getChildren().add(book);
+	//		}
+	//	}
 
 	protected @Lob
 	byte[] getBidDeletionsBlob() {
@@ -356,9 +357,9 @@ public class Book extends MarketData implements Spread {
 		return askInsertionsBlob;
 	}
 
-	protected void setChildren(List<Book> children) {
-		this.children = children;
-	}
+	//	protected void setChildren(List<Book> children) {
+	//		this.children = children;
+	//	}
 
 	protected void setParent(Book parent) {
 		this.parent = parent;
@@ -403,18 +404,21 @@ public class Book extends MarketData implements Spread {
 
 	@PrePersist
 	private void prePersist() {
+
 		if (parent == null) {
 			bidInsertionsBlob = convertQuotesToDatabaseBlob(bids);
 			askInsertionsBlob = convertQuotesToDatabaseBlob(asks);
 			bidDeletionsBlob = null;
 			askDeletionsBlob = null;
 		} else {
+
 			DiffBlobs bidBlobs = diff(parent.getBids(), getBids());
 			bidInsertionsBlob = bidBlobs.insertBlob;
 			bidDeletionsBlob = bidBlobs.deleteBlob;
 			DiffBlobs askBlobs = diff(parent.getAsks(), getAsks());
 			askInsertionsBlob = askBlobs.insertBlob;
 			askDeletionsBlob = askBlobs.deleteBlob;
+
 		}
 	}
 
@@ -429,7 +433,11 @@ public class Book extends MarketData implements Spread {
 
 	@PostPersist
 	private void postPersist() {
+		if (getParent() != null)
+			PersistUtil.detach(getParent());
+		PersistUtil.detach(this);
 		clearBlobs();
+
 	}
 
 	@PostLoad
@@ -494,7 +502,7 @@ public class Book extends MarketData implements Spread {
 
 	private List<Offer> convertDatabaseBlobToQuoteList(byte[] bytes) {
 		if (bytes == null)
-		return new ArrayList<>();
+			return new ArrayList<>();
 		List<Offer> result = new ArrayList<>();
 		ByteArrayInputStream bin = new ByteArrayInputStream(bytes);
 		//noinspection EmptyCatchBlock
@@ -600,6 +608,42 @@ public class Book extends MarketData implements Spread {
 		});
 	}
 
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof Book) {
+			Book book = (Book) obj;
+
+			if (!book.getId().equals(getId())) {
+				return false;
+			}
+			if (!Arrays.equals(book.getBidDeletionsBlob(), (getBidDeletionsBlob()))) {
+				return false;
+			}
+
+			if (!Arrays.equals(book.getAskDeletionsBlob(), (getAskDeletionsBlob()))) {
+				return false;
+			}
+
+			if (!!Arrays.equals(book.getAskInsertionsBlob(), (getAskInsertionsBlob()))) {
+				return false;
+			}
+
+			if (!Arrays.equals(book.getBidInsertionsBlob(), (getBidInsertionsBlob()))) {
+				return false;
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	@Override
+	public int hashCode() {
+		return getId().hashCode() + getBidDeletionsBlob().hashCode() + getAskDeletionsBlob().hashCode() + getBidInsertionsBlob().hashCode()
+				+ getAskInsertionsBlob().hashCode();
+	}
+
 	private List<Offer> bids;
 	private List<Offer> asks;
 	private Book parent; // if this is not null, then the Book is persisted as a diff against the parent Book
@@ -608,6 +652,6 @@ public class Book extends MarketData implements Spread {
 	private byte[] bidInsertionsBlob;
 	private byte[] askInsertionsBlob;
 	private boolean needToResolveDiff;
-	private Collection<Book> children;
+	//private Collection<Book> children;
 
 }

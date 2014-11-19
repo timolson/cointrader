@@ -39,8 +39,7 @@ public class PersistUtilHelper {
 	public static void closeEntityManager() {
 		EntityManager em = threadLocal.get();
 		if (em != null) {
-			if (em.isOpen())
-				em.close();
+			em.close();
 			threadLocal.set(null);
 		}
 	}

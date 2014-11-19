@@ -2,6 +2,7 @@ package org.cryptocoinpartners.schema;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
@@ -142,7 +143,7 @@ public class Transaction extends Event {
 	}
 
 	@Nullable
-	@ManyToOne(optional = true)
+	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public Asset getAsset() {
 		return asset;
 	}
@@ -162,14 +163,14 @@ public class Transaction extends Event {
 	}
 
 	@Nullable
-	@ManyToOne(optional = true)
+	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public Market getMarket() {
 		return market;
 	}
 
 	private Asset currency;
 
-	@ManyToOne(optional = false)
+	@ManyToOne(optional = false, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public Asset getCurrency() {
 		return currency;
 	}
@@ -185,18 +186,18 @@ public class Transaction extends Event {
 	}
 
 	@Nullable
-	@ManyToOne(optional = true)
+	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public Asset getCommissionCurrency() {
 		return commissionCurrency;
 	}
 
-	public @ManyToOne(optional = true)
+	public @ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	@JoinColumn(name = "`order`")
 	Order getOrder() {
 		return order;
 	}
 
-	public @ManyToOne(optional = true)
+	public @ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	Fill getFill() {
 		return fill;
 	}
@@ -212,7 +213,7 @@ public class Transaction extends Event {
 
 	}
 
-	@ManyToOne(optional = false)
+	@ManyToOne(optional = false, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	private TransactionType type;
 
 	public TransactionType getType() {
@@ -226,7 +227,7 @@ public class Transaction extends Event {
 	}
 
 	@Nullable
-	@ManyToOne(optional = true)
+	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public Exchange getExchange() {
 
 		return exchange;
@@ -304,6 +305,10 @@ public class Transaction extends Event {
 
 	protected void setMarket(Market market) {
 		this.market = market;
+	}
+
+	Transaction() {
+
 	}
 
 	//   protected Instant getTime() { return acceptedTime; }

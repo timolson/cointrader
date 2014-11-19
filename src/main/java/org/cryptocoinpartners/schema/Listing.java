@@ -7,7 +7,10 @@ import javax.annotation.Nullable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.NoResultException;
+import javax.persistence.PostPersist;
+import javax.persistence.Table;
 import javax.persistence.Transient;
+import javax.persistence.UniqueConstraint;
 
 import org.cryptocoinpartners.util.PersistUtil;
 
@@ -16,19 +19,30 @@ import org.cryptocoinpartners.util.PersistUtil;
  */
 @SuppressWarnings("UnusedDeclaration")
 @Entity
+@Table(name = "listing", uniqueConstraints = @UniqueConstraint(columnNames = { "base", "quote", "prompt" }))
 public class Listing extends EntityBase {
 
 	@ManyToOne(optional = false)
+	//@Column(unique = true)
 	public Asset getBase() {
 		return base;
 	}
 
+	@PostPersist
+	private void postPersist() {
+
+		PersistUtil.detach(this);
+
+	}
+
 	@ManyToOne(optional = false)
+	//@Column(unique = true)
 	public Asset getQuote() {
 		return quote;
 	}
 
 	@Nullable
+	//@Column(unique = true)
 	public String getPrompt() {
 		return prompt;
 	}

@@ -9,6 +9,7 @@ import javax.persistence.Basic;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.NoResultException;
+import javax.persistence.PostPersist;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.util.PersistUtil;
@@ -29,6 +30,13 @@ public class Market extends EntityBase {
 	/** adds the Market to the database if it does not already exist */
 	public static Market findOrCreate(Exchange exchange, Listing listing) {
 		return findOrCreate(exchange, listing, listing.getQuote().getBasis(), listing.getBase().getBasis());
+	}
+
+	@PostPersist
+	private void postPersist() {
+
+		PersistUtil.detach(this);
+
 	}
 
 	public static Market findOrCreate(Exchange exchange, Listing listing, double quoteBasis, double volumeBasis) {

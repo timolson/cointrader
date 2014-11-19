@@ -141,7 +141,6 @@ public abstract class BaseOrderService implements OrderService {
 	@When("@Priority(9) select * from Fill")
 	public void handleFill(Fill fill) {
 		Order order = fill.getOrder();
-		PersitOrderFill(fill);
 		//PersitOrderFill(order);
 		if (order.getParentOrder() != null) {
 			switch (order.getParentOrder().getFillType()) {
@@ -183,7 +182,7 @@ public abstract class BaseOrderService implements OrderService {
 			OrderState newState = order.isFilled() ? OrderState.FILLED : OrderState.PARTFILLED;
 			updateOrderState(order, newState);
 		}
-
+		PersitOrderFill(fill);
 		CreateTransaction(fill);
 
 	}
