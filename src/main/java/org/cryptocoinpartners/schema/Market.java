@@ -35,7 +35,7 @@ public class Market extends EntityBase {
 	@PostPersist
 	private void postPersist() {
 
-		PersistUtil.detach(this);
+		//PersistUtil.detach(this);
 
 	}
 

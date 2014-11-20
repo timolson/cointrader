@@ -214,7 +214,6 @@ public class XchangeData {
 				params = args.toArray(params);
 
 				final OrderBook orderBook = dataService.getOrderBook(pair, params);
-				log.warn(orderBook.toString());
 				if (helper != null)
 					helper.handleOrderBook(orderBook);
 				bookBuilder.start(new Instant(orderBook.getTimeStamp()), null, market);

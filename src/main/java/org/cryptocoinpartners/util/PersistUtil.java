@@ -79,11 +79,11 @@ public class PersistUtil implements Runnable {
 
 	public static void detach(EntityBase... entities) {
 
-		EntityManager em = createEntityManager();
+		//	EntityManager em = createEntityManager();
 
 		try {
 			for (EntityBase entity : entities) {
-				em.detach(entity);
+				PersistUtilHelper.getEntityManager().detach(entity);
 			}
 		} catch (RuntimeException e) {
 			e.printStackTrace();
@@ -179,7 +179,7 @@ public class PersistUtil implements Runnable {
 			}
 		} finally {
 			if (em != null)
-				PersistUtilHelper.closeEntityManager();
+				em.close();
 		}
 	}
 
@@ -211,7 +211,7 @@ public class PersistUtil implements Runnable {
 			}
 		} finally {
 			if (em != null)
-				PersistUtilHelper.closeEntityManager();
+				em.close();
 		}
 	}
 
@@ -229,7 +229,7 @@ public class PersistUtil implements Runnable {
 			return query.getResultList();
 		} finally {
 			if (em != null)
-				PersistUtilHelper.closeEntityManager();
+				em.close();
 		}
 	}
 
@@ -250,7 +250,7 @@ public class PersistUtil implements Runnable {
 			return query.getSingleResult();
 		} finally {
 			if (em != null)
-				PersistUtilHelper.closeEntityManager();
+				em.close();
 		}
 	}
 
@@ -276,7 +276,7 @@ public class PersistUtil implements Runnable {
 			}
 		} finally {
 			if (em != null)
-				PersistUtilHelper.closeEntityManager();
+				em.close();
 		}
 	}
 
@@ -286,7 +286,7 @@ public class PersistUtil implements Runnable {
 
 	public static EntityManager createEntityManager() {
 		init(false);
-		return PersistUtilHelper.getEntityManager();
+		return PersistUtilHelper.getEntityManagerFactory().createEntityManager();
 
 	}
 
@@ -381,7 +381,7 @@ public class PersistUtil implements Runnable {
 		} finally {
 
 			if (em != null)
-				PersistUtilHelper.closeEntityManager();
+				em.close();
 
 		}
 

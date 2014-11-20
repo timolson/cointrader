@@ -19,7 +19,7 @@ import org.cryptocoinpartners.util.PersistUtil;
  */
 @SuppressWarnings("UnusedDeclaration")
 @Entity
-@Table(name = "listing", uniqueConstraints = @UniqueConstraint(columnNames = { "base", "quote", "prompt" }))
+@Table(name = "listing", uniqueConstraints = { @UniqueConstraint(columnNames = { "base", "quote", "prompt" }) })
 public class Listing extends EntityBase {
 
 	@ManyToOne(optional = false)
@@ -31,7 +31,7 @@ public class Listing extends EntityBase {
 	@PostPersist
 	private void postPersist() {
 
-		PersistUtil.detach(this);
+		//	PersistUtil.detach(this);
 
 	}
 

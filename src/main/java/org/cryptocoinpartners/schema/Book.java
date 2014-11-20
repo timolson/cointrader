@@ -411,6 +411,7 @@ public class Book extends MarketData implements Spread {
 			bidDeletionsBlob = null;
 			askDeletionsBlob = null;
 		} else {
+			PersistUtil.detach(getParent());
 
 			DiffBlobs bidBlobs = diff(parent.getBids(), getBids());
 			bidInsertionsBlob = bidBlobs.insertBlob;
