@@ -255,12 +255,7 @@ public class Book extends MarketData implements Spread {
 					chain.chainLength++;
 				}
 
-				//book.setParent(parentBook);
-
-				//	
-				//	if (parentBook != null)
-				//	parentBook.addChild(book);
-				book.setParentBook(parentBook);
+				book.setParent(parentBook);
 				chain.previousBook = book;
 
 			}
@@ -323,7 +318,7 @@ public class Book extends MarketData implements Spread {
 	//@PrimaryKeyJoinColumn
 	//cascade = { CascadeType.REFRESH, CascadeType.MERGE }
 	@ManyToOne(optional = true)
-	public Book getParentBook() {
+	public Book getParent() {
 		return parent;
 	}
 
@@ -368,7 +363,7 @@ public class Book extends MarketData implements Spread {
 	//		this.children = children;
 	//	}
 
-	protected void setParentBook(Book parent) {
+	protected void setParent(Book parent) {
 		this.parent = parent;
 	}
 
@@ -625,43 +620,6 @@ public class Book extends MarketData implements Spread {
 				return ask.getPriceCount().compareTo(ask2.getPriceCount()); // low to high
 			}
 		});
-	}
-
-	@Override
-	public boolean equals(Object obj) {
-		if (obj instanceof Book) {
-			Book book = (Book) obj;
-
-			if (!book.getId().equals(getId())) {
-				return false;
-			}
-			//			if (!Arrays.equals(book.getBidDeletionsBlob(), (getBidDeletionsBlob()))) {
-			//				return false;
-			//			}
-			//
-			//			if (!Arrays.equals(book.getAskDeletionsBlob(), (getAskDeletionsBlob()))) {
-			//				return false;
-			//			}
-			//
-			//			if (!!Arrays.equals(book.getAskInsertionsBlob(), (getAskInsertionsBlob()))) {
-			//				return false;
-			//			}
-			//
-			//			if (!Arrays.equals(book.getBidInsertionsBlob(), (getBidInsertionsBlob()))) {
-			//				return false;
-			//			}
-
-			return true;
-		}
-
-		return false;
-	}
-
-	@Override
-	public int hashCode() {
-		return getId().hashCode();
-		//	getBidDeletionsBlob().hashCode() + getAskDeletionsBlob().hashCode() + getBidInsertionsBlob().hashCode()
-		//	+ getAskInsertionsBlob().hashCode();
 	}
 
 	private List<Offer> bids;
