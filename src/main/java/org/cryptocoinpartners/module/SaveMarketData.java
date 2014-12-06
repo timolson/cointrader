@@ -18,12 +18,14 @@ public class SaveMarketData {
 
 	@When("select * from MarketData")
 	public void handleMarketData(MarketData m) {
+		PersistUtil persistUtil = new PersistUtil();
+
 		if (m instanceof Trade) {
 			Trade trade = (Trade) m;
-			final Trade duplicate = PersistUtil.queryZeroOne(Trade.class, "select t from Trade t where market=?1 and remoteKey=?2", trade.getMarket(),
+			final Trade duplicate = persistUtil.queryZeroOne(Trade.class, "select t from Trade t where market=?1 and remoteKey=?2", trade.getMarket(),
 					trade.getRemoteKey());
 			if (duplicate == null)
-				PersistUtil.insert(trade);
+				persistUtil.insert(trade);
 			//else
 			//log.warn("dropped duplicate Trade " + trade);
 			//	} else if (m instanceof Book) {
@@ -34,11 +36,11 @@ public class SaveMarketData {
 			Book book = (Book) m;
 			//if (book.getParent() != null)
 			//PersistUtil.insert(book.getParent());
-			PersistUtil.insert(book);
+			persistUtil.insert(book);
 
 		} else { // if not a Trade, persist unconditionally
 			try {
-				PersistUtil.insert(m);
+				persistUtil.insert(m);
 			} catch (Throwable e) {
 				throw new Error("Could not insert " + m, e);
 			}

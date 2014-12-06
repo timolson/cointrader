@@ -35,11 +35,12 @@ public class Currency extends Asset {
 
 	// used by Currencies
 	static Currency forSymbolOrCreate(String symbol, boolean isFiat, double basis) {
+		PersistUtil persistUtil = new PersistUtil();
 		try {
 			return forSymbol(symbol);
 		} catch (NoResultException e) {
 			final Currency currency = new Currency(isFiat, symbol, basis);
-			PersistUtil.insert(currency);
+			persistUtil.insert(currency);
 			return currency;
 		}
 	}

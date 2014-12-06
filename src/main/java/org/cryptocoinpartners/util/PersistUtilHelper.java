@@ -1,20 +1,25 @@
 package org.cryptocoinpartners.util;
 
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+import javax.persistence.CacheRetrieveMode;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.FlushModeType;
 import javax.persistence.Persistence;
+import javax.persistence.Query;
+import javax.persistence.TypedQuery;
+
+import org.cryptocoinpartners.schema.EntityBase;
 
 public class PersistUtilHelper {
 
-	private static EntityManagerFactory emf = null;
-	private static final ThreadLocal<EntityManager> threadLocal;
-
-	static {
-
-		threadLocal = new ThreadLocal<EntityManager>();
-	}
+	private static EntityManagerFactory emf;
+	private static final ThreadLocal<EntityManager> threadLocal = new ThreadLocal<EntityManager>();
+	private static ConcurrentHashMap<String, EntityManager> entityManagers = new ConcurrentHashMap<String, EntityManager>();
 
 	PersistUtilHelper(Map<String, String> properties) {
 		emf = Persistence.createEntityManagerFactory("org.cryptocoinpartners.schema", properties);
@@ -27,20 +32,43 @@ public class PersistUtilHelper {
 
 	public static EntityManager getEntityManager() {
 		EntityManager em = threadLocal.get();
-
-		if (em == null) {
+		if (em == null || !em.isOpen()) {
 			em = emf.createEntityManager();
-			// set your flush mode here 
+			entityManagers.put(em.toString(), em);
 			threadLocal.set(em);
 		}
 		return em;
 	}
 
+	public static <T> TypedQuery<T> createQuery(String qlString, Class<T> resultClass) {
+		//getEntityManager().clear();
+		Map<String, Object> myproperties = getEntityManager().getProperties();
+		Map<String, Object> props = new HashMap<String, Object>();
+		props.put("javax.persistence.cache.retrieveMode", "BYPASS");
+
+		//getEntityManager().setProperty("javax.persistence.cache.storeMode", "BYPASS");
+		getEntityManager().setProperty("javax.persistence.cache.retrieveMode", CacheRetrieveMode.BYPASS);
+
+		return getEntityManager().createQuery(qlString, resultClass);
+	}
+
+	public static Query createQuery(String qlString) {
+		return getEntityManager().createQuery(qlString);
+	}
+
 	public static void closeEntityManager() {
 		EntityManager em = threadLocal.get();
 		if (em != null) {
+			entityManagers.remove(em.toString());
 			em.close();
 			threadLocal.set(null);
+		}
+	}
+
+	public static void clearEntityManager() {
+		EntityManager em = threadLocal.get();
+		if (em != null) {
+			em.clear();
 		}
 	}
 
@@ -61,6 +89,100 @@ public class PersistUtilHelper {
 		getEntityManager().getTransaction().commit();
 	}
 
+	public static void detach(Object entity) {
+		Iterator it = entityManagers.values().iterator();
+
+		while (it.hasNext()) {
+			EntityManager em = (EntityManager) it.next();
+			if (em != null || em.isOpen())
+				em.detach(entity);
+		}
+	}
+
+	public static void evict(Object entity) {
+		Iterator it = entityManagers.values().iterator();
+
+		while (it.hasNext()) {
+			EntityManager em = (EntityManager) it.next();
+			if (em != null || em.isOpen())
+				em.getEntityManagerFactory().getCache().evict(entity.getClass(), ((EntityBase) entity).getId());
+			//em.getEntityManagerFactory().createEntityManager(SynchronizationType.)
+
+		}
+	}
+
+	public static void merge(Object entity) {
+		Iterator it = entityManagers.values().iterator();
+
+		while (it.hasNext()) {
+			EntityManager em = (EntityManager) it.next();
+			if (em != null || em.isOpen())
+				if (em.find(entity.getClass(), ((EntityBase) entity).getId()) != null)
+					em.merge(entity);
+		}
+	}
+
+	public static void refresh(Object entity) {
+		Iterator it = entityManagers.values().iterator();
+		Object parent = null;
+		while (it.hasNext()) {
+			EntityManager em = (EntityManager) it.next();
+			Object mergedEntity = null;
+			Object rootEntity = null;
+			Map<String, Object> props = new HashMap<String, Object>();
+			props.put("javax.persistence.cache.retrieveMode", CacheRetrieveMode.BYPASS);
+
+			if (em != null || em.isOpen())
+				em.refresh(entity);
+			parent = em.find(entity.getClass(), ((EntityBase) entity).getId(), props);
+
+			rootEntity = em.getReference(entity.getClass(), ((EntityBase) entity).getId());
+			//rootEntity = em.find(entity.getClass(), ((EntityBase) entity).getId());
+
+			//if (em.find(entity.getClass(), ((EntityBase) entity).getId()) != null)
+			///em.re
+			em.refresh(rootEntity);
+			em.persist(rootEntity);
+			//em.merge(rootEntity);
+			//em.flush();
+
+			//em.refresh(mergedEntity);
+
+		}
+	}
+
+	public static void find(Object entity) {
+		Iterator it = entityManagers.values().iterator();
+		while (it.hasNext()) {
+			EntityManager em = (EntityManager) it.next();
+			FlushModeType flushMode;
+			Object rootEntity = null;
+			Map<String, Object> props = new HashMap<String, Object>();
+			props.put("javax.persistence.cache.retrieveMode", "BYPASS");
+			Object parent;
+			//Object Object;
+			if (em != null || em.isOpen())
+				parent = em.find(entity.getClass(), ((EntityBase) entity).getId(), props);
+
+			rootEntity = em.getReference(entity.getClass(), ((EntityBase) entity).getId());
+			{
+				em.refresh(rootEntity);
+				em.refresh(entity);
+
+				em.detach(rootEntity);
+			}
+
+			//em.
+			//em.refresh(rootEntity);
+			//em.getEntityManagerFactory().unwrap(cls).
+			//	flushMode = em.getFlushMode();
+			//em.setFlushMode(FlushModeType.)
+			//if (em.find(entity.getClass(), ((EntityBase) entity).getId()) != null)
+			//	em.merge(entity);
+
+		}
+	}
+
 	public static boolean isActive() {
 		return getEntityManager().getTransaction().isActive();
 
@@ -72,6 +194,12 @@ public class PersistUtilHelper {
 
 	public static void evictAll() {
 		emf.getCache().evictAll();
+
+	}
+
+	public static void reset() {
+		emf = null;
+		// TODO Auto-generated method stub
 
 	}
 

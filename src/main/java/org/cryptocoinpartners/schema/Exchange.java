@@ -16,35 +16,39 @@ import org.cryptocoinpartners.util.PersistUtil;
 public class Exchange extends EntityBase {
 
 	public static Exchange forSymbolOrCreate(String symbol) {
+		PersistUtil persistUtil = new PersistUtil();
 		Exchange found = forSymbol(symbol);
 		if (found == null) {
 			found = new Exchange(symbol);
-			PersistUtil.insert(found);
+			persistUtil.insert(found);
 		}
 		return found;
 	}
 
 	public static Exchange forSymbolOrCreate(String symbol, int margin, double feeRate, FeeMethod feeMethod) {
+		PersistUtil persistUtil = new PersistUtil();
 		Exchange found = forSymbol(symbol);
 		if (found == null) {
 			found = new Exchange(symbol, margin, feeRate, feeMethod);
-			PersistUtil.insert(found);
+			persistUtil.insert(found);
 		}
 		return found;
 	}
 
 	public static Exchange forSymbolOrCreate(String symbol, int margin, double feeRate, FeeMethod feeMethod, double marginFeeRate, FeeMethod marginFeeMethod) {
+		PersistUtil persistUtil = new PersistUtil();
 		Exchange found = forSymbol(symbol);
 		if (found == null) {
 			found = new Exchange(symbol, margin, feeRate, feeMethod, marginFeeRate, marginFeeMethod);
-			PersistUtil.insert(found);
+			persistUtil.insert(found);
 		}
 		return found;
 	}
 
 	/** returns null if the symbol does not represent an existing exchange */
 	public static Exchange forSymbol(String symbol) {
-		return PersistUtil.queryZeroOne(Exchange.class, "select e from Exchange e where symbol=?1", symbol);
+		PersistUtil persistUtil = new PersistUtil();
+		return persistUtil.queryZeroOne(Exchange.class, "select e from Exchange e where symbol=?1", symbol);
 	}
 
 	public static List<String> allSymbols() {

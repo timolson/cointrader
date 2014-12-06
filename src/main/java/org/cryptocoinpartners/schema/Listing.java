@@ -19,7 +19,8 @@ import org.cryptocoinpartners.util.PersistUtil;
  */
 @SuppressWarnings("UnusedDeclaration")
 @Entity
-@Table(name = "listing", uniqueConstraints = { @UniqueConstraint(columnNames = { "base", "quote", "prompt" }) })
+@Table(name = "listing", uniqueConstraints = { @UniqueConstraint(columnNames = { "base", "quote", "prompt" }),
+		@UniqueConstraint(columnNames = { "base", "quote" }) })
 public class Listing extends EntityBase {
 
 	@ManyToOne(optional = false)
@@ -30,8 +31,11 @@ public class Listing extends EntityBase {
 
 	@PostPersist
 	private void postPersist() {
-
-		//	PersistUtil.detach(this);
+		//	PersistUtil.clear();
+		//	PersistUtil.refresh(this);
+		//PersistUtil.merge(this);
+		// PersistUtil.close();
+		//PersistUtil.evict(this);
 
 	}
 
@@ -49,8 +53,11 @@ public class Listing extends EntityBase {
 
 	/** will create the listing if it doesn't exist */
 	public static Listing forPair(Asset base, Asset quote) {
+		//	PersistUtil persistUtil = new PersistUtil();
+
 		try {
 			Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2 and prompt IS NULL", base, quote);
+			//Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2", base, quote);
 			if (listing == null) {
 				listing = new Listing(base, quote);
 				PersistUtil.insert(listing);
@@ -64,7 +71,10 @@ public class Listing extends EntityBase {
 	}
 
 	public static Listing forPair(Asset base, Asset quote, String prompt) {
+		//PersistUtil persistUtil = new PersistUtil();
+
 		try {
+
 			Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2 and prompt=?3", base, quote, prompt);
 			if (listing == null) {
 				listing = new Listing(base, quote, prompt);

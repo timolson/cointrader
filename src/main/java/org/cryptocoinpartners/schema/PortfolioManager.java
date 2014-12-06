@@ -43,7 +43,8 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
 	@When("@Priority(9) select * from Transaction as transaction")
 	public void handleTransaction(Transaction transaction) {
-		PersistUtil.insert(transaction);
+		PersistUtil persistUtil = new PersistUtil();
+		persistUtil.insert(transaction);
 
 		if (transaction.getPortfolio() == (portfolio)) {
 
