@@ -180,6 +180,9 @@ public abstract class BaseOrderService implements OrderService {
 			log.warn("Fill received for Order in NEW state: skipping PLACED state");
 		if (state.isOpen()) {
 			OrderState newState = order.isFilled() ? OrderState.FILLED : OrderState.PARTFILLED;
+			if (newState == OrderState.FILLED) {
+				log.info("order filled");
+			}
 			updateOrderState(order, newState);
 		}
 		PersitOrderFill(fill);

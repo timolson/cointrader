@@ -77,6 +77,7 @@ public class MockOrderService extends BaseOrderService {
 						logFill(order, bid, fill);
 						if (remainingVolume == 0)
 							break;
+
 					}
 				}
 			}

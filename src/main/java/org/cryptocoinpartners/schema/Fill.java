@@ -31,7 +31,6 @@ public class Fill extends RemoteEvent {
 	private static final String SEPARATOR = ",";
 
 	public Fill(SpecificOrder order, Instant time, Market market, long priceCount, long volumeCount) {
-		order.addFill(this);
 		this.order = order;
 		this.market = market;
 		this.priceCount = priceCount;
@@ -39,7 +38,6 @@ public class Fill extends RemoteEvent {
 	}
 
 	public Fill(SpecificOrder order, Instant time, Market market, long priceCount, long volumeCount, Amount commission) {
-		order.addFill(this);
 		this.order = order;
 		this.market = market;
 		this.priceCount = priceCount;
