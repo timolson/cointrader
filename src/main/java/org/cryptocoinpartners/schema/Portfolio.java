@@ -13,6 +13,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
 
@@ -57,6 +58,59 @@ public class Portfolio extends EntityBase {
 		}
 
 		return allPositions;
+	}
+
+	public @Transient
+	ConcurrentHashMap<Asset, Amount> getRealisedPnLs() {
+
+		ConcurrentHashMap<Asset, Amount> allPnLs = new ConcurrentHashMap<Asset, Amount>();
+		Iterator<Asset> it = realisedProfits.keySet().iterator();
+		while (it.hasNext()) {
+			Asset asset = it.next();
+			Iterator<Exchange> ite = realisedProfits.get(asset).keySet().iterator();
+			while (ite.hasNext()) {
+				Exchange exchange = ite.next();
+				Iterator<Market> itm = realisedProfits.get(asset).get(exchange).keySet().iterator();
+				while (itm.hasNext()) {
+					Market market = itm.next();
+					Amount realisedPnL = realisedProfits.get(asset).get(exchange).get(market);
+
+					if (allPnLs.get(asset) == null) {
+						allPnLs.put(asset, realisedPnL);
+					} else {
+						allPnLs.put(asset, allPnLs.get(asset).plus(realisedPnL));
+					}
+				}
+
+			}
+
+		}
+
+		return allPnLs;
+	}
+
+	public @Transient
+	Amount getRealisedPnL(Asset asset) {
+
+		Amount realisedPnL = DecimalAmount.ZERO;
+		Iterator<Exchange> ite = realisedProfits.get(asset).keySet().iterator();
+		while (ite.hasNext()) {
+			Exchange exchange = ite.next();
+			Iterator<Market> itm = realisedProfits.get(asset).get(exchange).keySet().iterator();
+			while (itm.hasNext()) {
+				Market market = itm.next();
+				realisedPnL = realisedPnL.plus(realisedProfits.get(asset).get(exchange).get(market));
+
+			}
+		}
+
+		return realisedPnL;
+	}
+
+	public @Transient
+	ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Market, Amount>>> getRealisedPnL() {
+
+		return realisedProfits;
 	}
 
 	public @Transient
@@ -171,7 +225,12 @@ public class Portfolio extends EntityBase {
 	@Transient
 	private boolean merge(Position position) {
 		ConcurrentHashMap<Exchange, ArrayList<Position>> assetPosition = positions.get(position.asset);
-		ConcurrentHashMap<Exchange, Amount> assetRealisedProfits = realisedProfits.get(position.asset);
+		ConcurrentHashMap<Market, Amount> marketRealisedProfits;
+		ConcurrentHashMap<Exchange, ConcurrentHashMap<Market, Amount>> assetRealisedProfits = realisedProfits.get(position.getMarket().getQuote());
+		if (assetRealisedProfits != null) {
+			marketRealisedProfits = assetRealisedProfits.get(position.getMarket());
+		}
+
 		if (assetPosition == null) {
 			ArrayList<Position> detailPosition = new ArrayList<Position>();
 			detailPosition.add(position);
@@ -180,28 +239,28 @@ public class Portfolio extends EntityBase {
 			positions.put(position.asset, assetPosition);
 
 			Amount profits = DecimalAmount.ZERO;
-			assetRealisedProfits = new ConcurrentHashMap<Exchange, Amount>();
-			assetRealisedProfits.put(position.getExchange(), profits);
-			realisedProfits.put(position.asset, assetRealisedProfits);
-			if (realisedProfits.get(position.getMarket().getQuote()) == null) {
-				assetRealisedProfits = new ConcurrentHashMap<Exchange, Amount>();
-				assetRealisedProfits.put(position.getExchange(), profits);
+			if (assetRealisedProfits == null) {
+				assetRealisedProfits = new ConcurrentHashMap<Exchange, ConcurrentHashMap<Market, Amount>>();
+				marketRealisedProfits = new ConcurrentHashMap<Market, Amount>();
+				marketRealisedProfits.put(position.getMarket(), profits);
+				assetRealisedProfits.put(position.getExchange(), marketRealisedProfits);
 				realisedProfits.put(position.getMarket().getQuote(), assetRealisedProfits);
 			}
 			return true;
 		} else {
 			//asset is present, so check the market
 			ArrayList<Position> exchangePositions = assetPosition.get(position.getExchange());
-			Amount exchangeRealisedProfits = assetRealisedProfits.get(position.getExchange());
+			Amount exchangeRealisedProfits = realisedProfits.get(position.getMarket().getQuote()).get(position.getExchange()).get(position.getMarket());
 
 			if (exchangePositions == null) {
 				ArrayList<Position> detailPosition = new ArrayList<Position>();
 				detailPosition.add(position);
 				assetPosition.put(position.getExchange(), detailPosition);
 				Amount profits = DecimalAmount.ZERO;
-				assetRealisedProfits.put(position.getExchange(), profits);
-				if (realisedProfits.get(position.getMarket().getQuote()).get(position.getExchange()) == null) {
-					realisedProfits.get(position.getMarket().getQuote()).put(position.getExchange(), profits);
+				if (realisedProfits.get(position.getMarket().getQuote()).get(position.getExchange()).get(position.getMarket()) == null) {
+					marketRealisedProfits = new ConcurrentHashMap<Market, Amount>();
+					marketRealisedProfits.put(position.getMarket(), profits);
+					realisedProfits.get(position.getMarket().getQuote()).put(position.getExchange(), marketRealisedProfits);
 				}
 
 				return true;
@@ -223,9 +282,16 @@ public class Portfolio extends EntityBase {
 							// long average price - 
 						}
 						Amount RealisedPnL = ShortRealisedPnL.plus(LongRealisedPnL);
-						if (!RealisedPnL.isZero()) {
-							Amount TotalRealisedPnL = RealisedPnL.plus(realisedProfits.get(position.getMarket().getQuote()).get(position.getExchange()));
-							realisedProfits.get(position.getMarket().getQuote()).put(position.getExchange(), TotalRealisedPnL);
+						Amount PreviousPnL = realisedProfits.get(position.getMarket().getQuote()).get(position.getExchange()).get(position.getMarket());
+						if (!ShortRealisedPnL.isZero() || !LongRealisedPnL.isZero()) {
+							Amount TotalRealisedPnL = RealisedPnL.plus(realisedProfits.get(position.getMarket().getQuote()).get(position.getExchange())
+									.get(position.getMarket()));
+							if (PreviousPnL != TotalRealisedPnL) {
+
+								realisedProfits.get(position.getMarket().getQuote()).get(position.getExchange()).put(position.getMarket(), TotalRealisedPnL);
+								//		manager.getPortfolioService().CreateTransaction(position.getExchange(), position.getMarket().getQuote(),
+								//			TransactionType.REALISED_PROFIT_LOSS, TotalRealisedPnL.minus(PreviousPnL), DecimalAmount.ZERO);
+							}
 
 						}
 
@@ -285,7 +351,7 @@ public class Portfolio extends EntityBase {
 		this.name = name;
 		this.manager = manager;
 		this.positions = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ArrayList<Position>>>();
-		this.realisedProfits = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, Amount>>();
+		this.realisedProfits = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Market, Amount>>>();
 		this.balances = new ArrayList<>();
 		this.transactions = new ArrayList<>();
 	}
@@ -393,9 +459,11 @@ public class Portfolio extends EntityBase {
 	private PortfolioManager manager;
 	@Inject
 	private Logger log;
+	@Inject
+	protected Context context;
 	private Asset baseAsset;
 	private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ArrayList<Position>>> positions;
-	private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, Amount>> realisedProfits;
+	private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Market, Amount>>> realisedProfits;
 	private Collection<Balance> balances = Collections.emptyList();
 	private Collection<Transaction> transactions = Collections.emptyList();
 	private Collection<Stake> stakes = Collections.emptyList();

@@ -43,8 +43,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
 	@When("@Priority(9) select * from Transaction as transaction")
 	public void handleTransaction(Transaction transaction) {
-		PersistUtil persistUtil = new PersistUtil();
-		persistUtil.insert(transaction);
+		PersistUtil.insert(transaction);
 
 		if (transaction.getPortfolio() == (portfolio)) {
 
@@ -97,8 +96,9 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 			BasicPortfolioService portfolioService = portfolio.getManager().getPortfolioService();
 			//portfolio.getPositions();
 			logger.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Portfolio: " + portfolio + " Total Value ("
-					+ portfolio.getBaseAsset() + "):" + portfolioService.getCashBalance().plus(portfolioService.getMarketValue()) + " (Cash Balance:"
-					+ portfolioService.getCashBalance() + " Open Trade Equity:" + portfolioService.getMarketValue() + ")");
+					+ portfolio.getBaseAsset() + "):" + portfolioService.getCashBalance().plus(portfolioService.getUnrealisedPnL()) + " (Cash Balance:"
+					+ portfolioService.getCashBalance() + " Realised PnL:" + portfolioService.getRealisedPnL() + " Open Trade Equity:"
+					+ portfolioService.getUnrealisedPnL() + ")");
 			logger.info(portfolio.getPositions().toString());
 			//			Object itt = portfolio.getPositions().iterator();
 			//			while (itt.hasNext()) {

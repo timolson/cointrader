@@ -4,14 +4,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.FutureTask;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
 import javax.persistence.NoResultException;
+import javax.persistence.Persistence;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
@@ -24,96 +22,43 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Tim Olson
  */
-public class PersistUtil implements Runnable {
+public class PersistUtil {
 
 	private static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
-	private static final BlockingQueue<EntityBase[]> blockingQueue = new ArrayBlockingQueue<EntityBase[]>(10000);
-	private static boolean running = false;
-	private static boolean shutdown = false;
-	private static FutureTask persitanceTask = null;
-	private static ExecutorService service;
 
-	private static void persist(EntityBase... entities) {
+	public static void insert(EntityBase... entities) {
+		EntityManager em = null;
 		boolean persited = true;
 		try {
-			PersistUtilHelper.beginTransaction();
-
-			//PersistUtilHelper.beginTransaction();
+			em = createEntityManager();
+			EntityTransaction transaction = em.getTransaction();
+			transaction.begin();
 			try {
 				for (EntityBase entity : entities)
-					PersistUtilHelper.getEntityManager().persist(entity);
-				PersistUtilHelper.commit();
+					em.persist(entity);
+				transaction.commit();
+
 			} catch (Exception e) {
+				persited = false;
 				e.printStackTrace();
 				if (persited)
 					for (EntityBase entity : entities)
 						log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
-				if (PersistUtilHelper.isActive())
-					PersistUtilHelper.rollback();
+				if (transaction.isActive())
+					transaction.rollback();
 
+			} catch (Error t) {
+				transaction.rollback();
+				throw t;
 			}
 		} finally {
 			if (persited)
 				for (EntityBase entity : entities)
 					log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
 
+			if (em != null)
+				em.close();
 		}
-	}
-
-	public static void insert(EntityBase... entities) {
-		try {
-
-			persist(entities);
-
-		} catch (Exception e) {
-			e.printStackTrace();
-
-		} finally {
-			PersistUtilHelper.closeEntityManager();
-		}
-	}
-
-	public static void insertThreaded(EntityBase... entities) {
-		//org.hibernate.TransientPropertyValueException is thrown when peristing entities with many to one or many to many relationships
-		// as this persitnace is done via a separete thread, even though the smae entitymanager factory is used, it is not aware of any of the already saved entities.
-		// if you don't close the session manager after each perist, it works fine, hovever the query methods faild as they are not aware of the newly persitsted entities
-		// until the entity manager has been closed.
-		if (!shutdown && running && persitanceTask == null) {
-			service = Executors.newSingleThreadExecutor();
-			PersistUtil persistanceThread = new PersistUtil();
-			persitanceTask = (FutureTask) service.submit(persistanceThread);
-			running = true;
-			shutdown = false;
-			try {
-				blockingQueue.put(entities);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		} else if (!running) {
-			EntityManager em = null;
-			try {
-
-				for (EntityBase entity : entities)
-					persist(entities);
-			} finally {
-
-				PersistUtilHelper.closeEntityManager();
-			}
-
-		} else {
-
-			try {
-
-				blockingQueue.put(entities);
-
-			} catch (Exception e) {
-
-				log.error("Cointrader Database Peristnace had an error, the details are:  {}.", e);
-
-			}
-		}
-
 	}
 
 	/**
@@ -260,7 +205,7 @@ public class PersistUtil implements Runnable {
 
 	public static EntityManager createEntityManager() {
 		init(false);
-		return PersistUtilHelper.getEntityManager();
+		return entityManagerFactory.createEntityManager();
 	}
 
 	public static void resetDatabase() {
@@ -269,35 +214,23 @@ public class PersistUtil implements Runnable {
 
 	public static void init() {
 		init(false);
-		running = true;
-		shutdown = false;
 	}
 
 	public static void shutdown() {
-		if (persitanceTask != null) {
-			shutdown = true;
-			while (!persitanceTask.isDone()) {
-				//log.info("waiting for persitance thread to shutdown");
-			}
-			running = false;
-			service.shutdown();
-
-		}
-		if (PersistUtilHelper.getEntityManagerFactory() != null)
-			PersistUtilHelper.closeEntityManagerFactory();
+		if (entityManagerFactory != null)
+			entityManagerFactory.close();
 	}
 
 	private static void init(boolean resetDatabase) {
-		if (PersistUtilHelper.getEntityManagerFactory() != null) {
-			if (!PersistUtilHelper.isOpen()) {
+		if (entityManagerFactory != null) {
+			if (!entityManagerFactory.isOpen()) {
 				log.warn("entityManagerFactory was closed.  Re-initializing");
-				PersistUtilHelper.reset();
+				entityManagerFactory = null;
 			} else if (!resetDatabase) {
 				// entityManagerFactory exists, is open, and a reset is not requested.  continue to use existing EMF
 				return;
 			}
 		}
-
 		if (resetDatabase) {
 			log.info("resetting database");
 		} else
@@ -315,18 +248,17 @@ public class PersistUtil implements Runnable {
 		properties.put("hibernate.connection.username", ConfigUtil.combined().getString("db.username"));
 		properties.put("hibernate.connection.password", ConfigUtil.combined().getString("db.password"));
 		properties.put("hibernate.ejb.naming_strategy", "org.hibernate.cfg.ImprovedNamingStrategy");
+
 		try {
-			PersistUtilHelper emh = new PersistUtilHelper(properties);
+			entityManagerFactory = Persistence.createEntityManagerFactory("org.cryptocoinpartners.schema", properties);
 			ensureSingletonsExist();
-
 		} catch (Throwable t) {
-			if (PersistUtilHelper.getEntityManagerFactory() != null) {
-				PersistUtilHelper.closeEntityManagerFactory();
-
+			if (entityManagerFactory != null) {
+				entityManagerFactory.close();
+				entityManagerFactory = null;
 			}
 			throw new Error("Could not initialize db", t);
 		}
-
 	}
 
 	private static void ensureSingletonsExist() {
@@ -335,25 +267,6 @@ public class PersistUtil implements Runnable {
 		Exchanges.BITFINEX.getSymbol(); // this should load all the singletons in Exchanges
 	}
 
+	private static EntityManagerFactory entityManagerFactory;
 	private static final int defaultBatchSize = 20;
-
-	@Override
-	public void run() {
-		EntityBase[] entities;
-		while (!blockingQueue.isEmpty() || !shutdown) {
-
-			try {
-				entities = blockingQueue.take();
-				persist(entities);
-			} catch (Exception e) {
-				e.printStackTrace();
-
-			} finally {
-				entities = null;
-				PersistUtilHelper.closeEntityManager();
-			}
-
-		}
-	}
-
 }

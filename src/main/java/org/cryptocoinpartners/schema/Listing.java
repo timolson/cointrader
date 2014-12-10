@@ -53,11 +53,9 @@ public class Listing extends EntityBase {
 
 	/** will create the listing if it doesn't exist */
 	public static Listing forPair(Asset base, Asset quote) {
-		//	PersistUtil persistUtil = new PersistUtil();
 
 		try {
 			Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2 and prompt IS NULL", base, quote);
-			//Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2", base, quote);
 			if (listing == null) {
 				listing = new Listing(base, quote);
 				PersistUtil.insert(listing);
@@ -71,8 +69,6 @@ public class Listing extends EntityBase {
 	}
 
 	public static Listing forPair(Asset base, Asset quote, String prompt) {
-		//PersistUtil persistUtil = new PersistUtil();
-
 		try {
 
 			Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2 and prompt=?3", base, quote, prompt);

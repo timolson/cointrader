@@ -98,7 +98,7 @@ public class Position extends Holding {
 		if (isOpen() && marginAmount != null) {
 			return marginAmount;
 		} else {
-			return DecimalAmount.ZERO;
+			return DecimalAmount.ONE;
 		}
 	}
 
@@ -130,24 +130,24 @@ public class Position extends Holding {
 	}
 
 	@Transient
-	protected Amount getPrice() {
+	public Amount getPrice() {
 		return price;
 	}
 
 	@Transient
-	protected Amount getAvgPrice() {
+	public Amount getAvgPrice() {
 		return avgPrice;
 	}
 
 	@Transient
-	protected Amount getLongAvgPrice() {
+	public Amount getLongAvgPrice() {
 		if (longAvgPrice == null)
 			longAvgPrice = DecimalAmount.ZERO;
 		return longAvgPrice;
 	}
 
 	@Transient
-	protected Amount getShortAvgPrice() {
+	public Amount getShortAvgPrice() {
 		if (shortAvgPrice == null)
 			shortAvgPrice = DecimalAmount.ZERO;
 		return shortAvgPrice;

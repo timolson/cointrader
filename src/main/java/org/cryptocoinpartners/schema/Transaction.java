@@ -44,6 +44,16 @@ public class Transaction extends Event {
 		this.setPortfolioName(portfolio);
 	}
 
+	public Transaction(Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount) {
+
+		this.setAmount(amount);
+		this.setCurrency(currency);
+		this.setType(type);
+		this.setPortfolio(portfolio);
+		this.setExchange(exchange);
+		this.setPortfolioName(portfolio);
+	}
+
 	public Transaction(Fill fill) throws Exception {
 		Portfolio portfolio = fill.getOrder().getPortfolio();
 		TransactionType transactionType = fill.getVolume().isPositive() ? TransactionType.BUY : TransactionType.SELL;
@@ -96,16 +106,16 @@ public class Transaction extends Event {
 
 		if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
 
-			Amount notional = getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN);
-			Amount totalvalue = notional.plus(getCommission());
-			value = totalvalue;
+			Amount notional = getAmount().times(getPrice(), Remainder.ROUND_EVEN);
+			//Amount totalvalue = notional.plus(getCommission());
+			value = notional;
 		} else if (getType().equals(TransactionType.BUY_RESERVATION) || getType().equals(TransactionType.SELL_RESERVATION)) {
-			value = (getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN)).minus(getCommission());
+			value = (getAmount().times(getPrice(), Remainder.ROUND_EVEN)).minus(getCommission());
 
 		} else if (getType().equals(TransactionType.CREDIT) || getType().equals(TransactionType.INTREST)) {
 			value = (getAmount());
 		} else if (getType().equals(TransactionType.DEBIT) || getType().equals(TransactionType.FEES)) {
-			value = getAmount().negate();
+			value = getAmount();
 		} else if (getType().equals(TransactionType.REBALANCE)) {
 			value = getAmount().times(getPrice(), Remainder.ROUND_EVEN);
 
@@ -122,11 +132,12 @@ public class Transaction extends Event {
 		if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
 
 			Amount notional = getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN);
-			Amount cost = notional.dividedBy(getExchange().getMargin(), Remainder.ROUND_EVEN);
+			Amount cost = notional.divide(getExchange().getMargin(), Remainder.ROUND_EVEN);
 			Amount totalcost = cost.plus(getCommission());
 			value = totalcost;
 		} else if (getType().equals(TransactionType.BUY_RESERVATION) || getType().equals(TransactionType.SELL_RESERVATION)) {
-			value = (getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN)).minus(getCommission());
+			Amount notional = (getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN)).minus(getCommission());
+			value = notional.divide(getExchange().getMargin(), Remainder.ROUND_EVEN);
 
 		} else if (getType().equals(TransactionType.CREDIT) || getType().equals(TransactionType.INTREST)) {
 			value = (getAmount());
