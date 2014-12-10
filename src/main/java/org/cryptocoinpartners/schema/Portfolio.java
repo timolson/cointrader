@@ -129,18 +129,19 @@ public class Portfolio extends EntityBase {
 	}
 
 	public @Transient
-	long getPosition(Asset asset, Exchange exchange) {
+	DiscreteAmount getPosition(Asset asset, Exchange exchange) {
 		long netVolumeCount = 0;
+		Position pos;
 		if (positions.get(asset) != null && positions.get(asset).get(exchange) != null) {
 			Iterator<Position> itp = positions.get(asset).get(exchange).iterator();
 			while (itp.hasNext()) {
-				Position pos = itp.next();
+				pos = itp.next();
 				netVolumeCount += pos.getVolumeCount();
 			}
 
 		}
 
-		return netVolumeCount;
+		return new DiscreteAmount(netVolumeCount, asset.getBasis());
 	}
 
 	public @Transient

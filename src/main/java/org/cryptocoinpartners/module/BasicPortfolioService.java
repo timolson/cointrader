@@ -86,7 +86,7 @@ public class BasicPortfolioService implements PortfolioService {
 		return portfolio.getShortPosition(asset, exchange);
 	}
 
-	public long getPosition(Asset asset, Exchange exchange) {
+	public DiscreteAmount getPosition(Asset asset, Exchange exchange) {
 		return portfolio.getPosition(asset, exchange);
 	}
 

@@ -96,9 +96,9 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 			BasicPortfolioService portfolioService = portfolio.getManager().getPortfolioService();
 			//portfolio.getPositions();
 			logger.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Portfolio: " + portfolio + " Total Value ("
-					+ portfolio.getBaseAsset() + "):" + portfolioService.getCashBalance().plus(portfolioService.getUnrealisedPnL()) + " (Cash Balance:"
+					+ portfolio.getBaseAsset() + "):" + portfolioService.getCashBalance().plus(portfolioService.getMarketValue()) + " (Cash Balance:"
 					+ portfolioService.getCashBalance() + " Realised PnL:" + portfolioService.getRealisedPnL() + " Open Trade Equity:"
-					+ portfolioService.getUnrealisedPnL() + ")");
+					+ portfolioService.getUnrealisedPnL() + " MarketValue:" + portfolioService.getMarketValue() + ")");
 			logger.info(portfolio.getPositions().toString());
 			//			Object itt = portfolio.getPositions().iterator();
 			//			while (itt.hasNext()) {
