@@ -1,4 +1,4 @@
-package org.cryptocoinpartners.schema;
+package org.cryptocoinpartners.enumeration;
 
 /**
  * @author Mike Olson

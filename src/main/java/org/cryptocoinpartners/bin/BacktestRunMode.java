@@ -31,22 +31,22 @@ public class BacktestRunMode extends RunMode {
 	@Parameter(description = "Strategy name to load", arity = 1, required = true)
 	public List<String> strategyNames;
 	private Context context;
-	private final Instant start = new DateTime(2013, 11, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+	private final Instant start = new DateTime(2013, 1, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 	private final Instant end = new DateTime(2014, 1, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 	//private final Instant start = new DateTime(2014, 9, 9, 23, 0, 0, 0, DateTimeZone.UTC).toInstant();
 	//private final Instant end = new DateTime(2014, 9, 10, 6, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
 	@Parameter(names = { "-p", "--position" }, arity = 2, description = "specify initial portfolio positions as {Exchange}:{Asset} {Amount} e.g. BITFINEX:BTC 1.0")
-	public List<String> positions = Arrays.asList("BITFINEX:USD", "10000");
+	public List<String> positions = Arrays.asList("BITSTAMP:USD", "1000000");
 
 	@Parameter(names = { "-" }, description = "No-op switch used to end list of positions before supplying the strategy name")
 	boolean noop = false;
 
 	@Override
 	public void run() {
-		//Replay replay = Replay.between(start, end, true);
+		Replay replay = Replay.between(start, end, true);
 		//PersistUtil.purgeTransactions();
-		Replay replay = Replay.all(true);
+		//Replay replay = Replay.all(true);
 		context = replay.getContext();
 		context.attach(XchangeAccountService.class);
 		context.attach(BasicQuoteService.class);

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -19,6 +20,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
+import org.cryptocoinpartners.enumeration.TransactionType;
 import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
@@ -88,6 +90,9 @@ public abstract class Order extends Event {
 	@Column(insertable = false, updatable = false)
 	public abstract Amount getVolume();
 
+	@Transient
+	public abstract Amount getUnfilledVolume();
+
 	public abstract void setStopPrice(DecimalAmount stopPrice);
 
 	public abstract void setTrailingStopPrice(DecimalAmount trailingStopPrice);
@@ -149,6 +154,31 @@ public abstract class Order extends Event {
 		synchronized (lock) {
 			return transactions;
 		}
+	}
+
+	@Transient
+	public Transaction getReservation() {
+		Iterator<Transaction> it = getTransactions().iterator();
+		while (it.hasNext()) {
+			Transaction tran = it.next();
+			if (tran.getType().equals(TransactionType.BUY_RESERVATION) || tran.getType().equals(TransactionType.SELL_RESERVATION)) {
+				return tran;
+
+			}
+		}
+		return null;
+	}
+
+	@Transient
+	public void removeTransaction(Transaction transaction) {
+		Iterator<Transaction> it = getTransactions().iterator();
+		while (it.hasNext()) {
+			if (it.next().equals(transaction)) {
+				it.remove();
+
+			}
+		}
+
 	}
 
 	@Nullable

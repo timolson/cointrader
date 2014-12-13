@@ -3,6 +3,8 @@ package org.cryptocoinpartners.schema;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 
+import org.cryptocoinpartners.enumeration.OrderState;
+
 /**
  * When Orders change OrderState, this Event is published
  *

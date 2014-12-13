@@ -57,13 +57,13 @@ public class Transaction extends Event {
 	public Transaction(Fill fill) throws Exception {
 		Portfolio portfolio = fill.getOrder().getPortfolio();
 		TransactionType transactionType = fill.getVolume().isPositive() ? TransactionType.BUY : TransactionType.SELL;
-		this.setAsset(fill.getMarket().getBase());
-		this.setCurrency(fill.getMarket().getQuote());
+		this.amount = fill.getVolume().isPositive() ? fill.getVolume().times(fill.getPrice(), Remainder.ROUND_EVEN).negate() : fill.getVolume();
+		this.assetAmount = fill.getVolume().isPositive() ? fill.getVolume() : fill.getVolume().times(fill.getPrice(), Remainder.ROUND_EVEN).negate();
+		this.asset = fill.getVolume().isPositive() ? fill.getMarket().getBase() : fill.getMarket().getQuote();
+		this.currency = fill.getVolume().isPositive() ? fill.getMarket().getQuote() : fill.getMarket().getBase();
 		fill.addTransaction(this);
-		this.setAmount(fill.getVolume());
 		this.setPrice(fill.getPrice());
 		this.setPriceCount(fill.getPriceCount());
-		this.setAmountCount(fill.getVolumeCount());
 		this.setType(transactionType);
 		this.setPortfolio(portfolio);
 		this.setPortfolioName(portfolio);
@@ -80,19 +80,19 @@ public class Transaction extends Event {
 
 		TransactionType transactionType = order.getVolume().isPositive() ? TransactionType.BUY_RESERVATION : TransactionType.SELL_RESERVATION;
 		order.addTransaction(this);
-		this.setAmount(order.getVolume());
-		this.setAsset(order.getMarket().getBase());
-		this.setCurrency(order.getMarket().getQuote());
+		this.amount = order.getVolume().isPositive() ? (order.getVolume().times(order.getLimitPrice(), Remainder.ROUND_EVEN)).negate() : order.getVolume();
+		this.asset = order.getVolume().isPositive() ? order.getMarket().getBase() : order.getMarket().getQuote();
+		this.assetAmount = order.getVolume().isPositive() ? order.getVolume() : (order.getVolume().times(order.getLimitPrice(), Remainder.ROUND_EVEN)).negate();
+		this.currency = order.getVolume().isPositive() ? order.getMarket().getQuote() : order.getMarket().getBase();
 		this.setPrice(order.getLimitPrice());
 		this.setType(transactionType);
 		this.setPortfolio(portfolio);
-		this.setCurrency(order.getMarket().getQuote());
 		this.setCommission(order.getForcastedCommission());
 		this.setCommissionCurrency(order.getMarket().getQuote());
 		this.setMarket(order.getMarket());
 		this.setPortfolioName(portfolio);
 		this.setExchange(order.getMarket().getExchange());
-		//this.order = order;
+		this.order = order;
 
 	}
 
@@ -106,18 +106,18 @@ public class Transaction extends Event {
 
 		if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
 
-			Amount notional = getAmount().times(getPrice(), Remainder.ROUND_EVEN);
+			Amount notional = getAmount();
 			//Amount totalvalue = notional.plus(getCommission());
 			value = notional;
 		} else if (getType().equals(TransactionType.BUY_RESERVATION) || getType().equals(TransactionType.SELL_RESERVATION)) {
-			value = (getAmount().times(getPrice(), Remainder.ROUND_EVEN)).minus(getCommission());
+			value = getAmount().minus(getCommission());
 
 		} else if (getType().equals(TransactionType.CREDIT) || getType().equals(TransactionType.INTREST)) {
-			value = (getAmount());
+			value = getAmount();
 		} else if (getType().equals(TransactionType.DEBIT) || getType().equals(TransactionType.FEES)) {
 			value = getAmount();
 		} else if (getType().equals(TransactionType.REBALANCE)) {
-			value = getAmount().times(getPrice(), Remainder.ROUND_EVEN);
+			value = getAmount();
 
 		} else {
 			throw new IllegalArgumentException("unsupported transactionType: " + getType());
@@ -131,20 +131,20 @@ public class Transaction extends Event {
 
 		if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
 
-			Amount notional = getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN);
+			Amount notional = getAmount();
 			Amount cost = notional.divide(getExchange().getMargin(), Remainder.ROUND_EVEN);
 			Amount totalcost = cost.plus(getCommission());
 			value = totalcost;
 		} else if (getType().equals(TransactionType.BUY_RESERVATION) || getType().equals(TransactionType.SELL_RESERVATION)) {
-			Amount notional = (getAmount().negate().times(getPrice(), Remainder.ROUND_EVEN)).minus(getCommission());
+			Amount notional = getAmount().minus(getCommission());
 			value = notional.divide(getExchange().getMargin(), Remainder.ROUND_EVEN);
 
 		} else if (getType().equals(TransactionType.CREDIT) || getType().equals(TransactionType.INTREST)) {
-			value = (getAmount());
+			value = getAmount();
 		} else if (getType().equals(TransactionType.DEBIT) || getType().equals(TransactionType.FEES)) {
-			value = getAmount().negate();
+			value = getAmount();
 		} else if (getType().equals(TransactionType.REBALANCE)) {
-			value = getAmount().times(getPrice(), Remainder.ROUND_EVEN);
+			value = getAmount();
 
 		} else {
 			throw new IllegalArgumentException("unsupported transactionType: " + getType());
@@ -189,6 +189,11 @@ public class Transaction extends Event {
 	@Transient
 	public Amount getAmount() {
 		return amount;
+	}
+
+	@Transient
+	public Amount getAssetAmount() {
+		return assetAmount;
 	}
 
 	@Transient
@@ -249,7 +254,8 @@ public class Transaction extends Event {
 
 		return "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Portfolio=" + getPortfolio() + SEPARATOR + "Exchange="
 				+ getExchange() + SEPARATOR + "type=" + getType() + SEPARATOR + "volume=" + getAmount()
-				+ (getAsset() != null ? (SEPARATOR + "asset=" + getAsset()) : "") + SEPARATOR + "price=" + (getPrice() != DecimalAmount.ZERO ? getPrice() : "");
+				+ (getAsset() != null ? (SEPARATOR + "currency=" + getCurrency()) : "") + SEPARATOR + "price="
+				+ (getPrice() != DecimalAmount.ZERO ? getPrice() : "");
 	}
 
 	protected void setAmount(Amount amount) {
@@ -334,6 +340,7 @@ public class Transaction extends Event {
 	private Fill fill;
 	private Asset asset;
 	private Amount amount;
+	private Amount assetAmount;
 	private Long commissionCount;
 	private long amountCount;
 	private String portfolioName;

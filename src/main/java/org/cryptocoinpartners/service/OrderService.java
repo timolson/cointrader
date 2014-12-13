@@ -2,9 +2,9 @@ package org.cryptocoinpartners.service;
 
 import java.util.Collection;
 
+import org.cryptocoinpartners.enumeration.OrderState;
 import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Order;
-import org.cryptocoinpartners.schema.OrderState;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
 

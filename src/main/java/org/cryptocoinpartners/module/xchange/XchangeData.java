@@ -19,6 +19,7 @@ import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.MarketDataError;
+import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.PersistUtilHelper;
 import org.cryptocoinpartners.util.RateLimiter;
 import org.cryptocoinpartners.util.XchangeUtil;
@@ -131,7 +132,7 @@ public class XchangeData {
 			pair = XchangeUtil.getCurrencyPairForListing(market.getListing());
 			lastTradeTime = 0;
 			lastTradeId = 0;
-			EntityManager entityManager = PersistUtilHelper.getEntityManagerFactory().createEntityManager();
+			EntityManager entityManager = PersistUtil.createEntityManager();
 			try {
 				TypedQuery<org.cryptocoinpartners.schema.Trade> query = entityManager.createQuery(
 						"select t from Trade t where market=?1 and time=(select max(time) from Trade where market=?1)",

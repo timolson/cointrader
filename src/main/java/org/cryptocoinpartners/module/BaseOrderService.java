@@ -15,6 +15,7 @@ import javax.inject.Inject;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.cryptocoinpartners.enumeration.FillType;
+import org.cryptocoinpartners.enumeration.OrderState;
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Asset;
@@ -30,7 +31,6 @@ import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderBuilder;
 import org.cryptocoinpartners.schema.OrderBuilder.CommonOrderBuilder;
 import org.cryptocoinpartners.schema.OrderBuilder.GeneralOrderBuilder;
-import org.cryptocoinpartners.schema.OrderState;
 import org.cryptocoinpartners.schema.OrderUpdate;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
@@ -53,8 +53,8 @@ public abstract class BaseOrderService implements OrderService {
 
 	@Override
 	public void placeOrder(Order order) {
-		CreateTransaction(order);
 		PersitOrderFill(order);
+		CreateTransaction(order);
 		updateOrderState(order, OrderState.NEW);
 		log.info("Created new order " + order);
 		if (order instanceof GeneralOrder) {
@@ -434,9 +434,11 @@ public abstract class BaseOrderService implements OrderService {
 
 	protected final void CreateTransaction(EntityBase entity) {
 		Transaction transaction = null;
+		Order order;
 		switch (entity.getClass().getSimpleName()) {
-			case "GeneralOrder":
-				Order order = (Order) entity;
+
+			case "SpecificOrder":
+				order = (Order) entity;
 				try {
 					transaction = new Transaction(order);
 					log.info("Created new transaction " + transaction);

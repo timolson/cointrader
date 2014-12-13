@@ -13,6 +13,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
@@ -25,6 +26,8 @@ import org.slf4j.Logger;
  */
 @Entity
 public class Portfolio extends EntityBase {
+
+	private static Object lock = new Object();
 
 	/** returns all Positions, whether they are tied to an open Order or not.  Use getTradeablePositions() */
 	public @Transient
@@ -165,25 +168,53 @@ public class Portfolio extends EntityBase {
 	 * Returns all Positions in the Portfolio which are not reserved as payment for an open Order
 	 */
 	@Transient
-	public Collection<Position> getTradeablePositions() {
+	public Collection<Position> getTradeableBalance(Exchange exchange) {
 		throw new NotImplementedException();
 	}
 
 	@Transient
-	public boolean addTransactions(Transaction transaction) {
-		return this.transactions.add(transaction);
+	public Collection<Transaction> getTransactions() {
+		ArrayList<Transaction> allTransactions = new ArrayList<Transaction>();
+		Iterator<Asset> it = transactions.keySet().iterator();
+		while (it.hasNext()) {
+			Asset asset = it.next();
+			Iterator<Exchange> ite = transactions.get(asset).keySet().iterator();
+			while (ite.hasNext()) {
+				Exchange exchange = ite.next();
+				Iterator<TransactionType> itt = transactions.get(asset).get(exchange).keySet().iterator();
+				while (itt.hasNext()) {
+					TransactionType type = itt.next();
+					Iterator<Transaction> ittr = transactions.get(asset).get(exchange).get(type).iterator();
+					while (ittr.hasNext()) {
+						Transaction tran = ittr.next();
+						allTransactions.add(tran);
+					}
+
+				}
+			}
+		}
+		return allTransactions;
+
 	}
 
 	@Transient
-	public Collection<Transaction> getTransactions() {
-		return this.transactions;
+	public void removeTransaction(Transaction reservation) {
+
+		Iterator<Transaction> it = transactions.get(reservation.getCurrency()).get(reservation.getExchange()).get(reservation.getType()).iterator();
+
+		while (it.hasNext()) {
+			Transaction transaction = it.next();
+			if (transaction.equals(reservation))
+				it.remove();
+		}
+
 	}
 
 	/**
 	 * This is the main way for a Strategy to determine what assets it has available for trading
 	 */
 	@Transient
-	public Collection<Position> getReservePositions() {
+	public Collection<Position> getReservedBalances(Exchange exchange) {
 		throw new NotImplementedException();
 	}
 
@@ -193,7 +224,7 @@ public class Portfolio extends EntityBase {
 	 * @return
 	 */
 	@Transient
-	public Collection<Position> getTradeablePositionsOf(Asset f) {
+	public Collection<Position> getTradeableBalanceOf(Exchange exchange, Asset asset) {
 
 		throw new NotImplementedException();
 	}
@@ -215,6 +246,51 @@ public class Portfolio extends EntityBase {
 	@Transient
 	public void release(SpecificOrder order) {
 		throw new NotImplementedException();
+	}
+
+	@Transient
+	public boolean addTransaction(Transaction transaction) {
+		ConcurrentHashMap<Exchange, ConcurrentHashMap<TransactionType, ArrayList<Transaction>>> assetTransactions = transactions.get(transaction.getCurrency());
+
+		if (assetTransactions == null) {
+			ArrayList<Transaction> transactionList = new ArrayList<Transaction>();
+			assetTransactions = new ConcurrentHashMap<Exchange, ConcurrentHashMap<TransactionType, ArrayList<Transaction>>>();
+			transactionList.add(transaction);
+			ConcurrentHashMap<TransactionType, ArrayList<Transaction>> transactionGroup = new ConcurrentHashMap<TransactionType, ArrayList<Transaction>>();
+			transactionGroup.put(transaction.getType(), transactionList);
+			assetTransactions.put(transaction.getExchange(), transactionGroup);
+			transactions.put(transaction.getCurrency(), assetTransactions);
+			return true;
+		} else {
+			//asset is present, so check the market
+			ConcurrentHashMap<TransactionType, ArrayList<Transaction>> exchangeTransactions = assetTransactions.get(transaction.getExchange());
+
+			if (exchangeTransactions == null) {
+				ArrayList<Transaction> transactionList = new ArrayList<Transaction>();
+				transactionList.add(transaction);
+				ConcurrentHashMap<TransactionType, ArrayList<Transaction>> transactionGroup = new ConcurrentHashMap<TransactionType, ArrayList<Transaction>>();
+				transactionGroup.put(transaction.getType(), transactionList);
+				assetTransactions.put(transaction.getExchange(), transactionGroup);
+
+				return true;
+			} else {
+				ArrayList<Transaction> transactionList = exchangeTransactions.get(transaction.getType());
+
+				if (transactionList == null) {
+					transactionList = new ArrayList<Transaction>();
+					transactionList.add(transaction);
+					exchangeTransactions.put(transaction.getType(), transactionList);
+					return true;
+				} else {
+					transactionList.add(transaction);
+					exchangeTransactions.put(transaction.getType(), transactionList);
+					return true;
+				}
+
+			}
+
+		}
+
 	}
 
 	/**
@@ -354,7 +430,9 @@ public class Portfolio extends EntityBase {
 		this.positions = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ArrayList<Position>>>();
 		this.realisedProfits = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Market, Amount>>>();
 		this.balances = new ArrayList<>();
-		this.transactions = new ArrayList<>();
+
+		this.transactions = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<TransactionType, ArrayList<Transaction>>>>();
+
 	}
 
 	private String name;
@@ -424,7 +502,8 @@ public class Portfolio extends EntityBase {
 		this.baseAsset = baseAsset;
 	}
 
-	protected void setTransactions(Collection<Transaction> transactions) {
+	protected void setTransactions(
+			ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<TransactionType, ArrayList<Transaction>>>> transactions) {
 		this.transactions = transactions;
 	}
 
@@ -466,7 +545,7 @@ public class Portfolio extends EntityBase {
 	private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ArrayList<Position>>> positions;
 	private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Market, Amount>>> realisedProfits;
 	private Collection<Balance> balances = Collections.emptyList();
-	private Collection<Transaction> transactions = Collections.emptyList();
+	private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<TransactionType, ArrayList<Transaction>>>> transactions;
 	private Collection<Stake> stakes = Collections.emptyList();
 	//private ConcurrentHashMap<Market, ConcurrentSkipListMap<Long,ArrayList<TaxLot>>> longTaxLots;
 	//private ConcurrentHashMap<Market, ConcurrentSkipListMap<Long,ArrayList<TaxLot>>> shortTaxLots;

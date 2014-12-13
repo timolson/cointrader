@@ -9,12 +9,13 @@ import java.util.List;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import org.cryptocoinpartners.enumeration.OrderState;
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Offer;
-import org.cryptocoinpartners.schema.OrderState;
+import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderUpdate;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
@@ -35,6 +36,10 @@ public class MockOrderService extends BaseOrderService {
 	protected void handleSpecificOrder(SpecificOrder specificOrder) {
 		if (specificOrder.getStopPrice() != null)
 			reject(specificOrder, "Stop prices unsupported");
+		long longPos = specificOrder.getPortfolio().getLongPosition(specificOrder.getMarket().getBase(), specificOrder.getMarket().getExchange());
+		long longQuotePos = specificOrder.getPortfolio().getLongPosition(specificOrder.getMarket().getQuote(), specificOrder.getMarket().getExchange());
+		long shortPos = specificOrder.getPortfolio().getShortPosition(specificOrder.getMarket().getBase(), specificOrder.getMarket().getExchange());
+		long shortQuotePos = specificOrder.getPortfolio().getShortPosition(specificOrder.getMarket().getQuote(), specificOrder.getMarket().getExchange());
 
 		pendingOrders.add(specificOrder);
 		updateOrderState(specificOrder, OrderState.PLACED);
@@ -90,10 +95,32 @@ public class MockOrderService extends BaseOrderService {
 		}
 	}
 
-	@When("select * from OrderUpdate where state.open=false")
+	private void removeOrder(Order order) {
+		synchronized (pendingOrders) {
+			for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
+				SpecificOrder specificOrder = it.next();
+				if (specificOrder.equals(order))
+					it.remove();
+
+			}
+		}
+
+	}
+
+	@When("select * from OrderUpdate where state.open=false and NOT (OrderUpdate.state = OrderState.CANCELLED)")
 	private void completeOrder(OrderUpdate update) {
-		//noinspection SuspiciousMethodCalls
-		pendingOrders.remove(update.getOrder());
+		OrderState orderState = update.getState();
+		Order order = update.getOrder();
+
+		switch (orderState) {
+			case CANCELLING:
+				removeOrder(order);
+				updateOrderState(order, OrderState.CANCELLED);
+			default:
+				removeOrder(order);
+				break;
+		}
+
 	}
 
 	private void logFill(SpecificOrder order, Offer offer, Fill fill) {
@@ -103,7 +130,6 @@ public class MockOrderService extends BaseOrderService {
 
 	@Inject
 	private Logger log;
-
 	private final Collection<SpecificOrder> pendingOrders = new ArrayList<>();
 	private QuoteService quotes;
 
@@ -111,14 +137,16 @@ public class MockOrderService extends BaseOrderService {
 	public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio) {
 		Iterator<SpecificOrder> it = pendingOrders.iterator();
 		Collection<SpecificOrder> portfolioPendingOrders = new ArrayList<>();
+		synchronized (pendingOrders) {
 
-		while (it.hasNext()) {
-			SpecificOrder pendingOrder = it.next();
-			if (pendingOrder.getPortfolio().equals(portfolio)) {
+			while (it.hasNext()) {
+				SpecificOrder pendingOrder = it.next();
+				if (pendingOrder.getPortfolio().equals(portfolio)) {
 
-				portfolioPendingOrders.add(pendingOrder);
+					portfolioPendingOrders.add(pendingOrder);
+				}
 			}
-		}// TODO Auto-generated method stub
+		}
 		return portfolioPendingOrders;
 	}
 
@@ -126,31 +154,32 @@ public class MockOrderService extends BaseOrderService {
 	public void handleCancelSpecificOrders(SpecificOrder specificOrder) {
 		Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
 
-		for (SpecificOrder pendingOrder : pendingOrders) {
-			if (pendingOrder.equals(specificOrder)) {
-				cancelledOrders.add(pendingOrder);
-			}
+		for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
+			SpecificOrder cancelledOrder = it.next();
+			if (cancelledOrder.equals(specificOrder))
+				cancelledOrders.add(cancelledOrder);
+
 		}
-		pendingOrders.removeAll(cancelledOrders);
-		// TODO Auto-generated method stub
+		for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
+			SpecificOrder cancelledOrder = it.next();
+			updateOrderState(cancelledOrder, OrderState.CANCELLING);
+		}
 
 	}
 
 	@Override
 	public void handleCancelAllSpecificOrders(Portfolio portfolio) {
-		//Iterator<SpecificOrder> it = pendingOrders.iterator();
 		Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
 
-		for (SpecificOrder pendingOrder : pendingOrders) {
-
-			if (pendingOrder.getPortfolio().equals(portfolio))
-			//	&& !(pendingOrder.getFillType().equals(FillType.STOP_LIMIT) || pendingOrder.getFillType().equals(FillType.TRAILING_STOP_LIMIT))) {
-			{
-				cancelledOrders.add(pendingOrder);
-			}
+		for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
+			SpecificOrder specificOrder = it.next();
+			cancelledOrders.add(specificOrder);
 
 		}
-		pendingOrders.removeAll(cancelledOrders);
+		for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
+			SpecificOrder specificOrder = it.next();
 
+			updateOrderState(specificOrder, OrderState.CANCELLING);
+		}
 	}
 }

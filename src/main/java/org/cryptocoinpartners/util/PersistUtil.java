@@ -248,7 +248,7 @@ public class PersistUtil {
 		properties.put("hibernate.connection.username", ConfigUtil.combined().getString("db.username"));
 		properties.put("hibernate.connection.password", ConfigUtil.combined().getString("db.password"));
 		properties.put("hibernate.ejb.naming_strategy", "org.hibernate.cfg.ImprovedNamingStrategy");
-
+		properties.put("hibernate.connection.autocommit", "true");
 		try {
 			entityManagerFactory = Persistence.createEntityManagerFactory("org.cryptocoinpartners.schema", properties);
 			ensureSingletonsExist();

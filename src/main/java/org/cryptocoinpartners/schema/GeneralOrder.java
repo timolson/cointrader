@@ -126,11 +126,12 @@ public class GeneralOrder extends Order {
 		return trailingStopPrice;
 	}
 
+	@Override
 	@Transient
-	BigDecimal getUnfilledVolume() {
-		BigDecimal filled = BigDecimal.ZERO;
+	public Amount getUnfilledVolume() {
+		Amount filled = DecimalAmount.ZERO;
 		for (Fill fill : getFills())
-			filled = filled.add(fill.getVolume().asBigDecimal());
+			filled = filled.plus(fill.getVolume());
 		return filled;
 	}
 

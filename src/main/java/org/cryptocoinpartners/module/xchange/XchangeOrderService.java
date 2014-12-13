@@ -8,8 +8,8 @@ import java.util.Date;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import org.cryptocoinpartners.enumeration.OrderState;
 import org.cryptocoinpartners.module.BaseOrderService;
-import org.cryptocoinpartners.schema.OrderState;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.util.XchangeUtil;
