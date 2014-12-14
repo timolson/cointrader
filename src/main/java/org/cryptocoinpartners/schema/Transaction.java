@@ -57,10 +57,10 @@ public class Transaction extends Event {
 	public Transaction(Fill fill) throws Exception {
 		Portfolio portfolio = fill.getOrder().getPortfolio();
 		TransactionType transactionType = fill.getVolume().isPositive() ? TransactionType.BUY : TransactionType.SELL;
-		this.amount = fill.getVolume().isPositive() ? fill.getVolume().times(fill.getPrice(), Remainder.ROUND_EVEN).negate() : fill.getVolume();
-		this.assetAmount = fill.getVolume().isPositive() ? fill.getVolume() : fill.getVolume().times(fill.getPrice(), Remainder.ROUND_EVEN).negate();
-		this.asset = fill.getVolume().isPositive() ? fill.getMarket().getBase() : fill.getMarket().getQuote();
-		this.currency = fill.getVolume().isPositive() ? fill.getMarket().getQuote() : fill.getMarket().getBase();
+		this.assetAmount = fill.getVolume().times(fill.getPrice(), Remainder.ROUND_EVEN).negate();
+		this.asset = fill.getMarket().getQuote();
+		this.amount = fill.getVolume();
+		this.currency = fill.getMarket().getBase();
 		fill.addTransaction(this);
 		this.setPrice(fill.getPrice());
 		this.setPriceCount(fill.getPriceCount());
@@ -80,10 +80,10 @@ public class Transaction extends Event {
 
 		TransactionType transactionType = order.getVolume().isPositive() ? TransactionType.BUY_RESERVATION : TransactionType.SELL_RESERVATION;
 		order.addTransaction(this);
-		this.amount = order.getVolume().isPositive() ? (order.getVolume().times(order.getLimitPrice(), Remainder.ROUND_EVEN)).negate() : order.getVolume();
-		this.asset = order.getVolume().isPositive() ? order.getMarket().getBase() : order.getMarket().getQuote();
-		this.assetAmount = order.getVolume().isPositive() ? order.getVolume() : (order.getVolume().times(order.getLimitPrice(), Remainder.ROUND_EVEN)).negate();
-		this.currency = order.getVolume().isPositive() ? order.getMarket().getQuote() : order.getMarket().getBase();
+		this.assetAmount = (order.getVolume().times(order.getLimitPrice(), Remainder.ROUND_EVEN)).negate();
+		this.asset = order.getMarket().getQuote();
+		this.amount = order.getVolume();
+		this.currency = order.getMarket().getBase();
 		this.setPrice(order.getLimitPrice());
 		this.setType(transactionType);
 		this.setPortfolio(portfolio);
@@ -106,11 +106,11 @@ public class Transaction extends Event {
 
 		if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
 
-			Amount notional = getAmount();
+			Amount notional = getAssetAmount();
 			//Amount totalvalue = notional.plus(getCommission());
 			value = notional;
 		} else if (getType().equals(TransactionType.BUY_RESERVATION) || getType().equals(TransactionType.SELL_RESERVATION)) {
-			value = getAmount().minus(getCommission());
+			value = getAssetAmount().minus(getCommission());
 
 		} else if (getType().equals(TransactionType.CREDIT) || getType().equals(TransactionType.INTREST)) {
 			value = getAmount();
@@ -131,12 +131,12 @@ public class Transaction extends Event {
 
 		if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
 
-			Amount notional = getAmount();
+			Amount notional = getAssetAmount();
 			Amount cost = notional.divide(getExchange().getMargin(), Remainder.ROUND_EVEN);
 			Amount totalcost = cost.plus(getCommission());
 			value = totalcost;
 		} else if (getType().equals(TransactionType.BUY_RESERVATION) || getType().equals(TransactionType.SELL_RESERVATION)) {
-			Amount notional = getAmount().minus(getCommission());
+			Amount notional = getAssetAmount().minus(getCommission());
 			value = notional.divide(getExchange().getMargin(), Remainder.ROUND_EVEN);
 
 		} else if (getType().equals(TransactionType.CREDIT) || getType().equals(TransactionType.INTREST)) {

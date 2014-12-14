@@ -54,13 +54,17 @@ public class Portfolio extends EntityBase {
 	public @Transient
 	Collection<Position> getPositions(Asset asset, Exchange exchange) {
 		ArrayList<Position> allPositions = new ArrayList<Position>();
-		Iterator<Position> itp = positions.get(asset).get(exchange).iterator();
-		while (itp.hasNext()) {
-			Position pos = itp.next();
-			allPositions.add(pos);
-		}
+		if (positions.get(asset) != null && positions.get(asset).get(exchange) != null) {
 
+			Iterator<Position> itp = positions.get(asset).get(exchange).iterator();
+			while (itp.hasNext()) {
+				Position pos = itp.next();
+				allPositions.add(pos);
+			}
+
+		}
 		return allPositions;
+
 	}
 
 	public @Transient
@@ -132,9 +136,9 @@ public class Portfolio extends EntityBase {
 	}
 
 	public @Transient
-	DiscreteAmount getPosition(Asset asset, Exchange exchange) {
+	DiscreteAmount getNetPosition(Asset asset, Exchange exchange) {
 		long netVolumeCount = 0;
-		Position pos;
+		Position pos = null;
 		if (positions.get(asset) != null && positions.get(asset).get(exchange) != null) {
 			Iterator<Position> itp = positions.get(asset).get(exchange).iterator();
 			while (itp.hasNext()) {

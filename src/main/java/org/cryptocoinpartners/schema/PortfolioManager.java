@@ -93,7 +93,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
 	}
 
-	@When("@Priority(8) select * from Transaction as transaction")
+	@When("@Priority(8) select * from Transaction")
 	public void handleTransaction(Transaction transaction) {
 		PersistUtil.insert(transaction);
 
@@ -101,11 +101,12 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
 			Portfolio portfolio = transaction.getPortfolio();
 
-			Asset baseAsset = transaction.getAmount().isPositive() ? transaction.getCurrency() : transaction.getAsset();
+			Asset baseAsset = transaction.getCurrency();
 
 			Market market = transaction.getMarket();
-			Amount amount = transaction.getAmount().isPositive() ? transaction.getAmount() : transaction.getAssetAmount();
+			Amount amount = transaction.getAmount();
 			TransactionType type = transaction.getType();
+
 			Amount price = transaction.getPrice();
 			Exchange exchange = transaction.getExchange();
 			// Add transaction to approraite portfolio
@@ -113,6 +114,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 			Position position;
 			// update postion
 			if (type == TransactionType.BUY || type == TransactionType.SELL) {
+
 				if (transaction.getFill().getOrder().getStopPrice() != null) {
 					position = new Position(portfolio, exchange, market, baseAsset, amount, price, transaction.getFill().getOrder().getStopPrice());
 				} else {

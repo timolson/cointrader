@@ -2,6 +2,7 @@ package org.cryptocoinpartners.module;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -86,8 +87,8 @@ public class BasicPortfolioService implements PortfolioService {
 		return portfolio.getShortPosition(asset, exchange);
 	}
 
-	public DiscreteAmount getPosition(Asset asset, Exchange exchange) {
-		return portfolio.getPosition(asset, exchange);
+	public DiscreteAmount getNetPosition(Asset asset, Exchange exchange) {
+		return portfolio.getNetPosition(asset, exchange);
 	}
 
 	@Override
@@ -95,6 +96,13 @@ public class BasicPortfolioService implements PortfolioService {
 	public ArrayList<Position> getPositions(Exchange exchange) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	@Nullable
+	public Collection<Position> getPositions(Asset asset, Exchange exchange) {
+		return portfolio.getPositions(asset, exchange);
+
 	}
 
 	@Override
@@ -131,14 +139,14 @@ public class BasicPortfolioService implements PortfolioService {
 		Iterator<Transaction> itt = getTrades().iterator();
 		while (itt.hasNext()) {
 			Transaction transaction = itt.next();
-			if (balances.get(transaction.getCurrency()) != null) {
+			if (balances.get(transaction.getAsset()) != null) {
 
-				balance = balances.get(transaction.getCurrency());
+				balance = balances.get(transaction.getAsset());
 
 			}
 			Amount tranCost = transaction.getCost();
 			balance = balance.plus(tranCost);
-			balances.put(transaction.getCurrency(), balance);
+			balances.put(transaction.getAsset(), balance);
 
 		}
 

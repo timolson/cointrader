@@ -194,7 +194,8 @@ public class Position extends Holding {
 				+ (getShortAvgPrice() != null ? (SEPARATOR + ", Short Avg Price=" + getShortAvgPrice()) : "")
 				+ (getLongVolume() != null ? (SEPARATOR + "Long Qty=" + getLongVolume()) : "")
 				+ (getLongAvgPrice() != null ? (SEPARATOR + "Long Avg Price=" + getLongAvgPrice()) : "") + ", Net Qty=" + getVolume().toString()
-				+ ",  Entry Date=" + ", Instrument=" + asset + (longExitPrice != null ? (SEPARATOR + " Long Exit Price=" + getLongExitPrice()) : "")
+				+ " Vol Count=" + getVolumeCount() + ",  Entry Date=" + ", Instrument=" + asset
+				+ (longExitPrice != null ? (SEPARATOR + " Long Exit Price=" + getLongExitPrice()) : "")
 				+ (shortExitPrice != null ? (SEPARATOR + " Short Exit Price=" + getShortExitPrice()) : "") + "]";
 	}
 

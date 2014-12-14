@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.service;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -87,5 +88,7 @@ public interface PortfolioService {
 	Amount getUnrealisedPnL(Position postion);
 
 	Amount getUnrealisedPnL();
+
+	Collection<Position> getPositions(Asset asset, Exchange exchange);
 
 }
