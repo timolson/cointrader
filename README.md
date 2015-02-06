@@ -11,13 +11,13 @@
 * CSV output of market data
 * Ad-hoc table reports
 * Modular infrastructure
+* Backtesting
+* Accounting
+* Library of quantitative indicators (TaLib)
 
 Coin Trader's future goals include:
-
-* Accounting and reconciliation
-* Backtesting
+* Reconciliation
 * Flexible data output
-* Library of quantitative indicators
 * Web console & graphing
 
 #### Video
@@ -34,8 +34,8 @@ There's no mailing list, so [open a new issue](https://github.com/timolson/coint
 #### OHLC Bars
 cointrader-esper.cfg.xml
 ```
-       <plugin-view factory-class="org.cryptocoinpartners.esper.OHLCBarPlugInViewFactory" name="ohlcbar" namespace="custom"/>  
-       ```
+<plugin-view factory-class="org.cryptocoinpartners.esper.OHLCBarPlugInViewFactory" name="ohlcbar" namespace="custom"/>  
+```
 epl
 * Create an esper named window to add the OHLC bars into
 ```
@@ -44,7 +44,7 @@ as
 	select *
 from
 	Bar;
-	```
+```
 * Add the  OHLC bars to it
 ```
 insert into OHLCShortWindow
@@ -59,8 +59,8 @@ select * from OHLCShortWindow as ohlc
 #### TALIB Set Up
 cointrader-esper.cfg.xml
 ```
-	<plugin-aggregation-function name="talib" function-class="org.cryptocoinpartners.esper.GenericTALibFunction"/>  
-	```
+<plugin-aggregation-function name="talib" function-class="org.cryptocoinpartners.esper.GenericTALibFunction"/>  
+```
 epl
 ```
 select coalesce(talib("atr", max, min, last, 9),0) as atr from OHLCShortWindow;
