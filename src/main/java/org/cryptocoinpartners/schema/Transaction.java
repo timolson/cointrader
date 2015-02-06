@@ -10,6 +10,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.util.Remainder;
 import org.joda.time.Instant;
@@ -36,8 +37,10 @@ public class Transaction extends Event {
 	public Transaction(Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount, Amount price) {
 
 		this.setAmount(amount);
+		this.amountCount = amount.toBasis(currency.getBasis(), Remainder.ROUND_EVEN).getCount();
 		this.setCurrency(currency);
 		this.setPrice(price);
+		this.priceCount = price.toBasis(currency.getBasis(), Remainder.ROUND_EVEN).getCount();
 		this.setType(type);
 		this.setPortfolio(portfolio);
 		this.setExchange(exchange);
@@ -47,6 +50,7 @@ public class Transaction extends Event {
 	public Transaction(Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount) {
 
 		this.setAmount(amount);
+		this.amountCount = amount.toBasis(currency.getBasis(), Remainder.ROUND_EVEN).getCount();
 		this.setCurrency(currency);
 		this.setType(type);
 		this.setPortfolio(portfolio);
@@ -56,19 +60,32 @@ public class Transaction extends Event {
 
 	public Transaction(Fill fill) throws Exception {
 		Portfolio portfolio = fill.getOrder().getPortfolio();
-		TransactionType transactionType = fill.getVolume().isPositive() ? TransactionType.BUY : TransactionType.SELL;
-		this.assetAmount = fill.getVolume().times(fill.getPrice(), Remainder.ROUND_EVEN).negate();
-		this.asset = fill.getMarket().getQuote();
+		TransactionType transactionType = null;
+
+		if (fill.getOrder().getPositionEffect() == PositionEffect.OPEN || fill.getOrder().getPositionEffect() == PositionEffect.CLOSE) {
+			//is entering or exiting trade
+			transactionType = (fill.getVolume().isPositive()) ? TransactionType.BUY : TransactionType.SELL;
+		} else {
+			// is either  buying base currency and selling quote or selling base currency and buying quote
+			transactionType = TransactionType.REBALANCE;
+		}
+
+		this.asset = fill.getMarket().getTradedCurrency();
+		this.assetAmount = this.asset.equals(fill.getMarket().getQuote()) ? fill.getVolume().times(fill.getPrice(), Remainder.ROUND_EVEN).negate() : fill
+				.getVolume().negate();
 		this.amount = fill.getVolume();
 		this.currency = fill.getMarket().getBase();
 		fill.addTransaction(this);
+		this.setPositionEffect(fill.getOrder().getPositionEffect());
 		this.setPrice(fill.getPrice());
 		this.setPriceCount(fill.getPriceCount());
+
 		this.setType(transactionType);
 		this.setPortfolio(portfolio);
 		this.setPortfolioName(portfolio);
 		this.setCommission(fill.getCommission());
-		this.setCommissionCurrency(fill.getMarket().getQuote());
+		this.setMargin(fill.getMargin());
+		this.setCommissionCurrency(fill.getMarket().getTradedCurrency());
 		this.setMarket(fill.getMarket());
 		this.setExchange(fill.getMarket().getExchange());
 		this.fill = fill;
@@ -80,15 +97,20 @@ public class Transaction extends Event {
 
 		TransactionType transactionType = order.getVolume().isPositive() ? TransactionType.BUY_RESERVATION : TransactionType.SELL_RESERVATION;
 		order.addTransaction(this);
-		this.assetAmount = (order.getVolume().times(order.getLimitPrice(), Remainder.ROUND_EVEN)).negate();
-		this.asset = order.getMarket().getQuote();
+		this.asset = order.getMarket().getTradedCurrency();
+
+		//if traded=quote, then do this, if traded== base then just volume
+		this.assetAmount = this.asset.equals(order.getMarket().getQuote()) ? order.getVolume().times(order.getLimitPrice(), Remainder.ROUND_EVEN).negate()
+				: order.getVolume().negate();
 		this.amount = order.getVolume();
 		this.currency = order.getMarket().getBase();
 		this.setPrice(order.getLimitPrice());
 		this.setType(transactionType);
 		this.setPortfolio(portfolio);
+		this.setPositionEffect(order.getPositionEffect());
 		this.setCommission(order.getForcastedCommission());
-		this.setCommissionCurrency(order.getMarket().getQuote());
+		this.setMargin(order.getForcastedMargin());
+		this.setCommissionCurrency(order.getMarket().getTradedCurrency());
 		this.setMarket(order.getMarket());
 		this.setPortfolioName(portfolio);
 		this.setExchange(order.getMarket().getExchange());
@@ -103,6 +125,7 @@ public class Transaction extends Event {
 
 	@Transient
 	public Amount getValue() {
+		Amount value = DecimalAmount.ZERO;
 
 		if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
 
@@ -128,26 +151,29 @@ public class Transaction extends Event {
 
 	@Transient
 	public Amount getCost() {
+		Amount value = DecimalAmount.ZERO;
+		if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL) || getType().equals(TransactionType.REBALANCE)) {
+			// issue works when entering position on margin, howeever when exiting no margin applies.
+			// so open postion with 3 times mulitpler, so it costs me a 3rd
+			// whne a close a postion it still tinks i it is a 3rd so we over cacluated by 1/3rd of the PnL so always overstating the cash balance
 
-		if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
+			//(FeesUtil.getMargin(orderBuilder.getOrder()).plus(FeesUtil.getCommission(orderBuilder.getOrder()))).negate()
 
-			Amount notional = getAssetAmount();
-			Amount cost = notional.divide(getExchange().getMargin(), Remainder.ROUND_EVEN);
-			Amount totalcost = cost.plus(getCommission());
+			//	if (getAmount().isNegative() && getMarket().getContractSize() == 1)
+			//	cost = cost.negate();
+			//Amount notional = getAssetAmount();
+			//Amount cost = notional.divide(getExchange().getMargin(), Remainder.ROUND_EVEN);
+
+			Amount totalcost = value.plus(getCommission());
 			value = totalcost;
 		} else if (getType().equals(TransactionType.BUY_RESERVATION) || getType().equals(TransactionType.SELL_RESERVATION)) {
-			Amount notional = getAssetAmount().minus(getCommission());
-			value = notional.divide(getExchange().getMargin(), Remainder.ROUND_EVEN);
+			Amount notional = (getCommission());
+			value = notional;
 
 		} else if (getType().equals(TransactionType.CREDIT) || getType().equals(TransactionType.INTREST)) {
 			value = getAmount();
 		} else if (getType().equals(TransactionType.DEBIT) || getType().equals(TransactionType.FEES)) {
 			value = getAmount();
-		} else if (getType().equals(TransactionType.REBALANCE)) {
-			value = getAmount();
-
-		} else {
-			throw new IllegalArgumentException("unsupported transactionType: " + getType());
 		}
 
 		return value;
@@ -201,6 +227,11 @@ public class Transaction extends Event {
 		return commission;
 	}
 
+	@Transient
+	public Amount getMargin() {
+		return margin;
+	}
+
 	@Nullable
 	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
 	public Asset getCommissionCurrency() {
@@ -229,11 +260,18 @@ public class Transaction extends Event {
 
 	}
 
-	@ManyToOne(optional = false, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+	@ManyToOne(optional = false)
 	private TransactionType type;
 
 	public TransactionType getType() {
 		return type;
+	}
+
+	@ManyToOne(optional = true)
+	private PositionEffect positionEffect;
+
+	public PositionEffect getPositionEffect() {
+		return positionEffect;
 	}
 
 	@Transient
@@ -288,6 +326,10 @@ public class Transaction extends Event {
 		this.commission = commission;
 	}
 
+	protected void setMargin(Amount margin) {
+		this.margin = margin;
+	}
+
 	protected void setCommissionCount(Long commissionCount) {
 		this.commissionCount = commissionCount;
 	}
@@ -316,6 +358,10 @@ public class Transaction extends Event {
 		this.type = type;
 	}
 
+	protected void setPositionEffect(PositionEffect positionEffect) {
+		this.positionEffect = positionEffect;
+	}
+
 	protected void setPrice(Amount price) {
 		this.price = price;
 	}
@@ -330,7 +376,6 @@ public class Transaction extends Event {
 
 	//   protected Instant getTime() { return acceptedTime; }
 
-	private Amount value;
 	private Amount price;
 	@Nullable
 	private Portfolio portfolio;
@@ -347,6 +392,7 @@ public class Transaction extends Event {
 
 	private long priceCount;
 	private Amount commission;
+	private Amount margin;
 	private Exchange exchange;
 
 	private Asset commissionCurrency;

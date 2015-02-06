@@ -47,6 +47,7 @@ public class SpecificOrder extends Order {
 		this.volumeCount = volumeCount;
 		super.setComment(comment);
 		parentOrder.addChild(this);
+		this.setParentOrder(parentOrder);
 		super.setPortfolio(portfolio);
 
 	}
@@ -66,6 +67,7 @@ public class SpecificOrder extends Order {
 		this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
 		super.setComment(comment);
 		parentOrder.addChild(this);
+		this.setParentOrder(parentOrder);
 		super.setPortfolio(portfolio);
 	}
 
@@ -115,6 +117,7 @@ public class SpecificOrder extends Order {
 		return null;
 	}
 
+	@Override
 	@Transient
 	public DiscreteAmount getUnfilledVolume() {
 		return new DiscreteAmount(getUnfilledVolumeCount(), market.getVolumeBasis());

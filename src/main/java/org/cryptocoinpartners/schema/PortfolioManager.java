@@ -96,7 +96,9 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 	@When("@Priority(8) select * from Transaction")
 	public void handleTransaction(Transaction transaction) {
 		PersistUtil.insert(transaction);
-
+		//	Transaction tans = new Transaction(this, position.getExchange(), position.getAsset(), TransactionType.CREDIT, position.getVolume(),
+		//		position.getAvgPrice());
+		//context.route(transaction);
 		if (transaction.getPortfolio() == (portfolio)) {
 
 			Portfolio portfolio = transaction.getPortfolio();
@@ -115,11 +117,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 			// update postion
 			if (type == TransactionType.BUY || type == TransactionType.SELL) {
 
-				if (transaction.getFill().getOrder().getStopPrice() != null) {
-					position = new Position(portfolio, exchange, market, baseAsset, amount, price, transaction.getFill().getOrder().getStopPrice());
-				} else {
-					position = new Position(portfolio, exchange, market, baseAsset, amount, price);
-				}
+				position = new Position(portfolio, exchange, market, baseAsset, amount, price);
 
 				portfolio.modifyPosition(position, new Authorization("Fill for " + transaction.toString()));
 
@@ -151,10 +149,14 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 			BasicPortfolioService portfolioService = portfolio.getManager().getPortfolioService();
 			//portfolio.getPositions();
 			logger.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Portfolio: " + portfolio + " Total Value ("
-					+ portfolio.getBaseAsset() + "):" + portfolioService.getCashBalance().plus(portfolioService.getMarketValue()) + " (Cash Balance:"
-					+ portfolioService.getCashBalance() + " Realised PnL:" + portfolioService.getRealisedPnL() + " Open Trade Equity:"
-					+ portfolioService.getUnrealisedPnL() + " MarketValue:" + portfolioService.getMarketValue() + ")");
+					+ portfolio.getBaseAsset() + "):"
+					+ portfolioService.getCashBalance(portfolio.getBaseAsset()).plus(portfolioService.getUnrealisedPnL(portfolio.getBaseAsset()))
+					+ " (Cash Balance:" + portfolioService.getCashBalance(portfolio.getBaseAsset()) + " Realised PnL:"
+					+ portfolioService.getRealisedPnL(portfolio.getBaseAsset()) + " Open Trade Equity:"
+					+ portfolioService.getUnrealisedPnL(portfolio.getBaseAsset()) + " MarketValue:" + portfolioService.getMarketValue(portfolio.getBaseAsset())
+					+ ")");
 			logger.info(portfolio.getPositions().toString());
+			logger.info(portfolio.getDetailedPositions().toString());
 			//			Object itt = portfolio.getPositions().iterator();
 			//			while (itt.hasNext()) {
 			//				Position postion = itt.next();
@@ -175,7 +177,8 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
 	@Inject
 	private static Logger log;
-
+	@Inject
+	protected Context context;
 	private Portfolio portfolio;
 
 }

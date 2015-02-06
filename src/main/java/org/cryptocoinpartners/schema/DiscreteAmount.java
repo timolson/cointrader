@@ -86,6 +86,20 @@ public class DiscreteAmount extends Amount {
 		return new DiscreteAmount(-count, iBasis);
 	}
 
+	public DiscreteAmount invertAsDiscreteAmount() {
+
+		double value = ((double) count / (double) (iBasis * iBasis));
+
+		return value == 0 ? new DiscreteAmount(0, iBasis) : new DiscreteAmount((Math.round(1 / value)), iBasis);
+
+	}
+
+	@Override
+	public Amount invert() {
+
+		return new DecimalAmount(BigDecimal.ONE.divide(asBigDecimal(), mc));
+	}
+
 	@Override
 	public Amount plus(Amount o) {
 		if (o instanceof DiscreteAmount) {
@@ -122,7 +136,7 @@ public class DiscreteAmount extends Amount {
 	@Override
 	public Amount dividedBy(Amount o, RemainderHandler remainderHandler) {
 		BigDecimal bdDivisor = o.asBigDecimal();
-		bdDivisor.setScale(Math.min(bdDivisor.scale(), mc.getPrecision()));
+		bdDivisor.setScale(Math.max(bdDivisor.scale(), mc.getPrecision()));
 		return new DecimalAmount(asBigDecimal().divide(bdDivisor, BigDecimal.ROUND_HALF_EVEN));
 
 	}

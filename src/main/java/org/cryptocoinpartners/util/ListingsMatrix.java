@@ -34,7 +34,7 @@ public class ListingsMatrix {
 		ArgumentChecker.notNull(ccy, "Asset");
 		listings = new ConcurrentHashMap<>();
 		listings.put(ccy, new ConcurrentHashMap<Asset, Long>());
-		listings.get(ccy).put(ccy, (long) (1 / ccy.getBasis()));
+		listings.get(ccy).put(ccy, (long) (1.0 / ccy.getBasis()));
 
 	}
 
@@ -74,16 +74,16 @@ public class ListingsMatrix {
 		ArgumentChecker.notNull(ccyReference, "Reference currency should not be null");
 		ArgumentChecker.isTrue(!ccyToAdd.equals(ccyReference), "Currencies should be different");
 		if (listings.isEmpty() && rate != 0) { // Listings Matrix is empty.
-			BigDecimal inverseRateBD = (((BigDecimal.valueOf(1 / (ccyReference.getBasis()))).divide(BigDecimal.valueOf(rate), ccyToAdd.getScale(),
+			BigDecimal inverseRateBD = (((BigDecimal.valueOf(1.0 / (ccyReference.getBasis()))).divide(BigDecimal.valueOf(rate), ccyToAdd.getScale(),
 					RoundingMode.HALF_EVEN)).divide(BigDecimal.valueOf(ccyToAdd.getBasis())));
 			long inverseCrossRate = inverseRateBD.longValue();
 			listings.put(ccyReference, new ConcurrentHashMap<Asset, Long>());
 			listings.put(ccyToAdd, new ConcurrentHashMap<Asset, Long>());
 
 			listings.get(ccyToAdd).put(ccyReference, rate);
-			listings.get(ccyToAdd).put(ccyToAdd, (long) (1 / ccyToAdd.getBasis()));
+			listings.get(ccyToAdd).put(ccyToAdd, (long) (1.0 / ccyToAdd.getBasis()));
 			listings.get(ccyReference).put(ccyToAdd, inverseCrossRate);
-			listings.get(ccyReference).put(ccyReference, (long) (1 / ccyReference.getBasis()));
+			listings.get(ccyReference).put(ccyReference, (long) (1.0 / ccyReference.getBasis()));
 
 		} else if (rate != 0) {
 			ArgumentChecker.isTrue(listings.containsKey(ccyReference), "Reference currency {} not in the Listings matrix", ccyReference);
@@ -101,8 +101,8 @@ public class ListingsMatrix {
 					// get the rate for the 
 					BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
 					// calculate the inverse by getting the basis of the currenct rate and setting the scale to ttha tof the quote currency.
-					BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1 / (ccy.getBasis())))
-							.divide(crossRateBD, ccyToAdd.getScale(), RoundingMode.HALF_EVEN));
+					BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1.0 / (ccy.getBasis()))).divide(crossRateBD, ccyToAdd.getScale(),
+							RoundingMode.HALF_EVEN));
 					// divine the rate by the basis fo the currency to be added
 					inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(ccyToAdd.getBasis()));
 
@@ -118,7 +118,7 @@ public class ListingsMatrix {
 				}
 
 			}
-			listings.get(ccyToAdd).put(ccyToAdd, (long) (1 / ccyToAdd.getBasis()));
+			listings.get(ccyToAdd).put(ccyToAdd, (long) (1.0 / ccyToAdd.getBasis()));
 
 		}
 	}
@@ -131,7 +131,7 @@ public class ListingsMatrix {
 	 */
 	public long getRate(final Asset ccy1, final Asset ccy2) {
 		if (ccy1.equals(ccy2)) {
-			return (long) (1 / ccy1.getBasis());
+			return (long) (1.0 / ccy1.getBasis());
 		}
 		final ConcurrentHashMap<Asset, Long> index1 = listings.get(ccy1);
 		final ConcurrentHashMap<Asset, Long> index2 = listings.get(ccy2);
@@ -176,7 +176,7 @@ public class ListingsMatrix {
 					// get the rate for the 
 					BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
 					// calculate the inverse by getting the basis of the currenct rate and setting the scale to ttha tof the quote currency.
-					BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1 / (ccy.getBasis()))).divide(crossRateBD, ccyToUpdate.getScale(),
+					BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1.0 / (ccy.getBasis()))).divide(crossRateBD, ccyToUpdate.getScale(),
 							RoundingMode.HALF_EVEN));
 					// divine the rate by the basis fo the currency to be added
 					inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(ccyToUpdate.getBasis()));
@@ -186,7 +186,7 @@ public class ListingsMatrix {
 					listings.get(ccy).put(ccyToUpdate, inverseCrossRate);
 				}
 			}
-			listings.get(ccyToUpdate).put(ccyToUpdate, (long) (1 / ccyToUpdate.getBasis()));
+			listings.get(ccyToUpdate).put(ccyToUpdate, (long) (1.0 / ccyToUpdate.getBasis()));
 
 		}
 	}

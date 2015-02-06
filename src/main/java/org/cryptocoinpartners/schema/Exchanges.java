@@ -18,5 +18,5 @@ public class Exchanges {
 	public static final Exchange CRYPTSY = Exchange.forSymbolOrCreate("CRYPTSY", 1, 0.002, FeeMethod.PercentagePerUnit);
 	public static final Exchange CAMPBX = Exchange.forSymbolOrCreate("CAMPBX", 2, 0.0025, FeeMethod.PercentagePerUnit, 0.25, FeeMethod.PercentagePerUnit);
 	public static final Exchange BITTREX = Exchange.forSymbolOrCreate("BITTREX", 1, 0.002, FeeMethod.PercentagePerUnit);
-	public static final Exchange OKCOIN = Exchange.forSymbolOrCreate("OKCOIN", 1, 0.002, FeeMethod.PercentagePerUnit);
+	public static final Exchange OKCOIN = Exchange.forSymbolOrCreate("OKCOIN", 1, 0.002, FeeMethod.PercentagePerUnit, 0.25, FeeMethod.PercentagePerUnit);
 }

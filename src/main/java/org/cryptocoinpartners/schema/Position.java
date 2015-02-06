@@ -26,33 +26,15 @@ public class Position extends Holding {
 
 		this.exchange = exchange;
 		this.market = market;
+		this.volume = volume;
+		this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount();
 		this.longVolume = volume.isPositive() ? volume : this.longVolume;
-		this.longVolumeCount = volume.isPositive() ? volume.toBasis(asset.getBasis(), Remainder.ROUND_EVEN).getCount() : this.longVolumeCount;
+		this.longVolumeCount = volume.isPositive() ? volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount() : this.longVolumeCount;
 		this.shortVolume = volume.isNegative() ? volume : this.shortVolume;
-		this.shortVolumeCount = volume.isNegative() ? volume.toBasis(asset.getBasis(), Remainder.ROUND_EVEN).getCount() : this.shortVolumeCount;
-		this.price = price;
-		this.avgPrice = price;
+		this.shortVolumeCount = volume.isNegative() ? volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount() : this.shortVolumeCount;
 		this.longAvgPrice = volume.isPositive() ? price : this.longAvgPrice;
 		this.shortAvgPrice = volume.isNegative() ? price : this.shortAvgPrice;
 		this.asset = asset;
-		this.portfolio = portfolio;
-	}
-
-	public Position(Portfolio portfolio, Exchange exchange, Market market, Asset asset, Amount volume, Amount price, Amount exitPrice) {
-
-		this.exchange = exchange;
-		this.market = market;
-		this.longVolume = volume.isPositive() ? volume : this.longVolume;
-		this.longVolumeCount = volume.isPositive() ? volume.toBasis(asset.getBasis(), Remainder.ROUND_EVEN).getCount() : this.longVolumeCount;
-		this.shortVolume = volume.isNegative() ? volume : this.shortVolume;
-		this.shortVolumeCount = volume.isNegative() ? volume.toBasis(asset.getBasis(), Remainder.ROUND_EVEN).getCount() : this.shortVolumeCount;
-		this.price = price;
-		this.longExitPrice = volume.isPositive() ? exitPrice : this.longExitPrice;
-		this.shortExitPrice = volume.isNegative() ? exitPrice : this.shortExitPrice;
-		this.asset = asset;
-		this.avgPrice = price;
-		this.longAvgPrice = volume.isPositive() ? price : this.longAvgPrice;
-		this.shortAvgPrice = volume.isNegative() ? price : this.shortAvgPrice;
 		this.portfolio = portfolio;
 	}
 
@@ -105,38 +87,43 @@ public class Position extends Holding {
 	@Transient
 	public Amount getVolume() {
 
-		if (getLongVolume() != null && getShortVolume() != null) {
-			return getLongVolume().plus(getShortVolume());
-		} else if (getLongVolume() != null) {
-			return getLongVolume();
-		} else {
-			return getShortVolume();
-		}
+		if (volume == null)
+			volume = new DiscreteAmount(volumeCount, market.getVolumeBasis());
+		return volume;
+
+		//if (getLongVolume() != null && getShortVolume() != null) {
+		//		return getLongVolume().plus(getShortVolume());
+		//} else if (getLongVolume() != null) {
+		//	return getLongVolume();
+		//	} else {
+		//		return getShortVolume();
+		//}
+
+	}
+
+	@Transient
+	public Amount getAvgPrice() {
+
+		//	if (volume == null)
+		//	volume = new DiscreteAmount(volumeCount, market.getVolumeBasis());
+		//return volume;
+		return ((getLongAvgPrice().times(getLongVolume(), Remainder.ROUND_EVEN)).plus(getShortAvgPrice().times(getShortVolume(), Remainder.ROUND_EVEN)))
+				.dividedBy(getLongVolume().plus(getShortVolume()), Remainder.ROUND_EVEN);
 
 	}
 
 	@Transient
 	public Amount getLongVolume() {
 		if (longVolume == null)
-			longVolume = new DiscreteAmount(longVolumeCount, asset.getBasis());
+			longVolume = new DiscreteAmount(longVolumeCount, market.getVolumeBasis());
 		return longVolume;
 	}
 
 	@Transient
 	public Amount getShortVolume() {
 		if (shortVolume == null)
-			shortVolume = new DiscreteAmount(shortVolumeCount, asset.getBasis());
+			shortVolume = new DiscreteAmount(shortVolumeCount, market.getVolumeBasis());
 		return shortVolume;
-	}
-
-	@Transient
-	public Amount getPrice() {
-		return price;
-	}
-
-	@Transient
-	public Amount getAvgPrice() {
-		return avgPrice;
 	}
 
 	@Transient
@@ -151,16 +138,6 @@ public class Position extends Holding {
 		if (shortAvgPrice == null)
 			shortAvgPrice = DecimalAmount.ZERO;
 		return shortAvgPrice;
-	}
-
-	@Transient
-	public Amount getShortExitPrice() {
-		return shortExitPrice;
-	}
-
-	@Transient
-	public Amount getLongExitPrice() {
-		return longExitPrice;
 	}
 
 	/** If the SpecificOrder is not null, then this Position is being held in reserve as payment for that Order */
@@ -189,14 +166,11 @@ public class Position extends Holding {
 
 	@Override
 	public String toString() {
-		return "Position=[Exchange=" + exchange + ", Price=" + price + ", Average Price=" + avgPrice
-				+ (getShortVolume() != null ? (SEPARATOR + ", Short Qty=" + getShortVolume()) : "")
+		return "Position=[Exchange=" + exchange + (getShortVolume() != null ? (SEPARATOR + ", Short Qty=" + getShortVolume()) : "")
 				+ (getShortAvgPrice() != null ? (SEPARATOR + ", Short Avg Price=" + getShortAvgPrice()) : "")
 				+ (getLongVolume() != null ? (SEPARATOR + "Long Qty=" + getLongVolume()) : "")
 				+ (getLongAvgPrice() != null ? (SEPARATOR + "Long Avg Price=" + getLongAvgPrice()) : "") + ", Net Qty=" + getVolume().toString()
-				+ " Vol Count=" + getVolumeCount() + ",  Entry Date=" + ", Instrument=" + asset
-				+ (longExitPrice != null ? (SEPARATOR + " Long Exit Price=" + getLongExitPrice()) : "")
-				+ (shortExitPrice != null ? (SEPARATOR + " Short Exit Price=" + getShortExitPrice()) : "") + "]";
+				+ " Vol Count=" + getVolumeCount() + ",  Entry Date=" + ", Instrument=" + asset;
 	}
 
 	// JPA
@@ -205,7 +179,7 @@ public class Position extends Holding {
 
 	@Transient
 	protected long getVolumeCount() {
-		return longVolumeCount + shortVolumeCount;
+		return volumeCount;
 	}
 
 	protected long getLongVolumeCount() {
@@ -226,13 +200,15 @@ public class Position extends Holding {
 		this.shortVolume = null;
 	}
 
-	public void setLongExitPriceCount(long longExitPriceCount) {
-		this.longExitPriceCount = longExitPriceCount;
-		this.longExitPrice = null;
-	}
+	protected void setVolumeCount(long volumeCount) {
 
-	public void setAvgPrice(Amount avgPrice) {
-		this.avgPrice = avgPrice;
+		this.volumeCount = volumeCount;
+		this.volume = null;
+		if (volumeCount > 0)
+			setLongVolumeCount(volumeCount);
+		if (volumeCount < 0)
+			setShortVolumeCount(volumeCount);
+
 	}
 
 	public void setLongAvgPrice(Amount longAvgPrice) {
@@ -243,26 +219,16 @@ public class Position extends Holding {
 		this.shortAvgPrice = shortAvgPrice;
 	}
 
-	public void setShortExitPriceCount(long shortExitPriceCount) {
-		this.shortExitPriceCount = shortExitPriceCount;
-		this.shortExitPrice = null;
-	}
-
 	private Amount longVolume;
 	private Amount shortVolume;
+	private Amount volume;
 	private Market market;
-	private Amount price;
-	private Amount avgPrice;
 	private Amount longAvgPrice;
 	private Amount shortAvgPrice;
-	private Amount shortExitPrice;
-	private Amount longExitPrice;
 	private Amount marginAmount;
 	private long longVolumeCount;
 	private long shortVolumeCount;
-	private long priceCount;
-	private long shortExitPriceCount;
-	private long longExitPriceCount;
+	private long volumeCount;
 	private SpecificOrder order;
 
 }

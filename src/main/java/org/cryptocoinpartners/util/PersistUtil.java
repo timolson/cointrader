@@ -16,6 +16,7 @@ import javax.persistence.TypedQuery;
 import org.cryptocoinpartners.schema.Currencies;
 import org.cryptocoinpartners.schema.EntityBase;
 import org.cryptocoinpartners.schema.Exchanges;
+import org.cryptocoinpartners.schema.Prompts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -265,6 +266,7 @@ public class PersistUtil {
 		// Touch the singleton holders
 		Currencies.BTC.getSymbol(); // this should load all the singletons in Currencies
 		Exchanges.BITFINEX.getSymbol(); // this should load all the singletons in Exchanges
+		Prompts.THIS_WEEK.getSymbol();
 	}
 
 	private static EntityManagerFactory entityManagerFactory;

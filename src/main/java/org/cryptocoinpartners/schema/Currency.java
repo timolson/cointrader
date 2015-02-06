@@ -44,10 +44,28 @@ public class Currency extends Asset {
 		}
 	}
 
+	// used by Currencies
+	static Currency forSymbolOrCreate(String symbol, boolean isFiat, double basis, double multiplier) {
+		try {
+			return forSymbol(symbol);
+		} catch (NoResultException e) {
+			final Currency currency = new Currency(isFiat, symbol, basis, multiplier);
+			PersistUtil.insert(currency);
+			return currency;
+		}
+	}
+
 	private Currency(boolean fiat, String symbol, double basis) {
 		super(symbol, basis);
 		this.fiat = fiat;
 	}
 
+	private Currency(boolean fiat, String symbol, double basis, double multiplier) {
+		super(symbol, basis);
+		this.fiat = fiat;
+		this.multiplier = multiplier;
+	}
+
 	private boolean fiat;
+	private double multiplier;
 }

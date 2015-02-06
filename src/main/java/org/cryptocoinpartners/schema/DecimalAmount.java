@@ -39,6 +39,13 @@ public class DecimalAmount extends Amount {
 	}
 
 	@Override
+	public DecimalAmount invert() {
+
+		return bd.compareTo(BigDecimal.ZERO) == 0 ? new DecimalAmount(BigDecimal.ZERO) : new DecimalAmount(BigDecimal.ONE.divide(bd, mc));
+
+	}
+
+	@Override
 	public Amount plus(Amount o) {
 		return new DecimalAmount(bd.add(o.asBigDecimal()));
 
@@ -59,7 +66,7 @@ public class DecimalAmount extends Amount {
 	@Override
 	public Amount dividedBy(Amount o, RemainderHandler remainderHandler) {
 
-		int scale = Math.min(o.asBigDecimal().scale(), mc.getPrecision());
+		int scale = Math.max(o.asBigDecimal().scale(), mc.getPrecision());
 		return new DecimalAmount(bd.divide(o.asBigDecimal(), remainderHandler.getRoundingMode()).setScale(scale, remainderHandler.getRoundingMode()));
 
 	}

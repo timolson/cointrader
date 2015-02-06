@@ -3,15 +3,13 @@ package org.cryptocoinpartners.schema;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.annotation.Nullable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.NoResultException;
 import javax.persistence.PostPersist;
-import javax.persistence.Table;
 import javax.persistence.Transient;
-import javax.persistence.UniqueConstraint;
 
+import org.cryptocoinpartners.enumeration.FeeMethod;
 import org.cryptocoinpartners.util.PersistUtil;
 
 /**
@@ -19,8 +17,8 @@ import org.cryptocoinpartners.util.PersistUtil;
  */
 @SuppressWarnings("UnusedDeclaration")
 @Entity
-@Table(name = "listing", uniqueConstraints = { @UniqueConstraint(columnNames = { "base", "quote", "prompt" }),
-		@UniqueConstraint(columnNames = { "base", "quote" }) })
+//@Table(name = "listing", uniqueConstraints = { @UniqueConstraint(columnNames = { "base", "quote", "prompt" }),
+//@UniqueConstraint(columnNames = { "base", "quote" }) })
 public class Listing extends EntityBase {
 
 	@ManyToOne(optional = false)
@@ -45,9 +43,8 @@ public class Listing extends EntityBase {
 		return quote;
 	}
 
-	@Nullable
-	//@Column(unique = true)
-	public String getPrompt() {
+	@ManyToOne(optional = true)
+	public Prompt getPrompt() {
 		return prompt;
 	}
 
@@ -68,7 +65,7 @@ public class Listing extends EntityBase {
 		}
 	}
 
-	public static Listing forPair(Asset base, Asset quote, String prompt) {
+	public static Listing forPair(Asset base, Asset quote, Prompt prompt) {
 		try {
 
 			Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2 and prompt=?3", base, quote, prompt);
@@ -96,6 +93,104 @@ public class Listing extends EntityBase {
 		return base.getSymbol() + '.' + quote.getSymbol();
 	}
 
+	@Transient
+	protected double getMultiplier() {
+		if (prompt != null)
+			return prompt.getMultiplier();
+		return getTickValue() * getTickSize();
+	}
+
+	@Transient
+	protected double getTickValue() {
+		if (prompt != null)
+			return prompt.getTickValue();
+		return 1;
+	}
+
+	@Transient
+	protected double getContractSize() {
+		if (prompt != null)
+			return prompt.getContractSize();
+		return 1;
+	}
+
+	@Transient
+	protected double getTickSize() {
+		if (prompt != null)
+			return prompt.getTickSize();
+		return getPriceBasis();
+	}
+
+	@Transient
+	protected Amount getMultiplierAsAmount() {
+
+		return new DiscreteAmount((long) getMultiplier(), getVolumeBasis());
+	}
+
+	@Transient
+	protected double getVolumeBasis() {
+		double volumeBasis = 0;
+		if (prompt != null)
+			volumeBasis = prompt.getVolumeBasis();
+		return volumeBasis == 0 ? getBase().getBasis() : volumeBasis;
+
+	}
+
+	@Transient
+	public FeeMethod getMarginMethod() {
+		FeeMethod marginMethod = null;
+		if (prompt != null)
+			marginMethod = prompt.getMarginMethod();
+		return marginMethod == null ? null : marginMethod;
+
+	}
+
+	@Transient
+	public FeeMethod getMarginFeeMethod() {
+		FeeMethod marginFeeMethod = null;
+		if (prompt != null)
+			marginFeeMethod = prompt.getMarginFeeMethod();
+		return marginFeeMethod == null ? null : marginFeeMethod;
+
+	}
+
+	@Transient
+	protected double getPriceBasis() {
+		double priceBasis = 0;
+		if (prompt != null)
+			priceBasis = prompt.getPriceBasis();
+		return priceBasis == 0 ? getQuote().getBasis() : priceBasis;
+
+	}
+
+	@Transient
+	protected Asset getTradedCurrency() {
+		if (prompt != null && prompt.getTradedCurrency() != null)
+			return prompt.getTradedCurrency();
+		return getQuote();
+	}
+
+	@Transient
+	public FeeMethod getFeeMethod() {
+		if (prompt != null && prompt.getFeeMethod() != null)
+			return prompt.getFeeMethod();
+		return null;
+	}
+
+	@Transient
+	public double getFeeRate() {
+		if (prompt != null && prompt.getFeeRate() != 0)
+			return prompt.getFeeRate();
+		return 0;
+	}
+
+	@Transient
+	protected int getMargin() {
+		if (prompt != null && prompt.getMargin() != 0)
+			return prompt.getMargin();
+		return 0;
+	}
+
 	public static List<String> allSymbols() {
 		List<String> result = new ArrayList<>();
 		List<Listing> listings = PersistUtil.queryList(Listing.class, "select x from Listing x");
@@ -116,20 +211,20 @@ public class Listing extends EntityBase {
 		this.quote = quote;
 	}
 
-	protected void setPrompt(String prompt) {
+	protected void setPrompt(Prompt prompt) {
 		this.prompt = prompt;
 	}
 
 	protected Asset base;
 	protected Asset quote;
-	private String prompt;
+	private Prompt prompt;
 
 	public Listing(Asset base, Asset quote) {
 		this.base = base;
 		this.quote = quote;
 	}
 
-	public Listing(Asset base, Asset quote, String prompt) {
+	public Listing(Asset base, Asset quote, Prompt prompt) {
 		this.base = base;
 		this.quote = quote;
 		this.prompt = prompt;
@@ -147,12 +242,13 @@ public class Listing extends EntityBase {
 		int len = symbol.substring(dot + 1, symbol.length()).indexOf('.');
 		len = (len != -1) ? Math.min(symbol.length(), dot + 1 + symbol.substring(dot + 1, symbol.length()).indexOf('.')) : symbol.length();
 		final String quoteSymbol = symbol.substring(dot + 1, len);
-		final String prompt = (symbol.length() > len) ? symbol.substring(len + 1, symbol.length()) : null;
+		final String promptSymbol = (symbol.length() > len) ? symbol.substring(len + 1, symbol.length()) : null;
 		Asset quote = Asset.forSymbol(quoteSymbol);
 		if (quote == null)
 			throw new IllegalArgumentException("Invalid quote symbol: \"" + quoteSymbol + "\"");
-		if (prompt == null)
+		if (promptSymbol == null)
 			return Listing.forPair(base, quote);
+		Prompt prompt = Prompt.forSymbol(promptSymbol);
 		return Listing.forPair(base, quote, prompt);
 	}
 
@@ -168,6 +264,13 @@ public class Listing extends EntityBase {
 			if (!listing.getQuote().equals(getQuote())) {
 				return false;
 			}
+			if (listing.getPrompt() != null)
+				if (this.getPrompt() != null) {
+					if (!listing.getPrompt().equals(getPrompt()))
+						return false;
+				} else {
+					return false;
+				}
 
 			return true;
 		}
@@ -177,7 +280,8 @@ public class Listing extends EntityBase {
 
 	@Override
 	public int hashCode() {
-		return getQuote().hashCode() + getBase().hashCode();
+		return getPrompt() != null ? getQuote().hashCode() + getBase().hashCode() + getPrompt().hashCode() : getQuote().hashCode() + getBase().hashCode();
+
 	}
 
 }

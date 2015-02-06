@@ -32,7 +32,8 @@ import com.xeiam.xchange.currency.CurrencyPair;
 @Singleton
 public class ReadTicksCsv {
 
-	public static List<String> headers = new ArrayList<>(Arrays.asList(new String[] { "listing", "exchange", "base", "quote", "time", "last", "vol" }));
+	public static List<String> headers = new ArrayList<>(
+			Arrays.asList(new String[] { "listing", "exchange", "base", "quote", "prompt", "time", "last", "vol" }));
 
 	private SimpleDateFormat timeFormat;
 	private CSVReader reader;
@@ -74,7 +75,8 @@ public class ReadTicksCsv {
 			mappingStrategy.setType(CsvTrade.class);
 
 			// the fields to bind do in your JavaBean
-			String[] columns = new String[] { "listing", "exchange", "base", "quote", "time", "last", "vol", "bidprice1", "bidvol1", "askprice1", "askvol1" };
+			String[] columns = new String[] { "listing", "exchange", "base", "quote", "prompt", "time", "last", "vol", "bidprice1", "bidvol1", "askprice1",
+					"askvol1" };
 
 			mappingStrategy.setColumnMapping(columns);
 
@@ -128,6 +130,7 @@ public class ReadTicksCsv {
 		private double vol;
 		private String base;
 		private String quote;
+		private String prompt;
 		private double bidprice1;
 		private double bidvol1;
 		private double askprice1;
@@ -138,12 +141,20 @@ public class ReadTicksCsv {
 		}
 
 		public String getListingAsString() {
-			return base + "." + quote;
+			if ((getPrompt()) == null)
+				return base + "." + quote;
+			return base + "." + quote + "." + prompt;
 
 		}
 
 		public String getBase() {
 			return base;
+		}
+
+		public String getPrompt() {
+			if (prompt.isEmpty())
+				return null;
+			return prompt;
 		}
 
 		public String getQuote() {
@@ -181,6 +192,10 @@ public class ReadTicksCsv {
 
 		public void setQuote(String quote) {
 			this.quote = quote;
+		}
+
+		public void setPrompt(String prompt) {
+			this.prompt = prompt;
 		}
 
 		public double getLast() {

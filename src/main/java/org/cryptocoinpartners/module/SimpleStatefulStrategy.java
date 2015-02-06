@@ -72,17 +72,17 @@ public abstract class SimpleStatefulStrategy extends BaseStrategy {
 	protected void stopTrade(Fill fill) {
 
 		OrderBuilder.CommonOrderBuilder orderBuilder = buildStopOrder(fill);
-		if (orderBuilder != null) {
-			stopOrder = orderBuilder.getOrder();
-			//			if (state == State.INVESTED)
-			//				state = State.DIVESTING;
-			//			else if (state == State.DIVESTING)
-			//				state = State.INVESTING;
-			//			log.debug("Exiting trade with order " + stopOrder);
+		//if (orderBuilder != null) {
+		//	stopOrder = orderBuilder.getOrder();
+		//			if (state == State.INVESTED)
+		//				state = State.DIVESTING;
+		//			else if (state == State.DIVESTING)
+		//				state = State.INVESTING;
+		//			log.debug("Exiting trade with order " + stopOrder);
 
-			orderService.placeOrder(stopOrder);
+		//orderService.placeOrder(stopOrder);
 
-		}
+		//}
 	}
 
 	// todo listen for panic notifications
@@ -98,10 +98,12 @@ public abstract class SimpleStatefulStrategy extends BaseStrategy {
 	@When("select * from Fill((Fill.fillType not in (FillType.STOP_LIMIT, FillType.TRAILING_STOP_LIMIT))) ")
 	protected void handleFill(Fill fill) {
 
-		if (fill.getOrder().getComment() == "Long Entry Order" || fill.getOrder().getComment() == "Short Entry Order") {
-			stopTrade(fill);
-		}
-		log.info("Stop trade Entered at" + fill.getPrice());
+		//if (fill.getOrder().getComment() == "Long Entry Order" || fill.getOrder().getComment() == "Short Entry Order") {
+		//
+
+		//	stopTrade(fill);
+		//}
+		//log.info("Stop trade Entered at" + fill.getPrice());
 
 	}
 

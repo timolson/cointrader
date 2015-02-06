@@ -12,6 +12,7 @@ import javax.persistence.NoResultException;
 import javax.persistence.PostPersist;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.enumeration.FeeMethod;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.RemainderHandler;
 
@@ -29,7 +30,7 @@ public class Market extends EntityBase {
 
 	/** adds the Market to the database if it does not already exist */
 	public static Market findOrCreate(Exchange exchange, Listing listing) {
-		return findOrCreate(exchange, listing, listing.getQuote().getBasis(), listing.getBase().getBasis());
+		return findOrCreate(exchange, listing, listing.getPriceBasis(), listing.getVolumeBasis());
 	}
 
 	@PostPersist
@@ -76,7 +77,9 @@ public class Market extends EntityBase {
 
 	@Basic(optional = false)
 	public double getPriceBasis() {
-		return priceBasis;
+
+		return listing.getPriceBasis() == 0 ? priceBasis : listing.getPriceBasis();
+
 	}
 
 	@Transient
@@ -88,7 +91,8 @@ public class Market extends EntityBase {
 
 	@Basic(optional = false)
 	public double getVolumeBasis() {
-		return volumeBasis;
+		return listing.getVolumeBasis() == 0 ? volumeBasis : listing.getVolumeBasis();
+
 	}
 
 	/** @return true iff the Listing is currently traded at the Exchange.  The Market could have been retired. */
@@ -104,6 +108,60 @@ public class Market extends EntityBase {
 	@Transient
 	public Asset getQuote() {
 		return listing.getQuote();
+	}
+
+	@Transient
+	public int getMargin() {
+		return listing.getMargin() == 0 ? exchange.getMargin() : listing.getMargin();
+
+	}
+
+	@Transient
+	public double getFeeRate() {
+		return listing.getFeeRate() == 0 ? exchange.getFeeRate() : listing.getFeeRate();
+
+	}
+
+	@Transient
+	public FeeMethod getMarginFeeMethod() {
+		return listing.getMarginFeeMethod() == null ? exchange.getMarginFeeMethod() : listing.getMarginFeeMethod();
+
+	}
+
+	@Transient
+	public FeeMethod getFeeMethod() {
+		return listing.getFeeMethod() == null ? exchange.getFeeMethod() : listing.getFeeMethod();
+
+	}
+
+	@Transient
+	public double getMultiplier() {
+		return listing.getMultiplier();
+
+	}
+
+	@Transient
+	public double getTickValue() {
+		return listing.getTickValue();
+
+	}
+
+	@Transient
+	public double getContractSize() {
+		return listing.getContractSize();
+
+	}
+
+	@Transient
+	public double getTickSize() {
+		return listing.getTickSize();
+
+	}
+
+	@Transient
+	public Asset getTradedCurrency() {
+		return listing.getTradedCurrency();
+
 	}
 
 	@Transient
@@ -161,7 +219,7 @@ public class Market extends EntityBase {
 
 	public MarketAmountBuilder buildAmount() {
 		if (marketAmountBuilder == null)
-			marketAmountBuilder = new MarketAmountBuilder(priceBasis, volumeBasis);
+			marketAmountBuilder = new MarketAmountBuilder(getPriceBasis(), getVolumeBasis());
 		return marketAmountBuilder;
 	}
 

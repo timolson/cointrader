@@ -469,7 +469,7 @@ public class Book extends MarketData implements Spread {
 		// no difference between books
 		//if (bidDeletionsBlob == null || askDeletionsBlob == null)
 		//return;
-		if (bidDeletionsBlob == null)
+		if (bidDeletionsBlob == null || askDeletionsBlob == null)
 			Log.debug("null blob");
 		// add any non-deleted entries from the parent
 		List<Integer> bidDeletionIndexes = convertDatabaseBlobToIndexList(bidDeletionsBlob); // these should be already sorted

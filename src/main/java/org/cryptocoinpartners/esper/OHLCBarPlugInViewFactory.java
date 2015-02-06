@@ -2,6 +2,8 @@ package org.cryptocoinpartners.esper;
 
 import java.util.List;
 
+import org.cryptocoinpartners.schema.Market;
+
 import com.espertech.esper.client.EventType;
 import com.espertech.esper.core.context.util.AgentInstanceViewFactoryChainContext;
 import com.espertech.esper.core.service.StatementContext;
@@ -17,13 +19,14 @@ public class OHLCBarPlugInViewFactory extends ViewFactorySupport {
 	private List<ExprNode> viewParameters;
 	private ExprNode timestampExpression;
 	private ExprNode valueExpression;
+	private ExprNode marketExpression;
 
 	@Override
 	public void setViewParameters(ViewFactoryContext viewFactoryContext, List<ExprNode> viewParameters) throws ViewParameterException {
 		this.viewFactoryContext = viewFactoryContext;
-		if (viewParameters.size() != 2) {
+		if (viewParameters.size() < 2) {
 			throw new ViewParameterException(
-					"View requires a two parameters: the expression returning timestamps and the expression supplying OHLC data points");
+					"View requires at least two parameters: the expression returning timestamps and the expression supplying OHLC data points");
 		}
 		this.viewParameters = viewParameters;
 	}
@@ -35,6 +38,7 @@ public class OHLCBarPlugInViewFactory extends ViewFactorySupport {
 
 		timestampExpression = validatedNodes[0];
 		valueExpression = validatedNodes[1];
+		marketExpression = validatedNodes[2];
 
 		if ((timestampExpression.getExprEvaluator().getType() != long.class) && (timestampExpression.getExprEvaluator().getType() != Long.class)) {
 			throw new ViewParameterException("View requires long-typed timestamp values in parameter 1");
@@ -42,11 +46,14 @@ public class OHLCBarPlugInViewFactory extends ViewFactorySupport {
 		if ((valueExpression.getExprEvaluator().getType() != double.class) && (valueExpression.getExprEvaluator().getType() != Double.class)) {
 			throw new ViewParameterException("View requires double-typed values for in parameter 2");
 		}
+		if ((marketExpression.getExprEvaluator().getType() != Market.class) && (marketExpression.getExprEvaluator().getType() != Market.class)) {
+			throw new ViewParameterException("View requires market-typed values for in parameter 3");
+		}
 	}
 
 	@Override
 	public View makeView(AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext) {
-		return new OHLCBarPlugInView(agentInstanceViewFactoryContext, timestampExpression, valueExpression);
+		return new OHLCBarPlugInView(agentInstanceViewFactoryContext, timestampExpression, valueExpression, marketExpression);
 	}
 
 	@Override

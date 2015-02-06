@@ -12,7 +12,7 @@ import javax.persistence.Transient;
  * 
  */
 public enum FeeMethod {
-	PercentagePerUnit("PercentagePerUnit"), PerUnit("PerUnit"), ;
+	PercentagePerUnit("PercentagePerUnit"), PerUnit("PerUnit"), PercentagePerUnitOpening("PercentagePerUnitOpening"), PerUnitOpening("PerUnitOpening"), ;
 
 	private final String enumValue;
 
@@ -66,24 +66,31 @@ public enum FeeMethod {
 		synchronized (FeeMethod.values) {
 			FeeMethod.values.put(PercentagePerUnit.enumValue, PercentagePerUnit);
 			FeeMethod.values.put(PerUnit.enumValue, PerUnit);
+			FeeMethod.values.put(PercentagePerUnitOpening.enumValue, PercentagePerUnitOpening);
+			FeeMethod.values.put(PerUnitOpening.enumValue, PerUnitOpening);
 
 		}
 		synchronized (FeeMethod.valueList) {
 			FeeMethod.valueList.add(PercentagePerUnit);
 			FeeMethod.valueList.add(PerUnit);
+			FeeMethod.valueList.add(PercentagePerUnitOpening);
+			FeeMethod.valueList.add(PerUnitOpening);
 
 			FeeMethod.valueList = Collections.unmodifiableList(valueList);
 		}
 		synchronized (FeeMethod.literals) {
 			FeeMethod.literals.add(PercentagePerUnit.enumValue);
 			FeeMethod.literals.add(PerUnit.enumValue);
+			FeeMethod.literals.add(PercentagePerUnitOpening.enumValue);
+			FeeMethod.literals.add(PerUnitOpening.enumValue);
 
 			FeeMethod.literals = Collections.unmodifiableList(literals);
 		}
 		synchronized (FeeMethod.names) {
 			FeeMethod.names.add("PercentagePerUnit");
 			FeeMethod.names.add("PerUnit");
-
+			FeeMethod.names.add("PercentagePerUnitOpening");
+			FeeMethod.names.add("PerUnitOpening");
 			FeeMethod.names = Collections.unmodifiableList(names);
 		}
 	}

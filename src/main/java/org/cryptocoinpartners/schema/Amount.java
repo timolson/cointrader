@@ -138,4 +138,7 @@ public abstract class Amount implements Comparable<Amount> {
 
 	protected static final Logger log = LoggerFactory.getLogger(Amount.class);
 
+	@Transient
+	public abstract Amount invert();
+
 }

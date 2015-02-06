@@ -121,7 +121,7 @@ public class BasicQuoteService implements QuoteService {
 			return new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
 		} catch (java.lang.IllegalArgumentException e) {
 
-			return getBestAskForListing(listing);
+			return null;
 		}
 	}
 
@@ -134,7 +134,7 @@ public class BasicQuoteService implements QuoteService {
 			return new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
 		} catch (java.lang.IllegalArgumentException e) {
 
-			return getBestBidForListing(listing);
+			return null;
 		}
 
 	}
@@ -173,20 +173,22 @@ public class BasicQuoteService implements QuoteService {
 		Book lastBestBidBook = bestBidByMarket.get(marketSymbol);
 		//noinspection ConstantConditions
 		if (bestBid != null && (lastBestBidBook == null || bestBid.getPrice().compareTo(lastBestBidBook.getBestBid().getPrice()) > 0))
+
+		{
 			bestBidByMarket.put(marketSymbol, b);
-		try {
-			impliedBidMatrix.getRate(bestBid.getMarket().getBase(), bestBid.getMarket().getQuote());
-			impliedBidMatrix.updateRates(bestBid.getMarket().getBase(), bestBid.getMarket().getQuote(), bestBid.getPriceCount());
-		} catch (java.lang.IllegalArgumentException e) {
 			try {
-				impliedBidMatrix.addAsset(bestBid.getMarket().getBase(), bestBid.getMarket().getQuote(), bestBid.getPriceCount());
-			} catch (java.lang.IllegalArgumentException e2) {
-				//				//we not recived enouhg trades to create a link to other currecny
-				//				BigDecimal inverseRateBD = (((BigDecimal.valueOf(1 / (bestBid.getMarket().getQuote().getBasis()))).divide(
-				//						BigDecimal.valueOf(bestBid.getPriceCount()), bestBid.getMarket().getBase().getScale(), RoundingMode.HALF_EVEN)).divide(BigDecimal
-				//						.valueOf(bestBid.getMarket().getBase().getBasis())));
-				//				long inverseCrossRate = inverseRateBD.longValue();
-				//				impliedBidMatrix.addAsset(bestBid.getMarket().getQuote(), bestBid.getMarket().getBase(), inverseCrossRate);
+				impliedBidMatrix.updateRates(b.getBestBid().getMarket().getBase(), b.getBestBid().getMarket().getQuote(), b.getBestBid().getPriceCount());
+			} catch (java.lang.IllegalArgumentException e) {
+				try {
+					impliedBidMatrix.addAsset(b.getBestBid().getMarket().getBase(), b.getBestBid().getMarket().getQuote(), b.getBestBid().getPriceCount());
+				} catch (java.lang.IllegalArgumentException e2) {
+					//				//we not recived enouhg trades to create a link to other currecny
+					//				BigDecimal inverseRateBD = (((BigDecimal.valueOf(1 / (bestBid.getMarket().getQuote().getBasis()))).divide(
+					//						BigDecimal.valueOf(bestBid.getPriceCount()), bestBid.getMarket().getBase().getScale(), RoundingMode.HALF_EVEN)).divide(BigDecimal
+					//						.valueOf(bestBid.getMarket().getBase().getBasis())));
+					//				long inverseCrossRate = inverseRateBD.longValue();
+					//				impliedBidMatrix.addAsset(bestBid.getMarket().getQuote(), bestBid.getMarket().getBase(), inverseCrossRate);
+				}
 			}
 		}
 
@@ -196,12 +198,12 @@ public class BasicQuoteService implements QuoteService {
 		if (bestAsk != null && (lastBestAskBook == null || bestAsk.getPrice().compareTo(lastBestAskBook.getBestAsk().getPrice()) < 0))
 			bestAskByMarket.put(marketSymbol, b);
 		try {
-			impliedAskMatrix.getRate(bestAsk.getMarket().getBase(), bestAsk.getMarket().getQuote());
-			impliedAskMatrix.updateRates(bestAsk.getMarket().getBase(), bestAsk.getMarket().getQuote(), bestAsk.getPriceCount());
+			impliedAskMatrix.updateRates(b.getBestAsk().getMarket().getBase(), b.getBestAsk().getMarket().getQuote(), b.getBestAsk().getPriceCount());
 		} catch (java.lang.IllegalArgumentException e) {
 			try {
-				impliedAskMatrix.addAsset(bestAsk.getMarket().getBase(), bestAsk.getMarket().getQuote(), bestAsk.getPriceCount());
+				impliedAskMatrix.addAsset(b.getBestAsk().getMarket().getBase(), b.getBestAsk().getMarket().getQuote(), b.getBestAsk().getPriceCount());
 			} catch (java.lang.IllegalArgumentException e2) {
+				e2.printStackTrace();
 				//we not recived enouhg trades to create a link to other currecny
 				//we not recived enouhg trades to create a link to other currecny
 				//				BigDecimal inverseRateBD = (((BigDecimal.valueOf(1 / (bestAsk.getMarket().getQuote().getBasis()))).divide(

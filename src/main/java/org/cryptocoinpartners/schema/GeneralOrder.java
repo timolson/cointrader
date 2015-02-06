@@ -32,6 +32,7 @@ public class GeneralOrder extends Order {
 		super(time);
 		super.setPortfolio(portfolio);
 		parentOrder.addChild(this);
+		this.setParentOrder(parentOrder);
 		this.listing = listing;
 		this.volume = DecimalAmount.of(volume);
 	}
@@ -49,6 +50,7 @@ public class GeneralOrder extends Order {
 		super(time);
 		super.setPortfolio(portfolio);
 		parentOrder.addChild(this);
+		this.setParentOrder(parentOrder);
 		this.market = market;
 		this.listing = market.getListing();
 		this.volume = DecimalAmount.of(volume);
@@ -168,6 +170,8 @@ public class GeneralOrder extends Order {
 			s += ", trailingStopPrice=" + trailingStopPrice;
 		if (comment != null)
 			s += ", comment=" + comment;
+		if (positionEffect != null)
+			s += ", position effect=" + positionEffect;
 		if (fillType != null)
 			s += ", type=" + fillType;
 		if (hasFills())

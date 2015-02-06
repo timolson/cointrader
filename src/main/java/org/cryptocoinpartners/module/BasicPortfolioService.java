@@ -31,6 +31,7 @@ import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.PortfolioServiceException;
 import org.cryptocoinpartners.service.QuoteService;
+import org.cryptocoinpartners.util.FeesUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
 
@@ -61,6 +62,11 @@ public class BasicPortfolioService implements PortfolioService {
 		return (ArrayList<Position>) portfolio.getPositions();
 	}
 
+	@Transient
+	public Context getContext() {
+		return context;
+	}
+
 	@Override
 	@Nullable
 	public ConcurrentHashMap<Asset, Amount> getRealisedPnLs() {
@@ -69,21 +75,15 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Nullable
-	public Amount getRealisedPnL(Asset asset) {
-		return portfolio.getRealisedPnL(asset);
-	}
-
-	@Override
-	@Nullable
-	public ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Market, Amount>>> getRealisedPnLByMarket() {
+	public ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>> getRealisedPnLByMarket() {
 		return portfolio.getRealisedPnL();
 	}
 
-	public long getLongPosition(Asset asset, Exchange exchange) {
+	public DiscreteAmount getLongPosition(Asset asset, Exchange exchange) {
 		return portfolio.getLongPosition(asset, exchange);
 	}
 
-	public long getShortPosition(Asset asset, Exchange exchange) {
+	public DiscreteAmount getShortPosition(Asset asset, Exchange exchange) {
 		return portfolio.getShortPosition(asset, exchange);
 	}
 
@@ -125,17 +125,38 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Transient
+	public ConcurrentHashMap<Asset, Amount> getAvailableBalances() {
+
+		// so we need to get the cash balances
+		// then we will add to it the avg price x quantity of the open position
+
+		Amount availableBalance = DecimalAmount.ZERO;
+		ConcurrentHashMap<Asset, Amount> availableBalances = new ConcurrentHashMap<>();
+
+		Iterator<Transaction> itt = getTrades().iterator();
+		while (itt.hasNext()) {
+			Transaction transaction = itt.next();
+			if (availableBalances.get(transaction.getAsset()) != null) {
+
+				availableBalance = availableBalances.get(transaction.getAsset());
+
+			}
+			Amount tranCost = transaction.getCost();
+			availableBalance = availableBalance.plus(tranCost);
+			availableBalances.put(transaction.getAsset(), availableBalance);
+
+		}
+		return availableBalances;
+	}
+
+	@Override
+	@Transient
 	public ConcurrentHashMap<Asset, Amount> getCashBalances() {
 
 		// sum of all transactions that belongs to this strategy
-		//BigDecimal balance = BigDecimal.ZERO;
-		//DiscreteAmount(0, 0.01);
-		//Amount balance = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
 		Amount balance = DecimalAmount.ZERO;
-		//DecimalAmount.ZERO;
-
-		//= DecimalAmount.ZERO;
 		ConcurrentHashMap<Asset, Amount> balances = new ConcurrentHashMap<>();
+
 		Iterator<Transaction> itt = getTrades().iterator();
 		while (itt.hasNext()) {
 			Transaction transaction = itt.next();
@@ -174,12 +195,14 @@ public class BasicPortfolioService implements PortfolioService {
 			Iterator<Exchange> ite = getRealisedPnLByMarket().get(asset).keySet().iterator();
 			while (ite.hasNext()) {
 				Exchange exchange = ite.next();
-				Iterator<Market> itm = getRealisedPnLByMarket().get(asset).get(exchange).keySet().iterator();
+				Iterator<Listing> itm = getRealisedPnLByMarket().get(asset).get(exchange).keySet().iterator();
 				while (itm.hasNext()) {
-					Market market = itm.next();
+					Listing listing = itm.next();
+					Market market = Market.findOrCreate(exchange, listing);
 
-					Amount realisedPnL = getRealisedPnLByMarket().get(asset).get(exchange).get(market);
-					if (exchange.getMargin() != 1 && !realisedPnL.isZero()) {
+					Amount realisedPnL = getRealisedPnLByMarket().get(asset).get(exchange).get(listing);
+					// need to change this to the market and check the margin.
+					if (!realisedPnL.isZero()) {
 						if (balances.get(asset) != null) {
 
 							balance = balances.get(asset);
@@ -192,6 +215,28 @@ public class BasicPortfolioService implements PortfolioService {
 
 				}
 			}
+
+		}
+
+		Amount transferCredits = DecimalAmount.ZERO;
+		Amount transferDebits = DecimalAmount.ZERO;
+		Iterator<Transaction> itr = getTransfers().iterator();
+		while (itr.hasNext()) {
+			Transaction transactionTransaction = itr.next();
+			if (balances.get(transactionTransaction.getCurrency()) != null) {
+
+				transferDebits = balances.get(transactionTransaction.getCurrency());
+			}
+			if (balances.get(transactionTransaction.getAsset()) != null) {
+
+				transferCredits = balances.get(transactionTransaction.getAsset());
+			}
+
+			Amount tranCost = transactionTransaction.getCost();
+			transferCredits = transferCredits.plus(tranCost);
+			transferDebits = transferDebits.plus(transactionTransaction.getAmount());
+			balances.put(transactionTransaction.getCurrency(), transferDebits);
+			balances.put(transactionTransaction.getAsset(), transferCredits);
 
 		}
 
@@ -216,6 +261,21 @@ public class BasicPortfolioService implements PortfolioService {
 		}
 
 		return cashFlows;
+	}
+
+	public List<Transaction> getTransfers() {
+		// return all CREDIT,DEBIT,INTREST,FEES and REALISED PnL
+
+		ArrayList<Transaction> transfers = new ArrayList<>();
+		Iterator<Transaction> it = portfolio.getTransactions().iterator();
+		while (it.hasNext()) {
+			Transaction transaction = it.next();
+			if (transaction.getType() == TransactionType.REBALANCE) {
+				transfers.add(transaction);
+			}
+		}
+
+		return transfers;
 	}
 
 	@Override
@@ -258,34 +318,37 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Transient
-	public Amount getMarketValue(Position postion) {
+	public Amount getMarketValue(Position position) {
 
-		if (postion.isOpen()) {
+		if (position.isOpen()) {
+			Amount marketPrice = getMarketPrice(position);
 
-			return postion.getVolume().times(getMarketPrice(postion), Remainder.ROUND_EVEN);
+			if (position.getMarket().getTradedCurrency() == position.getMarket().getBase())
+				marketPrice = marketPrice.invert();
+
+			return (position.getVolume().times(marketPrice, Remainder.ROUND_EVEN)).times(position.getMarket().getContractSize(), Remainder.ROUND_EVEN);
 
 		} else {
-			return new DiscreteAmount(0, postion.getMarket().getVolumeBasis());
+			return new DiscreteAmount(0, position.getMarket().getVolumeBasis());
 
 		}
 	}
 
 	@Override
 	@Transient
-	public Amount getUnrealisedPnL(Position postion) {
+	public Amount getUnrealisedPnL(Position position) {
+		//have to invert her
+		Amount marketPrice = position.getAvgPrice();
 
-		if (postion.isLong()) {
-
-			return (getMarketPrice(postion).minus(postion.getLongAvgPrice())).times(postion.getVolume(), Remainder.ROUND_EVEN);
-
-		} else if (postion.isShort()) {
-			return (getMarketPrice(postion).minus(postion.getShortAvgPrice())).times(postion.getVolume(), Remainder.ROUND_EVEN);
+		Amount avgPrice = getMarketPrice(position);
+		if (position.getMarket().getTradedCurrency() == position.getMarket().getBase()) {
+			avgPrice = (position.getAvgPrice()).invert();
+			marketPrice = getMarketPrice(position).invert();
 		}
 
-		else {
-			return new DiscreteAmount(0, postion.getMarket().getVolumeBasis());
+		return (position.isFlat()) ? new DiscreteAmount(0, position.getMarket().getVolumeBasis()) : ((avgPrice.minus(marketPrice)).times(position.getVolume(),
+				Remainder.ROUND_EVEN)).times(position.getMarket().getContractSize(), Remainder.ROUND_EVEN);
 
-		}
 	}
 
 	@Override
@@ -306,7 +369,7 @@ public class BasicPortfolioService implements PortfolioService {
 				}
 				marketValue = marketValue.plus(getMarketValue(position));
 
-				marketValues.put(position.getMarket().getQuote(), marketValue);
+				marketValues.put(position.getMarket().getTradedCurrency(), marketValue);
 
 			}
 		}
@@ -333,7 +396,7 @@ public class BasicPortfolioService implements PortfolioService {
 				}
 				unrealisedPnL = unrealisedPnL.plus(getUnrealisedPnL(position));
 
-				unrealisedPnLs.put(position.getMarket().getQuote(), unrealisedPnL);
+				unrealisedPnLs.put(position.getMarket().getTradedCurrency(), unrealisedPnL);
 
 			}
 		}
@@ -344,15 +407,15 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Transient
-	@Inject
-	public Amount getMarketValue() {
+	public Amount getMarketValue(Asset quoteAsset) {
 		//Amount marketValue;
 		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
 		//portfolio.get
-		Asset quoteAsset = portfolio.getBaseAsset();
+
 		//Asset quoteAsset = list.getBase();
 		//Asset baseAsset=new Asset();
 		//	Amount baseMarketValue = new DiscreteAmount(0, 0.01);
+
 		Amount baseMarketValue = DecimalAmount.ZERO;
 
 		ConcurrentHashMap<Asset, Amount> marketValues = getMarketValues();
@@ -372,12 +435,10 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Transient
-	@Inject
-	public Amount getUnrealisedPnL() {
+	public Amount getUnrealisedPnL(Asset quoteAsset) {
 		//Amount marketValue;
 		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
 		//portfolio.get
-		Asset quoteAsset = portfolio.getBaseAsset();
 		//Asset quoteAsset = list.getBase();
 		//Asset baseAsset=new Asset();
 		//	Amount baseMarketValue = new DiscreteAmount(0, 0.01);
@@ -400,10 +461,9 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Transient
-	public Amount getRealisedPnL() {
+	public Amount getRealisedPnL(Asset quoteAsset) {
 
 		//Listing list = Listing.forSymbol(config.getString("base.symbol", "USD"));
-		Asset quoteAsset = portfolio.getBaseAsset();
 		//Asset quoteAsset = list.getBase();
 		//Asset baseAsset=new Asset();
 		Amount baseRealisedPnL = DecimalAmount.ZERO;
@@ -427,17 +487,8 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Transient
-	public Amount getCashBalance() {
-		//Amount marketValue;
-		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
-		//Listing list = Listing.forSymbol(config.getString("base.symbol", "USD"));
-		Asset quoteAsset = portfolio.getBaseAsset();
-		//Asset quoteAsset = list.getBase();
-		//Asset baseAsset=new Asset();
+	public Amount getCashBalance(Asset quoteAsset) {
 		Amount baseCashBalance = DecimalAmount.ZERO;
-
-		//Amount baseCashBalance = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
-
 		ConcurrentHashMap<Asset, Amount> cashBalances = getCashBalances();
 
 		Iterator<Asset> it = cashBalances.keySet().iterator();
@@ -452,6 +503,53 @@ public class BasicPortfolioService implements PortfolioService {
 		}
 
 		return baseCashBalance;
+
+	}
+
+	@Override
+	@Transient
+	public Amount getAvailableBalance(Asset quoteAsset) {
+		Amount baseMarginBalance = DecimalAmount.ZERO;
+		ConcurrentHashMap<Asset, Amount> margins = getMargins(quoteAsset);
+
+		Iterator<Asset> it = margins.keySet().iterator();
+		while (it.hasNext()) {
+			Asset baseAsset = it.next();
+			Listing listing = Listing.forPair(baseAsset, quoteAsset);
+			Offer rate = quotes.getImpliedBestAskForListing(listing);
+			Amount localMargin = margins.get(baseAsset);
+			Amount baseMargin = localMargin.times(rate.getPrice(), Remainder.ROUND_EVEN);
+			baseMarginBalance = baseMarginBalance.plus(baseMargin);
+
+		}
+
+		return getCashBalance(quoteAsset).plus(baseMarginBalance);
+
+	}
+
+	@Transient
+	public ConcurrentHashMap<Asset, Amount> getMargins(Asset quoteAsset) {
+		Amount baseAvailableBalance = DecimalAmount.ZERO;
+		Amount totalMargin = DecimalAmount.ZERO;
+
+		//Amount baseCashBalance = getCashBalance(quoteAsset);
+		ConcurrentHashMap<Asset, Amount> margins = new ConcurrentHashMap<Asset, Amount>();
+		Iterator<Position> it = portfolio.getPositions().iterator();
+		while (it.hasNext()) {
+			Position position = it.next();
+			Asset baseAsset = position.getMarket().getTradedCurrency();
+			if (position.isOpen() && baseAsset.equals(quoteAsset)) {
+				// calucate total margin
+
+				if (margins.get(baseAsset) != null)
+					totalMargin = margins.get(baseAsset);
+				totalMargin = totalMargin.plus(FeesUtil.getMargin(position));
+
+			}
+			margins.put(baseAsset, totalMargin);
+		}
+
+		return margins;
 
 	}
 
@@ -490,48 +588,6 @@ public class BasicPortfolioService implements PortfolioService {
 		if (!position.isOpen()) {
 			//TODO remove subsrcption
 		}
-	}
-
-	@Override
-	public void handleSetExitPrice(Position position, Amount exitPrice, boolean force) throws PortfolioServiceException {
-
-		// there needs to be a position
-		if (position == null) {
-			throw new PortfolioServiceException("position does not exist: ");
-		}
-		if (!force && (position.getLongExitPrice() == null || position.getShortExitPrice() == null)) {
-			log.warn("no exit value was set for position: " + position);
-			return;
-		}
-
-		// we don't want to set the exitValue to Zero
-		if (exitPrice.isZero()) {
-			log.warn("setting of exit Pirice of zero is prohibited: " + exitPrice);
-			return;
-		}
-
-		if (!force) {
-			if (position.isShort() && exitPrice.compareTo(position.getShortExitPrice()) > 0) {
-				log.warn("exit value " + exitPrice + " is higher than existing exit value " + position.getShortExitPrice() + " of short position " + position);
-				return;
-			} else if (position.isLong() && exitPrice.compareTo(position.getLongExitPrice()) < 0) {
-				log.warn("exit value " + exitPrice + " is lower than existing exit value " + position.getLongExitPrice() + " of long position " + position);
-				return;
-			}
-		}
-
-		// exitValue cannot be lower than currentValue
-		Amount currentPrice = getMarketPrice(position);
-
-		if (position.isShort() && exitPrice.compareTo(currentPrice) < 0) {
-			throw new PortfolioServiceException("ExitValue (" + exitPrice + ") for short-position " + position + " is lower than currentValue: " + exitPrice);
-		} else if (position.isLong() && exitPrice.compareTo(currentPrice) > 0) {
-			throw new PortfolioServiceException("ExitValue (" + exitPrice + ") for long-position " + position + " is higher than currentValue: " + currentPrice);
-		}
-
-		//position.setExitPrice(exitPrice);
-
-		log.info("set exit value " + position + " to " + exitPrice);
 	}
 
 	@Override

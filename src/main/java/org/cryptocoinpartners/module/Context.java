@@ -202,6 +202,21 @@ public class Context {
 		epRuntime.sendEvent(e);
 	}
 
+	public void route(Event e) {
+		Instant now;
+		if (timeProvider != null) {
+			now = timeProvider.nextTime(e);
+			if (now != null)
+				advanceTime(now);
+			else
+				now = new Instant(epRuntime.getCurrentTime());
+		} else
+			now = new Instant(epRuntime.getCurrentTime());
+		e.publishedAt(now);
+
+		epRuntime.route(e);
+	}
+
 	public void destroy() {
 		privateDestroy();
 	}
@@ -263,6 +278,10 @@ public class Context {
 
 	public Instant getTime() {
 		return new Instant(epRuntime.getCurrentTime());
+	}
+
+	public EPRuntime getRunTime() {
+		return epRuntime;
 	}
 
 	private void subscribe(Object listener, Class<?> cls) {
@@ -461,7 +480,6 @@ public class Context {
 			}
 		});
 	}
-
 
 	@SuppressWarnings("unchecked")
 	private Injector childInjector(final @Nullable Configuration configParams, Module... modules) {

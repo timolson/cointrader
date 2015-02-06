@@ -3,7 +3,10 @@ package org.cryptocoinpartners.util;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.schema.Book;
@@ -13,6 +16,8 @@ import org.cryptocoinpartners.schema.Trade;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.joda.time.Interval;
+
+import com.espertech.esper.client.EPRuntime;
 
 /**
  Manages a Context into which Trades and Books from the database are replayed.  The Context time is also managed by this
@@ -54,22 +59,56 @@ public class Replay {
 	 queries the database for all Books and Trades which have start <= time <= stop, then publishes those
 	 Events in order of time to this Replay's Context
 	 */
+
 	public void run() {
 		final Instant start = replayTimeInterval.getStart().toInstant();
 		final Instant end = replayTimeInterval.getEnd().toInstant();
+		service = Executors.newFixedThreadPool(1);
+		//	Replay replayThread = new Replay();
+
 		if (replayTimeInterval.toDuration().isLongerThan(timeStep)) {
 			for (Instant now = start; !now.isAfter(end);) {
 				final Instant stepEnd = now.plus(timeStep);
-				replayStep(now, stepEnd);
+				ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime());
+				service.submit(replayStep);
 				now = stepEnd;
 			}
 		} else
 			replayStep(start, end);
 	}
 
+	private class ReplayStepRunnable implements Runnable {
+
+		private final Instant start;
+		private final Instant stop;
+		private final EPRuntime runtime;
+
+		public ReplayStepRunnable(Instant start, Instant stop, EPRuntime runtime) {
+			this.start = start;
+			this.stop = stop;
+			this.runtime = runtime;
+
+		}
+
+		@Override
+		public void run() {
+			Iterator<RemoteEvent> ite = queryEvents(start, stop).iterator();
+			while (ite.hasNext()) {
+				RemoteEvent event = ite.next();
+				//runtime.sendEvent(event);
+				context.publish(event);
+			}
+			context.advanceTime(stop);
+		}
+
+	}
+
 	private void replayStep(Instant start, Instant stop) {
-		for (RemoteEvent event : queryEvents(start, stop))
+		Iterator<RemoteEvent> ite = queryEvents(start, stop).iterator();
+		while (ite.hasNext()) {
+			RemoteEvent event = ite.next();
 			context.publish(event);
+		}
 		context.advanceTime(stop); // advance to the end of the time window to trigger any timer events
 	}
 
@@ -146,7 +185,8 @@ public class Replay {
 	}
 
 	private final Interval replayTimeInterval;
+	private static ExecutorService service;
 	private final Context context;
-	private static final Duration timeStep = Duration.standardDays(7); // how many rows from the DB to gather in one batch
+	private static final Duration timeStep = Duration.standardDays(28); // how many rows from the DB to gather in one batch
 	private final boolean orderByTimeReceived;
 }

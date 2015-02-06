@@ -20,7 +20,9 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
+import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.TransactionType;
+import org.cryptocoinpartners.util.FeesUtil;
 import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
@@ -64,7 +66,18 @@ public abstract class Order extends Event {
 
 	@Transient
 	public Amount getForcastedCommission() {
-		return forcastedFees;
+		if (commission == null)
+			setForcastedCommission(FeesUtil.getCommission(this));
+		return commission;
+
+	}
+
+	@Transient
+	public Amount getForcastedMargin() {
+		if (margin == null)
+			setForcastedMargin(FeesUtil.getMargin(this));
+		return margin;
+
 	}
 
 	@Nullable
@@ -99,12 +112,22 @@ public abstract class Order extends Event {
 
 	public abstract void setMarket(Market market);
 
+	protected void setPositionEffect(PositionEffect positionEffect) {
+		this.positionEffect = positionEffect;
+	}
+
 	protected void setParentOrder(Order order) {
 		this.parentOrder = order;
 	}
 
 	public FillType getFillType() {
 		return fillType;
+	}
+
+	public PositionEffect getPositionEffect() {
+
+		return positionEffect;
+
 	}
 
 	public String getComment() {
@@ -258,16 +281,20 @@ public abstract class Order extends Event {
 		this.fillType = fillType;
 	}
 
-	public void setForcastedCommission(Amount forcastedFees) {
-		this.forcastedFees = forcastedFees;
-	}
-
 	protected void setComment(String comment) {
 		this.comment = comment;
 	}
 
 	protected void setMarginType(MarginType marginType) {
 		this.marginType = marginType;
+	}
+
+	protected void setForcastedCommission(Amount commission) {
+		this.commission = commission;
+	}
+
+	protected void setForcastedMargin(Amount margin) {
+		this.margin = margin;
 	}
 
 	protected void setExpiration(Instant expiration) {
@@ -310,9 +337,11 @@ public abstract class Order extends Event {
 	private Collection<Transaction> transactions;
 	protected FillType fillType;
 	private MarginType marginType;
+	private Amount commission;
+	private Amount margin;
 	protected String comment;
+	protected PositionEffect positionEffect;
 	private Instant expiration;
-	private Amount forcastedFees;
 
 	private boolean force; // allow this order to override various types of panic
 	private boolean emulation; // ("allow order type emulation" [default, true] or "only use exchange's native functionality")

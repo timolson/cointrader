@@ -13,6 +13,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
+import org.cryptocoinpartners.util.FeesUtil;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -99,7 +100,17 @@ public class Fill extends RemoteEvent {
 
 	@Transient
 	public Amount getCommission() {
+		if (commission == null)
+			setCommission(FeesUtil.getCommission(this));
 		return commission;
+	}
+
+	@Transient
+	public Amount getMargin() {
+		if (margin == null)
+			setMargin(FeesUtil.getMargin(this));
+
+		return margin;
 	}
 
 	@Transient
@@ -134,8 +145,12 @@ public class Fill extends RemoteEvent {
 		this.volumeCount = volumeCount;
 	}
 
-	public void setCommission(Amount commission) {
+	protected void setCommission(Amount commission) {
 		this.commission = commission;
+	}
+
+	protected void setMargin(Amount margin) {
+		this.margin = margin;
 	}
 
 	private SpecificOrder order;
@@ -143,6 +158,7 @@ public class Fill extends RemoteEvent {
 	private long priceCount;
 	private long volumeCount;
 	private Amount commission;
+	private Amount margin;
 	private Collection<Transaction> transactions;
 
 }

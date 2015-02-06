@@ -7,6 +7,7 @@ import java.util.Iterator;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.cryptocoinpartners.schema.Bar;
+import org.cryptocoinpartners.schema.Market;
 
 import com.espertech.esper.client.EventBean;
 import com.espertech.esper.client.EventType;
@@ -39,6 +40,7 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 	private final ScheduleSlot scheduleSlot;
 	private final ExprNode timestampExpression;
 	private final ExprNode valueExpression;
+	private ExprNode marketExpression;
 	private final EventBean[] eventsPerStream = new EventBean[1];
 
 	private EPStatementHandleCallback handle;
@@ -48,12 +50,22 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 	private Double last;
 	private Double max;
 	private Double min;
+	private Market market;
 	private EventBean lastEvent;
 
 	public OHLCBarPlugInView(AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext, ExprNode timestampExpression, ExprNode valueExpression) {
 		this.agentInstanceViewFactoryContext = agentInstanceViewFactoryContext;
 		this.timestampExpression = timestampExpression;
 		this.valueExpression = valueExpression;
+		this.scheduleSlot = agentInstanceViewFactoryContext.getStatementContext().getScheduleBucket().allocateSlot();
+	}
+
+	public OHLCBarPlugInView(AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext, ExprNode timestampExpression, ExprNode valueExpression,
+			ExprNode marketExpression) {
+		this.agentInstanceViewFactoryContext = agentInstanceViewFactoryContext;
+		this.timestampExpression = timestampExpression;
+		this.valueExpression = valueExpression;
+		this.marketExpression = marketExpression;
 		this.scheduleSlot = agentInstanceViewFactoryContext.getStatementContext().getScheduleBucket().allocateSlot();
 	}
 
@@ -68,7 +80,9 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 			Long timestamp = (Long) timestampExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
 			Long timestampMinute = removeSeconds(timestamp);
 			double value = (Double) valueExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
-
+			Market market;
+			if (marketExpression != null)
+				market = (Market) marketExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
 			// test if this minute has already been published, the event is too late
 			if ((cutoffTimestampMinute != null) && (timestampMinute <= cutoffTimestampMinute)) {
 				continue;
@@ -106,7 +120,7 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 
 	@Override
 	public View cloneView() {
-		return new OHLCBarPlugInView(agentInstanceViewFactoryContext, timestampExpression, valueExpression);
+		return new OHLCBarPlugInView(agentInstanceViewFactoryContext, timestampExpression, valueExpression, marketExpression);
 	}
 
 	private void applyValue(double value) {

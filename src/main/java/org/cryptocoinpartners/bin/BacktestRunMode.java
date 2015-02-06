@@ -2,6 +2,7 @@ package org.cryptocoinpartners.bin;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.module.BasicQuoteService;
@@ -31,22 +32,24 @@ public class BacktestRunMode extends RunMode {
 	@Parameter(description = "Strategy name to load", arity = 1, required = true)
 	public List<String> strategyNames;
 	private Context context;
-	private final Instant start = new DateTime(2013, 1, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
-	private final Instant end = new DateTime(2014, 1, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+	private static ExecutorService service;
+	private final Instant start = new DateTime(2013, 12, 10, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+	private final Instant end = new DateTime(2015, 1, 1, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 	//private final Instant start = new DateTime(2014, 9, 9, 23, 0, 0, 0, DateTimeZone.UTC).toInstant();
 	//private final Instant end = new DateTime(2014, 9, 10, 6, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
 	@Parameter(names = { "-p", "--position" }, arity = 2, description = "specify initial portfolio positions as {Exchange}:{Asset} {Amount} e.g. BITFINEX:BTC 1.0")
-	public List<String> positions = Arrays.asList("BITSTAMP:USD", "1000000");
+	public List<String> positions = Arrays.asList("OKCOIN:BTC", "100000000000");
 
 	@Parameter(names = { "-" }, description = "No-op switch used to end list of positions before supplying the strategy name")
 	boolean noop = false;
 
 	@Override
 	public void run() {
-		Replay replay = Replay.between(start, end, true);
 		//PersistUtil.purgeTransactions();
 		//Replay replay = Replay.all(true);
+		Replay replay = Replay.between(start, end, true);
+
 		context = replay.getContext();
 		context.attach(XchangeAccountService.class);
 		context.attach(BasicQuoteService.class);
@@ -58,6 +61,10 @@ public class BacktestRunMode extends RunMode {
 			// context.getInjector().getInstance(cls)
 
 		}
+		// this should be run on seperate thread
+		//service = Executors.newSingleThreadExecutor();
+		//	Replay replayThread = new Replay();
+		//service.submit(replay);
 
 		replay.run();
 		//System.exit(0);
@@ -72,12 +79,11 @@ public class BacktestRunMode extends RunMode {
 		for (int i = 0; i < positions.size() - 1;) {
 			Holding holding = Holding.forSymbol(positions.get(i++));
 			//	Long str = (positions.get(i++));
-			DiscreteAmount amount = new DiscreteAmount(Long.parseLong(positions.get(i++)), 0.01);
+			DiscreteAmount amount = new DiscreteAmount(Long.parseLong(positions.get(i++)), 0.000000001);
 			DiscreteAmount price = new DiscreteAmount(0, 0.01);
 			Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
 			context.publish(initialCredit);
 
 		}
 	}
-
 }

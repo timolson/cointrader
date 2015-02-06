@@ -18,10 +18,10 @@
         <appender-ref ref="CONSOLE"/>
     </root>
 
-    <!--<logger name="org.hibernate.ejb.HibernatePersistence" level="debug"/>-->
-    <!--<logger name="org.hibernate.type" level="ALL" />-->
- 	<!--<logger name="org.hibernate" level="DEBUG" />-->
-
+  <!--  <logger name="org.hibernate.ejb.HibernatePersistence" level="trace"/>-->
+    <!-- <logger name="org.hibernate.type" level="ALL" />-->
+ 	 <!-- < <logger name="org.hibernate" level="TRACE" />-->
+ 	 <!-- <   <logger name="com.espertech" level="TRACE"/>-->
     <logger name="org.cryptocoinpartners" level="debug"/>
     <!--<logger name="org.cryptocoinpartners.module" level="debug"/>-->
    <!-- <logger name="org.hibernate.tool.hbm2ddl.SchemaExport" level="off"/>-->

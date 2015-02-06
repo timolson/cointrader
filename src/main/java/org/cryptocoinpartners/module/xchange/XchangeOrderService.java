@@ -10,6 +10,7 @@ import javax.inject.Singleton;
 
 import org.cryptocoinpartners.enumeration.OrderState;
 import org.cryptocoinpartners.module.BaseOrderService;
+import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.util.XchangeUtil;
@@ -80,13 +81,13 @@ public class XchangeOrderService extends BaseOrderService {
 	}
 
 	@Override
-	public void handleCancelSpecificOrders(SpecificOrder specificOrder) {
+	public void handleCancelAllSpecificOrders(Portfolio portfolio, Market market) {
 		// TODO Auto-generated method stub
 
 	}
 
 	@Override
-	public void handleCancelAllSpecificOrders(Portfolio portfolio) {
+	public void handleCancelSpecificOrder(SpecificOrder specificOrder) {
 		// TODO Auto-generated method stub
 
 	}

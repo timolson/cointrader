@@ -4,6 +4,8 @@ import java.util.Collection;
 
 import org.cryptocoinpartners.enumeration.OrderState;
 import org.cryptocoinpartners.schema.Amount;
+import org.cryptocoinpartners.schema.GeneralOrder;
+import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
@@ -16,13 +18,15 @@ public interface OrderService {
 
 	public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio);
 
-	public void handleCancelSpecificOrders(SpecificOrder specificOrder);
+	public void handleCancelSpecificOrder(SpecificOrder specificOrder);
 
-	public void handleCancelAllStopOrders(Portfolio portfolio);
+	public void handleCancelGeneralOrder(GeneralOrder generalOrder);
 
-	public void handleCancelAllSpecificOrders(Portfolio portfolio);
+	public void handleCancelAllStopOrders(Portfolio portfolio, Market market);
 
-	public void adjustStopLoss(Amount amount);
+	public void handleCancelAllSpecificOrders(Portfolio portfolio, Market market);
+
+	public void adjustStopLoss(Amount price, Amount stopAdjustment);
 
 	// DO PLENTY OF LOGGING IN THIS METHOD
 	// initialize data interface with Xchange
@@ -46,5 +50,7 @@ public interface OrderService {
 	//                 - this can be based on data from time of placement, or from the current data interface
 
 	public OrderState getOrderState(Order o);
+
+	void cancelOrder(Order order);
 
 }

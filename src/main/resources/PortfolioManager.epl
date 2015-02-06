@@ -14,7 +14,7 @@ select
 from
 	SubscribePortfolio;
 
-
+@Priority(1)
 @Name('LOG_PORTFOLIO_VALUE')
 @Subscriber(className='org.cryptocoinpartners.schema.PortfolioManager$DataSubscriber')
 on pattern

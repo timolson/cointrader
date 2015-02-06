@@ -13,7 +13,7 @@ import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Asset;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Exchange;
-import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Position;
 import org.cryptocoinpartners.schema.Transaction;
 
@@ -40,7 +40,7 @@ public interface PortfolioService {
 	public DiscreteAmount getLastTrade();
 
 	@Transient
-	public Amount getCashBalance();
+	public Amount getCashBalance(Asset quoteAsset);
 
 	@Transient
 	@SuppressWarnings("null")
@@ -57,15 +57,13 @@ public interface PortfolioService {
 	public Amount getMarketValue(Position postion);
 
 	@Transient
-	public Amount getMarketValue();
+	public Amount getMarketValue(Asset quoteAsset);
 
 	void exitPosition(Position position) throws Exception;
 
 	void reducePosition(Position position, Amount amount);
 
 	void handleReducePosition(Position position, Amount amount) throws Exception;
-
-	void handleSetExitPrice(Position position, Amount exitPrice, boolean force) throws PortfolioServiceException;
 
 	void handleSetMargin(Position position) throws Exception;
 
@@ -77,18 +75,20 @@ public interface PortfolioService {
 
 	ConcurrentHashMap<Asset, Amount> getRealisedPnLs();
 
-	Amount getRealisedPnL(Asset asset);
+	Amount getRealisedPnL(Asset quoteAsset);
 
-	Amount getRealisedPnL();
-
-	ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Market, Amount>>> getRealisedPnLByMarket();
+	ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>> getRealisedPnLByMarket();
 
 	ConcurrentHashMap<Asset, Amount> getUnrealisedPnLs();
 
 	Amount getUnrealisedPnL(Position postion);
 
-	Amount getUnrealisedPnL();
+	Amount getUnrealisedPnL(Asset quoteAsset);
 
 	Collection<Position> getPositions(Asset asset, Exchange exchange);
+
+	ConcurrentHashMap<Asset, Amount> getAvailableBalances();
+
+	Amount getAvailableBalance(Asset quoteAsset);
 
 }

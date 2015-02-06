@@ -19,8 +19,8 @@ import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.MarketDataError;
+import org.cryptocoinpartners.schema.Prompt;
 import org.cryptocoinpartners.util.PersistUtil;
-import org.cryptocoinpartners.util.PersistUtilHelper;
 import org.cryptocoinpartners.util.RateLimiter;
 import org.cryptocoinpartners.util.XchangeUtil;
 import org.joda.time.Duration;
@@ -239,7 +239,7 @@ public class XchangeData {
 		private final Market market;
 		private final CurrencyPair pair;
 		private long lastTradeTime;
-		private final String prompt;
+		private final Prompt prompt;
 		private long lastTradeId;
 	}
 
