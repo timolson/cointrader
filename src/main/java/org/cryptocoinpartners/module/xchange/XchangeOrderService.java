@@ -8,6 +8,8 @@ import java.util.Date;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
+import com.xeiam.xchange.exceptions.NotYetImplementedForExchangeException;
+import com.xeiam.xchange.service.polling.trade.PollingTradeService;
 import org.cryptocoinpartners.enumeration.OrderState;
 import org.cryptocoinpartners.module.BaseOrderService;
 import org.cryptocoinpartners.schema.Market;
@@ -17,12 +19,10 @@ import org.cryptocoinpartners.util.XchangeUtil;
 import org.slf4j.Logger;
 
 import com.xeiam.xchange.Exchange;
-import com.xeiam.xchange.NotYetImplementedForExchangeException;
 import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.Order;
 import com.xeiam.xchange.dto.trade.LimitOrder;
 import com.xeiam.xchange.dto.trade.MarketOrder;
-import com.xeiam.xchange.service.polling.PollingTradeService;
 
 /**
  * This module routes SpecificOrders through Xchange
