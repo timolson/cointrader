@@ -31,6 +31,33 @@ Coin Trader requires Java JDK 1.7, Maven, and a SQL database (MySQL default).
 See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more information.  
 There's no mailing list, so [open a new issue](https://github.com/timolson/cointrader/issues/new) for anything, help or just discussion.  Tag it with "Question" and I'll follow through with you.
 
+#### OHLC Bars
+cointrader-esper.cfg.xml
+       <plugin-view factory-class="org.cryptocoinpartners.esper.OHLCBarPlugInViewFactory" name="ohlcbar" namespace="custom"/>  
+epl
+* Create an esper named window to add the OHLC bars into
+
+create window OHLCShortWindow.win:length(10)
+as
+	select *
+from
+	Bar;
+* Add the  OHLC bars to it
+
+insert into OHLCShortWindow
+select * 
+ from Trade.custom:ohlcbar(timestamp, priceCountAsDouble, market);
+
+* Select values from OHLC bar window
+select * from OHLCShortWindow as ohlc 
+
+	
+#### TALIB Set Up
+cointrader-esper.cfg.xml
+	<plugin-aggregation-function name="talib" function-class="org.cryptocoinpartners.esper.GenericTALibFunction"/>  
+epl
+select coalesce(talib("atr", max, min, last, 9),0) as atr from OHLCShortWindow;
+
 #### Console Demo
 
 The Coin Trader Console gives you a peek into the engine.
