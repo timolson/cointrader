@@ -31,7 +31,7 @@ Coin Trader requires Java JDK 1.7, Maven, and a SQL database (MySQL default).
 See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more information.  
 There's no mailing list, so [open a new issue](https://github.com/timolson/cointrader/issues/new) for anything, help or just discussion.  Tag it with "Question" and I'll follow through with you.
 
-#### OHLC Bars
+#### 24Hr OHLC Bars
 cointrader-esper.cfg.xml
 ```
 <plugin-view factory-class="org.cryptocoinpartners.esper.OHLCBarPlugInViewFactory" name="ohlcbar" namespace="custom"/>  
