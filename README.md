@@ -14,6 +14,7 @@
 * Backtesting
 * Accounting
 * Library of quantitative indicators (TaLib)
+* Bitcoin derivatives
 
 Coin Trader's future goals include:
 * Reconciliation
@@ -31,40 +32,28 @@ Coin Trader requires Java JDK 1.7, Maven, and a SQL database (MySQL default).
 See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more information.  
 There's no mailing list, so [open a new issue](https://github.com/timolson/cointrader/issues/new) for anything, help or just discussion.  Tag it with "Question" and I'll follow through with you.
 
-#### 24Hr OHLC Bars
-cointrader-esper.cfg.xml
+#### Automated Trading
+
+To implement signals and automated strategies, you connect [Esper](http://esper.codehaus.org/tutorials/tutorial/tutorial.html) event queries to Java code like this:
+
+```java
+@When( "select avg(priceAsDouble) from Trade.win:time(30 sec)" )
+void checkMovingAverage( double avg )
+{
+  if( avg > trigger )
+    context.publish( new MyIndicator(5.31) );
+}
+
+@When( "select * from MyIndicator where myIndicatorValue > 5.0" )
+void enterTrade( MyIndicator s )
+{
+  orders.create( Listings.BTC_USD, 1.0 )
+        .withLimit( 650.25 )
+        .place();
+}
 ```
-<plugin-view factory-class="org.cryptocoinpartners.esper.OHLCBarPlugInViewFactory" name="ohlcbar" namespace="custom"/>  
-```
-epl
-* Create an esper named window to add the OHLC bars into
-```
-create window OHLCShortWindow.win:length(10)
-as
-	select *
-from
-	Bar;
-```
-* Add the  OHLC bars to it
-```
-insert into OHLCShortWindow
-select * 
- from Trade.custom:ohlcbar(timestamp, priceCountAsDouble, market);
-```
-* Select values from OHLC bar window
-```
-select * from OHLCShortWindow as ohlc 
-```
-	
-#### TALIB Set Up
-cointrader-esper.cfg.xml
-```
-<plugin-aggregation-function name="talib" function-class="org.cryptocoinpartners.esper.GenericTALibFunction"/>  
-```
-epl
-```
-select coalesce(talib("atr", max, min, last, 9),0) as atr from OHLCShortWindow;
-```
+
+You then attach this class to a [Context](https://github.com/timolson/cointrader/wiki/The-Context-Class) to receive Esper event rows as method invocations.
 
 #### Console Demo
 
@@ -164,26 +153,5 @@ ct> exit
 $
 ```
 
-
-#### Automated Trading
-
-To implement signals and automated strategies, you connect [Esper](http://esper.codehaus.org/tutorials/tutorial/tutorial.html) event queries to Java code like this:
-
-```java
-@When( "select avg(priceAsDouble) from Trade.win:time(30 sec)" )
-void checkMovingAverage( double avg )
-{
-  if( avg > trigger )
-    context.publish( new MyIndicator(5.31) );
-}
-
-@When( "select * from MyIndicator where myIndicatorValue > 5.0" )
-void enterTrade( MyIndicator s )
-{
-  orders.create( Listings.BTC_USD, 1.0 )
-        .withLimit( 650.25 )
-        .place();
-}
-```
 
 See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more information, or jump to [Setup](https://github.com/timolson/cointrader/wiki/).
