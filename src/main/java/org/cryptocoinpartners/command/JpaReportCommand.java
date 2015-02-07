@@ -22,6 +22,7 @@ public class JpaReportCommand extends ReportCommand {
     }
 
 
+    @Override
     public void parse(String commandArguments) {
         queryStr = commandArguments;
     }
@@ -34,6 +35,7 @@ public class JpaReportCommand extends ReportCommand {
     }
 
 
+    @Override
     protected TableOutput runReport(Report report) {
         try {
             return super.runReport(report);

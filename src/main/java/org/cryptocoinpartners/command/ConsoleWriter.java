@@ -55,6 +55,7 @@ public class ConsoleWriter extends PrintWriter {
 
     private static class ConsolePrintWriter extends Writer {
         @SuppressWarnings("NullableProblems")
+        @Override
         public void write(char[] cbuf, int off, int len) throws IOException {
             String output = new String(cbuf, off, len);
             try {
@@ -67,10 +68,11 @@ public class ConsoleWriter extends PrintWriter {
             }
         }
 
-
+        @Override
         public void flush() throws IOException { console.flush(); }
-        public void close() throws IOException { console.flush(); }
 
+        @Override
+        public void close() throws IOException { console.flush(); }
 
         private ConsolePrintWriter(ConsoleReader console) { this.console = console; }
 

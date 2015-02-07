@@ -9,22 +9,24 @@ import org.apache.commons.lang.StringUtils;
 @SuppressWarnings("UnusedDeclaration")
 public class HelpCommand extends CommandBase {
 
+    @Override
     public String getUsageHelp() {
         return "help [command-name]";
     }
 
-
+    @Override
     public String getExtraHelp() {
         return "Without a command-name, help lists all available commands.  If a command-name is specified, " +
                        "detailed help is given for that command.";
     }
 
 
+    @Override
     public void parse(String commandArguments) {
         commandName = commandArguments.trim();
     }
 
-
+    @Override
     public void run() {
         if( StringUtils.isBlank(commandName) ) {
             out.println("Type \"help {command}\" for more detailed information.");

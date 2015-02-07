@@ -11,16 +11,19 @@ import javax.inject.Inject;
 @SuppressWarnings("UnusedDeclaration")
 public class CsvArgsListener extends CsvBaseListener {
 
+    @Override
     public void exitStartDate(@NotNull CsvParser.StartDateContext ctx) {
         command.startDate = ctx.getText();
     }
 
 
+    @Override
     public void exitTickDuration(@NotNull CsvParser.TickDurationContext ctx) {
         command.endDate = ctx.getText();
     }
 
 
+    @Override
     public void exitFilename(@NotNull CsvParser.FilenameContext ctx) {
         command.filename = ctx.getText();
     }
