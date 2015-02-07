@@ -32,6 +32,29 @@ Coin Trader requires Java JDK 1.7, Maven, and a SQL database (MySQL default).
 See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more information.  
 There's no mailing list, so [open a new issue](https://github.com/timolson/cointrader/issues/new) for anything, help or just discussion.  Tag it with "Question" and I'll follow through with you.
 
+#### Automated Trading
+
+To implement signals and automated strategies, you connect [Esper](http://esper.codehaus.org/tutorials/tutorial/tutorial.html) event queries to Java code like this:
+
+```java
+@When( "select avg(priceAsDouble) from Trade.win:time(30 sec)" )
+void checkMovingAverage( double avg )
+{
+  if( avg > trigger )
+    context.publish( new MyIndicator(5.31) );
+}
+
+@When( "select * from MyIndicator where myIndicatorValue > 5.0" )
+void enterTrade( MyIndicator s )
+{
+  orders.create( Listings.BTC_USD, 1.0 )
+        .withLimit( 650.25 )
+        .place();
+}
+```
+
+You then attach this class to a [Context](https://github.com/timolson/cointrader/wiki/The-Context-Class) to receive Esper event rows as method invocations.
+
 #### Console Demo
 
 The Coin Trader Console gives you a peek into the engine.
@@ -130,28 +153,5 @@ ct> exit
 $
 ```
 
-
-#### Automated Trading
-
-To implement signals and automated strategies, you connect [Esper](http://esper.codehaus.org/tutorials/tutorial/tutorial.html) event queries to Java code like this:
-
-```java
-@When( "select avg(priceAsDouble) from Trade.win:time(30 sec)" )
-void checkMovingAverage( double avg )
-{
-  if( avg > trigger )
-    context.publish( new MyIndicator(5.31) );
-}
-
-@When( "select * from MyIndicator where myIndicatorValue > 5.0" )
-void enterTrade( MyIndicator s )
-{
-  orders.create( Listings.BTC_USD, 1.0 )
-        .withLimit( 650.25 )
-        .place();
-}
-```
-
-You then attach this class to a [Context](https://github.com/timolson/cointrader/wiki/The-Context-Class) to receive Esper event rows as method invocations.
 
 See the [Wiki](https://github.com/timolson/cointrader/wiki/Home) for more information, or jump to [Setup](https://github.com/timolson/cointrader/wiki/).
