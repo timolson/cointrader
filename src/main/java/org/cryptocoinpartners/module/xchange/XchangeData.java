@@ -1,25 +1,13 @@
 package org.cryptocoinpartners.module.xchange;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
-
-import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
-
+import com.xeiam.xchange.currency.CurrencyPair;
+import com.xeiam.xchange.dto.marketdata.OrderBook;
+import com.xeiam.xchange.dto.marketdata.Trades;
+import com.xeiam.xchange.dto.trade.LimitOrder;
+import com.xeiam.xchange.service.polling.marketdata.PollingMarketDataService;
 import org.apache.commons.configuration.Configuration;
 import org.cryptocoinpartners.module.Context;
-import org.cryptocoinpartners.schema.Book;
-import org.cryptocoinpartners.schema.Exchange;
-import org.cryptocoinpartners.schema.Listing;
-import org.cryptocoinpartners.schema.Market;
-import org.cryptocoinpartners.schema.MarketDataError;
-import org.cryptocoinpartners.schema.Prompt;
+import org.cryptocoinpartners.schema.*;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.RateLimiter;
 import org.cryptocoinpartners.util.XchangeUtil;
@@ -27,11 +15,16 @@ import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
 
-import com.xeiam.xchange.currency.CurrencyPair;
-import com.xeiam.xchange.dto.marketdata.OrderBook;
-import com.xeiam.xchange.dto.marketdata.Trades;
-import com.xeiam.xchange.dto.trade.LimitOrder;
-import com.xeiam.xchange.service.polling.PollingMarketDataService;
+import javax.annotation.Nullable;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import javax.persistence.EntityManager;
+import javax.persistence.TypedQuery;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 
 /**
  * @author Tim Olson
