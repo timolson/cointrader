@@ -10,7 +10,7 @@ public class AdHocJpaReport extends JpaReport {
         this.query = query;
     }
 
-
+    @Override
     protected Query getQuery()
     {
         return new Query(null,query);

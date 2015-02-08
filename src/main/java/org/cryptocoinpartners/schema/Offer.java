@@ -31,7 +31,7 @@ public class Offer extends PriceData {
         super(time, timeReceived, null, market, priceCount, volumeCount);
     }
 
-
+    @Override
     public String toString() {
         return "Offer{" +
                        ", market=" + getMarket() +

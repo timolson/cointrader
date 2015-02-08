@@ -16,6 +16,7 @@ import java.util.List;
 public class AdHocJpaReportRunMode extends ReportRunMode
 {
 
+    @Override
     protected Report getReport() {
         Iterator<String> quotedStringIter = new Iterator<String>() {
             private Iterator<String> queryIter = query.iterator();

@@ -5,5 +5,7 @@ package org.cryptocoinpartners.command;
  */
 @SuppressWarnings("UnusedDeclaration")
 public class UnwatchCommand extends WatchCommandBase {
+
+    @Override
     public void run() { notifications.unwatch(listing); }
 }

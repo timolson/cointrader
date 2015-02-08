@@ -10,6 +10,7 @@ import org.cryptocoinpartners.report.Report;
  */
 public abstract class ReportCommand extends CommandBase {
 
+    @Override
     public void run() {
         IoUtil.outputAscii(runReport(getReport()));
     }

@@ -23,10 +23,11 @@ import java.util.Set;
  */
 public abstract class AntlrCommandBase extends CommandBase {
 
-
+    @Override
     public abstract String getUsageHelp();
 
 
+    @Override
     public void parse( String commandArguments )
     {
         initCommandArgs();
@@ -130,6 +131,8 @@ public abstract class AntlrCommandBase extends CommandBase {
 
 
     private class SelfProvider implements Provider<AntlrCommandBase> {
+
+        @Override
         public AntlrCommandBase get() {
             return AntlrCommandBase.this;
         }

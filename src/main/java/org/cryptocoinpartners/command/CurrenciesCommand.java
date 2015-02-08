@@ -10,11 +10,12 @@ import java.util.ArrayList;
  */
 public class CurrenciesCommand extends CommandBase {
 
+    @Override
     public String getExtraHelp() {
         return "Lists all known Currency symbols along with the Currency's basis";
     }
 
-
+    @Override
     public void run() {
         ArrayList<String> lines = new ArrayList<>();
         for( String symbol : Currency.allSymbols() ) {

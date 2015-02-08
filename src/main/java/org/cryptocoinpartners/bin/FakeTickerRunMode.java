@@ -12,6 +12,8 @@ import org.cryptocoinpartners.module.SaveMarketData;
 @SuppressWarnings("UnusedDeclaration")
 @Parameters(commandNames = "mockticker", commandDescription = "Launch a test ticker and save bogus data to the database")
 public class FakeTickerRunMode extends RunMode {
+
+    @Override
     public void run() {
         Context context = Context.create();
         context.attach(MockTicker.class);

@@ -10,6 +10,7 @@ import com.xeiam.xchange.dto.marketdata.Trades;
 public class BitfinexHelper extends XchangeDataHelperBase
 {
     /** Send the lastTradeTime in millis as the first parameter to getTrades() */
+    @Override
     public ArrayList<Object> getTradesParameters( CurrencyPair pair, final long lastTradeTime, long lastTradeId )
     {
     	return new ArrayList<Object>() {{ add(lastTradeTime);  }};
@@ -19,5 +20,6 @@ public class BitfinexHelper extends XchangeDataHelperBase
     }
 
 
+    @Override
     public void handleTrades( Trades xchangeTrades ) { }
 }

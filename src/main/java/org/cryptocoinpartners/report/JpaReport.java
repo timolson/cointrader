@@ -20,12 +20,11 @@ public abstract class JpaReport implements Report {
         return limit;
     }
 
-
     public void setLimit(int limit) {
         this.limit = limit;
     }
 
-
+    @Override
     public TableOutput runReport() {
         final Query query = getQuery();
         final List<String[]> rowStrings = new ArrayList<>();

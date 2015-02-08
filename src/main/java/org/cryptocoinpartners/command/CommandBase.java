@@ -16,9 +16,10 @@ import java.util.*;
  */
 public abstract class CommandBase implements Command {
 
+    @Override
     public String getUsageHelp() { return StringUtils.join(getCommandNames(getClass()),"|"); }
 
-
+    @Override
     public void parse(String commandArguments) { }
 
 

@@ -12,6 +12,8 @@ import org.cryptocoinpartners.schema.Panic;
 @SuppressWarnings("UnusedDeclaration")
 @Parameters(commandNames = "hello",commandDescription = "Example runmode which says hello to the world and to you")
 public class HelloRunMode extends RunMode {
+
+    @Override
     public void run() {
         Context context = Context.create();
         context.attach(HelloWorld.class);
