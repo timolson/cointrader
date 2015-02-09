@@ -17,6 +17,7 @@
 * Bitcoin derivatives (Futures & Swaps)
 * Implied price calculation across multiple markets
 * Base currency accounting
+* 24 Hr OHLC bars
 
 Coin Trader's future goals include:
 * Reconciliation
