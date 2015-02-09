@@ -14,7 +14,9 @@
 * Backtesting
 * Accounting
 * Library of quantitative indicators (TaLib)
-* Bitcoin derivatives
+* Bitcoin derivatives (Futures & Swaps)
+* Implied price calculation across multiple markets
+* Base currency accounting
 
 Coin Trader's future goals include:
 * Reconciliation
