@@ -183,6 +183,10 @@ public abstract class BaseOrderService implements OrderService {
 				break;
 			case REJECTED:
 				break;
+            default:
+                log.warn("Unknown order state: " + orderState);
+                break;
+
 		}
 
 	}
@@ -192,7 +196,8 @@ public abstract class BaseOrderService implements OrderService {
 		Order order = fill.getOrder();
 		//PersitOrderFill(order);
 		if (order.getParentOrder() != null) {
-			switch (order.getParentOrder().getFillType()) {
+            FillType fillType = order.getParentOrder().getFillType();
+            switch (fillType) {
 				case GOOD_TIL_CANCELLED:
 					break;
 				case GTC_OR_MARGIN_CAP:
@@ -214,8 +219,11 @@ public abstract class BaseOrderService implements OrderService {
 						placeOrder(stopOrder);
 					}
 					break;
+                default:
+                    log.warn("Unknown fill type: " + fillType);
+                    break;
 
-			}
+            }
 		}
 
 		if (log.isInfoEnabled())
@@ -266,7 +274,8 @@ public abstract class BaseOrderService implements OrderService {
 			generalOrder.setMarket(offer.getMarket());
 		}
 
-		switch (generalOrder.getFillType()) {
+        FillType fillType = generalOrder.getFillType();
+        switch (fillType) {
 			case GOOD_TIL_CANCELLED:
 				throw new NotImplementedException();
 			case GTC_OR_MARGIN_CAP:
@@ -295,8 +304,11 @@ public abstract class BaseOrderService implements OrderService {
 				log.info("Routing Stop Loss order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
 				placeOrder(specificOrder);
 				break;
+            default:
+                log.warn("Unknown fill type: " + fillType);
+                break;
 
-		}
+        }
 
 	}
 
@@ -379,7 +391,8 @@ public abstract class BaseOrderService implements OrderService {
 				generalOrder.getComment());
 		builder.withPositionEffect(generalOrder.getPositionEffect());
 
-		switch (generalOrder.getFillType()) {
+        FillType fillType = generalOrder.getFillType();
+        switch (fillType) {
 			case GOOD_TIL_CANCELLED:
 				break;
 			case GTC_OR_MARGIN_CAP:
@@ -400,8 +413,11 @@ public abstract class BaseOrderService implements OrderService {
 				DiscreteAmount discreteStopLossLimit = limitPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
 				builder.withLimitPrice(discreteStopLossLimit);
 				break;
+            default:
+                log.warn("Unknown fill type: " + fillType);
+                break;
 
-		}
+        }
 
 		SpecificOrder specificOrder = builder.getOrder();
 		specificOrder.copyCommonOrderProperties(generalOrder);
@@ -479,6 +495,7 @@ public abstract class BaseOrderService implements OrderService {
 			default:
 				log.warn("Unknown order state: " + childOrderState);
 				break;
+
 		}
 	}
 
@@ -508,7 +525,8 @@ public abstract class BaseOrderService implements OrderService {
 	protected final void CreateTransaction(EntityBase entity) {
 		Transaction transaction = null;
 		Order order;
-		switch (entity.getClass().getSimpleName()) {
+        String simpleName = entity.getClass().getSimpleName();
+        switch (simpleName) {
 
 			case "SpecificOrder":
 				order = (Order) entity;
@@ -533,6 +551,9 @@ public abstract class BaseOrderService implements OrderService {
 					e.printStackTrace();
 				}
 				break;
+            default:
+                log.warn("Unknown simple name: " + simpleName);
+                break;
 
 		}
 

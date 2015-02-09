@@ -17,21 +17,23 @@ import java.util.Properties;
 @SuppressWarnings("UnusedDeclaration")
 public class SetCommand extends CommandBase {
 
+    @Override
     public String getUsageHelp() {
         return "set [{key}={value}]";
     }
 
-
+    @Override
     public String getExtraHelp() {
         return "When invoked without an argument, 'set' lists all the current settings.  When an argument is passed, 'set' parses the argument as a line in a Properties file and attempts to set the Configuration property as specified.  Setting a key to a blank value overrides the value to be empty.  Use 'unset' to remove an overridden setting and revert to the default value for a key.";
     }
 
 
+    @Override
     public void parse(String commandArguments) {
         arg = commandArguments;
     }
 
-
+    @Override
     public void run() {
         if( StringUtils.isBlank(arg) )
             dumpConfig();

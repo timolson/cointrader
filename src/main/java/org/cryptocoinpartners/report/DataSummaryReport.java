@@ -5,6 +5,7 @@ package org.cryptocoinpartners.report;
  */
 public class DataSummaryReport extends JpaReport {
 
+    @Override
     protected Query getQuery() {
         return new Query(
                     new String[]{"Market", "Num Trades", "Num Books"},

@@ -9,6 +9,8 @@ import org.cryptocoinpartners.report.Report;
 @Parameters(commandNames = {"data", "data-summary", "report-data"},
             commandDescription = "Shows how many trades have been recorded in the database for each Market")
 public class ReportDataRunMode extends ReportRunMode {
+
+    @Override
     protected Report getReport() {
         return injector.getInstance(DataSummaryReport.class);
     }

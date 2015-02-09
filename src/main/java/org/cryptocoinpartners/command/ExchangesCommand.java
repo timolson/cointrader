@@ -11,10 +11,13 @@ import java.util.*;
 @SuppressWarnings("UnusedDeclaration")
 public class ExchangesCommand extends CommandBase {
 
+    @Override
     public String getUsageHelp() { return "exchanges"; }
+
+    @Override
     public String getExtraHelp() { return "prints all exchanges available"; }
 
-
+    @Override
     public void run() {
         Set<String> symbols = new HashSet<>();
         for( Market market : Market.findAll() )

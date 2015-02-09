@@ -16,6 +16,7 @@ import java.lang.reflect.Field;
  */
 public class LogInjector implements Module {
 
+    @Override
     public void configure(Binder binder) {
         // SLF4J logger injection
         binder.bind(Logger.class).toProvider(Providers.of(dummyLogger));
@@ -24,6 +25,8 @@ public class LogInjector implements Module {
 
 
     private static class MyTypeListener implements TypeListener {
+
+        @Override
         public <I> void hear(TypeLiteral<I> typeLiteral, TypeEncounter<I> typeEncounter) {
             for( Class<?> c = typeLiteral.getRawType(); c != Object.class; c = c.getSuperclass() ) {
                 for( final Field field : c.getDeclaredFields() ) {

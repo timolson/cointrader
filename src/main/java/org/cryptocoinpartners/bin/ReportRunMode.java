@@ -8,6 +8,7 @@ import org.cryptocoinpartners.util.IoUtil;
 
 public abstract class ReportRunMode extends RunMode
 {
+    @Override
     public void run()
     {
         output(getReport().runReport());

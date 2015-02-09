@@ -9,19 +9,20 @@ import org.cryptocoinpartners.util.PersistUtil;
 @SuppressWarnings("UnusedDeclaration")
 public class ExitCommand extends CommandBase {
 
+    @Override
     public String getUsageHelp() {
         return "exit";
     }
 
-
+    @Override
     public String getExtraHelp() {
         return "exits the cointrader console and stops the node running";
     }
 
-
+    @Override
     public void parse(String commandArguments) { }
 
-
+    @Override
     public void run() {
         PersistUtil.shutdown();
         System.exit(0);

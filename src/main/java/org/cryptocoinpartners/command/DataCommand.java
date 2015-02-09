@@ -11,16 +11,22 @@ import org.cryptocoinpartners.report.Report;
 public class DataCommand extends ReportCommand {
 
 
+    @Override
     public String getUsageHelp() {
         return "data [summary]";
     }
 
-
+    @Override
     public String getExtraHelp() {
         return "Prints a count of Trade and Book entries for each Market";
     }
 
+    @Override
+    public void run() {
+        super.run();
+    }
 
+    @Override
     protected Report getReport() {
         return injector.getInstance(DataSummaryReport.class);
     }

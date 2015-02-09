@@ -12,7 +12,7 @@ import javax.inject.Provider;
 */
 public class ConfigInjector implements Module {
 
-
+    @Override
     public void configure(Binder binder) {
         binder.bind(Configuration.class).toInstance(config);
     }

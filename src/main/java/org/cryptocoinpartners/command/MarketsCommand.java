@@ -13,10 +13,13 @@ import java.util.List;
 @SuppressWarnings("UnusedDeclaration")
 public class MarketsCommand extends CommandBase {
 
+    @Override
     public String getUsageHelp() { return "markets"; }
+
+    @Override
     public String getExtraHelp() { return "prints a list of all available exchanges and listings"; }
 
-
+    @Override
     public void run() {
         List<String> symbols = new ArrayList<>();
         for( Market market : Market.findAll() )

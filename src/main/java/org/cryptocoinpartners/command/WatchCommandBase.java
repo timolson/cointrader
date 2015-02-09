@@ -11,11 +11,13 @@ import javax.inject.Inject;
  */
 public abstract class WatchCommandBase extends CommandBase {
 
+    @Override
     public String getUsageHelp() {
         return "watch {listing}";
     }
 
 
+    @Override
     public void parse(String commandArguments) {
         try {
             listing = Listing.forSymbol(commandArguments);
@@ -25,7 +27,7 @@ public abstract class WatchCommandBase extends CommandBase {
         }
     }
 
-
+    @Override
     public String getExtraHelp() {
         return "Prints out market data for the given listing as soon as the data arrives.";
     }

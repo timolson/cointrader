@@ -12,21 +12,23 @@ import org.cryptocoinpartners.report.TableOutput;
 @SuppressWarnings("UnusedDeclaration")
 public class JpaReportCommand extends ReportCommand {
 
+    @Override
     public String getUsageHelp() {
         return "jpa {jpa_query}";
     }
 
-
+    @Override
     public String getExtraHelp() {
         return "Runs the specified ad-hoc query against the database and prints the result as a table";
     }
 
 
+    @Override
     public void parse(String commandArguments) {
         queryStr = commandArguments;
     }
 
-
+    @Override
     protected Report getReport() {
         AdHocJpaReport jpaReport = injector.getInstance(AdHocJpaReport.class);
         jpaReport.setQueryString(queryStr);
@@ -34,6 +36,12 @@ public class JpaReportCommand extends ReportCommand {
     }
 
 
+    @Override
+    public void run() {
+        super.run();
+    }
+
+    @Override
     protected TableOutput runReport(Report report) {
         try {
             return super.runReport(report);
