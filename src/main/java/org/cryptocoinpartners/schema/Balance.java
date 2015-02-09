@@ -7,102 +7,102 @@ package org.cryptocoinpartners.schema;
  */
 public final class Balance {
 
-	private final Asset asset;
-	private final String description;
-	private final Amount amount;
+    private final Asset asset;
+    private final String description;
+    private final Amount amount;
 
-	/**
-	 * Constructor
-	 * 
-	 * @param asset The underlying asset
-	 * @param amount The amount
-	 */
-	public Balance(Asset asset, Amount amount) {
+    /**
+     * Constructor
+     * 
+     * @param asset The underlying asset
+     * @param amount The amount
+     */
+    public Balance(Asset asset, Amount amount) {
 
-		this.asset = asset;
-		this.amount = amount;
-		this.description = "";
-	}
+        this.asset = asset;
+        this.amount = amount;
+        this.description = "";
+    }
 
-	/**
-	 * Additional constructor with optional description
-	 * 
-	 * @param description Optional description to distinguish same asset Balances
-	 */
-	public Balance(Asset asset, Amount amount, String description) {
+    /**
+     * Additional constructor with optional description
+     * 
+     * @param description Optional description to distinguish same asset Balances
+     */
+    public Balance(Asset asset, Amount amount, String description) {
 
-		this.asset = asset;
-		this.amount = amount;
-		this.description = description;
-	}
+        this.asset = asset;
+        this.amount = amount;
+        this.description = description;
+    }
 
-	public Asset getAsset() {
+    public Asset getAsset() {
 
-		return asset;
-	}
+        return asset;
+    }
 
-	public Amount getAmount() {
+    public Amount getAmount() {
 
-		return amount;
-	}
+        return amount;
+    }
 
-	public String getDescription() {
+    public String getDescription() {
 
-		return description;
-	}
+        return description;
+    }
 
-	@Override
-	public String toString() {
+    @Override
+    public String toString() {
 
-		return "Balance [asset=" + asset + ", amount=" + amount + ", description=" + description + "]";
-	}
+        return "Balance [asset=" + asset + ", amount=" + amount + ", description=" + description + "]";
+    }
 
-	@Override
-	public int hashCode() {
+    @Override
+    public int hashCode() {
 
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((amount == null) ? 0 : amount.hashCode());
-		result = prime * result + ((asset == null) ? 0 : asset.hashCode());
-		result = prime * result + ((description == null) ? 0 : description.hashCode());
-		return result;
-	}
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((amount == null) ? 0 : amount.hashCode());
+        result = prime * result + ((asset == null) ? 0 : asset.hashCode());
+        result = prime * result + ((description == null) ? 0 : description.hashCode());
+        return result;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
+    @Override
+    public boolean equals(Object obj) {
 
-		if (this == obj) {
-			return true;
-		}
-		if (obj == null) {
-			return false;
-		}
-		if (getClass() != obj.getClass()) {
-			return false;
-		}
-		Balance other = (Balance) obj;
-		if (amount == null) {
-			if (other.amount != null) {
-				return false;
-			}
-		} else if (!amount.equals(other.amount)) {
-			return false;
-		}
-		if (asset == null) {
-			if (other.asset != null) {
-				return false;
-			}
-		} else if (!asset.equals(other.asset)) {
-			return false;
-		}
-		if (description == null) {
-			if (other.description != null) {
-				return false;
-			}
-		} else if (!description.equals(other.description)) {
-			return false;
-		}
-		return true;
-	}
+        if (this == obj) {
+            return true;
+        }
+        if (obj == null) {
+            return false;
+        }
+        if (getClass() != obj.getClass()) {
+            return false;
+        }
+        Balance other = (Balance) obj;
+        if (amount == null) {
+            if (other.amount != null) {
+                return false;
+            }
+        } else if (!amount.equals(other.amount)) {
+            return false;
+        }
+        if (asset == null) {
+            if (other.asset != null) {
+                return false;
+            }
+        } else if (!asset.equals(other.asset)) {
+            return false;
+        }
+        if (description == null) {
+            if (other.description != null) {
+                return false;
+            }
+        } else if (!description.equals(other.description)) {
+            return false;
+        }
+        return true;
+    }
 
 }

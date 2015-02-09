@@ -12,36 +12,36 @@ import javax.persistence.MappedSuperclass;
 @MappedSuperclass
 public class MarketDataError extends Event {
 
-	public MarketDataError(Market market) {
-		this(market, null);
-	}
+    public MarketDataError(Market market) {
+        this(market, null);
+    }
 
-	public MarketDataError(Market market, @Nullable Exception exception) {
-		this.exception = exception;
-		this.market = market;
-	}
+    public MarketDataError(Market market, @Nullable Exception exception) {
+        this.exception = exception;
+        this.market = market;
+    }
 
-	@Nullable
-	public Exception getException() {
-		return exception;
-	}
+    @Nullable
+    public Exception getException() {
+        return exception;
+    }
 
-	@ManyToOne
-	public Market getMarket() {
-		return market;
-	}
+    @ManyToOne
+    public Market getMarket() {
+        return market;
+    }
 
-	protected MarketDataError() {
-	}
+    protected MarketDataError() {
+    }
 
-	protected void setException(@Nullable Exception exception) {
-		this.exception = exception;
-	}
+    protected void setException(@Nullable Exception exception) {
+        this.exception = exception;
+    }
 
-	protected void setMarket(Market market) {
-		this.market = market;
-	}
+    protected void setMarket(Market market) {
+        this.market = market;
+    }
 
-	private Exception exception;
-	private Market market;
+    private Exception exception;
+    private Market market;
 }

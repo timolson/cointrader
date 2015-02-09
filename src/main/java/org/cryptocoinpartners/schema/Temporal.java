@@ -15,43 +15,43 @@ import org.joda.time.Instant;
 @MappedSuperclass
 public class Temporal extends EntityBase {
 
-	public Temporal(Instant time) {
-		super();
-		this.time = time;
-		this.dateTime = time.toDate();
-		this.timestamp = time.getMillis();
-	}
+    public Temporal(Instant time) {
+        super();
+        this.time = time;
+        this.dateTime = time.toDate();
+        this.timestamp = time.getMillis();
+    }
 
-	/** For Events, this is the time the Event itself occured, not the time we received the Event.  It should be remote
-	 * server time if available, and local time if the object was created locally */
-	@Type(type = "org.jadira.usertype.dateandtime.joda.PersistentInstantAsMillisLong")
-	@Basic(optional = false)
-	public Instant getTime() {
-		return time;
-	}
+    /** For Events, this is the time the Event itself occured, not the time we received the Event.  It should be remote
+     * server time if available, and local time if the object was created locally */
+    @Type(type = "org.jadira.usertype.dateandtime.joda.PersistentInstantAsMillisLong")
+    @Basic(optional = false)
+    public Instant getTime() {
+        return time;
+    }
 
-	@Transient
-	public Date getDateTime() {
-		return dateTime;
-	}
+    @Transient
+    public Date getDateTime() {
+        return dateTime;
+    }
 
-	@Transient
-	public long getTimestamp() {
-		return timestamp;
-	}
+    @Transient
+    public long getTimestamp() {
+        return timestamp;
+    }
 
-	// JPA
-	protected Temporal() {
-	}
+    // JPA
+    protected Temporal() {
+    }
 
-	protected void setTime(Instant time) {
-		this.time = time;
-		this.dateTime = time.toDate();
-		this.timestamp = time.getMillis();
-	}
+    protected void setTime(Instant time) {
+        this.time = time;
+        this.dateTime = time.toDate();
+        this.timestamp = time.getMillis();
+    }
 
-	protected Instant time;
-	private long timestamp;
-	private Date dateTime;
+    protected Instant time;
+    private long timestamp;
+    private Date dateTime;
 
 }

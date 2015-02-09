@@ -16,34 +16,34 @@ import javax.persistence.OneToMany;
 @Entity
 public class Owner extends PortfolioManager {
 
-	public Owner(String name) {
-		super(name + "'s deposit account");
-		this.name = name;
-		stakes.add(new Stake(this, BigDecimal.ONE, getPortfolio())); // 100% Stake in the deposit portfolio
-	}
+    public Owner(String name) {
+        super(name + "'s deposit account");
+        this.name = name;
+        stakes.add(new Stake(this, BigDecimal.ONE, getPortfolio())); // 100% Stake in the deposit portfolio
+    }
 
-	@Basic(optional = false)
-	public String getName() {
-		return name;
-	}
+    @Basic(optional = false)
+    public String getName() {
+        return name;
+    }
 
-	@OneToMany
-	public Collection<Stake> getStakes() {
-		return stakes;
-	}
+    @OneToMany
+    public Collection<Stake> getStakes() {
+        return stakes;
+    }
 
-	// JPA only
-	protected Owner() {
-	}
+    // JPA only
+    protected Owner() {
+    }
 
-	protected void setName(String name) {
-		this.name = name;
-	}
+    protected void setName(String name) {
+        this.name = name;
+    }
 
-	protected void setStakes(Collection<Stake> stakes) {
-		this.stakes = stakes;
-	}
+    protected void setStakes(Collection<Stake> stakes) {
+        this.stakes = stakes;
+    }
 
-	private Collection<Stake> stakes = new ArrayList<>();
-	private String name;
+    private Collection<Stake> stakes = new ArrayList<>();
+    private String name;
 }

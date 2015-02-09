@@ -17,7 +17,7 @@ import javax.inject.Inject;
  */
 public class ConsoleWriter extends PrintWriter {
 
-	@Inject
+    @Inject
     public ConsoleWriter(ConsoleReader out) {
         super(new ConsolePrintWriter(out));
         this.console = out;

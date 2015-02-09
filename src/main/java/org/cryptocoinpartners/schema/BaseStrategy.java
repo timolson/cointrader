@@ -20,47 +20,47 @@ import org.slf4j.Logger;
  */
 public class BaseStrategy implements Strategy {
 
-	@Inject
-	protected void setPortfolio(Portfolio portfolio) {
-		this.portfolio = portfolio;
-		SubscribePortfolio portfolioSubcribeEvent = new SubscribePortfolio(portfolio);
-		context.publish(portfolioSubcribeEvent);
-		Asset baseAsset = Asset.forSymbol(context.getConfig().getString("base.symbol", "USD"));
-		portfolio.setBaseAsset(baseAsset);
-		order = new OrderBuilder(portfolio, orderService);
-	}
+    @Inject
+    protected void setPortfolio(Portfolio portfolio) {
+        this.portfolio = portfolio;
+        SubscribePortfolio portfolioSubcribeEvent = new SubscribePortfolio(portfolio);
+        context.publish(portfolioSubcribeEvent);
+        Asset baseAsset = Asset.forSymbol(context.getConfig().getString("base.symbol", "USD"));
+        portfolio.setBaseAsset(baseAsset);
+        order = new OrderBuilder(portfolio, orderService);
+    }
 
-	@Inject
-	protected void setPortfolioService(BasicPortfolioService portfolioService) {
-		this.portfolioService = portfolioService;
-	}
+    @Inject
+    protected void setPortfolioService(BasicPortfolioService portfolioService) {
+        this.portfolioService = portfolioService;
+    }
 
-	@Transient
-	protected BasicPortfolioService getPortfolioService() {
-		return this.portfolioService;
-	}
+    @Transient
+    protected BasicPortfolioService getPortfolioService() {
+        return this.portfolioService;
+    }
 
-	/** This tracks the assets you have for trading */
-	protected Portfolio portfolio;
-	protected BasicPortfolioService portfolioService;
+    /** This tracks the assets you have for trading */
+    protected Portfolio portfolio;
+    protected BasicPortfolioService portfolioService;
 
-	/** This is what you use to place orders:
-	 * <pre>
-	 * order.create(Listing.BTC_USD,1.00).withLimit(651.538).place();
-	 * </pre>
-	 */
-	protected OrderBuilder order;
+    /** This is what you use to place orders:
+     * <pre>
+     * order.create(Listing.BTC_USD,1.00).withLimit(651.538).place();
+     * </pre>
+     */
+    protected OrderBuilder order;
 
-	/** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
-	@Inject
-	protected QuoteService quotes;
+    /** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
+    @Inject
+    protected QuoteService quotes;
 
-	@Inject
-	protected Context context;
-	@Inject
-	protected OrderService orderService;
+    @Inject
+    protected Context context;
+    @Inject
+    protected OrderService orderService;
 
-	@Inject
-	protected Logger log;
+    @Inject
+    protected Logger log;
 
 }

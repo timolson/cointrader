@@ -15,45 +15,45 @@ import javax.persistence.OneToOne;
 @MappedSuperclass
 public class Holding extends EntityBase {
 
-	public static Holding forSymbol(String symbol) {
-		Matcher matcher = Pattern.compile("(\\w+):(\\w+)").matcher(symbol);
-		if (!matcher.matches())
-			throw new IllegalArgumentException("Could not parse Holding symbol " + symbol);
-		return new Holding(Exchange.forSymbol(matcher.group(1)), Asset.forSymbol(matcher.group(2)));
-	}
+    public static Holding forSymbol(String symbol) {
+        Matcher matcher = Pattern.compile("(\\w+):(\\w+)").matcher(symbol);
+        if (!matcher.matches())
+            throw new IllegalArgumentException("Could not parse Holding symbol " + symbol);
+        return new Holding(Exchange.forSymbol(matcher.group(1)), Asset.forSymbol(matcher.group(2)));
+    }
 
-	public Holding(Exchange exchange, Asset asset) {
-		this.exchange = exchange;
-		this.asset = asset;
-	}
+    public Holding(Exchange exchange, Asset asset) {
+        this.exchange = exchange;
+        this.asset = asset;
+    }
 
-	@ManyToOne(optional = false)
-	public Exchange getExchange() {
-		return exchange;
-	}
+    @ManyToOne(optional = false)
+    public Exchange getExchange() {
+        return exchange;
+    }
 
-	@OneToOne(optional = false)
-	public Asset getAsset() {
-		return asset;
-	}
+    @OneToOne(optional = false)
+    public Asset getAsset() {
+        return asset;
+    }
 
-	@Override
-	public String toString() {
-		return exchange.getSymbol() + asset.getSymbol();
-	}
+    @Override
+    public String toString() {
+        return exchange.getSymbol() + asset.getSymbol();
+    }
 
-	// JPA
-	protected Holding() {
-	}
+    // JPA
+    protected Holding() {
+    }
 
-	protected void setExchange(Exchange exchange) {
-		this.exchange = exchange;
-	}
+    protected void setExchange(Exchange exchange) {
+        this.exchange = exchange;
+    }
 
-	protected void setAsset(Asset asset) {
-		this.asset = asset;
-	}
+    protected void setAsset(Asset asset) {
+        this.asset = asset;
+    }
 
-	protected Exchange exchange;
-	protected Asset asset;
+    protected Exchange exchange;
+    protected Asset asset;
 }
