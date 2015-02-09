@@ -12,28 +12,28 @@ import org.joda.time.Instant;
 @Entity
 public abstract class MarketData extends RemoteEvent {
 
-	protected MarketData(Instant time, @Nullable String remoteKey, Market market) {
-		this(time, Instant.now(), remoteKey, market);
-	}
+    protected MarketData(Instant time, @Nullable String remoteKey, Market market) {
+        this(time, Instant.now(), remoteKey, market);
+    }
 
-	protected MarketData(Instant time, Instant timeReceived, String remoteKey, Market market) {
-		super(time, timeReceived, remoteKey);
-		this.market = market;
-	}
+    protected MarketData(Instant time, Instant timeReceived, String remoteKey, Market market) {
+        super(time, timeReceived, remoteKey);
+        this.market = market;
+    }
 
-	@ManyToOne(optional = false)
-	public Market getMarket() {
-		return market;
-	}
+    @ManyToOne(optional = false)
+    public Market getMarket() {
+        return market;
+    }
 
-	// JPA
-	protected MarketData() {
-		super();
-	}
+    // JPA
+    protected MarketData() {
+        super();
+    }
 
-	protected void setMarket(Market market) {
-		this.market = market;
-	}
+    protected void setMarket(Market market) {
+        this.market = market;
+    }
 
-	private Market market;
+    private Market market;
 }

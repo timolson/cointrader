@@ -17,65 +17,65 @@ import org.joda.time.Instant;
 @Entity
 public class Adjustment extends EntityBase {
 
-	public Adjustment(Authorization authorization, List<Position> deltas) {
-		this.authorization = authorization;
-		this.deltas = deltas;
-	}
+    public Adjustment(Authorization authorization, List<Position> deltas) {
+        this.authorization = authorization;
+        this.deltas = deltas;
+    }
 
-	/** You must call this method to enact the Adjustment and modify the relevant Portfolio Positions.  Only the first
-	 * call to apply() has any effect, and subsequent invocations are ignored.
-	 */
-	/* UNIMPLEMENTED
-	public void apply() {
-	    if( timeApplied != null )
-	        return;
-	    timeApplied = Instant.now();
+    /** You must call this method to enact the Adjustment and modify the relevant Portfolio Positions.  Only the first
+     * call to apply() has any effect, and subsequent invocations are ignored.
+     */
+    /* UNIMPLEMENTED
+    public void apply() {
+        if( timeApplied != null )
+            return;
+        timeApplied = Instant.now();
 
-	    try {
-	        for( Position delta : deltas ) {
-	            delta.getPortfolio().modifyPosition( delta, authorization );
-	        }
-	        // todo modify Portfolios' Positions
-	    }
-	    catch( Throwable e ) {
-	        timeApplied = null;
-	        throw e;
-	    }
-	}
-	*/
+        try {
+            for( Position delta : deltas ) {
+                delta.getPortfolio().modifyPosition( delta, authorization );
+            }
+            // todo modify Portfolios' Positions
+        }
+        catch( Throwable e ) {
+            timeApplied = null;
+            throw e;
+        }
+    }
+    */
 
-	/** this will be null if apply() has not yet been called */
-	public Instant getTimeApplied() {
-		return timeApplied;
-	}
+    /** this will be null if apply() has not yet been called */
+    public Instant getTimeApplied() {
+        return timeApplied;
+    }
 
-	@OneToOne(optional = false)
-	public Authorization getAuthorization() {
-		return authorization;
-	}
+    @OneToOne(optional = false)
+    public Authorization getAuthorization() {
+        return authorization;
+    }
 
-	@OneToMany
-	public List<Position> getDeltas() {
-		return deltas;
-	}
+    @OneToMany
+    public List<Position> getDeltas() {
+        return deltas;
+    }
 
-	// JPA
-	protected Adjustment() {
-	}
+    // JPA
+    protected Adjustment() {
+    }
 
-	protected void setAuthorization(Authorization authorization) {
-		this.authorization = authorization;
-	}
+    protected void setAuthorization(Authorization authorization) {
+        this.authorization = authorization;
+    }
 
-	protected void setDeltas(List<Position> deltas) {
-		this.deltas = deltas;
-	}
+    protected void setDeltas(List<Position> deltas) {
+        this.deltas = deltas;
+    }
 
-	protected void setTimeApplied(Instant timeApplied) {
-		this.timeApplied = timeApplied;
-	}
+    protected void setTimeApplied(Instant timeApplied) {
+        this.timeApplied = timeApplied;
+    }
 
-	private Instant timeApplied;
-	private Authorization authorization;
-	private List<Position> deltas;
+    private Instant timeApplied;
+    private Authorization authorization;
+    private List<Position> deltas;
 }

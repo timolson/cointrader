@@ -21,229 +21,229 @@ import org.joda.time.Instant;
 @Entity
 public class GeneralOrder extends Order {
 
-	public GeneralOrder(Instant time, Portfolio portfolio, Listing listing, BigDecimal volume) {
-		super(time);
-		super.setPortfolio(portfolio);
-		this.listing = listing;
-		this.volume = DecimalAmount.of(volume);
-	}
+    public GeneralOrder(Instant time, Portfolio portfolio, Listing listing, BigDecimal volume) {
+        super(time);
+        super.setPortfolio(portfolio);
+        this.listing = listing;
+        this.volume = DecimalAmount.of(volume);
+    }
 
-	public GeneralOrder(Instant time, Portfolio portfolio, Order parentOrder, Listing listing, BigDecimal volume) {
-		super(time);
-		super.setPortfolio(portfolio);
-		parentOrder.addChild(this);
-		this.setParentOrder(parentOrder);
-		this.listing = listing;
-		this.volume = DecimalAmount.of(volume);
-	}
+    public GeneralOrder(Instant time, Portfolio portfolio, Order parentOrder, Listing listing, BigDecimal volume) {
+        super(time);
+        super.setPortfolio(portfolio);
+        parentOrder.addChild(this);
+        this.setParentOrder(parentOrder);
+        this.listing = listing;
+        this.volume = DecimalAmount.of(volume);
+    }
 
-	public GeneralOrder(Instant time, Portfolio portfolio, Market market, BigDecimal volume, FillType type) {
-		super(time);
-		super.setPortfolio(portfolio);
-		this.market = market;
-		this.listing = market.getListing();
-		this.volume = DecimalAmount.of(volume);
-		this.fillType = type;
-	}
+    public GeneralOrder(Instant time, Portfolio portfolio, Market market, BigDecimal volume, FillType type) {
+        super(time);
+        super.setPortfolio(portfolio);
+        this.market = market;
+        this.listing = market.getListing();
+        this.volume = DecimalAmount.of(volume);
+        this.fillType = type;
+    }
 
-	public GeneralOrder(Instant time, Portfolio portfolio, Order parentOrder, Market market, BigDecimal volume, FillType type) {
-		super(time);
-		super.setPortfolio(portfolio);
-		parentOrder.addChild(this);
-		this.setParentOrder(parentOrder);
-		this.market = market;
-		this.listing = market.getListing();
-		this.volume = DecimalAmount.of(volume);
-		this.fillType = type;
-	}
+    public GeneralOrder(Instant time, Portfolio portfolio, Order parentOrder, Market market, BigDecimal volume, FillType type) {
+        super(time);
+        super.setPortfolio(portfolio);
+        parentOrder.addChild(this);
+        this.setParentOrder(parentOrder);
+        this.market = market;
+        this.listing = market.getListing();
+        this.volume = DecimalAmount.of(volume);
+        this.fillType = type;
+    }
 
-	public GeneralOrder(Instant time, Portfolio portfolio, Listing listing, String volume) {
-		super(time);
-		super.setPortfolio(portfolio);
-		this.listing = listing;
-		this.volume = DecimalAmount.of(volume);
-	}
+    public GeneralOrder(Instant time, Portfolio portfolio, Listing listing, String volume) {
+        super(time);
+        super.setPortfolio(portfolio);
+        this.listing = listing;
+        this.volume = DecimalAmount.of(volume);
+    }
 
-	@ManyToOne(optional = false, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
-	//@EmbeddedId
-	public Listing getListing() {
-		return listing;
-	}
+    @ManyToOne(optional = false, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+    //@EmbeddedId
+    public Listing getListing() {
+        return listing;
+    }
 
-	@Override
-	@ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
-	public Market getMarket() {
-		return market;
-	}
+    @Override
+    @ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+    public Market getMarket() {
+        return market;
+    }
 
-	public BigDecimal getVolumeDecimal() {
+    public BigDecimal getVolumeDecimal() {
 
-		if (volume == null)
-			volume = DecimalAmount.of(BigDecimal.ZERO);
-		return volume.asBigDecimal();
+        if (volume == null)
+            volume = DecimalAmount.of(BigDecimal.ZERO);
+        return volume.asBigDecimal();
 
-	}
+    }
 
-	public BigDecimal getLimitPriceDecimal() {
-		if (limitPrice == null)
-			return null;
-		return limitPrice.asBigDecimal();
+    public BigDecimal getLimitPriceDecimal() {
+        if (limitPrice == null)
+            return null;
+        return limitPrice.asBigDecimal();
 
-	}
+    }
 
-	public BigDecimal getStopPriceDecimal() {
-		if (stopPrice == null)
-			return null;
-		return stopPrice.asBigDecimal();
+    public BigDecimal getStopPriceDecimal() {
+        if (stopPrice == null)
+            return null;
+        return stopPrice.asBigDecimal();
 
-	}
+    }
 
-	public BigDecimal getTrailingStopPriceDecimal() {
-		if (trailingStopPrice == null)
-			return null;
-		return trailingStopPrice.asBigDecimal();
-	}
+    public BigDecimal getTrailingStopPriceDecimal() {
+        if (trailingStopPrice == null)
+            return null;
+        return trailingStopPrice.asBigDecimal();
+    }
 
-	@Override
-	@Transient
-	public DecimalAmount getVolume() {
-		return volume;
-	}
+    @Override
+    @Transient
+    public DecimalAmount getVolume() {
+        return volume;
+    }
 
-	@Override
-	@Transient
-	public DecimalAmount getLimitPrice() {
-		return limitPrice;
-	}
+    @Override
+    @Transient
+    public DecimalAmount getLimitPrice() {
+        return limitPrice;
+    }
 
-	@Override
-	@Transient
-	public DecimalAmount getStopPrice() {
-		return stopPrice;
-	}
+    @Override
+    @Transient
+    public DecimalAmount getStopPrice() {
+        return stopPrice;
+    }
 
-	@Override
-	@Transient
-	public DecimalAmount getTrailingStopPrice() {
-		return trailingStopPrice;
-	}
+    @Override
+    @Transient
+    public DecimalAmount getTrailingStopPrice() {
+        return trailingStopPrice;
+    }
 
-	@Override
-	@Transient
-	public Amount getUnfilledVolume() {
-		Amount filled = DecimalAmount.ZERO;
-		for (Fill fill : getFills())
-			filled = filled.plus(fill.getVolume());
-		return filled;
-	}
+    @Override
+    @Transient
+    public Amount getUnfilledVolume() {
+        Amount filled = DecimalAmount.ZERO;
+        for (Fill fill : getFills())
+            filled = filled.plus(fill.getVolume());
+        return filled;
+    }
 
-	@Override
-	@Transient
-	public boolean isFilled() {
-		return getUnfilledVolume().equals(BigDecimal.ZERO);
-	}
+    @Override
+    @Transient
+    public boolean isFilled() {
+        return getUnfilledVolume().equals(BigDecimal.ZERO);
+    }
 
-	@Override
-	@Transient
-	public boolean isBid() {
-		return !volume.isNegative();
-	}
+    @Override
+    @Transient
+    public boolean isBid() {
+        return !volume.isNegative();
+    }
 
-	public void copyCommonFillProperties(Fill fill) {
-		setTime(fill.getTime());
-		setEmulation(fill.getOrder().isEmulation());
-		setExpiration(fill.getOrder().getExpiration());
-		setPortfolio(fill.getOrder().getPortfolio());
-		setMarginType(fill.getOrder().getMarginType());
-		setPanicForce(fill.getOrder().getPanicForce());
-	}
+    public void copyCommonFillProperties(Fill fill) {
+        setTime(fill.getTime());
+        setEmulation(fill.getOrder().isEmulation());
+        setExpiration(fill.getOrder().getExpiration());
+        setPortfolio(fill.getOrder().getPortfolio());
+        setMarginType(fill.getOrder().getMarginType());
+        setPanicForce(fill.getOrder().getPanicForce());
+    }
 
-	@Override
-	public String toString() {
-		String s = "GeneralOrder{" + "id=" + getId() + ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + ", listing="
-				+ listing + ", volume=" + volume;
-		if (limitPrice != null && limitPrice.asBigDecimal() != null)
-			s += ", limitPrice=" + limitPrice;
-		if (stopPrice != null && stopPrice.asBigDecimal() != null)
-			s += ", stopPrice=" + stopPrice;
-		if (trailingStopPrice != null && trailingStopPrice.asBigDecimal() != null)
-			s += ", trailingStopPrice=" + trailingStopPrice;
-		if (comment != null)
-			s += ", comment=" + comment;
-		if (positionEffect != null)
-			s += ", position effect=" + positionEffect;
-		if (fillType != null)
-			s += ", type=" + fillType;
-		if (hasFills())
-			s += ", averageFillPrice=" + averageFillPrice();
-		s += '}';
-		return s;
-	}
+    @Override
+    public String toString() {
+        String s = "GeneralOrder{" + "id=" + getId() + ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + ", listing="
+                + listing + ", volume=" + volume;
+        if (limitPrice != null && limitPrice.asBigDecimal() != null)
+            s += ", limitPrice=" + limitPrice;
+        if (stopPrice != null && stopPrice.asBigDecimal() != null)
+            s += ", stopPrice=" + stopPrice;
+        if (trailingStopPrice != null && trailingStopPrice.asBigDecimal() != null)
+            s += ", trailingStopPrice=" + trailingStopPrice;
+        if (comment != null)
+            s += ", comment=" + comment;
+        if (positionEffect != null)
+            s += ", position effect=" + positionEffect;
+        if (fillType != null)
+            s += ", type=" + fillType;
+        if (hasFills())
+            s += ", averageFillPrice=" + averageFillPrice();
+        s += '}';
+        return s;
+    }
 
-	protected GeneralOrder() {
-	}
+    protected GeneralOrder() {
+    }
 
-	protected GeneralOrder(Instant time) {
-		super(time);
-	}
+    protected GeneralOrder(Instant time) {
+        super(time);
+    }
 
-	protected void setVolume(DecimalAmount volume) {
-		this.volume = volume;
-	}
+    protected void setVolume(DecimalAmount volume) {
+        this.volume = volume;
+    }
 
-	protected void setVolumeDecimal(BigDecimal volume) {
-		this.volume = new DecimalAmount(volume);
-	}
+    protected void setVolumeDecimal(BigDecimal volume) {
+        this.volume = new DecimalAmount(volume);
+    }
 
-	protected void setLimitPrice(DecimalAmount limitPrice) {
-		this.limitPrice = limitPrice;
-	}
+    protected void setLimitPrice(DecimalAmount limitPrice) {
+        this.limitPrice = limitPrice;
+    }
 
-	protected void setLimitPriceDecimal(BigDecimal limitPrice) {
-		if (limitPrice != null) {
-			this.limitPrice = DecimalAmount.of(limitPrice);
-		}
-	}
+    protected void setLimitPriceDecimal(BigDecimal limitPrice) {
+        if (limitPrice != null) {
+            this.limitPrice = DecimalAmount.of(limitPrice);
+        }
+    }
 
-	@Override
-	public void setStopPrice(DecimalAmount stopPrice) {
-		this.stopPrice = stopPrice;
-	}
+    @Override
+    public void setStopPrice(DecimalAmount stopPrice) {
+        this.stopPrice = stopPrice;
+    }
 
-	public void setStopPriceDecimal(BigDecimal stopPrice) {
-		if (stopPrice != null) {
-			this.stopPrice = DecimalAmount.of(stopPrice);
-		}
-	}
+    public void setStopPriceDecimal(BigDecimal stopPrice) {
+        if (stopPrice != null) {
+            this.stopPrice = DecimalAmount.of(stopPrice);
+        }
+    }
 
-	@Override
-	public void setTrailingStopPrice(DecimalAmount trailingStopPrice) {
-		this.trailingStopPrice = trailingStopPrice;
-	}
+    @Override
+    public void setTrailingStopPrice(DecimalAmount trailingStopPrice) {
+        this.trailingStopPrice = trailingStopPrice;
+    }
 
-	public void setTrailingStopPriceDecimal(BigDecimal trailingStopPrice) {
-		if (trailingStopPrice != null) {
-			this.trailingStopPrice = DecimalAmount.of(trailingStopPrice);
-		}
-	}
+    public void setTrailingStopPriceDecimal(BigDecimal trailingStopPrice) {
+        if (trailingStopPrice != null) {
+            this.trailingStopPrice = DecimalAmount.of(trailingStopPrice);
+        }
+    }
 
-	protected void setListing(Listing listing) {
-		this.listing = listing;
-		this.market = null;
-	}
+    protected void setListing(Listing listing) {
+        this.listing = listing;
+        this.market = null;
+    }
 
-	@Override
-	public void setMarket(Market market) {
-		this.market = market;
-		this.listing = market.getListing();
-	}
+    @Override
+    public void setMarket(Market market) {
+        this.market = market;
+        this.listing = market.getListing();
+    }
 
-	private Listing listing;
-	private Market market;
-	private DecimalAmount volume;
-	private DecimalAmount limitPrice;
-	private DecimalAmount stopPrice;
-	private DecimalAmount trailingStopPrice;
-	private Amount forcastedFees;
+    private Listing listing;
+    private Market market;
+    private DecimalAmount volume;
+    private DecimalAmount limitPrice;
+    private DecimalAmount stopPrice;
+    private DecimalAmount trailingStopPrice;
+    private Amount forcastedFees;
 
 }

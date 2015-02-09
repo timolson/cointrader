@@ -13,43 +13,43 @@ import org.cryptocoinpartners.enumeration.OrderState;
 @Entity
 public class OrderUpdate extends Event {
 
-	@ManyToOne
-	public Order getOrder() {
-		return order;
-	}
+    @ManyToOne
+    public Order getOrder() {
+        return order;
+    }
 
-	public OrderState getLastState() {
-		return lastState;
-	}
+    public OrderState getLastState() {
+        return lastState;
+    }
 
-	public OrderState getState() {
-		return state;
-	}
+    public OrderState getState() {
+        return state;
+    }
 
-	public OrderUpdate(Order order, OrderState lastState, OrderState state) {
-		this.order = order;
-		this.lastState = lastState;
-		this.state = state;
-	}
+    public OrderUpdate(Order order, OrderState lastState, OrderState state) {
+        this.order = order;
+        this.lastState = lastState;
+        this.state = state;
+    }
 
-	// JPA
-	protected OrderUpdate() {
-	}
+    // JPA
+    protected OrderUpdate() {
+    }
 
-	protected void setOrder(Order order) {
-		this.order = order;
-	}
+    protected void setOrder(Order order) {
+        this.order = order;
+    }
 
-	protected void setLastState(OrderState lastState) {
-		this.lastState = lastState;
-	}
+    protected void setLastState(OrderState lastState) {
+        this.lastState = lastState;
+    }
 
-	protected void setState(OrderState state) {
-		this.state = state;
-	}
+    protected void setState(OrderState state) {
+        this.state = state;
+    }
 
-	private Order order;
-	private OrderState lastState;
-	private OrderState state;
+    private Order order;
+    private OrderState lastState;
+    private OrderState state;
 
 }

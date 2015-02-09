@@ -13,10 +13,10 @@ public class BitfinexHelper extends XchangeDataHelperBase
     @Override
     public ArrayList<Object> getTradesParameters( CurrencyPair pair, final long lastTradeTime, long lastTradeId )
     {
-    	return new ArrayList<Object>() {{ add(lastTradeTime);  }};
-    	
-    	
-        		
+        return new ArrayList<Object>() {{ add(lastTradeTime);  }};
+        
+        
+                
     }
 
 

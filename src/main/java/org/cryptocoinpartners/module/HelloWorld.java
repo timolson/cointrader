@@ -19,42 +19,42 @@ import com.espertech.esper.client.deploy.ParseException;
 @Singleton
 public class HelloWorld {
 
-	@When("select * from Event")
-	public void doSomethingWithEvery(Event e) {
-		log.info("Hello, Event " + (++count) + " " + e);
-		getAvgTrade();
-	}
+    @When("select * from Event")
+    public void doSomethingWithEvery(Event e) {
+        log.info("Hello, Event " + (++count) + " " + e);
+        getAvgTrade();
+    }
 
-	static int count = 0;
+    static int count = 0;
 
-	public void getAvgTrade() {
+    public void getAvgTrade() {
 
-		List<Object> events = null;
+        List<Object> events = null;
 
-		try {
-			events = context.loadStatementByName("getAvgTrade");
-		} catch (ParseException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (DeploymentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		if (events.size() > 0) {
-			Double avgTrade = ((Double) events.get(events.size() - 1));
-			log.info("Hello, Event " + avgTrade);
-			// return(trade.getPrice());
-		}
+        try {
+            events = context.loadStatementByName("getAvgTrade");
+        } catch (ParseException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (DeploymentException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        if (events.size() > 0) {
+            Double avgTrade = ((Double) events.get(events.size() - 1));
+            log.info("Hello, Event " + avgTrade);
+            // return(trade.getPrice());
+        }
 
-	}
+    }
 
-	private double avgTrade;
-	@Inject
-	private Logger log;
-	@Inject
-	protected Context context;
+    private double avgTrade;
+    @Inject
+    private Logger log;
+    @Inject
+    protected Context context;
 
 }

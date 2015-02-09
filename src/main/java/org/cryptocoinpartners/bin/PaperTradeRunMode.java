@@ -24,42 +24,42 @@ import com.beust.jcommander.Parameters;
 @SuppressWarnings("UnusedDeclaration")
 @Parameters(commandNames = { "paper" }, commandDescription = "Run strategies against live streaming data but use the mock order system instead of live trades")
 public class PaperTradeRunMode extends RunMode {
-	public List<String> positions = Arrays.asList("BITFINEX:BTC", "1.0");
+    public List<String> positions = Arrays.asList("BITFINEX:BTC", "1.0");
 
-	@Override
-	public void run() {
-		context = Context.create();
-		context.attach(XchangeAccountService.class);
-		context.attach(BasicQuoteService.class);
-		context.attach(MockOrderService.class);
-		context.attach(XchangeData.class);
-		for (String strategyName : strategyNames) {
-			StrategyInstance strategyInstance = new StrategyInstance(strategyName);
-			context.attachInstance(strategyInstance);
-			setUpInitialPortfolio(strategyInstance);
-			// context.getInjector().getInstance(cls)
+    @Override
+    public void run() {
+        context = Context.create();
+        context.attach(XchangeAccountService.class);
+        context.attach(BasicQuoteService.class);
+        context.attach(MockOrderService.class);
+        context.attach(XchangeData.class);
+        for (String strategyName : strategyNames) {
+            StrategyInstance strategyInstance = new StrategyInstance(strategyName);
+            context.attachInstance(strategyInstance);
+            setUpInitialPortfolio(strategyInstance);
+            // context.getInjector().getInstance(cls)
 
-		}
+        }
 
-	}
+    }
 
-	private void setUpInitialPortfolio(StrategyInstance strategyInstance) {
-		Portfolio portfolio = strategyInstance.getPortfolio();
-		if (positions.size() % 2 != 0) {
-			System.err.println("You must supply an even number of arguments to the position switch. " + positions);
-		}
-		for (int i = 0; i < positions.size() - 1;) {
-			Holding holding = Holding.forSymbol(positions.get(i++));
-			DiscreteAmount amount = new DiscreteAmount(0, 0.000001);
-			DiscreteAmount price = new DiscreteAmount(0, 0.000001);
-			Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
-			context.publish(initialCredit);
+    private void setUpInitialPortfolio(StrategyInstance strategyInstance) {
+        Portfolio portfolio = strategyInstance.getPortfolio();
+        if (positions.size() % 2 != 0) {
+            System.err.println("You must supply an even number of arguments to the position switch. " + positions);
+        }
+        for (int i = 0; i < positions.size() - 1;) {
+            Holding holding = Holding.forSymbol(positions.get(i++));
+            DiscreteAmount amount = new DiscreteAmount(0, 0.000001);
+            DiscreteAmount price = new DiscreteAmount(0, 0.000001);
+            Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
+            context.publish(initialCredit);
 
-		}
-	}
+        }
+    }
 
-	@SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-	@Parameter(description = "Strategy name to load", arity = 1, required = true)
-	public List<String> strategyNames;
-	private Context context;
+    @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
+    @Parameter(description = "Strategy name to load", arity = 1, required = true)
+    public List<String> strategyNames;
+    private Context context;
 }
