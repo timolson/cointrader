@@ -154,11 +154,12 @@ public class BasicPortfolioService implements PortfolioService {
 	public ConcurrentHashMap<Asset, Amount> getCashBalances() {
 
 		// sum of all transactions that belongs to this strategy
-		Amount balance = DecimalAmount.ZERO;
 		ConcurrentHashMap<Asset, Amount> balances = new ConcurrentHashMap<>();
-
+		Amount balance = DecimalAmount.ZERO;
 		Iterator<Transaction> itt = getTrades().iterator();
 		while (itt.hasNext()) {
+			balance = DecimalAmount.ZERO;
+
 			Transaction transaction = itt.next();
 			if (balances.get(transaction.getAsset()) != null) {
 
@@ -172,11 +173,11 @@ public class BasicPortfolioService implements PortfolioService {
 		}
 
 		// plus part of all cashFlows
-		Amount cashFlows = DecimalAmount.ZERO;
 		//Amount cashFlows = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
 
 		Iterator<Transaction> itc = getCashFlows().iterator();
 		while (itc.hasNext()) {
+			Amount cashFlows = DecimalAmount.ZERO;
 			Transaction cashFlowTransaction = itc.next();
 			if (balances.get(cashFlowTransaction.getCurrency()) != null) {
 
@@ -407,7 +408,7 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Transient
-	public Amount getMarketValue(Asset quoteAsset) {
+	public Amount getBaseMarketValue(Asset quoteAsset) {
 		//Amount marketValue;
 		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
 		//portfolio.get
@@ -435,7 +436,35 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Transient
-	public Amount getUnrealisedPnL(Asset quoteAsset) {
+	public Amount getMarketValue(Asset quoteAsset) {
+		//Amount marketValue;
+		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
+		//portfolio.get
+
+		//Asset quoteAsset = list.getBase();
+		//Asset baseAsset=new Asset();
+		//	Amount baseMarketValue = new DiscreteAmount(0, 0.01);
+
+		Amount marketValue = DecimalAmount.ZERO;
+
+		ConcurrentHashMap<Asset, Amount> marketValues = getMarketValues();
+
+		Iterator<Asset> it = marketValues.keySet().iterator();
+		while (it.hasNext()) {
+			Asset baseAsset = it.next();
+			if (baseAsset.equals(quoteAsset)) {
+				marketValue = marketValue.plus(marketValues.get(baseAsset));
+			}
+
+		}
+
+		return marketValue;
+
+	}
+
+	@Override
+	@Transient
+	public Amount getBaseUnrealisedPnL(Asset quoteAsset) {
 		//Amount marketValue;
 		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
 		//portfolio.get
@@ -461,7 +490,33 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Transient
-	public Amount getRealisedPnL(Asset quoteAsset) {
+	public Amount getUnrealisedPnL(Asset quoteAsset) {
+		//Amount marketValue;
+		//ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
+		//portfolio.get
+		//Asset quoteAsset = list.getBase();
+		//Asset baseAsset=new Asset();
+		//	Amount baseMarketValue = new DiscreteAmount(0, 0.01);
+		Amount unrealisedPnL = DecimalAmount.ZERO;
+
+		ConcurrentHashMap<Asset, Amount> unrealisedPnLs = getUnrealisedPnLs();
+
+		Iterator<Asset> it = unrealisedPnLs.keySet().iterator();
+		while (it.hasNext()) {
+			Asset baseAsset = it.next();
+			if (baseAsset.equals(quoteAsset)) {
+				unrealisedPnL = unrealisedPnL.plus(unrealisedPnLs.get(baseAsset));
+			}
+
+		}
+
+		return unrealisedPnL;
+
+	}
+
+	@Override
+	@Transient
+	public Amount getBaseRealisedPnL(Asset quoteAsset) {
 
 		//Listing list = Listing.forSymbol(config.getString("base.symbol", "USD"));
 		//Asset quoteAsset = list.getBase();
@@ -487,29 +542,100 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Transient
+	public Amount getRealisedPnL(Asset quoteAsset) {
+
+		//Listing list = Listing.forSymbol(config.getString("base.symbol", "USD"));
+		//Asset quoteAsset = list.getBase();
+		//Asset baseAsset=new Asset();
+		Amount realisedPnL = DecimalAmount.ZERO;
+
+		//Amount baseCashBalance = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
+
+		ConcurrentHashMap<Asset, Amount> realisedPnLs = getRealisedPnLs();
+
+		Iterator<Asset> itp = realisedPnLs.keySet().iterator();
+		while (itp.hasNext()) {
+			Asset baseAsset = itp.next();
+			if (baseAsset.equals(quoteAsset)) {
+
+				Amount localPnL = realisedPnLs.get(baseAsset);
+				realisedPnL = realisedPnL.plus(localPnL);
+			}
+
+		}
+		return realisedPnL;
+	}
+
+	@Override
+	@Transient
 	public Amount getCashBalance(Asset quoteAsset) {
-		Amount baseCashBalance = DecimalAmount.ZERO;
+		Amount cashBalance = DecimalAmount.ZERO;
 		ConcurrentHashMap<Asset, Amount> cashBalances = getCashBalances();
 
 		Iterator<Asset> it = cashBalances.keySet().iterator();
 		while (it.hasNext()) {
 			Asset baseAsset = it.next();
+			if (baseAsset.equals(quoteAsset)) {
+				//	Listing listing = Listing.forPair(baseAsset, quoteAsset);
+				//Offer rate = quotes.getImpliedBestAskForListing(listing);
+				Amount localBalance = cashBalances.get(baseAsset);
+				//Amount baseBalance = localBalance.times(rate.getPrice(), Remainder.ROUND_EVEN);
+				cashBalance = cashBalance.plus(localBalance);
+			}
+
+		}
+
+		return cashBalance;
+
+	}
+
+	@Override
+	@Transient
+	public Amount getBaseCashBalance(Asset quoteAsset) {
+		Amount cashBalance = DecimalAmount.ZERO;
+		ConcurrentHashMap<Asset, Amount> cashBalances = getCashBalances();
+
+		Iterator<Asset> it = cashBalances.keySet().iterator();
+		while (it.hasNext()) {
+			Asset baseAsset = it.next();
+
 			Listing listing = Listing.forPair(baseAsset, quoteAsset);
 			Offer rate = quotes.getImpliedBestAskForListing(listing);
 			Amount localBalance = cashBalances.get(baseAsset);
 			Amount baseBalance = localBalance.times(rate.getPrice(), Remainder.ROUND_EVEN);
-			baseCashBalance = baseCashBalance.plus(baseBalance);
+			cashBalance = cashBalance.plus(baseBalance);
 
 		}
 
-		return baseCashBalance;
+		return cashBalance;
 
 	}
 
 	@Override
 	@Transient
 	public Amount getAvailableBalance(Asset quoteAsset) {
-		Amount baseMarginBalance = DecimalAmount.ZERO;
+		Amount marginBalance = DecimalAmount.ZERO;
+		ConcurrentHashMap<Asset, Amount> margins = getMargins(quoteAsset);
+
+		Iterator<Asset> it = margins.keySet().iterator();
+		while (it.hasNext()) {
+			Asset baseAsset = it.next();
+			Listing listing = Listing.forPair(baseAsset, quoteAsset);
+			//Offer rate = quotes.getImpliedBestAskForListing(listing);
+			Amount localMargin = margins.get(baseAsset);
+			//Amount baseMargin = localMargin.times(rate.getPrice(), Remainder.ROUND_EVEN);
+			marginBalance = marginBalance.plus(localMargin);
+
+		}
+
+		return getCashBalance(quoteAsset).plus(marginBalance);
+
+	}
+
+	@Override
+	@Transient
+	public Amount getAvailableBaseBalance(Asset quoteAsset) {
+		Amount marginBalance = DecimalAmount.ZERO;
 		ConcurrentHashMap<Asset, Amount> margins = getMargins(quoteAsset);
 
 		Iterator<Asset> it = margins.keySet().iterator();
@@ -519,11 +645,11 @@ public class BasicPortfolioService implements PortfolioService {
 			Offer rate = quotes.getImpliedBestAskForListing(listing);
 			Amount localMargin = margins.get(baseAsset);
 			Amount baseMargin = localMargin.times(rate.getPrice(), Remainder.ROUND_EVEN);
-			baseMarginBalance = baseMarginBalance.plus(baseMargin);
+			marginBalance = marginBalance.plus(baseMargin);
 
 		}
 
-		return getCashBalance(quoteAsset).plus(baseMarginBalance);
+		return getBaseCashBalance(quoteAsset).plus(marginBalance);
 
 	}
 

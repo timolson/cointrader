@@ -14,6 +14,7 @@ import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.Context;
+import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.joda.time.format.DateTimeFormat;
@@ -121,6 +122,22 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
 				portfolio.modifyPosition(position, new Authorization("Fill for " + transaction.toString()));
 
+			} else if (type == TransactionType.REALISED_PROFIT_LOSS) {
+				//Transfer ammount to base currency
+				// neeed to be able to implment this on the exchange via orders
+				if (!transaction.getCurrency().equals(transaction.getPortfolio().getBaseAsset())) {
+					Listing tradedListing = Listing.forPair(transaction.getCurrency(), transaction.getPortfolio().getBaseAsset());
+					//we will be selling transaction currency and buying base currency i.e. sell BTC, buy USD
+					Offer tradedRate = quotes.getImpliedBestAskForListing(tradedListing);
+
+					Transaction initialDedit = new Transaction(transaction.getPortfolio(), transaction.getExchange(), transaction.getCurrency(),
+							TransactionType.DEBIT, transaction.getAmount().negate());
+					context.route(initialDedit);
+					Transaction initialCredit = new Transaction(transaction.getPortfolio(), transaction.getExchange(), transaction.getPortfolio()
+							.getBaseAsset(), TransactionType.CREDIT, transaction.getAmount().times(tradedRate.getPrice(), Remainder.ROUND_EVEN));
+					context.route(initialCredit);
+
+				}
 			}
 		} else {
 			return;
@@ -150,11 +167,11 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 			//portfolio.getPositions();
 			logger.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Portfolio: " + portfolio + " Total Value ("
 					+ portfolio.getBaseAsset() + "):"
-					+ portfolioService.getCashBalance(portfolio.getBaseAsset()).plus(portfolioService.getUnrealisedPnL(portfolio.getBaseAsset()))
-					+ " (Cash Balance:" + portfolioService.getCashBalance(portfolio.getBaseAsset()) + " Realised PnL:"
-					+ portfolioService.getRealisedPnL(portfolio.getBaseAsset()) + " Open Trade Equity:"
-					+ portfolioService.getUnrealisedPnL(portfolio.getBaseAsset()) + " MarketValue:" + portfolioService.getMarketValue(portfolio.getBaseAsset())
-					+ ")");
+					+ portfolioService.getBaseCashBalance(portfolio.getBaseAsset()).plus(portfolioService.getBaseUnrealisedPnL(portfolio.getBaseAsset()))
+					+ " (Cash Balance:" + portfolioService.getBaseCashBalance(portfolio.getBaseAsset()) + " Realised PnL (M2M):"
+					+ portfolioService.getBaseRealisedPnL(portfolio.getBaseAsset()) + " Open Trade Equity:"
+					+ portfolioService.getBaseUnrealisedPnL(portfolio.getBaseAsset()) + " MarketValue:"
+					+ portfolioService.getBaseMarketValue(portfolio.getBaseAsset()) + ")");
 			logger.info(portfolio.getPositions().toString());
 			logger.info(portfolio.getDetailedPositions().toString());
 			//			Object itt = portfolio.getPositions().iterator();
@@ -179,6 +196,8 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 	private static Logger log;
 	@Inject
 	protected Context context;
+	@Inject
+	private QuoteService quotes;
 	private Portfolio portfolio;
 
 }

@@ -39,7 +39,7 @@ public class BacktestRunMode extends RunMode {
 	//private final Instant end = new DateTime(2014, 9, 10, 6, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
 	@Parameter(names = { "-p", "--position" }, arity = 2, description = "specify initial portfolio positions as {Exchange}:{Asset} {Amount} e.g. BITFINEX:BTC 1.0")
-	public List<String> positions = Arrays.asList("OKCOIN:BTC", "100000000000");
+	public List<String> positions = Arrays.asList("OKCOIN:USD", "1000000");
 
 	@Parameter(names = { "-" }, description = "No-op switch used to end list of positions before supplying the strategy name")
 	boolean noop = false;
@@ -79,8 +79,8 @@ public class BacktestRunMode extends RunMode {
 		for (int i = 0; i < positions.size() - 1;) {
 			Holding holding = Holding.forSymbol(positions.get(i++));
 			//	Long str = (positions.get(i++));
-			DiscreteAmount amount = new DiscreteAmount(Long.parseLong(positions.get(i++)), 0.000000001);
-			DiscreteAmount price = new DiscreteAmount(0, 0.01);
+			DiscreteAmount amount = new DiscreteAmount(Long.parseLong(positions.get(i++)), holding.getAsset().getBasis());
+			DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
 			Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
 			context.publish(initialCredit);
 

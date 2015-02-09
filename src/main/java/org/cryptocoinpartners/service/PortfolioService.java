@@ -91,4 +91,14 @@ public interface PortfolioService {
 
 	Amount getAvailableBalance(Asset quoteAsset);
 
+	Amount getBaseCashBalance(Asset quoteAsset);
+
+	Amount getBaseUnrealisedPnL(Asset quoteAsset);
+
+	Amount getBaseRealisedPnL(Asset quoteAsset);
+
+	Amount getBaseMarketValue(Asset quoteAsset);
+
+	Amount getAvailableBaseBalance(Asset quoteAsset);
+
 }

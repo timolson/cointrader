@@ -129,9 +129,9 @@ public class BasicQuoteService implements QuoteService {
 	public @Nullable
 	Offer getImpliedBestBidForListing(Listing listing) {
 		try {
-			long bestImpliedAsk = impliedBidMatrix.getRate(listing.getBase(), listing.getQuote());
+			long bestImpliedBid = impliedBidMatrix.getRate(listing.getBase(), listing.getQuote());
 			Market market = Market.findOrCreate(Exchanges.SELF, listing);
-			return new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
+			return new Offer(market, Instant.now(), Instant.now(), bestImpliedBid, 0L);
 		} catch (java.lang.IllegalArgumentException e) {
 
 			return null;
@@ -154,7 +154,7 @@ public class BasicQuoteService implements QuoteService {
 	}
 
 	//@Priority(10)
-	@When("select * from Book")
+	@When("@Priority(9) select * from Book")
 	private void recordBook(Book b) {
 		Market market = b.getMarket();
 		handleMarket(market);
@@ -174,21 +174,19 @@ public class BasicQuoteService implements QuoteService {
 		//noinspection ConstantConditions
 		if (bestBid != null && (lastBestBidBook == null || bestBid.getPrice().compareTo(lastBestBidBook.getBestBid().getPrice()) > 0))
 
-		{
 			bestBidByMarket.put(marketSymbol, b);
+		try {
+			impliedBidMatrix.updateRates(market.getBase(), market.getQuote(), b.getBidPrice().getCount());
+		} catch (java.lang.IllegalArgumentException e) {
 			try {
-				impliedBidMatrix.updateRates(b.getBestBid().getMarket().getBase(), b.getBestBid().getMarket().getQuote(), b.getBestBid().getPriceCount());
-			} catch (java.lang.IllegalArgumentException e) {
-				try {
-					impliedBidMatrix.addAsset(b.getBestBid().getMarket().getBase(), b.getBestBid().getMarket().getQuote(), b.getBestBid().getPriceCount());
-				} catch (java.lang.IllegalArgumentException e2) {
-					//				//we not recived enouhg trades to create a link to other currecny
-					//				BigDecimal inverseRateBD = (((BigDecimal.valueOf(1 / (bestBid.getMarket().getQuote().getBasis()))).divide(
-					//						BigDecimal.valueOf(bestBid.getPriceCount()), bestBid.getMarket().getBase().getScale(), RoundingMode.HALF_EVEN)).divide(BigDecimal
-					//						.valueOf(bestBid.getMarket().getBase().getBasis())));
-					//				long inverseCrossRate = inverseRateBD.longValue();
-					//				impliedBidMatrix.addAsset(bestBid.getMarket().getQuote(), bestBid.getMarket().getBase(), inverseCrossRate);
-				}
+				impliedBidMatrix.addAsset(market.getBase(), market.getQuote(), b.getBidPrice().getCount());
+			} catch (java.lang.IllegalArgumentException e2) {
+				//				//we not recived enouhg trades to create a link to other currecny
+				//				BigDecimal inverseRateBD = (((BigDecimal.valueOf(1 / (bestBid.getMarket().getQuote().getBasis()))).divide(
+				//						BigDecimal.valueOf(bestBid.getPriceCount()), bestBid.getMarket().getBase().getScale(), RoundingMode.HALF_EVEN)).divide(BigDecimal
+				//						.valueOf(bestBid.getMarket().getBase().getBasis())));
+				//				long inverseCrossRate = inverseRateBD.longValue();
+				//				impliedBidMatrix.addAsset(bestBid.getMarket().getQuote(), bestBid.getMarket().getBase(), inverseCrossRate);
 			}
 		}
 
@@ -198,10 +196,10 @@ public class BasicQuoteService implements QuoteService {
 		if (bestAsk != null && (lastBestAskBook == null || bestAsk.getPrice().compareTo(lastBestAskBook.getBestAsk().getPrice()) < 0))
 			bestAskByMarket.put(marketSymbol, b);
 		try {
-			impliedAskMatrix.updateRates(b.getBestAsk().getMarket().getBase(), b.getBestAsk().getMarket().getQuote(), b.getBestAsk().getPriceCount());
+			impliedAskMatrix.updateRates(market.getBase(), market.getQuote(), b.getAskPrice().getCount());
 		} catch (java.lang.IllegalArgumentException e) {
 			try {
-				impliedAskMatrix.addAsset(b.getBestAsk().getMarket().getBase(), b.getBestAsk().getMarket().getQuote(), b.getBestAsk().getPriceCount());
+				impliedAskMatrix.addAsset(market.getBase(), market.getQuote(), b.getAskPrice().getCount());
 			} catch (java.lang.IllegalArgumentException e2) {
 				e2.printStackTrace();
 				//we not recived enouhg trades to create a link to other currecny
@@ -218,7 +216,7 @@ public class BasicQuoteService implements QuoteService {
 
 	}
 
-	@When("select * from Trade")
+	@When("@Priority(9) select * from Trade")
 	private void recordTrade(Trade t) {
 		Market market = t.getMarket();
 		handleMarket(market);
@@ -256,4 +254,5 @@ public class BasicQuoteService implements QuoteService {
 	private final Map<String, Book> bestBidByMarket = new HashMap<>();
 	private final Map<String, Book> bestAskByMarket = new HashMap<>();
 	private final Map<String, Set<Market>> marketsByListing = new HashMap<>();
+
 }
