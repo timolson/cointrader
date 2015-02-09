@@ -17,7 +17,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <xchange.version>3.0.0-SNAPSHOT</xchange.version>
+        <xchange.version>3.0.1-SNAPSHOT</xchange.version>
         <slf4j-api.version>1.7.5</slf4j-api.version>
         <hibernate.version>4.3.6.Final</hibernate.version>
         <antlr.version>4.2.2</antlr.version>
