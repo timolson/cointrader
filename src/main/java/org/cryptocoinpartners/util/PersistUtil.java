@@ -39,24 +39,19 @@ public class PersistUtil {
                     em.persist(entity);
                 transaction.commit();
 
-            } catch (Exception e) {
+            } catch (Exception | Error e) {
                 persited = false;
                 e.printStackTrace();
-                if (persited)
-                    for (EntityBase entity : entities)
-                        log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
                 if (transaction.isActive())
                     transaction.rollback();
-
-            } catch (Error t) {
-                transaction.rollback();
-                throw t;
             }
         } finally {
             if (persited)
                 for (EntityBase entity : entities)
                     log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
-
+            else
+                for (EntityBase entity : entities)
+                    log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
             if (em != null)
                 em.close();
         }
