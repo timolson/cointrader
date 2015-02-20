@@ -59,6 +59,9 @@ void enterTrade( MyIndicator s )
 You then attach this class to a [Context](https://github.com/timolson/cointrader/wiki/The-Context-Class) to receive Esper event rows as method invocations.
 
 #### 24Hr OHLC Bars
+Strategy needs to implement a .getInterval() method to return a double in seconds of the size of the bar.
+
+Default simple statful stretegy is 86400 (24Hr)
 cointrader-esper.cfg.xml
 ```
 <plugin-view factory-class="org.cryptocoinpartners.esper.OHLCBarPlugInViewFactory" name="ohlcbar" namespace="custom"/>  
@@ -76,7 +79,8 @@ from
 ```
 insert into OHLCShortWindow
 select * 
- from Trade.custom:ohlcbar(timestamp, priceCountAsDouble, market);
+ from  Trade.custom:ohlcbar(timestamp, priceCountAsDouble, market,TestStrategy.getInterval());
+ 
 ```
 * Select values from OHLC bar window
 ```
