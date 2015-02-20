@@ -20,6 +20,7 @@ public class OHLCBarPlugInViewFactory extends ViewFactorySupport {
     private ExprNode timestampExpression;
     private ExprNode valueExpression;
     private ExprNode marketExpression;
+    private ExprNode intervalExpression;
 
     @Override
     public void setViewParameters(ViewFactoryContext viewFactoryContext, List<ExprNode> viewParameters) throws ViewParameterException {
@@ -39,6 +40,7 @@ public class OHLCBarPlugInViewFactory extends ViewFactorySupport {
         timestampExpression = validatedNodes[0];
         valueExpression = validatedNodes[1];
         marketExpression = validatedNodes[2];
+        intervalExpression = validatedNodes[3];
 
         if ((timestampExpression.getExprEvaluator().getType() != long.class) && (timestampExpression.getExprEvaluator().getType() != Long.class)) {
             throw new ViewParameterException("View requires long-typed timestamp values in parameter 1");
@@ -49,11 +51,14 @@ public class OHLCBarPlugInViewFactory extends ViewFactorySupport {
         if ((marketExpression.getExprEvaluator().getType() != Market.class) && (marketExpression.getExprEvaluator().getType() != Market.class)) {
             throw new ViewParameterException("View requires market-typed values for in parameter 3");
         }
+        if ((intervalExpression.getExprEvaluator().getType() != double.class) && (intervalExpression.getExprEvaluator().getType() != Double.class)) {
+            throw new ViewParameterException("View requires double-typed values for in parameter 4");
+        }
     }
 
     @Override
     public View makeView(AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext) {
-        return new OHLCBarPlugInView(agentInstanceViewFactoryContext, timestampExpression, valueExpression, marketExpression);
+        return new OHLCBarPlugInView(agentInstanceViewFactoryContext, timestampExpression, valueExpression, marketExpression, intervalExpression);
     }
 
     @Override

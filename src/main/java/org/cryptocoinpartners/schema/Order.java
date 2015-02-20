@@ -51,6 +51,12 @@ public abstract class Order extends Event {
         return parentOrder;
     }
 
+   // @ManyToOne(optional = true)
+    @Transient
+    public Fill getParentFill() {
+        return parentFill;
+    }
+
     @Transient
     public abstract boolean isBid();
 
@@ -118,6 +124,10 @@ public abstract class Order extends Event {
 
     protected void setParentOrder(Order order) {
         this.parentOrder = order;
+    }
+
+    protected void setParentFill(Fill fill) {
+        this.parentFill = fill;
     }
 
     public FillType getFillType() {
@@ -346,5 +356,6 @@ public abstract class Order extends Event {
     private boolean force; // allow this order to override various types of panic
     private boolean emulation; // ("allow order type emulation" [default, true] or "only use exchange's native functionality")
     protected Order parentOrder;
+    protected Fill parentFill;
 
 }

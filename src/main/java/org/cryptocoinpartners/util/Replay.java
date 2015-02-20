@@ -187,6 +187,6 @@ public class Replay {
     private final Interval replayTimeInterval;
     private static ExecutorService service;
     private final Context context;
-    private static final Duration timeStep = Duration.standardDays(28); // how many rows from the DB to gather in one batch
+    private static final Duration timeStep = Duration.standardDays(1); // how many rows from the DB to gather in one batch
     private final boolean orderByTimeReceived;
 }

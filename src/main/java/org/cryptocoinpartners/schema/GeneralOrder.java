@@ -8,6 +8,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
+import org.cryptocoinpartners.util.Remainder;
 import org.joda.time.Instant;
 
 /**
@@ -51,6 +52,17 @@ public class GeneralOrder extends Order {
         super.setPortfolio(portfolio);
         parentOrder.addChild(this);
         this.setParentOrder(parentOrder);
+        this.market = market;
+        this.listing = market.getListing();
+        this.volume = DecimalAmount.of(volume);
+        this.fillType = type;
+    }
+
+    public GeneralOrder(Instant time, Portfolio portfolio, Fill parentFill, Market market, BigDecimal volume, FillType type) {
+        super(time);
+        super.setPortfolio(portfolio);
+        parentFill.addChild(this);
+        this.setParentFill(parentFill);
         this.market = market;
         this.listing = market.getListing();
         this.volume = DecimalAmount.of(volume);
@@ -207,6 +219,8 @@ public class GeneralOrder extends Order {
 
     @Override
     public void setStopPrice(DecimalAmount stopPrice) {
+        if(this.parentFill!=null)
+            parentFill.setStopPriceCount(stopPrice.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
         this.stopPrice = stopPrice;
     }
 

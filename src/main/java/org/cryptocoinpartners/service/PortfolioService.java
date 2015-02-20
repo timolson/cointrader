@@ -13,6 +13,7 @@ import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Asset;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Exchange;
+import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Position;
 import org.cryptocoinpartners.schema.Transaction;
@@ -85,7 +86,7 @@ public interface PortfolioService {
 
     Amount getUnrealisedPnL(Asset quoteAsset);
 
-    Collection<Position> getPositions(Asset asset, Exchange exchange);
+    Collection<Fill> getPositions(Asset asset, Exchange exchange);
 
     ConcurrentHashMap<Asset, Amount> getAvailableBalances();
 

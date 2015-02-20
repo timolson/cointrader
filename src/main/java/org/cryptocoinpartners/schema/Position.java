@@ -92,11 +92,11 @@ public class Position extends Holding {
         return volume;
 
         //if (getLongVolume() != null && getShortVolume() != null) {
-        //      return getLongVolume().plus(getShortVolume());
+        //		return getLongVolume().plus(getShortVolume());
         //} else if (getLongVolume() != null) {
-        //  return getLongVolume();
-        //  } else {
-        //      return getShortVolume();
+        //	return getLongVolume();
+        //	} else {
+        //		return getShortVolume();
         //}
 
     }
@@ -104,8 +104,8 @@ public class Position extends Holding {
     @Transient
     public Amount getAvgPrice() {
 
-        //  if (volume == null)
-        //  volume = new DiscreteAmount(volumeCount, market.getVolumeBasis());
+        //	if (volume == null)
+        //	volume = new DiscreteAmount(volumeCount, market.getVolumeBasis());
         //return volume;
         return ((getLongAvgPrice().times(getLongVolume(), Remainder.ROUND_EVEN)).plus(getShortAvgPrice().times(getShortVolume(), Remainder.ROUND_EVEN)))
                 .dividedBy(getLongVolume().plus(getShortVolume()), Remainder.ROUND_EVEN);
@@ -140,6 +140,20 @@ public class Position extends Holding {
         return shortAvgPrice;
     }
 
+    @Transient
+    public Amount getLongAvgStopPrice() {
+        if (longAvgStopPrice == null)
+            longAvgStopPrice = DecimalAmount.ZERO;
+        return longAvgStopPrice;
+    }
+
+    @Transient
+    public Amount getShortAvgStopPrice() {
+        if (shortAvgStopPrice == null)
+            shortAvgStopPrice = DecimalAmount.ZERO;
+        return shortAvgStopPrice;
+    }
+
     /** If the SpecificOrder is not null, then this Position is being held in reserve as payment for that Order */
 
     @Transient
@@ -168,13 +182,15 @@ public class Position extends Holding {
     public String toString() {
         return "Position=[Exchange=" + exchange + (getShortVolume() != null ? (SEPARATOR + ", Short Qty=" + getShortVolume()) : "")
                 + (getShortAvgPrice() != null ? (SEPARATOR + ", Short Avg Price=" + getShortAvgPrice()) : "")
+                + (getShortAvgStopPrice() != null ? (SEPARATOR + ", Short Avg Stop Price=" + getShortAvgStopPrice()) : "")
                 + (getLongVolume() != null ? (SEPARATOR + "Long Qty=" + getLongVolume()) : "")
-                + (getLongAvgPrice() != null ? (SEPARATOR + "Long Avg Price=" + getLongAvgPrice()) : "") + ", Net Qty=" + getVolume().toString()
+                + (getLongAvgPrice() != null ? (SEPARATOR + "Long Avg Price=" + getLongAvgPrice()) : "")
+                + (getLongAvgStopPrice() != null ? (SEPARATOR + "Long Avg Stop Price=" + getLongAvgStopPrice()) : "") + ", Net Qty=" + getVolume().toString()
                 + " Vol Count=" + getVolumeCount() + ",  Entry Date=" + ", Instrument=" + asset;
     }
 
     // JPA
-    protected Position() {
+    public Position() {
     }
 
     @Transient
@@ -219,12 +235,22 @@ public class Position extends Holding {
         this.shortAvgPrice = shortAvgPrice;
     }
 
+    public void setLongAvgStopPrice(Amount longAvgStopPrice) {
+        this.longAvgStopPrice = longAvgStopPrice;
+    }
+
+    public void setShortAvgStopPrice(Amount shortAvgStopPrice) {
+        this.shortAvgStopPrice = shortAvgStopPrice;
+    }
+
     private Amount longVolume;
     private Amount shortVolume;
     private Amount volume;
     private Market market;
     private Amount longAvgPrice;
     private Amount shortAvgPrice;
+    private Amount longAvgStopPrice;
+    private Amount shortAvgStopPrice;
     private Amount marginAmount;
     private long longVolumeCount;
     private long shortVolumeCount;

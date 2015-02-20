@@ -106,11 +106,11 @@ public abstract class BaseOrderService implements OrderService {
     public void adjustStopLoss(Amount price, Amount amount) {
         synchronized (lock) {
             for (int i = 0; i < triggerOrders.size(); i++) {
-                //              if(myList.get(i).equals("3")){
-                //                  myList.remove(i);
-                //                  i--;
-                //                  myList.add("6");
-                //              }
+                //			    if(myList.get(i).equals("3")){
+                //			        myList.remove(i);
+                //			        i--;
+                //			        myList.add("6");
+                //			    }
 
                 //for (Iterator<Order> it = triggerOrders.iterator(); it.hasNext();) {
                 Order triggerOrder = triggerOrders.get(i);
@@ -127,11 +127,11 @@ public abstract class BaseOrderService implements OrderService {
 
                 }
 
-                //              if (triggerOrder.getParentOrder().getFillType().equals(FillType.STOP_LOSS)) {
-                //                  //need to check this
-                //                  DecimalAmount stopPrice = DecimalAmount.of(triggerOrder.getStopPrice().plus(amount));
+                //				if (triggerOrder.getParentOrder().getFillType().equals(FillType.STOP_LOSS)) {
+                //					//need to check this
+                //					DecimalAmount stopPrice = DecimalAmount.of(triggerOrder.getStopPrice().plus(amount));
                 //
-                //                  triggerOrder.setStopPrice(stopPrice);
+                //					triggerOrder.setStopPrice(stopPrice);
 
             }
 
@@ -162,7 +162,7 @@ public abstract class BaseOrderService implements OrderService {
             case ROUTED:
                 break;
             case PLACED:
-                //  PersitOrderFill(orderUpdate.getOrder());
+                //	PersitOrderFill(orderUpdate.getOrder());
                 break;
             case PARTFILLED:
                 break;
@@ -183,10 +183,6 @@ public abstract class BaseOrderService implements OrderService {
                 break;
             case REJECTED:
                 break;
-            default:
-                log.warn("Unknown order state: " + orderState);
-                break;
-
         }
 
     }
@@ -196,8 +192,7 @@ public abstract class BaseOrderService implements OrderService {
         Order order = fill.getOrder();
         //PersitOrderFill(order);
         if (order.getParentOrder() != null) {
-            FillType fillType = order.getParentOrder().getFillType();
-            switch (fillType) {
+            switch (order.getParentOrder().getFillType()) {
                 case GOOD_TIL_CANCELLED:
                     break;
                 case GTC_OR_MARGIN_CAP:
@@ -218,9 +213,6 @@ public abstract class BaseOrderService implements OrderService {
                         Order stopOrder = orderBuilder.getOrder();
                         placeOrder(stopOrder);
                     }
-                    break;
-                default:
-                    log.warn("Unknown fill type: " + fillType);
                     break;
 
             }
@@ -249,10 +241,14 @@ public abstract class BaseOrderService implements OrderService {
 
         if (fill.getOrder().getParentOrder().getStopPrice() != null) {
             BigDecimal bdVolume = fill.getVolume().asBigDecimal();
-            BigDecimal bdStopPrice = fill.getOrder().getParentOrder().getStopPrice().asBigDecimal();
+            DiscreteAmount stopPriceDiscrete = new DiscreteAmount(DiscreteAmount.roundedCountForBasis(fill.getOrder().getParentOrder().getStopPrice()
+                    .asBigDecimal(), fill.getMarket().getPriceBasis()), fill.getMarket().getPriceBasis());
+            BigDecimal bdStopPrice = stopPriceDiscrete.asBigDecimal();
+            BigDecimal bdLimitPrice = (fill.getVolume().isNegative()) ? stopPriceDiscrete.increment(2).asBigDecimal() : stopPriceDiscrete.decrement(2)
+                    .asBigDecimal();
             GeneralOrderBuilder generalOrder = order
-                    .create(context.getTime(), fill.getOrder().getParentOrder(), fill.getMarket(), bdVolume.negate(), FillType.STOP_LIMIT)
-                    .withComment("Stop Order").withStopPrice(bdStopPrice).withLimitPrice(bdStopPrice).withPositionEffect(PositionEffect.CLOSE);
+                    .create(context.getTime(), fill, fill.getMarket(), bdVolume.negate(), FillType.STOP_LIMIT)
+                    .withComment("Stop Order").withStopPrice(bdStopPrice).withLimitPrice(bdLimitPrice).withPositionEffect(PositionEffect.CLOSE);
 
             generalOrder.getOrder().copyCommonFillProperties(fill);
             return generalOrder;
@@ -274,8 +270,7 @@ public abstract class BaseOrderService implements OrderService {
             generalOrder.setMarket(offer.getMarket());
         }
 
-        FillType fillType = generalOrder.getFillType();
-        switch (fillType) {
+        switch (generalOrder.getFillType()) {
             case GOOD_TIL_CANCELLED:
                 throw new NotImplementedException();
             case GTC_OR_MARGIN_CAP:
@@ -304,9 +299,6 @@ public abstract class BaseOrderService implements OrderService {
                 log.info("Routing Stop Loss order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
                 placeOrder(specificOrder);
                 break;
-            default:
-                log.warn("Unknown fill type: " + fillType);
-                break;
 
         }
 
@@ -334,7 +326,8 @@ public abstract class BaseOrderService implements OrderService {
                             placeOrder(specificOrder);
                             triggerOrders.remove(i);
                             i--;
-                            //  triggerOrders.remove(triggerOrder);
+                            //i = Math.min(0, i - 1);
+                            //	triggerOrders.remove(triggerOrder);
                             log.debug(triggeredOrder + " triggered as specificOrder " + specificOrder);
                         } else if (triggeredOrder.getTrailingStopPrice() != null) {
                             //current price is less than the stop price so I will update the stop price
@@ -357,6 +350,7 @@ public abstract class BaseOrderService implements OrderService {
                             placeOrder(specificOrder);
                             triggerOrders.remove(i);
                             i--;
+                            //i = Math.min(0, i - 1);
                             //triggeredOrders.add(triggeredOrder);
                             log.debug(triggeredOrder + " triggered as specificOrder " + specificOrder);
 
@@ -380,7 +374,8 @@ public abstract class BaseOrderService implements OrderService {
 
     private SpecificOrder convertGeneralOrderToSpecific(GeneralOrder generalOrder, Market market) {
         DiscreteAmount volume = generalOrder.getVolume().toBasis(market.getVolumeBasis(), Remainder.DISCARD);
-
+        DiscreteAmount discreteLimit;
+        DiscreteAmount discreteStop;
         RemainderHandler priceRemainderHandler = generalOrder.isBid() ? buyHandler : sellHandler;
         final DecimalAmount limitPrice = generalOrder.getLimitPrice();
         final DecimalAmount stopPrice = generalOrder.getStopPrice();
@@ -391,8 +386,7 @@ public abstract class BaseOrderService implements OrderService {
                 generalOrder.getComment());
         builder.withPositionEffect(generalOrder.getPositionEffect());
 
-        FillType fillType = generalOrder.getFillType();
-        switch (fillType) {
+        switch (generalOrder.getFillType()) {
             case GOOD_TIL_CANCELLED:
                 break;
             case GTC_OR_MARGIN_CAP:
@@ -400,21 +394,19 @@ public abstract class BaseOrderService implements OrderService {
             case CANCEL_REMAINDER:
                 break;
             case LIMIT:
-                DiscreteAmount discreteLimit = limitPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
+                discreteLimit = limitPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
                 builder.withLimitPrice(discreteLimit);
                 break;
             case STOP_LIMIT:
-                DiscreteAmount discreteStopLimit = stopPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
-                builder.withLimitPrice(discreteStopLimit);
+                discreteStop = stopPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
+                discreteLimit = volume.isNegative() ? discreteStop.decrement(2) : discreteStop.increment(2);
+                builder.withLimitPrice(discreteLimit);
                 break;
             case TRAILING_STOP_LIMIT:
                 break;
             case STOP_LOSS:
-                DiscreteAmount discreteStopLossLimit = limitPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
-                builder.withLimitPrice(discreteStopLossLimit);
-                break;
-            default:
-                log.warn("Unknown fill type: " + fillType);
+                discreteLimit = limitPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
+                builder.withLimitPrice(discreteLimit);
                 break;
 
         }
@@ -495,7 +487,6 @@ public abstract class BaseOrderService implements OrderService {
             default:
                 log.warn("Unknown order state: " + childOrderState);
                 break;
-
         }
     }
 
@@ -525,8 +516,7 @@ public abstract class BaseOrderService implements OrderService {
     protected final void CreateTransaction(EntityBase entity) {
         Transaction transaction = null;
         Order order;
-        String simpleName = entity.getClass().getSimpleName();
-        switch (simpleName) {
+        switch (entity.getClass().getSimpleName()) {
 
             case "SpecificOrder":
                 order = (Order) entity;
@@ -550,9 +540,6 @@ public abstract class BaseOrderService implements OrderService {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
-                break;
-            default:
-                log.warn("Unknown simple name: " + simpleName);
                 break;
 
         }

@@ -41,6 +41,7 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
     private final ExprNode timestampExpression;
     private final ExprNode valueExpression;
     private ExprNode marketExpression;
+    private ExprNode intervalExpression;
     private final EventBean[] eventsPerStream = new EventBean[1];
 
     private EPStatementHandleCallback handle;
@@ -51,6 +52,7 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
     private Double max;
     private Double min;
     private Market market;
+    private static Double interval;
     private EventBean lastEvent;
 
     public OHLCBarPlugInView(AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext, ExprNode timestampExpression, ExprNode valueExpression) {
@@ -61,11 +63,12 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
     }
 
     public OHLCBarPlugInView(AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext, ExprNode timestampExpression, ExprNode valueExpression,
-            ExprNode marketExpression) {
+            ExprNode marketExpression, ExprNode intervalExpression) {
         this.agentInstanceViewFactoryContext = agentInstanceViewFactoryContext;
         this.timestampExpression = timestampExpression;
         this.valueExpression = valueExpression;
         this.marketExpression = marketExpression;
+        this.intervalExpression = intervalExpression;
         this.scheduleSlot = agentInstanceViewFactoryContext.getStatementContext().getScheduleBucket().allocateSlot();
     }
 
@@ -77,10 +80,10 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 
         for (EventBean theEvent : newData) {
             eventsPerStream[0] = theEvent;
+            interval = (Double) intervalExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
             Long timestamp = (Long) timestampExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
             Long timestampMinute = removeSeconds(timestamp);
             double value = (Double) valueExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
-            Market market;
             if (marketExpression != null)
                 market = (Market) marketExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
             // test if this minute has already been published, the event is too late
@@ -120,7 +123,7 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 
     @Override
     public View cloneView() {
-        return new OHLCBarPlugInView(agentInstanceViewFactoryContext, timestampExpression, valueExpression, marketExpression);
+        return new OHLCBarPlugInView(agentInstanceViewFactoryContext, timestampExpression, valueExpression, marketExpression, intervalExpression);
     }
 
     private void applyValue(double value) {
@@ -147,9 +150,24 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
     private static long removeSeconds(long timestamp) {
         Calendar cal = GregorianCalendar.getInstance();
         cal.setTimeInMillis(timestamp);
+        //TODO: need to support bars for mulitiple days
+        if ((interval / 86400) > 1) {
+            cal.set(Calendar.DAY_OF_YEAR, 0);
+            // round interval to nearest day
+            interval = ((double) Math.round(interval / 86400)) * 86400;
+        }
 
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
+        if ((interval / 3600) > 1) {
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            // round interval to nearest hour
+            interval = ((double) Math.round(interval / 3600)) * 3600;
+        }
+
+        if ((interval / 60) > 1) {
+            cal.set(Calendar.MINUTE, 0);
+            // round interval to nearest day
+            interval = ((double) Math.round(interval / 60)) * 60;
+        }
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
         return cal.getTimeInMillis();
@@ -164,7 +182,9 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 
         long currentTime = agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime();
         long currentRemoveSeconds = removeSeconds(currentTime);
-        long targetTime = currentRemoveSeconds + (86400 + LATE_EVENT_SLACK_SECONDS) * 1000; // leave some seconds for late comers
+        //long targetTime = currentRemoveSeconds + (86400 + LATE_EVENT_SLACK_SECONDS) * 1000; // leave some seconds for late comers
+        long targetTime = currentRemoveSeconds + (interval.longValue() + LATE_EVENT_SLACK_SECONDS) * 1000; // leave some seconds for late comers
+
         long scheduleAfterMSec = targetTime - currentTime;
 
         ScheduleHandleCallback callback = new ScheduleHandleCallback() {
@@ -180,7 +200,7 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
     }
 
     private void postData() {
-        Bar barValue = new Bar(currentTimestampMinute, first, last, max, min);
+        Bar barValue = new Bar(currentTimestampMinute, first, last, max, min, market);
         EventBean outgoing = agentInstanceViewFactoryContext.getStatementContext().getEventAdapterService().adapterForBean(barValue);
         if (lastEvent == null) {
             this.updateChildren(new EventBean[] { outgoing }, null);

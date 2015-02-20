@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
@@ -36,6 +37,9 @@ public class Fill extends RemoteEvent {
         this.market = market;
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
+        this.portfolio = order.getPortfolio();
+        this.stopPriceCount = (order.getStopPrice() != null) ? order.getStopPrice().getCount() : 0;
+
     }
 
     public Fill(SpecificOrder order, Instant time, Market market, long priceCount, long volumeCount, Amount commission) {
@@ -44,12 +48,51 @@ public class Fill extends RemoteEvent {
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
         this.commission = commission;
+        this.portfolio = order.getPortfolio();
+        this.stopPriceCount = (order.getStopPrice() != null) ? order.getStopPrice().getCount() : 0;
     }
 
     public @ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
     @JoinColumn(name = "`order`")
     SpecificOrder getOrder() {
         return order;
+    }
+
+    @Transient
+    public boolean isLong() {
+
+        return getVolume().isPositive();
+    }
+
+    public void addChild(Order order) {
+        synchronized (lock) {
+            getChildren().add(order);
+        }
+    }
+
+    @Nullable
+    @OneToMany
+    public Collection<Order> getChildren() {
+        if (children == null)
+            children = new ArrayList<Order>();
+        synchronized (lock) {
+            return children;
+        }
+    }
+
+    protected void setChildren(List<Order> children) {
+        this.children = children;
+    }
+
+    @Transient
+    public boolean hasChildren() {
+        return !getChildren().isEmpty();
+    }
+
+    @Transient
+    public boolean isShort() {
+
+        return getVolume().isNegative();
     }
 
     @Nullable
@@ -85,8 +128,19 @@ public class Fill extends RemoteEvent {
         return new DiscreteAmount(priceCount, market.getPriceBasis());
     }
 
+    @Transient
+    public Amount getStopPrice() {
+        if (stopPriceCount == 0)
+            return null;
+        return new DiscreteAmount(stopPriceCount, market.getPriceBasis());
+    }
+
     public long getPriceCount() {
         return priceCount;
+    }
+
+    public long getStopPriceCount() {
+        return stopPriceCount;
     }
 
     @Transient
@@ -111,6 +165,11 @@ public class Fill extends RemoteEvent {
             setMargin(FeesUtil.getMargin(this));
 
         return margin;
+    }
+
+    @Transient
+    public Portfolio getPortfolio() {
+        return portfolio;
     }
 
     @Transient
@@ -141,6 +200,14 @@ public class Fill extends RemoteEvent {
         this.priceCount = priceCount;
     }
 
+    protected void setStopPriceCount(long StopPriceCount) {
+        this.stopPriceCount = stopPriceCount;
+    }
+
+    protected void setPortfolio(Portfolio portfolio) {
+        this.portfolio = portfolio;
+    }
+
     protected void setVolumeCount(long volumeCount) {
         this.volumeCount = volumeCount;
     }
@@ -153,12 +220,16 @@ public class Fill extends RemoteEvent {
         this.margin = margin;
     }
 
+    private Collection<Order> children;
+
     private SpecificOrder order;
     private Market market;
     private long priceCount;
+    private long stopPriceCount;
     private long volumeCount;
     private Amount commission;
     private Amount margin;
     private Collection<Transaction> transactions;
+    private Portfolio portfolio;
 
 }
