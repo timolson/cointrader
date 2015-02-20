@@ -82,6 +82,9 @@ public abstract class BaseOrderService implements OrderService {
                 Order triggerOrder = it.next();
                 if (triggerOrder.getMarket().equals(market))
                     cancelledOrders.add(triggerOrder);
+                //TODO could be a condition here where we have not removed the trigger order but we have set the stop price to 0 on the fill
+                if (triggerOrder.getParentFill() != null)
+                    triggerOrder.getParentFill().setStopPriceCount(0);
             }
             triggerOrders.removeAll(cancelledOrders);
         }
@@ -95,6 +98,9 @@ public abstract class BaseOrderService implements OrderService {
                 Order triggerOrder = it.next();
                 if (triggerOrder.equals(order))
                     cancelledOrders.add(triggerOrder);
+                if (triggerOrder.getParentFill() != null)
+                    triggerOrder.getParentFill().setStopPriceCount(0);
+
             }
 
             triggerOrders.removeAll(cancelledOrders);
@@ -119,11 +125,15 @@ public abstract class BaseOrderService implements OrderService {
                             (price.plus(amount).toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount());
                     DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggerOrder.getMarket().getPriceBasis()));
                     triggerOrder.setStopPrice(stopDiscrete);
+                    if (triggerOrder.getParentFill() != null)
+                        triggerOrder.getParentFill().setStopPriceCount(stopPrice);
                 } else if (triggerOrder.isAsk()) {
                     long stopPrice = Math.max((triggerOrder.getStopPrice().toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount(),
                             (price.minus(amount).toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount());
                     DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggerOrder.getMarket().getPriceBasis()));
                     triggerOrder.setStopPrice(stopDiscrete);
+                    if (triggerOrder.getParentFill() != null)
+                        triggerOrder.getParentFill().setStopPriceCount(stopPrice);
 
                 }
 
@@ -246,11 +256,11 @@ public abstract class BaseOrderService implements OrderService {
             BigDecimal bdStopPrice = stopPriceDiscrete.asBigDecimal();
             BigDecimal bdLimitPrice = (fill.getVolume().isNegative()) ? stopPriceDiscrete.increment(2).asBigDecimal() : stopPriceDiscrete.decrement(2)
                     .asBigDecimal();
-            GeneralOrderBuilder generalOrder = order
-                    .create(context.getTime(), fill, fill.getMarket(), bdVolume.negate(), FillType.STOP_LIMIT)
+            GeneralOrderBuilder generalOrder = order.create(context.getTime(), fill, fill.getMarket(), bdVolume.negate(), FillType.STOP_LIMIT)
                     .withComment("Stop Order").withStopPrice(bdStopPrice).withLimitPrice(bdLimitPrice).withPositionEffect(PositionEffect.CLOSE);
 
             generalOrder.getOrder().copyCommonFillProperties(fill);
+            fill.setStopPriceCount(stopPriceDiscrete.getCount());
             return generalOrder;
         }
         return null;

@@ -200,7 +200,7 @@ public class Fill extends RemoteEvent {
         this.priceCount = priceCount;
     }
 
-    protected void setStopPriceCount(long StopPriceCount) {
+    public void setStopPriceCount(long stopPriceCount) {
         this.stopPriceCount = stopPriceCount;
     }
 
