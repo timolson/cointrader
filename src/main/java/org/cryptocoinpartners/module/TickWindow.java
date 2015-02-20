@@ -90,7 +90,7 @@ public class TickWindow {
     }
 
     @Inject
-    private final Context context;
+    private Context context;
     @Inject
     private Logger log;
     private final Map<UUID, AccumulatingTick> accumulatingTickMap;
