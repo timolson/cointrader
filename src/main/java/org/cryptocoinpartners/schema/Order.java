@@ -51,7 +51,7 @@ public abstract class Order extends Event {
         return parentOrder;
     }
 
-   // @ManyToOne(optional = true)
+    // @ManyToOne(optional = true)
     @Transient
     public Fill getParentFill() {
         return parentFill;
@@ -103,6 +103,11 @@ public abstract class Order extends Event {
     @Nullable
     @Transient
     @Column(insertable = false, updatable = false)
+    public abstract Amount getTargetPrice();
+
+    @Nullable
+    @Transient
+    @Column(insertable = false, updatable = false)
     public abstract Amount getTrailingStopPrice();
 
     @Transient
@@ -113,6 +118,8 @@ public abstract class Order extends Event {
     public abstract Amount getUnfilledVolume();
 
     public abstract void setStopPrice(DecimalAmount stopPrice);
+
+    public abstract void setTargetPrice(DecimalAmount stopPrice);
 
     public abstract void setTrailingStopPrice(DecimalAmount trailingStopPrice);
 

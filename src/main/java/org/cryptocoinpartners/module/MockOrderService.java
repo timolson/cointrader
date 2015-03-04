@@ -2,7 +2,6 @@ package org.cryptocoinpartners.module;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -10,6 +9,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.cryptocoinpartners.enumeration.OrderState;
+import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.Fill;
@@ -36,15 +36,15 @@ public class MockOrderService extends BaseOrderService {
         if (specificOrder.getStopPrice() != null)
             reject(specificOrder, "Stop prices unsupported");
 
-        pendingOrders.add(specificOrder);
+        addOrder(specificOrder);
         updateOrderState(specificOrder, OrderState.PLACED);
         specificOrder.setEntryTime(context.getTime());
     }
 
     @SuppressWarnings("ConstantConditions")
-    @When("select * from Book")
+    @When("@Priority(9) select * from Book")
     private void handleBook(Book b) {
-        List<Fill> fills = Collections.synchronizedList(new ArrayList<Fill>());
+        List<Fill> fills = new ArrayList<Fill>();
 
         // todo multiple Orders may be filled with the same Offer.  We should deplete the Offers as we fill
         for (SpecificOrder order : pendingOrders) {
@@ -89,13 +89,20 @@ public class MockOrderService extends BaseOrderService {
     }
 
     private void removeOrder(Order order) {
-        synchronized (pendingOrders) {
+        synchronized (lock) {
             pendingOrders.remove(order);
         }
 
     }
 
-    @When("select * from OrderUpdate where state.open=false and NOT (OrderUpdate.state = OrderState.CANCELLED)")
+    private void addOrder(SpecificOrder order) {
+        synchronized (lock) {
+            pendingOrders.add(order);
+        }
+
+    }
+
+    @When("@Priority(9) select * from OrderUpdate where state.open=false and NOT (OrderUpdate.state = OrderState.CANCELLED)")
     private void completeOrder(OrderUpdate update) {
         OrderState orderState = update.getState();
         Order order = update.getOrder();
@@ -118,15 +125,15 @@ public class MockOrderService extends BaseOrderService {
 
     @Inject
     private Logger log;
-
-    private final Collection<SpecificOrder> pendingOrders = Collections.synchronizedList(new ArrayList<SpecificOrder>());
+    private static Object lock = new Object();
+    private final Collection<SpecificOrder> pendingOrders = new ArrayList<SpecificOrder>();
     private QuoteService quotes;
 
     @Override
     public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio) {
         Iterator<SpecificOrder> it = pendingOrders.iterator();
         Collection<SpecificOrder> portfolioPendingOrders = new ArrayList<>();
-        synchronized (pendingOrders) {
+        synchronized (lock) {
 
             while (it.hasNext()) {
                 SpecificOrder pendingOrder = it.next();
@@ -140,9 +147,15 @@ public class MockOrderService extends BaseOrderService {
     }
 
     @Override
+    public Collection<SpecificOrder> getPendingOrders() {
+
+        return pendingOrders;
+    }
+
+    @Override
     public void handleCancelSpecificOrder(SpecificOrder specificOrder) {
         Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
-        synchronized (pendingOrders) {
+        synchronized (lock) {
             for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
                 SpecificOrder cancelledOrder = it.next();
                 if (cancelledOrder.equals(specificOrder))
@@ -158,9 +171,47 @@ public class MockOrderService extends BaseOrderService {
     }
 
     @Override
+    public void handleCancelAllClosingSpecificOrders(Portfolio portfolio, Market market) {
+        Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
+        synchronized (lock) {
+            for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
+                SpecificOrder specificOrder = it.next();
+                if (specificOrder.getMarket().equals(market) && specificOrder.getPositionEffect().equals(PositionEffect.CLOSE))
+                    //cancelledOrders.add(specificOrder);
+                    updateOrderState(specificOrder, OrderState.CANCELLING);
+            }
+            //          for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
+            //              SpecificOrder specificOrder = it.next();
+            //
+            //              
+            //          }
+        }
+
+    }
+
+    @Override
+    public void handleCancelAllOpeningSpecificOrders(Portfolio portfolio, Market market) {
+        Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
+        synchronized (lock) {
+            for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
+                SpecificOrder specificOrder = it.next();
+                if (specificOrder.getMarket().equals(market) && specificOrder.getPositionEffect().equals(PositionEffect.OPEN))
+                    //cancelledOrders.add(specificOrder);
+                    updateOrderState(specificOrder, OrderState.CANCELLING);
+            }
+            //          for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
+            //              SpecificOrder specificOrder = it.next();
+            //
+            //              
+            //          }
+        }
+
+    }
+
+    @Override
     public void handleCancelAllSpecificOrders(Portfolio portfolio, Market market) {
         Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
-        synchronized (pendingOrders) {
+        synchronized (lock) {
             for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
                 SpecificOrder specificOrder = it.next();
                 if (specificOrder.getMarket().equals(market))
@@ -173,5 +224,6 @@ public class MockOrderService extends BaseOrderService {
             //              
             //          }
         }
+
     }
 }

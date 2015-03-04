@@ -8,8 +8,6 @@ import java.util.Date;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import com.xeiam.xchange.exceptions.NotYetImplementedForExchangeException;
-import com.xeiam.xchange.service.polling.trade.PollingTradeService;
 import org.cryptocoinpartners.enumeration.OrderState;
 import org.cryptocoinpartners.module.BaseOrderService;
 import org.cryptocoinpartners.schema.Market;
@@ -23,6 +21,8 @@ import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.Order;
 import com.xeiam.xchange.dto.trade.LimitOrder;
 import com.xeiam.xchange.dto.trade.MarketOrder;
+import com.xeiam.xchange.exceptions.NotYetImplementedForExchangeException;
+import com.xeiam.xchange.service.polling.trade.PollingTradeService;
 
 /**
  * This module routes SpecificOrders through Xchange
@@ -81,6 +81,13 @@ public class XchangeOrderService extends BaseOrderService {
     }
 
     @Override
+    public Collection<SpecificOrder> getPendingOrders() {
+        return null;
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
     public void handleCancelAllSpecificOrders(Portfolio portfolio, Market market) {
         // TODO Auto-generated method stub
 
@@ -88,6 +95,18 @@ public class XchangeOrderService extends BaseOrderService {
 
     @Override
     public void handleCancelSpecificOrder(SpecificOrder specificOrder) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void handleCancelAllOpeningSpecificOrders(Portfolio portfolio, Market market) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void handleCancelAllClosingSpecificOrders(Portfolio portfolio, Market market) {
         // TODO Auto-generated method stub
 
     }

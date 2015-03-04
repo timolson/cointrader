@@ -20,7 +20,7 @@ import org.joda.time.format.DateTimeFormatter;
  * @author Tim Olson
  */
 @Entity
-@Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived"), @Index(columnList = "market,remoteKey") })
+@Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived"), @Index(columnList = "market"), @Index(columnList = "market,remoteKey") })
 public class Trade extends PriceData {
     private static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
 

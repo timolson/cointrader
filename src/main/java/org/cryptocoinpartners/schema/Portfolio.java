@@ -87,21 +87,21 @@ public class Portfolio extends EntityBase {
                         while (itlp.hasNext()) {
                             Fill pos = itlp.next();
                             if (pos.isLong()) {
-                                longAvgPrice = ((longAvgPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getVolume().times(pos.getPrice(),
-                                        Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getVolume()), Remainder.ROUND_EVEN);
-                                if(pos.getStopPrice()!=null)
-                                longAvgStopPrice = ((longAvgStopPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getVolume().times(pos.getStopPrice(),
-                                        Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getVolume()), Remainder.ROUND_EVEN);
+                                longAvgPrice = ((longAvgPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getPrice(),
+                                        Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+                                if (pos.getStopPrice() != null)
+                                    longAvgStopPrice = ((longAvgStopPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(
+                                            pos.getStopPrice(), Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
 
-                                longVolume = longVolume.plus(pos.getVolume());
+                                longVolume = longVolume.plus(pos.getOpenVolume());
                             } else if (pos.isShort()) {
-                                shortAvgPrice = ((shortAvgPrice.times(shortVolume, Remainder.ROUND_EVEN)).plus(pos.getVolume().times(pos.getPrice(),
-                                        Remainder.ROUND_EVEN))).dividedBy(shortVolume.plus(pos.getVolume()), Remainder.ROUND_EVEN);
-                                if(pos.getStopPrice()!=null)
-                                shortAvgStopPrice = ((shortAvgStopPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getVolume().times(pos.getStopPrice(),
-                                        Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getVolume()), Remainder.ROUND_EVEN);
+                                shortAvgPrice = ((shortAvgPrice.times(shortVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getPrice(),
+                                        Remainder.ROUND_EVEN))).dividedBy(shortVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+                                if (pos.getStopPrice() != null)
+                                    shortAvgStopPrice = ((shortAvgStopPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(
+                                            pos.getStopPrice(), Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
 
-                                shortVolume = shortVolume.plus(pos.getVolume());
+                                shortVolume = shortVolume.plus(pos.getOpenVolume());
                             }
                         }
                         // need to change this to just return one position that is the total, not one long and one short.
@@ -146,21 +146,22 @@ public class Portfolio extends EntityBase {
             while (itlp.hasNext()) {
                 Fill pos = itlp.next();
                 if (pos.isLong()) {
-                    longAvgPrice = ((longAvgPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getVolume().times(pos.getPrice(), Remainder.ROUND_EVEN)))
-                            .dividedBy(longVolume.plus(pos.getVolume()), Remainder.ROUND_EVEN);
-                    if(pos.getStopPrice()!=null)
-                    longAvgStopPrice = ((longAvgStopPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getVolume().times(pos.getStopPrice(),
-                            Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getVolume()), Remainder.ROUND_EVEN);
+                    longAvgPrice = ((longAvgPrice.times(longVolume, Remainder.ROUND_EVEN))
+                            .plus(pos.getOpenVolume().times(pos.getPrice(), Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getOpenVolume()),
+                            Remainder.ROUND_EVEN);
+                    if (pos.getStopPrice() != null)
+                        longAvgStopPrice = ((longAvgStopPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getStopPrice(),
+                                Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
 
-                    longVolume = longVolume.plus(pos.getVolume());
+                    longVolume = longVolume.plus(pos.getOpenVolume());
                 } else if (pos.isShort()) {
-                    shortAvgPrice = ((shortAvgPrice.times(shortVolume, Remainder.ROUND_EVEN)).plus(pos.getVolume().times(pos.getPrice(), Remainder.ROUND_EVEN)))
-                            .dividedBy(shortVolume.plus(pos.getVolume()), Remainder.ROUND_EVEN);
-                    if(pos.getStopPrice()!=null)
-                    shortAvgStopPrice = ((shortAvgStopPrice.times(shortVolume, Remainder.ROUND_EVEN)).plus(pos.getVolume().times(pos.getStopPrice(),
-                            Remainder.ROUND_EVEN))).dividedBy(shortVolume.plus(pos.getVolume()), Remainder.ROUND_EVEN);
+                    shortAvgPrice = ((shortAvgPrice.times(shortVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getPrice(),
+                            Remainder.ROUND_EVEN))).dividedBy(shortVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+                    if (pos.getStopPrice() != null)
+                        shortAvgStopPrice = ((shortAvgStopPrice.times(shortVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getStopPrice(),
+                                Remainder.ROUND_EVEN))).dividedBy(shortVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
 
-                    shortVolume = shortVolume.plus(pos.getVolume());
+                    shortVolume = shortVolume.plus(pos.getOpenVolume());
                 }
             }
             // need to change this to just return one position that is the total, not one long and one short.
@@ -270,7 +271,7 @@ public class Portfolio extends EntityBase {
                 Iterator<Fill> itp = positions.get(asset).get(exchange).get(listing).get(TransactionType.BUY).iterator();
                 while (itp.hasNext()) {
                     Fill pos = itp.next();
-                    longVolumeCount += pos.getVolumeCount();
+                    longVolumeCount += pos.getOpenVolumeCount();
                 }
 
             }
@@ -295,7 +296,7 @@ public class Portfolio extends EntityBase {
 
                     while (itp.hasNext()) {
                         pos = itp.next();
-                        netVolumeCount += pos.getVolumeCount();
+                        netVolumeCount += pos.getOpenVolumeCount();
                     }
 
                 }
@@ -318,7 +319,7 @@ public class Portfolio extends EntityBase {
 
                 while (itp.hasNext()) {
                     Fill pos = itp.next();
-                    shortVolumeCount += pos.getVolumeCount();
+                    shortVolumeCount += pos.getOpenVolumeCount();
 
                 }
             }
@@ -588,12 +589,12 @@ public class Portfolio extends EntityBase {
 
                         // now need to get opposit side
                         Iterator<Fill> itop = openingListingPositions.iterator();
-                        while (Math.abs(p.getVolumeCount()) > 0 && itop.hasNext()) {
+                        while (Math.abs(p.getOpenVolumeCount()) > 0 && itop.hasNext()) {
                             Fill openPosition = itop.next();
-                            if ((Long.signum(openPosition.getVolumeCount()) + Long.signum(p.getVolumeCount())) != 0) {
-                                if (Math.abs(p.getVolumeCount()) == 0)
+                            if ((Long.signum(openPosition.getOpenVolumeCount()) + Long.signum(p.getOpenVolumeCount())) != 0) {
+                                if (Math.abs(p.getOpenVolumeCount()) == 0)
                                     itp.remove();
-                                if (Math.abs(openPosition.getVolumeCount()) == 0)
+                                if (Math.abs(openPosition.getOpenVolumeCount()) == 0)
                                     itop.remove();
                                 break;
 
@@ -633,28 +634,29 @@ public class Portfolio extends EntityBase {
 
                             //Math.abs(a)
 
-                            closingVolumeCount = (openingTransactionType.equals(TransactionType.SELL)) ? (Math.min(Math.abs(openPosition.getVolumeCount()),
-                                    Math.abs(p.getVolumeCount()))) * -1 : (Math.min(Math.abs(openPosition.getVolumeCount()), Math.abs(p.getVolumeCount())));
+                            closingVolumeCount = (openingTransactionType.equals(TransactionType.SELL)) ? (Math.min(Math.abs(openPosition.getOpenVolumeCount()),
+                                    Math.abs(p.getVolumeCount()))) * -1 : (Math.min(Math.abs(openPosition.getOpenVolumeCount()),
+                                    Math.abs(p.getOpenVolumeCount())));
                             // need to think hwere as one if negative and one is postive, nwee to work out what is the quanity to update on currrnet and the passed position
                             //when p=43 and open postion =-42
-                            if (Math.abs(p.getVolumeCount()) >= Math.abs(openPosition.getVolumeCount())) {
-                                long updatedVolumeCount = p.getVolumeCount() + closingVolumeCount;
+                            if (Math.abs(p.getOpenVolumeCount()) >= Math.abs(openPosition.getOpenVolumeCount())) {
+                                long updatedVolumeCount = p.getOpenVolumeCount() + closingVolumeCount;
                                 //updatedVolumeCount = (p.isShort()) ? updatedVolumeCount * -1 : updatedVolumeCount;
-                                p.setVolumeCount(updatedVolumeCount);
+                                p.setOpenVolumeCount(updatedVolumeCount);
                                 if (Math.abs(updatedVolumeCount) == 0)
                                     itp.remove();
-                                openPosition.setVolumeCount(0);
+                                openPosition.setOpenVolumeCount(0);
                                 itop.remove();
 
                             } else {
-                                long updatedVolumeCount = openPosition.getVolumeCount() + p.getVolumeCount();
-                                openPosition.setVolumeCount(updatedVolumeCount);
+                                long updatedVolumeCount = openPosition.getOpenVolumeCount() + p.getOpenVolumeCount();
+                                openPosition.setOpenVolumeCount(updatedVolumeCount);
 
                                 if (updatedVolumeCount == 0) {
                                     itop.remove();
 
                                 }
-                                p.setVolumeCount(0);
+                                p.setOpenVolumeCount(0);
                                 itp.remove();
 
                             }

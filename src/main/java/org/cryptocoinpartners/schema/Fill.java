@@ -37,6 +37,7 @@ public class Fill extends RemoteEvent {
         this.market = market;
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
+        this.openVolumeCount = volumeCount;
         this.portfolio = order.getPortfolio();
         this.stopPriceCount = (order.getStopPrice() != null) ? order.getStopPrice().getCount() : 0;
 
@@ -47,6 +48,7 @@ public class Fill extends RemoteEvent {
         this.market = market;
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
+        this.openVolumeCount = volumeCount;
         this.commission = commission;
         this.portfolio = order.getPortfolio();
         this.stopPriceCount = (order.getStopPrice() != null) ? order.getStopPrice().getCount() : 0;
@@ -56,6 +58,20 @@ public class Fill extends RemoteEvent {
     @JoinColumn(name = "`order`")
     SpecificOrder getOrder() {
         return order;
+    }
+
+    @Transient
+    @Nullable
+    public Double getPriceAsDouble() {
+        Amount price = getPrice();
+        return price == null ? null : price.asDouble();
+    }
+
+    @Transient
+    @Nullable
+    public Double getPriceCountAsDouble() {
+        Long price = getPriceCount();
+        return price == null ? null : price.doubleValue();
     }
 
     @Transient
@@ -135,12 +151,23 @@ public class Fill extends RemoteEvent {
         return new DiscreteAmount(stopPriceCount, market.getPriceBasis());
     }
 
+    @Transient
+    public Amount getTargetPrice() {
+        if (targetPriceCount == 0)
+            return null;
+        return new DiscreteAmount(targetPriceCount, market.getPriceBasis());
+    }
+
     public long getPriceCount() {
         return priceCount;
     }
 
     public long getStopPriceCount() {
         return stopPriceCount;
+    }
+
+    public long getTargetPriceCount() {
+        return targetPriceCount;
     }
 
     @Transient
@@ -150,6 +177,15 @@ public class Fill extends RemoteEvent {
 
     public long getVolumeCount() {
         return volumeCount;
+    }
+
+    @Transient
+    public Amount getOpenVolume() {
+        return new DiscreteAmount(openVolumeCount, market.getVolumeBasis());
+    }
+
+    public long getOpenVolumeCount() {
+        return openVolumeCount;
     }
 
     @Transient
@@ -204,12 +240,20 @@ public class Fill extends RemoteEvent {
         this.stopPriceCount = stopPriceCount;
     }
 
+    public void setTargetPriceCount(long targetPriceCount) {
+        this.targetPriceCount = targetPriceCount;
+    }
+
     protected void setPortfolio(Portfolio portfolio) {
         this.portfolio = portfolio;
     }
 
     protected void setVolumeCount(long volumeCount) {
         this.volumeCount = volumeCount;
+    }
+
+    protected void setOpenVolumeCount(long openVolumeCount) {
+        this.openVolumeCount = openVolumeCount;
     }
 
     protected void setCommission(Amount commission) {
@@ -226,7 +270,9 @@ public class Fill extends RemoteEvent {
     private Market market;
     private long priceCount;
     private long stopPriceCount;
+    private long targetPriceCount;
     private long volumeCount;
+    private long openVolumeCount;
     private Amount commission;
     private Amount margin;
     private Collection<Transaction> transactions;

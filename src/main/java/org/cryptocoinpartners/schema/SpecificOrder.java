@@ -29,6 +29,7 @@ public class SpecificOrder extends Order {
         this.market = market;
         this.volumeCount = volumeCount;
         super.setPortfolio(portfolio);
+        this.placementCount = 1;
 
     }
 
@@ -38,6 +39,7 @@ public class SpecificOrder extends Order {
         this.volumeCount = volumeCount;
         super.setComment(comment);
         super.setPortfolio(portfolio);
+        this.placementCount = 1;
 
     }
 
@@ -49,6 +51,7 @@ public class SpecificOrder extends Order {
         parentOrder.addChild(this);
         this.setParentOrder(parentOrder);
         super.setPortfolio(portfolio);
+        this.placementCount = 1;
 
     }
 
@@ -58,6 +61,7 @@ public class SpecificOrder extends Order {
         this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
         super.setComment(comment);
         super.setPortfolio(portfolio);
+        this.placementCount = 1;
 
     }
 
@@ -69,6 +73,7 @@ public class SpecificOrder extends Order {
         parentOrder.addChild(this);
         this.setParentOrder(parentOrder);
         super.setPortfolio(portfolio);
+        this.placementCount = 1;
     }
 
     public SpecificOrder(Instant time, Portfolio portfolio, Market market, BigDecimal volume, String comment) {
@@ -107,6 +112,12 @@ public class SpecificOrder extends Order {
     @Override
     @Transient
     public DiscreteAmount getStopPrice() {
+        return null;
+    }
+
+    @Override
+    @Transient
+    public DiscreteAmount getTargetPrice() {
         return null;
     }
 
@@ -161,7 +172,7 @@ public class SpecificOrder extends Order {
         return "SpecificOrder{ time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "id=" + getId() + SEPARATOR + "parentOrder="
                 + (getParentOrder() == null ? "null" : getParentOrder().getId()) + SEPARATOR + "portfolio=" + getPortfolio() + SEPARATOR + "market=" + market
                 + SEPARATOR + "volumeCount=" + getVolume() + (limitPriceCount != 0 ? (SEPARATOR + "limitPriceCount=" + getLimitPrice()) : "")
-                + (getComment().isEmpty() ? "" : (SEPARATOR + "Comment=" + getComment()))
+                + (SEPARATOR + "PlacementCount=" + getPlacementCount()) + (getComment().isEmpty() ? "" : (SEPARATOR + "Comment=" + getComment()))
                 + (getFillType().getValue().isEmpty() ? "" : (SEPARATOR + "Order Type=" + getFillType()))
                 + (hasFills() ? (SEPARATOR + "averageFillPrice=" + averageFillPrice()) : "") + "}";
     }
@@ -174,6 +185,10 @@ public class SpecificOrder extends Order {
     /** 0 if no limit is set */
     protected long getLimitPriceCount() {
         return limitPriceCount;
+    }
+
+    public int getPlacementCount() {
+        return placementCount;
     }
 
     protected SpecificOrder() {
@@ -199,8 +214,19 @@ public class SpecificOrder extends Order {
         limitPrice = null;
     }
 
+    public void setPlacementCount(int placementCount) {
+        this.placementCount = placementCount;
+
+    }
+
     @Override
     public void setStopPrice(DecimalAmount stopPrice) {
+        throw new NotImplementedException();
+
+    }
+
+    @Override
+    public void setTargetPrice(DecimalAmount targetPrice) {
         throw new NotImplementedException();
 
     }
@@ -220,7 +246,7 @@ public class SpecificOrder extends Order {
     private Market market;
     private DiscreteAmount volume;
     private DiscreteAmount limitPrice;
-
+    private int placementCount;
     private long volumeCount;
     private long limitPriceCount;
 

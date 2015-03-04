@@ -136,6 +136,12 @@ public class GeneralOrder extends Order {
 
     @Override
     @Transient
+    public DecimalAmount getTargetPrice() {
+        return targetPrice;
+    }
+
+    @Override
+    @Transient
     public DecimalAmount getTrailingStopPrice() {
         return trailingStopPrice;
     }
@@ -218,8 +224,21 @@ public class GeneralOrder extends Order {
     }
 
     @Override
+    public void setTargetPrice(DecimalAmount targetPrice) {
+        if (this.parentFill != null)
+            parentFill.setTargetPriceCount(targetPrice.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+        this.targetPrice = targetPrice;
+    }
+
+    public void setTargetPriceDecimal(BigDecimal targetPrice) {
+        if (targetPrice != null) {
+            this.targetPrice = DecimalAmount.of(targetPrice);
+        }
+    }
+
+    @Override
     public void setStopPrice(DecimalAmount stopPrice) {
-        if(this.parentFill!=null)
+        if (this.parentFill != null)
             parentFill.setStopPriceCount(stopPrice.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
         this.stopPrice = stopPrice;
     }
@@ -257,6 +276,7 @@ public class GeneralOrder extends Order {
     private DecimalAmount volume;
     private DecimalAmount limitPrice;
     private DecimalAmount stopPrice;
+    private DecimalAmount targetPrice;
     private DecimalAmount trailingStopPrice;
     private Amount forcastedFees;
 

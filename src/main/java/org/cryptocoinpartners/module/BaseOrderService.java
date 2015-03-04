@@ -122,14 +122,14 @@ public abstract class BaseOrderService implements OrderService {
                 Order triggerOrder = triggerOrders.get(i);
                 if (triggerOrder.isBid()) {
                     long stopPrice = Math.min((triggerOrder.getStopPrice().toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount(),
-                            (price.plus(amount).toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount());
+                            (price.plus(amount.abs()).toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount());
                     DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggerOrder.getMarket().getPriceBasis()));
                     triggerOrder.setStopPrice(stopDiscrete);
                     if (triggerOrder.getParentFill() != null)
                         triggerOrder.getParentFill().setStopPriceCount(stopPrice);
                 } else if (triggerOrder.isAsk()) {
                     long stopPrice = Math.max((triggerOrder.getStopPrice().toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount(),
-                            (price.minus(amount).toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount());
+                            (price.minus(amount.abs()).toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount());
                     DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggerOrder.getMarket().getPriceBasis()));
                     triggerOrder.setStopPrice(stopDiscrete);
                     if (triggerOrder.getParentFill() != null)
@@ -315,11 +315,32 @@ public abstract class BaseOrderService implements OrderService {
     }
 
     @SuppressWarnings("ConstantConditions")
-    @When("@Priority(9) select * from Book")
+    @When("@Priority(5) select * from Book")
     private void handleBook(Book b) {
         Offer ask = b.getBestAsk();
         Offer bid = b.getBestBid();
-        Collection<Order> triggeredOrders = new ArrayList<>();
+        Iterator<SpecificOrder> itpo = getPendingOrders().iterator();
+        synchronized (lock) {
+
+            while (itpo.hasNext()) {
+
+                SpecificOrder pendingOrder = itpo.next();
+
+                if (pendingOrder.getMarket().equals(b.getMarket())
+                        && ((pendingOrder.getParentOrder() != null && pendingOrder.getParentOrder().getFillType() == FillType.STOP_LIMIT) || pendingOrder
+                                .getPositionEffect() == PositionEffect.CLOSE)) {
+                    Offer offer = pendingOrder.isBid() ? quotes.getLastBidForMarket(pendingOrder.getMarket()) : quotes.getLastAskForMarket(pendingOrder
+                            .getMarket());
+                    DiscreteAmount limitPrice = (pendingOrder.getVolume().isNegative()) ? offer.getPrice().decrement(
+                            (long) (Math.pow(pendingOrder.getPlacementCount(), 2))) : offer.getPrice().increment(
+                            (long) (Math.pow(pendingOrder.getPlacementCount(), 2)));
+
+                    pendingOrder.setLimitPriceCount(limitPrice.getCount());
+
+                    pendingOrder.setPlacementCount(pendingOrder.getPlacementCount() + 1);
+                }
+            }
+        }
 
         synchronized (lock) {
             for (int i = 0; i < triggerOrders.size(); i++) {
@@ -332,7 +353,9 @@ public abstract class BaseOrderService implements OrderService {
                                         Remainder.ROUND_EVEN)).getCount()) {
                             //convert order to specfic order
                             SpecificOrder specificOrder = convertGeneralOrderToSpecific((GeneralOrder) triggeredOrder, triggeredOrder.getMarket());
-                            log.info("Routing trigger order " + triggeredOrder + " to " + triggeredOrder.getMarket().getExchange().getSymbol());
+                            log.info("At " + context.getTime() + " Routing trigger order " + triggeredOrder + " to "
+                                    + triggeredOrder.getMarket().getExchange().getSymbol());
+                            //TODO need 
                             placeOrder(specificOrder);
                             triggerOrders.remove(i);
                             i--;
@@ -356,7 +379,8 @@ public abstract class BaseOrderService implements OrderService {
                                         Remainder.ROUND_EVEN)).getCount()) {
                             //Place order
                             SpecificOrder specificOrder = convertGeneralOrderToSpecific((GeneralOrder) triggeredOrder, triggeredOrder.getMarket());
-                            log.info("Routing trigger order " + specificOrder + " to " + specificOrder.getMarket().getExchange().getSymbol());
+                            log.info("At " + context.getTime() + " Routing trigger order " + specificOrder + " to "
+                                    + specificOrder.getMarket().getExchange().getSymbol());
                             placeOrder(specificOrder);
                             triggerOrders.remove(i);
                             i--;
@@ -408,8 +432,12 @@ public abstract class BaseOrderService implements OrderService {
                 builder.withLimitPrice(discreteLimit);
                 break;
             case STOP_LIMIT:
-                discreteStop = stopPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
-                discreteLimit = volume.isNegative() ? discreteStop.decrement(2) : discreteStop.increment(2);
+                //we will put the stop order in at best bid or best ask
+                SpecificOrder stopOrder = builder.getOrder();
+                Offer offer = stopOrder.isBid() ? quotes.getLastBidForMarket(stopOrder.getMarket()) : quotes.getLastAskForMarket(stopOrder.getMarket());
+
+                discreteStop = offer.getPrice();
+                discreteLimit = volume.isNegative() ? discreteStop.decrement(4) : discreteStop.increment(4);
                 builder.withLimitPrice(discreteLimit);
                 break;
             case TRAILING_STOP_LIMIT:
@@ -437,7 +465,16 @@ public abstract class BaseOrderService implements OrderService {
     public abstract Collection<SpecificOrder> getPendingOrders(Portfolio portfolio);
 
     @Override
+    public abstract Collection<SpecificOrder> getPendingOrders();
+
+    @Override
     public abstract void handleCancelSpecificOrder(SpecificOrder specificOrder);
+
+    @Override
+    public abstract void handleCancelAllOpeningSpecificOrders(Portfolio portfolio, Market market);
+
+    @Override
+    public abstract void handleCancelAllClosingSpecificOrders(Portfolio portfolio, Market market);
 
     @Override
     public abstract void handleCancelAllSpecificOrders(Portfolio portfolio, Market market);

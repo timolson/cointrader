@@ -107,8 +107,20 @@ public class Position extends Holding {
         //	if (volume == null)
         //	volume = new DiscreteAmount(volumeCount, market.getVolumeBasis());
         //return volume;
-        return ((getLongAvgPrice().times(getLongVolume(), Remainder.ROUND_EVEN)).plus(getShortAvgPrice().times(getShortVolume(), Remainder.ROUND_EVEN)))
-                .dividedBy(getLongVolume().plus(getShortVolume()), Remainder.ROUND_EVEN);
+
+        return (getVolume().isNegative()) ? getShortAvgPrice() : getLongAvgPrice();
+        // return ((getLongAvgPrice().times(getLongVolume(), Remainder.ROUND_EVEN)).plus(getShortAvgPrice().times(getShortVolume(), Remainder.ROUND_EVEN)))
+        //       .dividedBy(getLongVolume().plus(getShortVolume()), Remainder.ROUND_EVEN);
+
+    }
+
+    @Transient
+    public Amount getAvgStopPrice() {
+
+        //  if (volume == null)
+        //  volume = new DiscreteAmount(volumeCount, market.getVolumeBasis());
+        //return volume;
+        return (getVolume().isNegative()) ? getShortAvgStopPrice() : getLongAvgStopPrice();
 
     }
 
