@@ -9,12 +9,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.configuration.CombinedConfiguration;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.text.WordUtils;
 import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Listing;
 
 import com.xeiam.xchange.ExchangeFactory;
 import com.xeiam.xchange.ExchangeSpecification;
 import com.xeiam.xchange.currency.CurrencyPair;
+import com.xeiam.xchange.okcoin.FuturesContract;
 
 /**
  * @author Tim Olson
@@ -38,6 +41,11 @@ public class XchangeUtil {
 
     public static CurrencyPair getCurrencyPairForListing(Listing listing) {
         return new CurrencyPair(listing.getBase().getSymbol(), listing.getQuote().getSymbol());
+    }
+
+    public static FuturesContract getContractForListing(Listing listing) {
+        String prompt = StringUtils.remove(WordUtils.capitalizeFully(listing.getPrompt().toString(), new char[] { '_' }), "_");
+        return FuturesContract.valueOf(prompt);
     }
 
     private static Map<Exchange, com.xeiam.xchange.Exchange> exchangesByMarket;

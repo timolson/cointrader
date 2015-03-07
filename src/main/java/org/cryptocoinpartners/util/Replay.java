@@ -100,7 +100,6 @@ public class Replay {
             }
             context.advanceTime(stop);
         }
-
     }
 
     private void replayStep(Instant start, Instant stop) {

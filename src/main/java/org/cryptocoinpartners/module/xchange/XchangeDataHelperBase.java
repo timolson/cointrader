@@ -1,15 +1,13 @@
 package org.cryptocoinpartners.module.xchange;
 
-import java.util.ArrayList;
-
 import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.marketdata.OrderBook;
 import com.xeiam.xchange.dto.marketdata.Trades;
 
 public class XchangeDataHelperBase implements XchangeData.Helper {
     @Override
-    public ArrayList<Object> getTradesParameters(CurrencyPair pair, long lastTradeTime, long lastTradeId) {
-        return new ArrayList<Object>();
+    public Object[] getTradesParameters(CurrencyPair pair, long lastTradeTime, long lastTradeId) {
+        return new Object[0];
     }
 
     @Override
@@ -17,8 +15,8 @@ public class XchangeDataHelperBase implements XchangeData.Helper {
     }
 
     @Override
-    public ArrayList<Object> getOrderBookParameters(CurrencyPair pair) {
-        return new ArrayList<Object>();
+    public Object[] getOrderBookParameters(CurrencyPair pair) {
+        return new Object[0];
     }
 
     @Override

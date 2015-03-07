@@ -1,13 +1,26 @@
 package org.cryptocoinpartners.module.xchange;
 
-import com.xeiam.xchange.currency.CurrencyPair;
-import com.xeiam.xchange.dto.marketdata.OrderBook;
-import com.xeiam.xchange.dto.marketdata.Trades;
-import com.xeiam.xchange.dto.trade.LimitOrder;
-import com.xeiam.xchange.service.polling.marketdata.PollingMarketDataService;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+
+import javax.annotation.Nullable;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import javax.persistence.EntityManager;
+import javax.persistence.TypedQuery;
+
 import org.apache.commons.configuration.Configuration;
 import org.cryptocoinpartners.module.Context;
-import org.cryptocoinpartners.schema.*;
+import org.cryptocoinpartners.schema.Book;
+import org.cryptocoinpartners.schema.Exchange;
+import org.cryptocoinpartners.schema.Listing;
+import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.MarketDataError;
+import org.cryptocoinpartners.schema.Prompt;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.RateLimiter;
 import org.cryptocoinpartners.util.XchangeUtil;
@@ -15,16 +28,12 @@ import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
 
-import javax.annotation.Nullable;
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import com.xeiam.xchange.currency.CurrencyPair;
+import com.xeiam.xchange.dto.marketdata.OrderBook;
+import com.xeiam.xchange.dto.marketdata.Trades;
+import com.xeiam.xchange.dto.trade.LimitOrder;
+import com.xeiam.xchange.okcoin.FuturesContract;
+import com.xeiam.xchange.service.polling.marketdata.PollingMarketDataService;
 
 /**
  * @author Tim Olson
@@ -66,9 +75,9 @@ public class XchangeData {
         module package).
      */
     public interface Helper {
-        ArrayList<Object> getTradesParameters(CurrencyPair pair, long lastTradeTime, long lastTradeId);
+        Object[] getTradesParameters(CurrencyPair pair, long lastTradeTime, long lastTradeId);
 
-        ArrayList<Object> getOrderBookParameters(CurrencyPair pair);
+        Object[] getOrderBookParameters(CurrencyPair pair);
 
         void handleTrades(Trades tradeSpec);
 
@@ -100,15 +109,19 @@ public class XchangeData {
         PollingMarketDataService dataService = xchangeExchange.getPollingMarketDataService();
         RateLimiter rateLimiter = new RateLimiter(queries, per);
         Collection<Market> markets = new ArrayList<>(listings.size());
-        for (Object listingSymbol : listings) {
-            Listing listing = Listing.forSymbol(listingSymbol.toString().toUpperCase());
+        Market market;
 
-            final Market market = Market.findOrCreate(coinTraderExchange, listing);
-            markets.add(market);
+        for (Iterator<List> il = listings.iterator(); il.hasNext(); markets.add(market)) {
+            Object listingSymbol = il.next();
+            Listing listing = Listing.forSymbol(listingSymbol.toString().toUpperCase());
+            market = Market.findOrCreate(coinTraderExchange, listing);
         }
-        for (final Market market : markets) {
-            rateLimiter.execute(new FetchTradesRunnable(context, market, rateLimiter, dataService, helper));
-        }
+
+        for (Iterator<Market> im = markets.iterator(); im.hasNext(); rateLimiter.execute(new FetchTradesRunnable(context, market, rateLimiter, dataService,
+                helper)))
+            market = im.next();
+
+        return;
     }
 
     private class FetchTradesRunnable implements Runnable {
@@ -123,15 +136,19 @@ public class XchangeData {
             this.helper = helper;
             this.prompt = market.getListing().getPrompt();
             pair = XchangeUtil.getCurrencyPairForListing(market.getListing());
+            contract = prompt == null ? null : XchangeUtil.getContractForListing(market.getListing());
+
             lastTradeTime = 0;
             lastTradeId = 0;
             EntityManager entityManager = PersistUtil.createEntityManager();
             try {
+
                 TypedQuery<org.cryptocoinpartners.schema.Trade> query = entityManager.createQuery(
                         "select t from Trade t where market=?1 and time=(select max(time) from Trade where market=?1)",
                         org.cryptocoinpartners.schema.Trade.class);
                 query.setParameter(1, market);
                 for (org.cryptocoinpartners.schema.Trade trade : query.getResultList()) {
+                    // org.cryptocoinpartners.schema.Trade trade = query.getSingleResult();
                     long millis = trade.getTime().getMillis();
                     if (millis > lastTradeTime)
                         lastTradeTime = millis;
@@ -160,20 +177,12 @@ public class XchangeData {
 
         protected void getTrades() {
             try {
-                ArrayList<Object> args;
+                Object params[];
                 if (helper != null)
-                    args = helper.getTradesParameters(pair, lastTradeTime, lastTradeId);
-
+                    params = helper.getTradesParameters(pair, lastTradeTime, lastTradeId);
                 else
-                    args = new ArrayList<Object>();
-
-                if (prompt != null)
-                    args.add(0, prompt);
-                // convert the array list
-                Object[] params = new Object[args.size()];
-                params = args.toArray(params);
-
-                Trades tradeSpec = dataService.getTrades(pair, params);
+                    params = new Object[0];
+                Trades tradeSpec = dataService.getTrades(pair, new Object[] { contract });
                 if (helper != null)
                     helper.handleTrades(tradeSpec);
                 List<com.xeiam.xchange.dto.marketdata.Trade> trades = tradeSpec.getTrades();
@@ -196,18 +205,12 @@ public class XchangeData {
 
         protected void getBook() {
             try {
-                ArrayList<Object> args;
+                Object params[];
                 if (helper != null)
-                    args = helper.getOrderBookParameters(pair);
+                    params = helper.getOrderBookParameters(pair);
                 else
-                    args = new ArrayList<Object>();
-
-                if (prompt != null)
-                    args.add(0, prompt);
-                Object[] params = new Object[args.size()];
-                params = args.toArray(params);
-
-                final OrderBook orderBook = dataService.getOrderBook(pair, params);
+                    params = new Object[0];
+                OrderBook orderBook = dataService.getOrderBook(pair, new Object[] { contract, params });
                 if (helper != null)
                     helper.handleOrderBook(orderBook);
                 bookBuilder.start(new Instant(orderBook.getTimeStamp()), null, market);
@@ -231,6 +234,7 @@ public class XchangeData {
         private final Context context;
         private final Market market;
         private final CurrencyPair pair;
+        private final FuturesContract contract;
         private long lastTradeTime;
         private final Prompt prompt;
         private long lastTradeId;

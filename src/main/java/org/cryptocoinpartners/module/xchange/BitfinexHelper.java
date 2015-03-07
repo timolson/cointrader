@@ -1,25 +1,18 @@
 package org.cryptocoinpartners.module.xchange;
 
-import java.util.ArrayList;
-
 import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.marketdata.Trades;
 
-
 @SuppressWarnings("UnusedDeclaration")
-public class BitfinexHelper extends XchangeDataHelperBase
-{
+public class BitfinexHelper extends XchangeDataHelperBase {
     /** Send the lastTradeTime in millis as the first parameter to getTrades() */
     @Override
-    public ArrayList<Object> getTradesParameters( CurrencyPair pair, final long lastTradeTime, long lastTradeId )
-    {
-        return new ArrayList<Object>() {{ add(lastTradeTime);  }};
-        
-        
-                
+    public Object[] getTradesParameters(CurrencyPair pair, final long lastTradeTime, long lastTradeId) {
+        return new Object[] { Long.valueOf(lastTradeTime) };
+
     }
 
-
     @Override
-    public void handleTrades( Trades xchangeTrades ) { }
+    public void handleTrades(Trades xchangeTrades) {
+    }
 }
