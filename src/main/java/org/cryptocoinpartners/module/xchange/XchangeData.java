@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 
 import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.marketdata.OrderBook;
+import com.xeiam.xchange.dto.marketdata.Trade;
 import com.xeiam.xchange.dto.marketdata.Trades;
 import com.xeiam.xchange.dto.trade.LimitOrder;
 import com.xeiam.xchange.okcoin.FuturesContract;
@@ -185,9 +186,13 @@ public class XchangeData {
                 Trades tradeSpec = dataService.getTrades(pair, new Object[] { contract });
                 if (helper != null)
                     helper.handleTrades(tradeSpec);
-                List<com.xeiam.xchange.dto.marketdata.Trade> trades = tradeSpec.getTrades();
-                for (com.xeiam.xchange.dto.marketdata.Trade trade : trades) {
-                    long remoteId = Long.valueOf(trade.getId());
+                List trades = tradeSpec.getTrades();
+                Iterator<Trade> ilt = trades.iterator();
+                do {
+                    if (!ilt.hasNext())
+                        break;
+                    com.xeiam.xchange.dto.marketdata.Trade trade = ilt.next();
+                    long remoteId = Long.valueOf(trade.getId()).longValue();
                     if (remoteId > lastTradeId) {
                         Instant tradeInstant = new Instant(trade.getTimestamp());
                         org.cryptocoinpartners.schema.Trade ourTrade = new org.cryptocoinpartners.schema.Trade(market, tradeInstant, trade.getId(),
@@ -196,11 +201,13 @@ public class XchangeData {
                         lastTradeTime = tradeInstant.getMillis();
                         lastTradeId = remoteId;
                     }
-                }
+
+                } while (true);
             } catch (IOException e) {
                 log.warn("Could not get trades for " + market, e);
                 context.publish(new MarketDataError(market, e));
             }
+            return;
         }
 
         protected void getBook() {
@@ -214,13 +221,18 @@ public class XchangeData {
                 if (helper != null)
                     helper.handleOrderBook(orderBook);
                 bookBuilder.start(new Instant(orderBook.getTimeStamp()), null, market);
-                for (LimitOrder limitOrder : orderBook.getBids())
-                    bookBuilder.addBid(limitOrder.getLimitPrice(), limitOrder.getTradableAmount());
-                for (LimitOrder limitOrder : orderBook.getAsks())
-                    bookBuilder.addAsk(limitOrder.getLimitPrice(), limitOrder.getTradableAmount());
-                // bookBuilder.
+                LimitOrder limitOrder;
+                for (Iterator<LimitOrder> itb = orderBook.getBids().iterator(); itb.hasNext(); bookBuilder.addBid(limitOrder.getLimitPrice(),
+                        limitOrder.getTradableAmount()))
+                    limitOrder = itb.next();
+
+                for (Iterator<LimitOrder> ita = orderBook.getAsks().iterator(); ita.hasNext(); bookBuilder.addAsk(limitOrder.getLimitPrice(),
+                        limitOrder.getTradableAmount()))
+                    limitOrder = ita.next();
+
                 Book book = bookBuilder.build();
                 context.publish(book);
+
             } catch (IOException e) {
                 log.warn("Could not get book for " + market, e);
                 context.publish(new MarketDataError(market, e));

@@ -77,10 +77,13 @@ public class XchangeUtil {
             spec.setPassword(config.getString(baseKey + "password", null));
             spec.setApiKey(config.getString(baseKey + "apikey", null));
             spec.setSecretKey(config.getString(baseKey + "apisecret", null));
-            spec.setExchangeSpecificParametersItem("Use_Intl", true);
+            spec.setExchangeSpecificParametersItem("Use_Intl", Boolean.valueOf(config.getString(baseKey + "exchangeSpecificParameters.intl", "false")));
+            spec.setExchangeSpecificParametersItem("Use_Futures", Boolean.valueOf(config.getString(baseKey + "exchangeSpecificParameters.futures", "false")));
+            spec.setSslUri(config.getString(baseKey + "ssluri", null));
+            spec.setHost(config.getString(baseKey + "host", null));
+
             com.xeiam.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
             exchangesByMarket.put(getExchangeForTag(exchangeTag), exchange);
         }
     }
-
 }
