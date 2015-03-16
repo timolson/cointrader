@@ -181,9 +181,15 @@ public class XchangeData {
                 Object params[];
                 if (helper != null)
                     params = helper.getTradesParameters(pair, lastTradeTime, lastTradeId);
-                else
-                    params = new Object[0];
-                Trades tradeSpec = dataService.getTrades(pair, new Object[] { contract });
+                else {
+                    if (contract == null)
+                        params = new Object[] {};
+                    else
+                        params = new Object[] { contract };
+
+                }
+
+                Trades tradeSpec = dataService.getTrades(pair, params);
                 if (helper != null)
                     helper.handleTrades(tradeSpec);
                 List trades = tradeSpec.getTrades();
@@ -215,9 +221,15 @@ public class XchangeData {
                 Object params[];
                 if (helper != null)
                     params = helper.getOrderBookParameters(pair);
-                else
-                    params = new Object[0];
-                OrderBook orderBook = dataService.getOrderBook(pair, new Object[] { contract, params });
+                else {
+                    if (contract == null)
+                        params = new Object[] {};
+                    else
+                        params = new Object[] { contract };
+
+                }
+
+                OrderBook orderBook = dataService.getOrderBook(pair, params);
                 if (helper != null)
                     helper.handleOrderBook(orderBook);
                 bookBuilder.start(new Instant(orderBook.getTimeStamp()), null, market);
