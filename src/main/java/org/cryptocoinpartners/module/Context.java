@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.module;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -318,8 +319,9 @@ public class Context {
     public void loadStatements(String source, Object intoFieldBean) {
         EPDeploymentAdmin deploymentAdmin = epAdministrator.getDeploymentAdmin();
         com.espertech.esper.client.deploy.Module module;
+        String filename = source + ".epl";
         try {
-            module = deploymentAdmin.read(source + ".epl");
+            module = deploymentAdmin.read(filename);
             DeploymentResult deployResult;
             try {
                 deployResult = deploymentAdmin.deploy(module, new DeploymentOptions());
@@ -334,18 +336,19 @@ public class Context {
                         e.printStackTrace();
                     }
                 }
-                log.debug("deployed module " + source + ".epl");
+                log.debug("deployed module " + filename);
             } catch (DeploymentException e) {
-                System.out.println(e);
-                e.printStackTrace();
+                log.error("error deploying module "+source,e);
             }
-        } catch (IOException e) {
-            log.debug("no module file found for " + source + ".epl on classpath. Please ensure " + source + ".epl is in the resources directory.");
-        } catch (ParseException e) {
-            System.out.println(e);
-            e.printStackTrace();
         }
-
+        catch( FileNotFoundException ignored ) {
+            // it is not neccessary for every module to have an EPL file
+        }
+        catch (IOException e) {
+            log.debug("no module file found for " + filename + " on classpath. Please ensure " + source + ".epl is in the resources directory.",e);
+        } catch (ParseException e) {
+            log.error("Could not parse EPL " + filename, e);
+        }
     }
 
     public Injector getInjector() {
