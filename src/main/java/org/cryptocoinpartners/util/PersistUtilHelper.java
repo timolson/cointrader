@@ -60,7 +60,13 @@ public class PersistUtilHelper {
         EntityManager em = threadLocal.get();
         if (em != null) {
             entityManagers.remove(em.toString());
-            em.close();
+            try {
+                em.close();
+            } catch (Exception | Error e) {
+                e.printStackTrace();
+
+            }
+
             threadLocal.set(null);
         }
     }
@@ -74,7 +80,7 @@ public class PersistUtilHelper {
 
     public static void closeEntityManagerFactory() {
         emf.close();
-        emf = null;
+        //  emf = null;
     }
 
     public static void beginTransaction() {

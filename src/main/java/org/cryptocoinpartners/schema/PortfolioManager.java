@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema;
 // import java.util.logging.Logger;
 
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
@@ -12,8 +13,8 @@ import javax.persistence.Transient;
 import org.cryptocoinpartners.enumeration.OrderState;
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.esper.annotation.When;
-import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.Context;
+import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
@@ -29,9 +30,10 @@ import org.slf4j.LoggerFactory;
  */
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@Singleton
 public class PortfolioManager extends EntityBase implements Context.AttachListener {
 
-    private BasicPortfolioService portfolioService;
+    // private BasicPortfolioService portfolioService;
 
     // todo we need to get the tradeable portfolio separately from the "reserved" portfolio (assets needed for open orders)
     @OneToOne
@@ -40,11 +42,11 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     }
 
     @Transient
-    public BasicPortfolioService getPortfolioService() {
+    public PortfolioService getPortfolioService() {
         return portfolioService;
     }
 
-    @When("@Priority(9) select * from OrderUpdate where state.open=true`")
+    @When("@Priority(6) select * from OrderUpdate where state.open=true`")
     private void updateReservation(OrderUpdate update) {
 
         //removes the reservation from the transactions
@@ -58,7 +60,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         }
     }
 
-    @When("@Priority(9) select * from OrderUpdate where state.open=false")
+    @When("@Priority(5) select * from OrderUpdate where state.open=false")
     private void removeReservation(OrderUpdate update) {
         //removes the reservation from the transactions
         Transaction reservation = update.getOrder().getReservation();
@@ -94,7 +96,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
     }
 
-    @When("@Priority(1) select * from Transaction")
+    @When("@Priority(7) select * from Transaction")
     public void handleTransaction(Transaction transaction) {
         PersistUtil.insert(transaction);
         //	Transaction tans = new Transaction(this, position.getExchange(), position.getAsset(), TransactionType.CREDIT, position.getVolume(),
@@ -152,8 +154,13 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
     /** for subclasses */
     protected PortfolioManager(String portfolioName) {
-        this.portfolio = new Portfolio(portfolioName, this);
-        this.portfolioService = new BasicPortfolioService(portfolio);
+        // new PortfolioManager();
+        //   portfolio.setName(portfolioName);
+        // portfolio.setManager(this);
+        // this.portfolio = new Portfolio(portfolioName, this);
+        portfolioService.getPortfolio().setName(portfolioName);
+        portfolioService.getPortfolio().setManager(this);
+        //  this.portfolioService = new BasicPortfolioService(portfolio);
     }
 
     public static class DataSubscriber {
@@ -163,7 +170,9 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
         @SuppressWarnings("rawtypes")
         public void update(Long Timestamp, Portfolio portfolio) {
-            BasicPortfolioService portfolioService = portfolio.getManager().getPortfolioService();
+            // PortfolioService portfolioService = context.
+            PortfolioService portfolioService = portfolio.context.getInjector().getInstance(PortfolioService.class);
+            //      ..getManager().getPortfolioService();
             //portfolio.getPositions();
             logger.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Portfolio: " + portfolio + " Total Value ("
                     + portfolio.getBaseAsset() + "):"
@@ -185,9 +194,19 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     }
 
     // JPA
+
     protected PortfolioManager() {
+        // portfolio.setManager(this);
+        // portfolioService.setManager(this);
+
     }
 
+    // @Inject
+    protected PortfolioManager(PortfolioService portfolioService) {
+        this.portfolioService = portfolioService;
+    }
+
+    // @Inject
     protected void setPortfolio(Portfolio portfolio) {
         this.portfolio = portfolio;
     }
@@ -198,6 +217,9 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     protected Context context;
     @Inject
     private QuoteService quotes;
+    @Inject
+    private PortfolioService portfolioService;
+    @Inject
     private Portfolio portfolio;
 
 }

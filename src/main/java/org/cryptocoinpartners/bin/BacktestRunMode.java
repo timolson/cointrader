@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 
 import org.cryptocoinpartners.enumeration.TransactionType;
+import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.MockOrderService;
@@ -56,10 +57,13 @@ public class BacktestRunMode extends RunMode {
         context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
         context.attach(MockOrderService.class);
+        context.attach(BasicPortfolioService.class);
         for (String strategyName : strategyNames) {
             StrategyInstance strategyInstance = new StrategyInstance(strategyName);
             context.attachInstance(strategyInstance);
+
             setUpInitialPortfolio(strategyInstance);
+
             // context.getInjector().getInstance(cls)
 
         }
@@ -74,7 +78,8 @@ public class BacktestRunMode extends RunMode {
     }
 
     private void setUpInitialPortfolio(StrategyInstance strategyInstance) {
-        Portfolio portfolio = strategyInstance.getPortfolio();
+        Portfolio portfolio = context.getInjector().getInstance(Portfolio.class);
+        //Portfolio portfolio = strategyInstance.getPortfolio();
         if (positions.size() % 2 != 0) {
             System.err.println("You must supply an even number of arguments to the position switch. " + positions);
         }

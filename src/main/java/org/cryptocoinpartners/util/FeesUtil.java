@@ -159,7 +159,7 @@ public class FeesUtil {
 
     }
 
-    public static Amount getMargin(Amount price, Amount amount, Market market, PositionEffect postionEffect) {
+    protected static Amount getMargin(Amount price, Amount amount, Market market, PositionEffect postionEffect) {
         double rate = market.getMargin();
         FeeMethod method = market.getMarginFeeMethod();
         Amount margin;

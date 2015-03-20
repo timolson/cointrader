@@ -32,7 +32,8 @@ public class Fill extends RemoteEvent {
     // private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
     private static final String SEPARATOR = ",";
 
-    public Fill(SpecificOrder order, Instant time, Market market, long priceCount, long volumeCount) {
+    public Fill(SpecificOrder order, Instant time, Instant timeReceived, Market market, long priceCount, long volumeCount, String remoteKey) {
+        //   super(time, timeReceived, remoteKey);
         this.order = order;
         this.market = market;
         this.priceCount = priceCount;
@@ -43,7 +44,8 @@ public class Fill extends RemoteEvent {
 
     }
 
-    public Fill(SpecificOrder order, Instant time, Market market, long priceCount, long volumeCount, Amount commission) {
+    public Fill(SpecificOrder order, Instant time, Instant timeReceived, Market market, long priceCount, long volumeCount, Amount commission, String remoteKey) {
+        // super(time, timeReceived, remoteKey);
         this.order = order;
         this.market = market;
         this.priceCount = priceCount;
@@ -77,7 +79,7 @@ public class Fill extends RemoteEvent {
     @Transient
     public boolean isLong() {
 
-        return getVolume().isPositive();
+        return getOpenVolume().isPositive();
     }
 
     public void addChild(Order order) {
@@ -108,7 +110,7 @@ public class Fill extends RemoteEvent {
     @Transient
     public boolean isShort() {
 
-        return getVolume().isNegative();
+        return getOpenVolume().isNegative();
     }
 
     @Nullable

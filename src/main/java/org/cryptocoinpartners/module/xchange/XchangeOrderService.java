@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -81,7 +82,7 @@ public class XchangeOrderService extends BaseOrderService {
     }
 
     @Override
-    public Collection<SpecificOrder> getPendingOrders() {
+    public List<SpecificOrder> getPendingOrders() {
         return null;
         // TODO Auto-generated method stub
 

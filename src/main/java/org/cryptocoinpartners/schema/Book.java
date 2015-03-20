@@ -59,18 +59,22 @@ public class Book extends MarketData implements Spread {
 
     @Transient
     public List<Offer> getBids() {
-        resolveDiff();
-        if (bids == null)
-            return (new ArrayList<>());
-        return bids;
+        synchronized (lock) {
+            resolveDiff();
+            if (bids == null)
+                return (new ArrayList<>());
+            return bids;
+        }
     }
 
     @Transient
     public List<Offer> getAsks() {
-        resolveDiff();
-        if (asks == null)
-            return (new ArrayList<>());
-        return asks;
+        synchronized (lock) {
+            resolveDiff();
+            if (asks == null)
+                return (new ArrayList<>());
+            return asks;
+        }
     }
 
     @Override
@@ -191,8 +195,10 @@ public class Book extends MarketData implements Spread {
 
     public DiffResult diff(Book previousBook) {
         DiffResult result = new DiffResult();
-        diff(result, getBids(), previousBook.getBids());
-        diff(result, getAsks(), previousBook.getAsks());
+        synchronized (lock) {
+            diff(result, getBids(), previousBook.getBids());
+            diff(result, getAsks(), previousBook.getAsks());
+        }
         return result;
     }
 
@@ -219,15 +225,19 @@ public class Book extends MarketData implements Spread {
 
         public Builder addBid(BigDecimal price, BigDecimal volume) {
             Market market = book.getMarket();
-            book.bids.add(Offer.bid(market, book.getTime(), book.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
-                    DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
+            synchronized (lock) {
+                book.bids.add(Offer.bid(market, book.getTime(), book.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
+                        DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
+            }
             return this;
         }
 
         public Builder addAsk(BigDecimal price, BigDecimal volume) {
             Market market = book.getMarket();
-            book.asks.add(Offer.ask(market, book.getTime(), book.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
-                    DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
+            synchronized (lock) {
+                book.asks.add(Offer.ask(market, book.getTime(), book.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
+                        DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
+            }
             return this;
         }
 
@@ -476,13 +486,17 @@ public class Book extends MarketData implements Spread {
         List<Offer> parentBids = parent.getBids();
         for (int i = 0; i < parentBids.size(); i++) {
             if (!bidDeletionIndexes.contains(i))
-                bids.add(parentBids.get(i));
+                synchronized (lock) {
+                    bids.add(parentBids.get(i));
+                }
         }
         List<Integer> askDeletionIndexes = convertDatabaseBlobToIndexList(askDeletionsBlob); // these should be already sorted
         List<Offer> parentAsks = parent.getAsks();
         for (int i = 0; i < parentAsks.size(); i++) {
             if (!askDeletionIndexes.contains(i))
-                asks.add(parentAsks.get(i));
+                synchronized (lock) {
+                    asks.add(parentAsks.get(i));
+                }
         }
         sortBook();
         clearBlobs();
@@ -554,6 +568,8 @@ public class Book extends MarketData implements Spread {
 
     private static List<Integer> convertDatabaseBlobToIndexList(byte[] bytes) {
         List<Integer> result = new ArrayList<>();
+        if (bytes == null)
+            return result;
         ByteArrayInputStream bin = new ByteArrayInputStream(bytes);
         try {
             ObjectInputStream in = new ObjectInputStream(bin);
@@ -606,20 +622,24 @@ public class Book extends MarketData implements Spread {
     }
 
     private void sortBook() {
-        Collections.sort(bids, new Comparator<Offer>() {
-            @Override
-            @SuppressWarnings("ConstantConditions")
-            public int compare(Offer bid, Offer bid2) {
-                return -bid.getPriceCount().compareTo(bid2.getPriceCount()); // high to low
-            }
-        });
-        Collections.sort(asks, new Comparator<Offer>() {
-            @Override
-            @SuppressWarnings("ConstantConditions")
-            public int compare(Offer ask, Offer ask2) {
-                return ask.getPriceCount().compareTo(ask2.getPriceCount()); // low to high
-            }
-        });
+        synchronized (lock) {
+            Collections.sort(bids, new Comparator<Offer>() {
+                @Override
+                @SuppressWarnings("ConstantConditions")
+                public int compare(Offer bid, Offer bid2) {
+                    return -bid.getPriceCount().compareTo(bid2.getPriceCount()); // high to low
+                }
+            });
+        }
+        synchronized (lock) {
+            Collections.sort(asks, new Comparator<Offer>() {
+                @Override
+                @SuppressWarnings("ConstantConditions")
+                public int compare(Offer ask, Offer ask2) {
+                    return ask.getPriceCount().compareTo(ask2.getPriceCount()); // low to high
+                }
+            });
+        }
     }
 
     private List<Offer> bids;

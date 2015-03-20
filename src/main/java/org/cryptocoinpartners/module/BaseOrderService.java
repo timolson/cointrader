@@ -4,10 +4,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.inject.Inject;
 
@@ -15,6 +15,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.enumeration.OrderState;
 import org.cryptocoinpartners.enumeration.PositionEffect;
+import org.cryptocoinpartners.enumeration.PositionType;
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Book;
@@ -31,6 +32,7 @@ import org.cryptocoinpartners.schema.OrderBuilder.CommonOrderBuilder;
 import org.cryptocoinpartners.schema.OrderBuilder.GeneralOrderBuilder;
 import org.cryptocoinpartners.schema.OrderUpdate;
 import org.cryptocoinpartners.schema.Portfolio;
+import org.cryptocoinpartners.schema.PositionUpdate;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.schema.Transaction;
 import org.cryptocoinpartners.service.OrderService;
@@ -111,15 +113,13 @@ public abstract class BaseOrderService implements OrderService {
     @Override
     public void adjustStopLoss(Amount price, Amount amount) {
         synchronized (lock) {
-            for (int i = 0; i < triggerOrders.size(); i++) {
+            for (Order triggerOrder : triggerOrders) {
                 //			    if(myList.get(i).equals("3")){
                 //			        myList.remove(i);
                 //			        i--;
                 //			        myList.add("6");
                 //			    }
 
-                //for (Iterator<Order> it = triggerOrders.iterator(); it.hasNext();) {
-                Order triggerOrder = triggerOrders.get(i);
                 if (triggerOrder.isBid()) {
                     long stopPrice = Math.min((triggerOrder.getStopPrice().toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount(),
                             (price.plus(amount.abs()).toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount());
@@ -158,7 +158,7 @@ public abstract class BaseOrderService implements OrderService {
         return state;
     }
 
-    @When("@Priority(6) select * from OrderUpdate")
+    @When("@Priority(9) select * from OrderUpdate")
     public void handleOrderUpdate(OrderUpdate orderUpdate) {
         OrderState orderState = orderUpdate.getState();
         Order order = orderUpdate.getOrder();
@@ -197,7 +197,7 @@ public abstract class BaseOrderService implements OrderService {
 
     }
 
-    @When("@Priority(9) select * from Fill")
+    @When("@Priority(8) select * from Fill")
     public void handleFill(Fill fill) {
         Order order = fill.getOrder();
         //PersitOrderFill(order);
@@ -315,16 +315,12 @@ public abstract class BaseOrderService implements OrderService {
     }
 
     @SuppressWarnings("ConstantConditions")
-    @When("@Priority(5) select * from Book")
+    @When("@Priority(9) select * from Book")
     private void handleBook(Book b) {
         Offer ask = b.getBestAsk();
         Offer bid = b.getBestBid();
-        Iterator<SpecificOrder> itpo = getPendingOrders().iterator();
         synchronized (lock) {
-
-            while (itpo.hasNext()) {
-
-                SpecificOrder pendingOrder = itpo.next();
+            for (SpecificOrder pendingOrder : getPendingOrders()) {
 
                 if (pendingOrder.getMarket().equals(b.getMarket())
                         && ((pendingOrder.getParentOrder() != null && pendingOrder.getParentOrder().getFillType() == FillType.STOP_LIMIT) || pendingOrder
@@ -343,8 +339,8 @@ public abstract class BaseOrderService implements OrderService {
         }
 
         synchronized (lock) {
-            for (int i = 0; i < triggerOrders.size(); i++) {
-                Order triggeredOrder = triggerOrders.get(i);
+
+            for (Order triggeredOrder : triggerOrders) {
 
                 if (triggeredOrder.getMarket().equals(b.getMarket())) {
                     if (triggeredOrder.isBid()) {
@@ -357,8 +353,9 @@ public abstract class BaseOrderService implements OrderService {
                                     + triggeredOrder.getMarket().getExchange().getSymbol());
                             //TODO need 
                             placeOrder(specificOrder);
-                            triggerOrders.remove(i);
-                            i--;
+                            context.publish(new PositionUpdate(null, specificOrder.getMarket(), PositionType.EXITING));
+                            triggerOrders.remove(triggeredOrder);
+
                             //i = Math.min(0, i - 1);
                             //	triggerOrders.remove(triggerOrder);
                             log.debug(triggeredOrder + " triggered as specificOrder " + specificOrder);
@@ -382,8 +379,11 @@ public abstract class BaseOrderService implements OrderService {
                             log.info("At " + context.getTime() + " Routing trigger order " + specificOrder + " to "
                                     + specificOrder.getMarket().getExchange().getSymbol());
                             placeOrder(specificOrder);
-                            triggerOrders.remove(i);
-                            i--;
+                            context.publish(new PositionUpdate(null, specificOrder.getMarket(), PositionType.EXITING));
+                            triggerOrders.remove(triggeredOrder);
+                            // portfolioService.publishPositionUpdate(new Position(triggeredOrder.getPortfolio(), triggeredOrder.getMarket().getExchange(), triggeredOrder.getMarket(), triggeredOrder.getMarket().getBase(),
+                            //       DecimalAmount.ZERO, DecimalAmount.ZERO));
+
                             //i = Math.min(0, i - 1);
                             //triggeredOrders.add(triggeredOrder);
                             log.debug(triggeredOrder + " triggered as specificOrder " + specificOrder);
@@ -547,10 +547,16 @@ public abstract class BaseOrderService implements OrderService {
     }
 
     private void removeTriggerOrder(Order order) {
-        synchronized (lock) {
-            triggerOrders.remove(order);
-        }
 
+        for (Order triggerOrder : triggerOrders) {
+
+            if (triggerOrder == order) {
+                triggerOrders.remove(order);
+                // --removeOrder(order);
+            }
+
+            // pendingOrders.remove(order);
+        }
     }
 
     private void addTriggerOrder(Order order) {
@@ -612,10 +618,12 @@ public abstract class BaseOrderService implements OrderService {
     protected Context context;
     @Inject
     private Logger log;
-    private final Map<Order, OrderState> orderStateMap = new HashMap<>();
+    private final Map<Order, OrderState> orderStateMap = new ConcurrentHashMap<>();
     @Inject
     private QuoteService quotes;
-    private final List<Order> triggerOrders = new ArrayList<Order>();
+    // @Inject
+    // protected PortfolioService portfolioService;
+    private final static Collection<Order> triggerOrders = new ConcurrentLinkedQueue<Order>();
     private static Object lock = new Object();
 
 }

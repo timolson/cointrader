@@ -200,20 +200,19 @@ public class Context {
             now = new Instant(epRuntime.getCurrentTime());
         e.publishedAt(now);
         epRuntime.sendEvent(e);
+        //   epRuntime.route(e);
     }
 
     public void route(Event e) {
-        Instant now;
+        Instant now = null;
         if (timeProvider != null) {
             now = timeProvider.nextTime(e);
-            if (now != null)
-                advanceTime(now);
-            else
+            if (now == null)
                 now = new Instant(epRuntime.getCurrentTime());
         } else
             now = new Instant(epRuntime.getCurrentTime());
         e.publishedAt(now);
-
+        // epRuntime.sendEvent(e);
         epRuntime.route(e);
     }
 

@@ -79,7 +79,7 @@ public class Transaction extends Event {
         this.setPositionEffect(fill.getOrder().getPositionEffect());
         this.setPrice(fill.getPrice());
         this.setPriceCount(fill.getPriceCount());
-
+        //f this.time = fill.getTime();
         this.setType(transactionType);
         this.setPortfolio(portfolio);
         this.setPortfolioName(portfolio);
@@ -113,6 +113,7 @@ public class Transaction extends Event {
         this.setCommissionCurrency(order.getMarket().getTradedCurrency());
         this.setMarket(order.getMarket());
         this.setPortfolioName(portfolio);
+        // this.time = order.getTime();
         this.setExchange(order.getMarket().getExchange());
         this.order = order;
 
@@ -159,8 +160,8 @@ public class Transaction extends Event {
 
             //(FeesUtil.getMargin(orderBuilder.getOrder()).plus(FeesUtil.getCommission(orderBuilder.getOrder()))).negate()
 
-            //  if (getAmount().isNegative() && getMarket().getContractSize() == 1)
-            //  cost = cost.negate();
+            //	if (getAmount().isNegative() && getMarket().getContractSize() == 1)
+            //	cost = cost.negate();
             //Amount notional = getAssetAmount();
             //Amount cost = notional.divide(getExchange().getMargin(), Remainder.ROUND_EVEN);
 

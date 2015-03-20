@@ -41,25 +41,25 @@ public class Position extends Holding {
     @Transient
     public boolean isOpen() {
 
-        return !getVolume().isZero();
+        return (getVolume() != null && !getVolume().isZero());
     }
 
     @Transient
     public boolean isLong() {
 
-        return getVolume().isPositive();
+        return (getVolume() != null && getVolume().isPositive());
     }
 
     @Transient
     public boolean isShort() {
 
-        return getVolume().isNegative();
+        return (getVolume() != null && getVolume().isNegative());
     }
 
     @Transient
     public boolean isFlat() {
-
-        return getVolume().isZero();
+        //if (getVolume()!=null)
+        return (getVolume() == null || getVolume().isZero());
     }
 
     @Transient
@@ -87,17 +87,17 @@ public class Position extends Holding {
     @Transient
     public Amount getVolume() {
 
-        if (volume == null)
-            volume = new DiscreteAmount(volumeCount, market.getVolumeBasis());
-        return volume;
+        // if (volume == null)
+        //   volume = new DiscreteAmount(volumeCount, market.getVolumeBasis());
+        //return volume;
 
-        //if (getLongVolume() != null && getShortVolume() != null) {
-        //		return getLongVolume().plus(getShortVolume());
-        //} else if (getLongVolume() != null) {
-        //	return getLongVolume();
-        //	} else {
-        //		return getShortVolume();
-        //}
+        if (getLongVolume() != null && getShortVolume() != null) {
+            return getLongVolume().plus(getShortVolume());
+        } else if (getLongVolume() != null) {
+            return getLongVolume();
+        } else {
+            return getShortVolume();
+        }
 
     }
 
@@ -126,6 +126,8 @@ public class Position extends Holding {
 
     @Transient
     public Amount getLongVolume() {
+        if (market == null)
+            return null;
         if (longVolume == null)
             longVolume = new DiscreteAmount(longVolumeCount, market.getVolumeBasis());
         return longVolume;
@@ -133,6 +135,8 @@ public class Position extends Holding {
 
     @Transient
     public Amount getShortVolume() {
+        if (market == null)
+            return null;
         if (shortVolume == null)
             shortVolume = new DiscreteAmount(shortVolumeCount, market.getVolumeBasis());
         return shortVolume;
@@ -179,10 +183,13 @@ public class Position extends Holding {
      * @return true iff the positions both have the same Asset and the same Exchange, in which case this Position
      * has modified its volume by the amount in the position argument.
      */
-    protected boolean merge(Position position) {
+    public boolean merge(Position position) {
+        if (exchange == null && position.exchange == null)
+            return false;
+        if (asset == null && position.asset == null)
+            return false;
         if (!exchange.equals(position.exchange) || !asset.equals(position.asset))
             return false;
-
         longVolumeCount += position.longVolumeCount;
         shortVolumeCount += position.shortVolumeCount;
         setLongVolumeCount(longVolumeCount);

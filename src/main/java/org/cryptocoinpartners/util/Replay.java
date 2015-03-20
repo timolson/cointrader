@@ -8,14 +8,20 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import javax.inject.Inject;
+
+import jline.internal.Log;
+
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.Event;
 import org.cryptocoinpartners.schema.RemoteEvent;
 import org.cryptocoinpartners.schema.Trade;
+import org.cryptocoinpartners.service.PortfolioService;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.joda.time.Interval;
+import org.slf4j.Logger;
 
 import com.espertech.esper.client.EPRuntime;
 
@@ -23,7 +29,7 @@ import com.espertech.esper.client.EPRuntime;
  Manages a Context into which Trades and Books from the database are replayed.  The Context time is also managed by this
  class as it advances through the events.
  */
-public class Replay {
+public class Replay implements Runnable {
 
     public static Replay all(boolean orderByTimeReceived) {
         return during(new Interval(getEventsStart(orderByTimeReceived), getEventsEnd(orderByTimeReceived)), orderByTimeReceived);
@@ -60,6 +66,7 @@ public class Replay {
      Events in order of time to this Replay's Context
      */
 
+    @Override
     public void run() {
         final Instant start = replayTimeInterval.getStart().toInstant();
         final Instant end = replayTimeInterval.getEnd().toInstant();
@@ -72,9 +79,12 @@ public class Replay {
                 ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime());
                 service.submit(replayStep);
                 now = stepEnd;
+
             }
+            Log.debug("replay complete");
         } else
             replayStep(start, end);
+        Log.debug("replay complete");
     }
 
     private class ReplayStepRunnable implements Runnable {
@@ -91,15 +101,20 @@ public class Replay {
         }
 
         @Override
+        // @Inject
         public void run() {
+            Log.debug(context.getInjector().toString());
+            PortfolioService port = context.getInjector().getInstance(PortfolioService.class);
             Iterator<RemoteEvent> ite = queryEvents(start, stop).iterator();
             while (ite.hasNext()) {
                 RemoteEvent event = ite.next();
                 //runtime.sendEvent(event);
                 context.publish(event);
             }
-            context.advanceTime(stop);
+
+            // context.advanceTime(stop);
         }
+
     }
 
     private void replayStep(Instant start, Instant stop) {
@@ -112,6 +127,7 @@ public class Replay {
     }
 
     private List<RemoteEvent> queryEvents(Instant start, Instant stop) {
+
         final String timeField = timeFieldForOrdering(orderByTimeReceived);
         final String tradeQuery = "select t from Trade t where " + timeField + " >= ?1 and " + timeField + " <= ?2";
         final String bookQuery = "select b from Book b where " + timeField + " >= ?1 and " + timeField + " <= ?2";
@@ -183,6 +199,8 @@ public class Replay {
         }
     }
 
+    @Inject
+    private Logger log;
     private final Interval replayTimeInterval;
     private static ExecutorService service;
     private final Context context;

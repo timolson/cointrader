@@ -15,6 +15,7 @@ import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Listing;
+import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.Position;
 import org.cryptocoinpartners.schema.Transaction;
 
@@ -78,6 +79,8 @@ public interface PortfolioService {
 
     Amount getRealisedPnL(Asset quoteAsset);
 
+    Portfolio getPortfolio();
+
     ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>> getRealisedPnLByMarket();
 
     ConcurrentHashMap<Asset, Amount> getUnrealisedPnLs();
@@ -101,5 +104,7 @@ public interface PortfolioService {
     Amount getBaseMarketValue(Asset quoteAsset);
 
     Amount getAvailableBaseBalance(Asset quoteAsset);
+
+    DiscreteAmount getNetPosition(Asset base, Exchange exchange);
 
 }

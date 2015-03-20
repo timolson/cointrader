@@ -9,7 +9,6 @@ import javax.persistence.Entity;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.MapConfiguration;
-import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.Context;
 
 import com.google.inject.Binder;
@@ -27,7 +26,7 @@ import com.google.inject.Module;
 public class StrategyInstance extends PortfolioManager implements Context.AttachListener {
 
     public StrategyInstance(String moduleName) {
-        super(moduleName + " portfolio");
+        // super(moduleName + " portfolio");
         this.moduleName = moduleName;
     }
 
@@ -59,17 +58,22 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
     }
 
     @Override
-    public void afterAttach(Context context) {
+    public void afterAttach(final Context context) {
         // attach the actual Strategy instead of this StrategyInstance
         // Set ourselves as the StrategyInstance
         //      context.loadStatements("BasicPortfolioService");
-        strategy = context.attach(moduleName, new MapConfiguration(config), new Module() {
+        strategy = context.attach(moduleName, new MapConfiguration(config), new Module()
+
+        {
             @Override
             public void configure(Binder binder) {
                 binder.bind(StrategyInstance.class).toInstance(StrategyInstance.this);
-
-                binder.bind(Portfolio.class).toInstance(getPortfolio());
-                binder.bind(BasicPortfolioService.class).toInstance(getPortfolioService());
+                (context.getInjector().getInstance(Portfolio.class)).setName(getModuleName());
+                (context.getInjector().getInstance(Portfolio.class)).setManager(StrategyInstance.this);
+                //  portfolio.setName(getModuleName());
+                //  portfolio.setManager(this);
+                // binder.bind(Portfolio.class).toInstance(context.getInjector().getInstance(Portfolio.class));
+                // binder.bind(PortfolioService.class).toInstance(context.getInjector().getInstance(PortfolioService.class));
 
                 //              context.loadStatements("Portfolio");
 

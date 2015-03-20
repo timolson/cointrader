@@ -23,6 +23,8 @@
  	 <!-- < <logger name="org.hibernate" level="TRACE" />-->
  	 <!-- <   <logger name="com.espertech" level="TRACE"/>-->
     <logger name="org.cryptocoinpartners" level="debug"/>
+   <!-- <logger name="com.xeiam.xchange" level="DEBUG" />-->
+	<!--<logger name="si.mazi.rescu" level="TRACE" /> -->
     <!--<logger name="org.cryptocoinpartners.module" level="debug"/>-->
    <!-- <logger name="org.hibernate.tool.hbm2ddl.SchemaExport" level="off"/>-->
     <!--<logger name="org.cryptocoinpartners.util.ConfigUtil" level="debug"/>-->

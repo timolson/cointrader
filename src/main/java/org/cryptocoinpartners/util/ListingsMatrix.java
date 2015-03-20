@@ -86,34 +86,44 @@ public class ListingsMatrix {
             listings.get(ccyReference).put(ccyReference, (long) (1.0 / ccyReference.getBasis()));
 
         } else if (rate != 0) {
-            ArgumentChecker.isTrue(listings.containsKey(ccyReference), "Reference currency {} not in the Listings matrix", ccyReference);
-            ArgumentChecker.isTrue(!listings.containsKey(ccyToAdd), "New currency {} already in the Listings matrix", ccyToAdd);
+            // ArgumentChecker.isTrue(listings.containsKey(ccyReference), " {} not in the Listings matrix", ccyReference);
+            //ArgumentChecker.isTrue(!listings.containsKey(ccyToAdd), "New currency {} already in the Listings matrix", ccyToAdd);
 
             Iterator<Asset> lit = listings.keySet().iterator();
 
             while (lit.hasNext()) {
                 Asset ccy = lit.next();
                 if (!ccyToAdd.equals(ccy)) {
+
+                    long inverseCrossRate = 0;
+                    long crossRate = 0;
                     // new matrix create of rates that is _currenciesLookup (size) x _currenciesLookup.sise()
                     // loop over each of the quote currencies and get the cross rate, converting to th the baiss of the new curency
 
-                    long crossRate = Math.round((rate * listings.get(ccyReference).get(ccy).longValue() * (ccyToAdd.getBasis())));
+                    crossRate = Math.round((rate * listings.get(ccyReference).get(ccy).longValue() * (ccyToAdd.getBasis())));
                     // get the rate for the 
-                    BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
-                    // calculate the inverse by getting the basis of the currenct rate and setting the scale to ttha tof the quote currency.
-                    BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1.0 / (ccy.getBasis()))).divide(crossRateBD, ccyToAdd.getScale(),
-                            RoundingMode.HALF_EVEN));
-                    // divine the rate by the basis fo the currency to be added
-                    inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(ccyToAdd.getBasis()));
+                    if (crossRate != 0) {
+                        BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
+                        // calculate the inverse by getting the basis of the currenct rate and setting the scale to ttha tof the quote currency.
+                        BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1.0 / (ccy.getBasis()))).divide(crossRateBD, ccyToAdd.getScale(),
+                                RoundingMode.HALF_EVEN));
+                        // divine the rate by the basis fo the currency to be added
+                        inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(ccyToAdd.getBasis()));
 
-                    long inverseCrossRate = inverseCrossRateBD.longValue();
-                    // update the base currecny vs the quote
-                    if (listings.get(ccyToAdd) == null) {
-                        listings.put(ccyToAdd, new ConcurrentHashMap<Asset, Long>());
+                        inverseCrossRate = inverseCrossRateBD.longValue();
+                        // update the base currecny vs the quote
+                        if (listings.get(ccyToAdd) == null) {
+                            listings.put(ccyToAdd, new ConcurrentHashMap<Asset, Long>());
 
+                        }
                     }
-                    listings.get(ccyToAdd).put(ccy, crossRate);
-                    listings.get(ccy).put(ccyToAdd, inverseCrossRate);
+
+                    if (this.listings.get(ccyToAdd) == null)
+                        this.listings.put(ccyToAdd, new ConcurrentHashMap<Asset, Long>());
+                    listings.get(ccyToAdd).put(ccy, Long.valueOf(crossRate));
+                    if (this.listings.get(ccy) == null)
+                        this.listings.put(ccy, new ConcurrentHashMap<Asset, Long>());
+                    listings.get(ccy).put(ccyToAdd, Long.valueOf(inverseCrossRate));
 
                 }
 
@@ -171,17 +181,25 @@ public class ListingsMatrix {
 
                 Asset ccy = lit.next();
                 if (!ccyToUpdate.equals(ccy)) {
+                    long inverseCrossRate = 0;
+                    long crossRate = 0;
 
-                    long crossRate = Math.round((rate * listings.get(ccyReference).get(ccy).longValue() * (ccyReference.getBasis())));
-                    // get the rate for the 
-                    BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
-                    // calculate the inverse by getting the basis of the currenct rate and setting the scale to ttha tof the quote currency.
-                    BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1.0 / (ccy.getBasis()))).divide(crossRateBD, ccyToUpdate.getScale(),
-                            RoundingMode.HALF_EVEN));
-                    // divine the rate by the basis fo the currency to be added
-                    inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(ccyToUpdate.getBasis()));
+                    if ((this.listings.get(ccyReference) != null) && (((ConcurrentHashMap) this.listings.get(ccyReference)).get(ccy) != null)) {
 
-                    long inverseCrossRate = inverseCrossRateBD.longValue();
+                        crossRate = Math.round((rate * listings.get(ccyReference).get(ccy).longValue() * (ccyReference.getBasis())));
+                        // get the rate for the 
+                        if (crossRate != 0) {
+                            BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
+                            // calculate the inverse by getting the basis of the currenct rate and setting the scale to ttha tof the quote currency.
+                            BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1.0 / (ccy.getBasis()))).divide(crossRateBD, ccyToUpdate.getScale(),
+                                    RoundingMode.HALF_EVEN));
+                            // divine the rate by the basis fo the currency to be added
+                            inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(ccyToUpdate.getBasis()));
+
+                            inverseCrossRate = inverseCrossRateBD.longValue();
+                        }
+                    }
+
                     listings.get(ccyToUpdate).put(ccy, crossRate);
                     listings.get(ccy).put(ccyToUpdate, inverseCrossRate);
                 }

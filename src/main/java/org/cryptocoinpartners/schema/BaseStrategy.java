@@ -6,6 +6,7 @@ import javax.persistence.Transient;
 import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.service.OrderService;
+import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.service.Strategy;
 import org.slf4j.Logger;
@@ -21,8 +22,9 @@ import org.slf4j.Logger;
 public class BaseStrategy implements Strategy {
 
     @Inject
-    protected void setPortfolio(Portfolio portfolio) {
-        this.portfolio = portfolio;
+    protected void setPortfolio(BasicPortfolioService portfolioService) {
+        // portfolioService
+        //    this.portfolio = portfolio;
         SubscribePortfolio portfolioSubcribeEvent = new SubscribePortfolio(portfolio);
         context.publish(portfolioSubcribeEvent);
         Asset baseAsset = Asset.forSymbol(context.getConfig().getString("base.symbol", "USD"));
@@ -30,19 +32,17 @@ public class BaseStrategy implements Strategy {
         order = new OrderBuilder(portfolio, orderService);
     }
 
-    @Inject
-    protected void setPortfolioService(BasicPortfolioService portfolioService) {
+    // @Inject
+    protected void setPortfolioService(PortfolioService portfolioService) {
         this.portfolioService = portfolioService;
     }
 
     @Transient
-    protected BasicPortfolioService getPortfolioService() {
+    protected PortfolioService getPortfolioService() {
         return this.portfolioService;
     }
 
     /** This tracks the assets you have for trading */
-    protected Portfolio portfolio;
-    protected BasicPortfolioService portfolioService;
 
     /** This is what you use to place orders:
      * <pre>
@@ -59,6 +59,10 @@ public class BaseStrategy implements Strategy {
     protected Context context;
     @Inject
     protected OrderService orderService;
+    @Inject
+    protected PortfolioService portfolioService;
+    @Inject
+    protected Portfolio portfolio;
 
     @Inject
     protected Logger log;

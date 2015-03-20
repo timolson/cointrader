@@ -154,7 +154,7 @@ public class BasicQuoteService implements QuoteService {
     }
 
     //@Priority(10)
-    @When("@Priority(9) select * from Book")
+    @When("@Priority(5) select * from Book")
     private void recordBook(Book b) {
         Market market = b.getMarket();
         handleMarket(market);
@@ -216,7 +216,7 @@ public class BasicQuoteService implements QuoteService {
 
     }
 
-    @When("@Priority(9) select * from Trade")
+    @When("@Priority(5) select * from Trade")
     private void recordTrade(Trade t) {
         Market market = t.getMarket();
         handleMarket(market);
