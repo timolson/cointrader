@@ -337,14 +337,12 @@ public class Context {
                 }
                 log.debug("deployed module " + filename);
             } catch (DeploymentException e) {
-                log.error("error deploying module "+source,e);
+                log.error("error deploying module " + source, e);
             }
-        }
-        catch( FileNotFoundException ignored ) {
+        } catch (FileNotFoundException ignored) {
             // it is not neccessary for every module to have an EPL file
-        }
-        catch (IOException e) {
-            log.debug("no module file found for " + filename + " on classpath. Please ensure " + source + ".epl is in the resources directory.",e);
+        } catch (IOException e) {
+            log.debug("no module file found for " + filename + " on classpath. Please ensure " + source + ".epl is in the resources directory.");
         } catch (ParseException e) {
             log.error("Could not parse EPL " + filename, e);
         }

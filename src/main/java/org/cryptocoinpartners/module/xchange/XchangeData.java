@@ -1,6 +1,8 @@
 package org.cryptocoinpartners.module.xchange;
 
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -128,6 +130,7 @@ public class XchangeData {
     private class FetchTradesRunnable implements Runnable {
 
         private final Helper helper;
+        DateFormat dateFormat = new SimpleDateFormat("ddMMyy");
 
         public FetchTradesRunnable(Context context, Market market, RateLimiter rateLimiter, PollingMarketDataService dataService, @Nullable Helper helper) {
             this.context = context;
@@ -154,6 +157,7 @@ public class XchangeData {
                     if (millis > lastTradeTime)
                         lastTradeTime = millis;
                     // todo this is broken and assumes an increasing integer remote key
+                    // Long remoteId = Long.valueOf(trade.getRemoteKey().concat(String.valueOf(trade.getTimestamp())));
                     Long remoteId = Long.valueOf(trade.getRemoteKey());
                     if (remoteId > lastTradeId)
                         lastTradeId = remoteId;
@@ -198,7 +202,7 @@ public class XchangeData {
                     if (!ilt.hasNext())
                         break;
                     com.xeiam.xchange.dto.marketdata.Trade trade = ilt.next();
-                    long remoteId = Long.valueOf(trade.getId()).longValue();
+                    long remoteId = Long.valueOf(String.valueOf(dateFormat.format(trade.getTimestamp()).concat(trade.getId()))).longValue();
                     if (remoteId > lastTradeId) {
                         Instant tradeInstant = new Instant(trade.getTimestamp());
                         org.cryptocoinpartners.schema.Trade ourTrade = new org.cryptocoinpartners.schema.Trade(market, tradeInstant, trade.getId(),

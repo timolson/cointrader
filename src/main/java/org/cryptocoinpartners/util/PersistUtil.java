@@ -6,10 +6,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
 import javax.persistence.NoResultException;
-import javax.persistence.Persistence;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
@@ -26,34 +23,38 @@ import org.slf4j.LoggerFactory;
 public class PersistUtil {
 
     private static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
+    private static Object lock = new Object();
 
     public static void insert(EntityBase... entities) {
-        EntityManager em = null;
-        boolean persited = true;
-        try {
-            em = createEntityManager();
-            EntityTransaction transaction = em.getTransaction();
-            transaction.begin();
+        synchronized (lock) {
+            EntityManager em = null;
+            boolean persited = true;
             try {
-                for (EntityBase entity : entities)
-                    em.persist(entity);
-                transaction.commit();
+                em = createEntityManager();
+                PersistUtilHelper.beginTransaction();
 
-            } catch (Exception | Error e) {
-                persited = false;
-                e.printStackTrace();
-                if (transaction.isActive())
-                    transaction.rollback();
+                try {
+                    for (EntityBase entity : entities)
+                        em.persist(entity);
+                    PersistUtilHelper.commit();
+
+                } catch (Exception | Error e) {
+                    persited = false;
+                    e.printStackTrace();
+                    if (PersistUtilHelper.isActive())
+                        PersistUtilHelper.rollback();
+                }
+            } finally {
+                if (persited)
+                    for (EntityBase entity : entities)
+                        log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
+                else
+                    for (EntityBase entity : entities)
+                        log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
+                if (em != null && em.isOpen())
+                    PersistUtilHelper.closeEntityManager();
+
             }
-        } finally {
-            if (persited)
-                for (EntityBase entity : entities)
-                    log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
-            else
-                for (EntityBase entity : entities)
-                    log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
-            if (em != null)
-                em.close();
         }
     }
 
@@ -95,7 +96,7 @@ public class PersistUtil {
             }
         } finally {
             if (em != null)
-                em.close();
+                PersistUtilHelper.closeEntityManager();
         }
     }
 
@@ -127,7 +128,8 @@ public class PersistUtil {
             }
         } finally {
             if (em != null)
-                em.close();
+                PersistUtilHelper.closeEntityManager();
+
         }
     }
 
@@ -145,7 +147,7 @@ public class PersistUtil {
             return query.getResultList();
         } finally {
             if (em != null)
-                em.close();
+                PersistUtilHelper.closeEntityManager();
         }
     }
 
@@ -166,7 +168,7 @@ public class PersistUtil {
             return query.getSingleResult();
         } finally {
             if (em != null)
-                em.close();
+                PersistUtilHelper.closeEntityManager();
         }
     }
 
@@ -191,7 +193,7 @@ public class PersistUtil {
             }
         } finally {
             if (em != null)
-                em.close();
+                PersistUtilHelper.closeEntityManager();
         }
     }
 
@@ -201,7 +203,8 @@ public class PersistUtil {
 
     public static EntityManager createEntityManager() {
         init(false);
-        return entityManagerFactory.createEntityManager();
+        return PersistUtilHelper.getEntityManager();
+        // return entityManagerFactory.createEntityManager();
     }
 
     public static void resetDatabase() {
@@ -213,20 +216,21 @@ public class PersistUtil {
     }
 
     public static void shutdown() {
-        if (entityManagerFactory != null)
-            entityManagerFactory.close();
+        if (PersistUtilHelper.getEntityManagerFactory() != null)
+            PersistUtilHelper.closeEntityManagerFactory();
     }
 
     private static void init(boolean resetDatabase) {
-        if (entityManagerFactory != null) {
-            if (!entityManagerFactory.isOpen()) {
+        if (PersistUtilHelper.getEntityManagerFactory() != null) {
+            if (!PersistUtilHelper.isOpen()) {
                 log.warn("entityManagerFactory was closed.  Re-initializing");
-                entityManagerFactory = null;
+                PersistUtilHelper.reset();
             } else if (!resetDatabase) {
                 // entityManagerFactory exists, is open, and a reset is not requested.  continue to use existing EMF
                 return;
             }
         }
+
         if (resetDatabase) {
             log.info("resetting database");
         } else
@@ -245,13 +249,28 @@ public class PersistUtil {
         properties.put("hibernate.connection.password", ConfigUtil.combined().getString("db.password"));
         properties.put("hibernate.ejb.naming_strategy", "org.hibernate.cfg.ImprovedNamingStrategy");
         properties.put("hibernate.connection.autocommit", "true");
+        properties.put("hibernate.connection.provider_class", "org.hibernate.connection.C3P0ConnectionProvider");
+        properties.put("hibernate.c3p0.min_size", "1");
+        properties.put("hibernate.c3p0.max_size", "3");
+        properties.put("hibernate.c3p0.acquire_increment", "3");
+        properties.put("hibernate.c3p0.idle_test_period", "3000");
+        properties.put("hibernate.c3p0.max_statements", "0");
+        properties.put("hibernate.c3p0.timeout", "0");
+        properties.put("hibernate.c3p0.preferredTestQuery", "SELECT 1 from exchange");
+        properties.put("hibernate.c3p0.maxConnectionAge", "3600");
+        properties.put(" hibernate.c3p0.testConnectionOnCheckout", "true");
+        properties.put("hibernate.c3p0.acquireRetryDelay", "1000");
+        properties.put(" hibernate.c3p0.acquireRetryAttempts", "0");
+        properties.put("hibernate.c3p0.breakAfterAcquireFailure", "false");
+
         try {
-            entityManagerFactory = Persistence.createEntityManagerFactory("org.cryptocoinpartners.schema", properties);
+            PersistUtilHelper emh = new PersistUtilHelper(properties);
             ensureSingletonsExist();
+
         } catch (Throwable t) {
-            if (entityManagerFactory != null) {
-                entityManagerFactory.close();
-                entityManagerFactory = null;
+            if (PersistUtilHelper.getEntityManagerFactory() != null) {
+                PersistUtilHelper.closeEntityManagerFactory();
+
             }
             throw new Error("Could not initialize db", t);
         }
@@ -264,6 +283,6 @@ public class PersistUtil {
         Prompts.THIS_WEEK.getSymbol();
     }
 
-    private static EntityManagerFactory entityManagerFactory;
+    //private static EntityManagerFactory entityManagerFactory;
     private static final int defaultBatchSize = 20;
 }
