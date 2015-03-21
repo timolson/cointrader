@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.cryptocoinpartners.util.ConfigUtil;
@@ -102,12 +101,7 @@ public class Main {
         }
         PersistUtil.init();
         try {
-            Future future = service.submit(runMode);
-            Thread.sleep(8000);
-            while (!future.isDone()) {
-
-            }
-            //runMode.run();
+            runMode.run();
         } catch (Throwable t) {
             log.error("Uncaught error while running " + runMode.getClass().getSimpleName(), t);
         } finally {
