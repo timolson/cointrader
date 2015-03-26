@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.module.BasicPortfolioService;
@@ -34,15 +35,15 @@ public class PaperTradeRunMode extends RunMode {
     public List<String> positions = Arrays.asList("OKCOIN:USD", "1000000"); //private final Instant start = new DateTime(2014, 11, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
     final ExecutorService service = Executors.newSingleThreadExecutor();
     private final Instant end = new DateTime(DateTime.now()).toInstant();
-
+    Semaphore paperSemaphore = new Semaphore(0);
     private final Instant start = end.minus(Duration.standardDays(10)).toInstant();
 
     // new DateTime(2013, 12, 20, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
     @Override
-    public void run() {
+    public void run(Semaphore semaphore) {
         //context = Context.create();
-        Replay replay = Replay.between(start, end, true);
+        Replay replay = Replay.between(start, end, true, paperSemaphore);
         context = replay.getContext();
 
         context.attach(XchangeAccountService.class);
@@ -65,6 +66,8 @@ public class PaperTradeRunMode extends RunMode {
         replay.run();
 
         context.attach(XchangeData.class);
+        if (semaphore != null)
+            semaphore.release();
 
     }
 
@@ -90,4 +93,11 @@ public class PaperTradeRunMode extends RunMode {
     @Parameter(description = "Strategy name to load", arity = 1, required = true)
     public List<String> strategyNames;
     private Context context;
+
+    @Override
+    public void run() {
+        Semaphore semaphore = null;
+        run(semaphore);
+
+    }
 }

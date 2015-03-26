@@ -2,6 +2,7 @@ package org.cryptocoinpartners.module.xchange;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -22,6 +23,7 @@ import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.Order;
 import com.xeiam.xchange.dto.trade.LimitOrder;
 import com.xeiam.xchange.dto.trade.MarketOrder;
+import com.xeiam.xchange.dto.trade.OpenOrders;
 import com.xeiam.xchange.exceptions.NotYetImplementedForExchangeException;
 import com.xeiam.xchange.service.polling.trade.PollingTradeService;
 
@@ -75,16 +77,29 @@ public class XchangeOrderService extends BaseOrderService {
     Logger log;
 
     @Override
-    public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio) {
-        return null;
-        // TODO Auto-generated method stub
+    public Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio) {
+        com.xeiam.xchange.Exchange exchange = XchangeUtil.getExchangeForMarket(market.getExchange());
+        PollingTradeService tradeService = exchange.getPollingTradeService();
+        Collection<SpecificOrder> pendingOrders = new ArrayList<>();
+        try {
+            OpenOrders openOrders = tradeService.getOpenOrders();
+
+            for (LimitOrder limitOrder : openOrders.getOpenOrders()) {
+                pendingOrders.add(new SpecificOrder(limitOrder, exchange, portfolio));
+
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+
+        }
+        return pendingOrders;
 
     }
 
     @Override
     public List<SpecificOrder> getPendingOrders() {
-        return null;
-        // TODO Auto-generated method stub
+        return new ArrayList<>();
 
     }
 
@@ -109,6 +124,12 @@ public class XchangeOrderService extends BaseOrderService {
     @Override
     public void handleCancelAllClosingSpecificOrders(Portfolio portfolio, Market market) {
         // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio) {
+        return new ArrayList<>();
 
     }
 

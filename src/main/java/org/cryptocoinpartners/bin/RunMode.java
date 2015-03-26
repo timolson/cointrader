@@ -1,12 +1,14 @@
 package org.cryptocoinpartners.bin;
 
-import com.beust.jcommander.Parameters;
+import java.util.concurrent.Semaphore;
+
+import javax.inject.Inject;
+
 import org.apache.commons.configuration.Configuration;
 import org.cryptocoinpartners.util.Injector;
 import org.slf4j.Logger;
 
-import javax.inject.Inject;
-
+import com.beust.jcommander.Parameters;
 
 /**
  * Each subclass of RunMode must be annotated with the JCommander @Parameters tag.  Main will
@@ -18,14 +20,15 @@ import javax.inject.Inject;
 @Parameters(commandNames = "example", commandDescription = "This is an example of how to annotate your subclasses")
 public abstract class RunMode implements Runnable {
 
-//  @Parameter(names = {"-x","-X","-example"}, description = "this is an example")
-//  public boolean exampleSwitch;
+    public abstract void run(Semaphore semaphore);
 
-//  public void run() {
-//      System.err.println("<unimplemented>");
-//      System.exit(404);
-//  }
+    //  @Parameter(names = {"-x","-X","-example"}, description = "this is an example")
+    //  public boolean exampleSwitch;
 
+    //  public void run() {
+    //      System.err.println("<unimplemented>");
+    //      System.exit(404);
+    //  }
 
     @Inject
     protected Injector injector;

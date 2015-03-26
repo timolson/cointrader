@@ -244,4 +244,10 @@ public class MockOrderService extends BaseOrderService {
         }
 
     }
+
+    @Override
+    public Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio) {
+        // TODO Auto-generated method stub
+        return null;
+    }
 }

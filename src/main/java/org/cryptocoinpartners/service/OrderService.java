@@ -59,4 +59,6 @@ public interface OrderService {
 
     void handleCancelAllClosingSpecificOrders(Portfolio portfolio, Market market);
 
+    Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio);
+
 }

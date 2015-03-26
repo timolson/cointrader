@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.cryptocoinpartners.util.ConfigUtil;
@@ -52,6 +53,7 @@ public class Main {
     public static void main(String[] args) throws ConfigurationException, IllegalAccessException, InstantiationException {
         // first, parse only the MainParams to get the properties file location and initialize ConfigUtil and rootInjector
         MainParamsOnly mainParamsOnly = new MainParamsOnly();
+        Semaphore semaphore = new Semaphore(0);
         JCommander parameterParser = new JCommander(mainParamsOnly);
         parameterParser.setProgramName(Main.class.getName());
         try {
@@ -101,7 +103,8 @@ public class Main {
         }
         PersistUtil.init();
         try {
-            runMode.run();
+            runMode.run(semaphore);
+            semaphore.acquire(1);
         } catch (Throwable t) {
             log.error("Uncaught error while running " + runMode.getClass().getSimpleName(), t);
         } finally {

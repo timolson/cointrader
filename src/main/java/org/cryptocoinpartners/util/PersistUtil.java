@@ -251,16 +251,16 @@ public class PersistUtil {
         properties.put("hibernate.connection.autocommit", "true");
         properties.put("hibernate.connection.provider_class", "org.hibernate.connection.C3P0ConnectionProvider");
         properties.put("hibernate.c3p0.min_size", "1");
-        properties.put("hibernate.c3p0.max_size", "3");
-        properties.put("hibernate.c3p0.acquire_increment", "3");
-        properties.put("hibernate.c3p0.idle_test_period", "3000");
+        properties.put("hibernate.c3p0.max_size", ConfigUtil.combined().getString("db.pool.size"));
+        properties.put("hibernate.c3p0.acquire_increment", ConfigUtil.combined().getString("db.pool.growth"));
+        properties.put("hibernate.c3p0.idle_test_period", ConfigUtil.combined().getString("db.idle.test.period"));
         properties.put("hibernate.c3p0.max_statements", "0");
         properties.put("hibernate.c3p0.timeout", "0");
         properties.put("hibernate.c3p0.preferredTestQuery", "SELECT 1 from exchange");
-        properties.put("hibernate.c3p0.maxConnectionAge", "3600");
-        properties.put(" hibernate.c3p0.testConnectionOnCheckout", "true");
+        properties.put("hibernate.c3p0.maxConnectionAge", ConfigUtil.combined().getString("db.max.connection.age"));
+        properties.put("hibernate.c3p0.testConnectionOnCheckout", ConfigUtil.combined().getString("db.test.connection"));
         properties.put("hibernate.c3p0.acquireRetryDelay", "1000");
-        properties.put(" hibernate.c3p0.acquireRetryAttempts", "0");
+        properties.put("hibernate.c3p0.acquireRetryAttempts", "0");
         properties.put("hibernate.c3p0.breakAfterAcquireFailure", "false");
 
         try {

@@ -1,9 +1,7 @@
 package org.cryptocoinpartners.util;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -14,6 +12,7 @@ import org.apache.commons.lang3.text.WordUtils;
 import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Listing;
 
+import com.google.common.collect.HashBiMap;
 import com.xeiam.xchange.ExchangeFactory;
 import com.xeiam.xchange.ExchangeSpecification;
 import com.xeiam.xchange.currency.CurrencyPair;
@@ -39,6 +38,14 @@ public class XchangeUtil {
         return xchangeExchange;
     }
 
+    public static Exchange getExchangeForMarket(com.xeiam.xchange.Exchange xeiamExchange) {
+        Exchange coinTraderExchange = exchangesByMarket.inverse().get(xeiamExchange);
+        if (coinTraderExchange == null)
+            throw new Error("Could not get XChange Exchange for Coin Trader Exchange " + coinTraderExchange);
+        return coinTraderExchange;
+
+    }
+
     public static CurrencyPair getCurrencyPairForListing(Listing listing) {
         return new CurrencyPair(listing.getBase().getSymbol(), listing.getQuote().getSymbol());
     }
@@ -48,7 +55,7 @@ public class XchangeUtil {
         return FuturesContract.valueOf(prompt);
     }
 
-    private static Map<Exchange, com.xeiam.xchange.Exchange> exchangesByMarket;
+    private static HashBiMap<Exchange, com.xeiam.xchange.Exchange> exchangesByMarket;
     private static Set<String> exchangeTags;
 
     static {
@@ -65,7 +72,9 @@ public class XchangeUtil {
                 exchangeTags.add(matcher.group(1));
         }
 
-        exchangesByMarket = new HashMap<>();
+        exchangesByMarket = HashBiMap.create();
+
+        //= new HashMap<>();
         for (String exchangeTag : exchangeTags) {
             String baseKey = "xchange." + exchangeTag + ".";
             String key = baseKey + "class";

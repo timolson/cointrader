@@ -1,8 +1,10 @@
 package org.cryptocoinpartners.bin;
 
-import com.beust.jcommander.Parameters;
+import java.util.concurrent.Semaphore;
+
 import org.cryptocoinpartners.util.PersistUtil;
 
+import com.beust.jcommander.Parameters;
 
 /**
  * @author Tim Olson
@@ -12,8 +14,17 @@ import org.cryptocoinpartners.util.PersistUtil;
 public class ResetDatabaseRunMode extends RunMode {
 
     @Override
-    public void run() {
+    public void run(Semaphore semaphore) {
         PersistUtil.resetDatabase();
+        if (semaphore != null)
+            semaphore.release();
         System.exit(0);
+    }
+
+    @Override
+    public void run() {
+        Semaphore semaphore = null;
+        run(semaphore);
+
     }
 }

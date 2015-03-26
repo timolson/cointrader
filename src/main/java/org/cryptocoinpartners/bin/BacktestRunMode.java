@@ -3,6 +3,7 @@ package org.cryptocoinpartners.bin;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Semaphore;
 
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.module.BasicPortfolioService;
@@ -34,10 +35,11 @@ public class BacktestRunMode extends RunMode {
     public List<String> strategyNames;
     private Context context;
     private static ExecutorService service;
-    private final Instant start = new DateTime(2013, 12, 20, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    Semaphore backTestSemaphore = new Semaphore(0);
+    private final Instant start = new DateTime(2014, 11, 20, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
     //private final Instant start = new DateTime(2014, 11, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
-    private final Instant end = new DateTime(2015, 1, 1, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    private final Instant end = new DateTime(2015, 03, 22, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
     //private final Instant start = new DateTime(2014, 9, 9, 23, 0, 0, 0, DateTimeZone.UTC).toInstant();
     //private final Instant end = new DateTime(2014, 9, 10, 6, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
@@ -48,11 +50,11 @@ public class BacktestRunMode extends RunMode {
     boolean noop = false;
 
     @Override
-    public void run() {
+    public void run(Semaphore semaphore) {
         //PersistUtil.purgeTransactions();
         //Replay replay = Replay.all(true);
-        Replay replay = Replay.between(start, end, true);
-
+        //Replay replay = Replay.between(start, end, true);
+        Replay replay = Replay.between(start, end, true, backTestSemaphore);
         context = replay.getContext();
         context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
@@ -73,6 +75,8 @@ public class BacktestRunMode extends RunMode {
         //service.submit(replay);
 
         replay.run();
+        if (semaphore != null)
+            semaphore.release();
         //System.exit(0);
         // todo report P&L, etc.
     }
@@ -92,5 +96,12 @@ public class BacktestRunMode extends RunMode {
             context.publish(initialCredit);
 
         }
+    }
+
+    @Override
+    public void run() {
+        Semaphore semaphore = null;
+        run(semaphore);
+
     }
 }

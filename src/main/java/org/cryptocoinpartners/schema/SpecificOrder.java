@@ -2,6 +2,7 @@ package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
 import java.util.Collection;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
@@ -11,7 +12,10 @@ import javax.persistence.Transient;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.cryptocoinpartners.util.Remainder;
+import org.cryptocoinpartners.util.XchangeUtil;
 import org.joda.time.Instant;
+
+import com.xeiam.xchange.dto.trade.LimitOrder;
 
 /**
  * SpecificOrders are bound to a Market and express their prices and volumes in DiscreteAmounts with the correct
@@ -63,6 +67,24 @@ public class SpecificOrder extends Order {
         super.setPortfolio(portfolio);
         this.placementCount = 1;
 
+    }
+
+    public SpecificOrder(LimitOrder limitOrder, com.xeiam.xchange.Exchange xchangeExchange, Portfolio portfolio) {
+        super(new Instant(limitOrder.getTimestamp().getTime()));
+        Asset baseCCY = Asset.forSymbol(limitOrder.getCurrencyPair().baseSymbol.toUpperCase());
+        Asset quoteCCY = Asset.forSymbol(limitOrder.getCurrencyPair().counterSymbol.toUpperCase());
+        Listing listing = Listing.forPair(baseCCY, quoteCCY);
+        Exchange exchange = XchangeUtil.getExchangeForMarket(xchangeExchange);
+        this.market = Market.findOrCreate(exchange, listing);
+        this.setId(UUID.fromString(limitOrder.getId()));
+        long vol = limitOrder.getTradableAmount().divide(BigDecimal.valueOf(market.getPriceBasis())).longValue();
+        this.volume = new DiscreteAmount(vol, market.getPriceBasis());
+        this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+        super.setComment(comment);
+        //     parentOrder.addChild(this);
+        //   this.setParentOrder(parentOrder);
+        super.setPortfolio(portfolio);
+        // this.placementCount = 1;
     }
 
     public SpecificOrder(Instant time, Portfolio portfolio, Market market, Amount volume, Order parentOrder, String comment) {
