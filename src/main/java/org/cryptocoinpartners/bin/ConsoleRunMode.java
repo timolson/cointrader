@@ -30,6 +30,7 @@ import org.cryptocoinpartners.module.xchange.XchangeOrderService;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Holding;
 import org.cryptocoinpartners.schema.Portfolio;
+import org.cryptocoinpartners.schema.StrategyInstance;
 import org.cryptocoinpartners.schema.Transaction;
 
 import com.beust.jcommander.Parameter;
@@ -121,7 +122,16 @@ public class ConsoleRunMode extends RunMode {
         else
             context.attach(MockOrderService.class);
         context.attach(BasicPortfolioService.class);
+
+        //    (context.getInjector().getInstance(Portfolio.class)).setName("ConsolePortfolio");
+
+        StrategyInstance strategyInstance = new StrategyInstance("ConsoleStrategy");
+        context.attachInstance(strategyInstance);
+
+        // setUpInitialPortfolio(strategyInstance);
         setUpInitialPortfolio();
+
+        // (context.getInjector().getInstance(Portfolio.class)).setManager(new PortfolioManager());
 
         Terminal terminal = TerminalFactory.get();
         try {

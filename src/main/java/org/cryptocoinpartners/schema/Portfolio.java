@@ -814,7 +814,7 @@ public class Portfolio extends EntityBase {
         this.transactions = transactions;
     }
 
-    protected void setName(String name) {
+    public void setName(String name) {
         this.name = name;
     }
 

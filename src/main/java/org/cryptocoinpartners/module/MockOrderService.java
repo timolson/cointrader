@@ -247,7 +247,15 @@ public class MockOrderService extends BaseOrderService {
 
     @Override
     public Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio) {
-        // TODO Auto-generated method stub
-        return null;
+        Collection<SpecificOrder> portfolioPendingOrders = new ArrayList<>();
+
+        for (SpecificOrder pendingOrder : pendingOrders) {
+            if (pendingOrder.getPortfolio().equals(portfolio) && pendingOrder.getMarket().equals(market)) {
+
+                portfolioPendingOrders.add(pendingOrder);
+            }
+
+        }
+        return portfolioPendingOrders;
     }
 }

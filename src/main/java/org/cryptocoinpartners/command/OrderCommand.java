@@ -151,6 +151,7 @@ public abstract class OrderCommand extends AntlrCommandBase {
 
     @Inject
     OrderService orderService;
+    @Inject
     private Portfolio portfolio;
     private BigDecimal volume;
     private Market market;
