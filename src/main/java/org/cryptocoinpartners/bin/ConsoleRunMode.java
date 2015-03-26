@@ -2,6 +2,9 @@ package org.cryptocoinpartners.bin;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.Semaphore;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,11 +27,8 @@ import org.cryptocoinpartners.module.MockOrderService;
 import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.module.xchange.XchangeData;
 import org.cryptocoinpartners.module.xchange.XchangeOrderService;
-import org.cryptocoinpartners.schema.Amount;
-import org.cryptocoinpartners.schema.Currencies;
 import org.cryptocoinpartners.schema.DiscreteAmount;
-import org.cryptocoinpartners.schema.Exchanges;
-import org.cryptocoinpartners.schema.Owner;
+import org.cryptocoinpartners.schema.Holding;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.Transaction;
 
@@ -46,7 +46,7 @@ public class ConsoleRunMode extends RunMode {
     public boolean live = false;
 
     @Override
-    public void run() {
+    public void run(Semaphore semaphore) {
         try {
             init();
             //noinspection InfiniteLoopStatement
@@ -96,10 +96,14 @@ public class ConsoleRunMode extends RunMode {
                     continue;
                 }
                 history.add(line);
+                if (semaphore != null)
+                    semaphore.release();
             }
+
         } catch (IOException e) {
             throw new Error("Console exception", e);
         }
+
     }
 
     private void internalError() {
@@ -110,21 +114,14 @@ public class ConsoleRunMode extends RunMode {
         context = Context.create();
         context.attach(XchangeData.class);
         context.attach(BasicQuoteService.class);
+
         context.attach(XchangeAccountService.class);
         if (live)
             context.attach(XchangeOrderService.class);
         else
             context.attach(MockOrderService.class);
-
-        Owner owner = new Owner("Console Portfolio");
-        Portfolio portfolio = owner.getPortfolio();
-        // Adjust the Owner's Portfolio to have some BTC & USD to play with.
-        Amount amount = new DiscreteAmount(10000000, Currencies.BTC.getBasis());
-        Amount price = new DiscreteAmount(0, Currencies.BTC.getBasis());
-        Transaction initialCredit = new Transaction(portfolio, Exchanges.BITFINEX, Currencies.BTC, TransactionType.CREDIT, amount, price);
-        context.publish(initialCredit);
-
-        context.attachInstance(owner);
+        context.attach(BasicPortfolioService.class);
+        setUpInitialPortfolio();
 
         Terminal terminal = TerminalFactory.get();
         try {
@@ -152,8 +149,35 @@ public class ConsoleRunMode extends RunMode {
             console.println("-= LIVE TRADING MODE =-");
     }
 
+    private void setUpInitialPortfolio() {
+        Portfolio portfolio = context.getInjector().getInstance(Portfolio.class);
+        //Portfolio portfolio = strategyInstance.getPortfolio();
+        if (positions.size() % 2 != 0) {
+            System.err.println("You must supply an even number of arguments to the position switch. " + positions);
+        }
+        for (int i = 0; i < positions.size() - 1;) {
+            Holding holding = Holding.forSymbol(positions.get(i++));
+            //  Long str = (positions.get(i++));
+            DiscreteAmount amount = new DiscreteAmount(Long.parseLong(positions.get(i++)), holding.getAsset().getBasis());
+            DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
+            Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
+            context.publish(initialCredit);
+
+        }
+    }
+
+    public List<String> positions = Arrays.asList("OKCOIN:USD", "1000000");
+
     private Context context;
     private ConsoleReader console;
     private ConsoleWriter out;
     private MemoryHistory history;
+
+    @Override
+    public void run() {
+        Semaphore semaphore = null;
+        run(semaphore);
+        // TODO Auto-generated method stub
+
+    }
 }
