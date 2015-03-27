@@ -17,6 +17,8 @@ grammar Base;
     {
         if( currencySymbols.contains(getText().toUpperCase()) )
             setType(Currency);
+         else if( promptSymbols.contains(getText().toUpperCase()) )
+            setType(Prompt);
         else if( exchangeSymbols.contains(getText().toUpperCase()) )
             setType(Exchange);
     }
@@ -25,12 +27,14 @@ grammar Base;
     private static Set<String> listingSymbols;
     private static Set<String> exchangeSymbols;
     private static Set<String> currencySymbols;
+    private static Set<String> promptSymbols;
 
     static {
         marketSymbols = new HashSet<String>(org.cryptocoinpartners.schema.Market.allSymbols());
         listingSymbols = new HashSet<String>(org.cryptocoinpartners.schema.Listing.allSymbols());
         exchangeSymbols = new HashSet<String>(org.cryptocoinpartners.schema.Exchange.allSymbols());
         currencySymbols = new HashSet<String>(org.cryptocoinpartners.schema.Currency.allSymbols());
+        promptSymbols = new HashSet<String>(org.cryptocoinpartners.schema.Prompt.allSymbols());
     }
   
 }
@@ -42,14 +46,14 @@ Amount
 ;
 
 Ident
-: [a-zA-Z][a-zA-Z]* { ident(); }
+: [a-zA-Z_][a-zA-Z_]* { ident(); }
 ;
 
 Market: Exchange ':' Listing ;
-Listing: Currency '.' Currency ;
+Listing: Currency '.' Currency '.' Prompt ;
+Prompt: Ident; // set by ident();
 Currency: Ident; // set by ident();
 Exchange: Ident; // set by ident();
-
 
 fragment
 Alpha

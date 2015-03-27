@@ -46,6 +46,7 @@ public abstract class OrderCommand extends AntlrCommandBase {
     }
 
     protected void placeSpecificOrder() {
+        volume = isSell ? volume.negate() : volume;
         OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(portfolio, orderService).create(context.getTime(), market, volume, "New Order");
         if (limit != null) {
             long limitCount = DiscreteAmount.roundedCountForBasis(limit, market.getPriceBasis());
@@ -56,6 +57,8 @@ public abstract class OrderCommand extends AntlrCommandBase {
     }
 
     protected void placeGeneralOrder() {
+        volume = isSell ? volume.negate() : volume;
+
         OrderBuilder.GeneralOrderBuilder builder = new OrderBuilder(portfolio, orderService).create(context.getTime(), listing, volume);
         if (limit != null)
             builder = builder.withLimitPrice(limit);

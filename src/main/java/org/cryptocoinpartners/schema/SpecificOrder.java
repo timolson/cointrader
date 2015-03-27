@@ -11,6 +11,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.util.Remainder;
 import org.cryptocoinpartners.util.XchangeUtil;
 import org.joda.time.Instant;
@@ -34,6 +35,7 @@ public class SpecificOrder extends Order {
         this.volumeCount = volumeCount;
         super.setPortfolio(portfolio);
         this.placementCount = 1;
+        this.positionEffect = PositionEffect.OPEN;
 
     }
 
@@ -44,6 +46,7 @@ public class SpecificOrder extends Order {
         super.setComment(comment);
         super.setPortfolio(portfolio);
         this.placementCount = 1;
+        this.positionEffect = PositionEffect.OPEN;
 
     }
 
@@ -56,6 +59,7 @@ public class SpecificOrder extends Order {
         this.setParentOrder(parentOrder);
         super.setPortfolio(portfolio);
         this.placementCount = 1;
+        this.positionEffect = PositionEffect.OPEN;
 
     }
 
@@ -66,6 +70,7 @@ public class SpecificOrder extends Order {
         super.setComment(comment);
         super.setPortfolio(portfolio);
         this.placementCount = 1;
+        this.positionEffect = PositionEffect.OPEN;
 
     }
 
@@ -80,6 +85,7 @@ public class SpecificOrder extends Order {
         long vol = limitOrder.getTradableAmount().divide(BigDecimal.valueOf(market.getPriceBasis())).longValue();
         this.volume = new DiscreteAmount(vol, market.getPriceBasis());
         this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+        this.positionEffect = PositionEffect.OPEN;
         super.setComment(comment);
         //     parentOrder.addChild(this);
         //   this.setParentOrder(parentOrder);
@@ -96,6 +102,7 @@ public class SpecificOrder extends Order {
         this.setParentOrder(parentOrder);
         super.setPortfolio(portfolio);
         this.placementCount = 1;
+        this.positionEffect = PositionEffect.OPEN;
     }
 
     public SpecificOrder(Instant time, Portfolio portfolio, Market market, BigDecimal volume, String comment) {

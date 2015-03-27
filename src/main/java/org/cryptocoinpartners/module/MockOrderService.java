@@ -250,7 +250,8 @@ public class MockOrderService extends BaseOrderService {
         Collection<SpecificOrder> portfolioPendingOrders = new ArrayList<>();
 
         for (SpecificOrder pendingOrder : pendingOrders) {
-            if (pendingOrder.getPortfolio().equals(portfolio) && pendingOrder.getMarket().equals(market)) {
+            if (pendingOrder.getPortfolio().equals(portfolio)) {
+                //&& pendingOrder.getMarket().equals(market)) {
 
                 portfolioPendingOrders.add(pendingOrder);
             }
