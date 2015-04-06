@@ -36,10 +36,10 @@ public class BacktestRunMode extends RunMode {
     private Context context;
     private static ExecutorService service;
     Semaphore backTestSemaphore = new Semaphore(0);
-    private final Instant start = new DateTime(2014, 11, 20, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    private final Instant start = new DateTime(2013, 11, 20, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
     //private final Instant start = new DateTime(2014, 11, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
-    private final Instant end = new DateTime(2015, 03, 22, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    private final Instant end = new DateTime(2015, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
     //private final Instant start = new DateTime(2014, 9, 9, 23, 0, 0, 0, DateTimeZone.UTC).toInstant();
     //private final Instant end = new DateTime(2014, 9, 10, 6, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
@@ -58,8 +58,9 @@ public class BacktestRunMode extends RunMode {
         context = replay.getContext();
         context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
-        context.attach(MockOrderService.class);
         context.attach(BasicPortfolioService.class);
+        context.attach(MockOrderService.class);
+
         for (String strategyName : strategyNames) {
             StrategyInstance strategyInstance = new StrategyInstance(strategyName);
             context.attachInstance(strategyInstance);
@@ -82,8 +83,10 @@ public class BacktestRunMode extends RunMode {
     }
 
     private void setUpInitialPortfolio(StrategyInstance strategyInstance) {
-        Portfolio portfolio = context.getInjector().getInstance(Portfolio.class);
-        //Portfolio portfolio = strategyInstance.getPortfolio();
+        // @Inject
+        // Portfolio portfolio;
+        // ;= context.getInjector().getInstance(Portfolio.class);
+        Portfolio portfolio = strategyInstance.getPortfolio();
         if (positions.size() % 2 != 0) {
             System.err.println("You must supply an even number of arguments to the position switch. " + positions);
         }
@@ -94,6 +97,7 @@ public class BacktestRunMode extends RunMode {
             DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
             Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
             context.publish(initialCredit);
+            strategyInstance.getStrategy().init();
 
         }
     }

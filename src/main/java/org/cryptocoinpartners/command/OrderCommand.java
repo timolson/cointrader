@@ -46,6 +46,7 @@ public abstract class OrderCommand extends AntlrCommandBase {
     }
 
     protected void placeSpecificOrder() {
+        //FillType.STOP_LOSS
         volume = isSell ? volume.negate() : volume;
         OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(portfolio, orderService).create(context.getTime(), market, volume, "New Order");
         if (limit != null) {

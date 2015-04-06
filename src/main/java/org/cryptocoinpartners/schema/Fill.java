@@ -205,7 +205,7 @@ public class Fill extends RemoteEvent {
         return margin;
     }
 
-    @Transient
+    @ManyToOne(optional = false)
     public Portfolio getPortfolio() {
         return portfolio;
     }

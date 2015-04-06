@@ -24,7 +24,6 @@ import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.MockOrderService;
-import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.module.xchange.XchangeData;
 import org.cryptocoinpartners.module.xchange.XchangeOrderService;
 import org.cryptocoinpartners.schema.DiscreteAmount;
@@ -115,21 +114,20 @@ public class ConsoleRunMode extends RunMode {
         context = Context.create();
         context.attach(XchangeData.class);
         context.attach(BasicQuoteService.class);
+        context.attach(BasicPortfolioService.class);
 
-        context.attach(XchangeAccountService.class);
         if (live)
             context.attach(XchangeOrderService.class);
         else
             context.attach(MockOrderService.class);
-        context.attach(BasicPortfolioService.class);
-
-        //    (context.getInjector().getInstance(Portfolio.class)).setName("ConsolePortfolio");
 
         StrategyInstance strategyInstance = new StrategyInstance("ConsoleStrategy");
         context.attachInstance(strategyInstance);
+        setUpInitialPortfolio(strategyInstance);
+
+        //    (context.getInjector().getInstance(Portfolio.class)).setName("ConsolePortfolio");
 
         // setUpInitialPortfolio(strategyInstance);
-        setUpInitialPortfolio();
 
         // (context.getInjector().getInstance(Portfolio.class)).setManager(new PortfolioManager());
 
@@ -159,8 +157,9 @@ public class ConsoleRunMode extends RunMode {
             console.println("-= LIVE TRADING MODE =-");
     }
 
-    private void setUpInitialPortfolio() {
-        Portfolio portfolio = context.getInjector().getInstance(Portfolio.class);
+    private void setUpInitialPortfolio(StrategyInstance strategyInstance) {
+        Portfolio portfolio = strategyInstance.getPortfolio();
+
         //Portfolio portfolio = strategyInstance.getPortfolio();
         if (positions.size() % 2 != 0) {
             System.err.println("You must supply an even number of arguments to the position switch. " + positions);
@@ -174,6 +173,8 @@ public class ConsoleRunMode extends RunMode {
             context.publish(initialCredit);
 
         }
+        strategyInstance.getStrategy().init();
+        //   strategyInstance.init;
     }
 
     public List<String> positions = Arrays.asList("OKCOIN:USD", "1000000");

@@ -250,7 +250,7 @@ public class Transaction extends Event {
         return fill;
     }
 
-    @Transient
+    @ManyToOne(optional = false)
     public Portfolio getPortfolio() {
         return portfolio;
     }
@@ -301,6 +301,7 @@ public class Transaction extends Event {
         this.amount = amount;
     }
 
+    @Inject
     protected void setPortfolio(Portfolio portfolio) {
         this.portfolio = portfolio;
     }

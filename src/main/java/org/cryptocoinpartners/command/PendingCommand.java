@@ -6,8 +6,8 @@ import javax.inject.Inject;
 
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
-import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.service.OrderService;
+import org.cryptocoinpartners.service.PortfolioService;
 
 /**
  * @author Tim Olson
@@ -43,13 +43,13 @@ public class PendingCommand extends CommandBase {
 
     @Override
     public void run() {
-        out.printList(orderService.getPendingOrders(market, portfolio));
+        out.printList(orderService.getPendingOrders(market, portfolioService.getPortfolio()));
     }
 
     @Inject
     OrderService orderService;
     @Inject
-    private Portfolio portfolio;
+    private PortfolioService portfolioService;
     @Inject
     private ConsoleWriter console;
     private BigDecimal volume;

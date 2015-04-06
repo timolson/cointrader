@@ -34,9 +34,13 @@ public class PersistUtil {
                 PersistUtilHelper.beginTransaction();
 
                 try {
-                    for (EntityBase entity : entities)
-                        em.persist(entity);
-                    PersistUtilHelper.commit();
+                    for (EntityBase entity : entities) {
+                        if (em.contains(entity))
+                            em.merge(entity);
+                        else
+                            em.persist(entity);
+                        PersistUtilHelper.commit();
+                    }
 
                 } catch (Exception | Error e) {
                     persited = false;

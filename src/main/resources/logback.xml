@@ -12,19 +12,28 @@
             <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
+ 
+ <!--http://www.mchange.com/projects/c3p0/index.html#configuring_logging --> 
+ <property name="com.mchange.v2.log.MLog"                              value="com.mchange.v2.log.log4j.Log4jMLog"/>
+ <property name="com.mchange.v2.log.NameTransformer"                   value="com.mchange.v2.log.PackageNames"/>
+ <property name="com.mchange.v2.log.FallbackMLog.DEFAULT_CUTOFF_LEVEL" value="INFO"/>
+ 
+ 
 
-    <root level="info">
+   <root level="info">
         <appender-ref ref="FILE"/>
         <appender-ref ref="CONSOLE"/>
     </root>
+ <logger name="com.mchange.v2.c3p0" level="INFO"/>
+ <logger name="org.hibernate.transaction" level="INFO"/>
 
   <!--  <logger name="org.hibernate.ejb.HibernatePersistence" level="trace"/>-->
     <!-- <logger name="org.hibernate.type" level="ALL" />-->
- 	 <!-- < <logger name="org.hibernate" level="TRACE" />-->
+ 	 <!--  <logger name="org.hibernate" level="TRACE" />-->
  	 <!-- <   <logger name="com.espertech" level="TRACE"/>-->
-    <logger name="org.cryptocoinpartners" level="debug"/>
-   <!-- <logger name="com.xeiam.xchange" level="DEBUG" />-->
-	<!--<logger name="si.mazi.rescu" level="TRACE" /> -->
+     <logger name="org.cryptocoinpartners" level="debug"/>
+  <logger name="com.xeiam.xchange" level="DEBUG" />
+	<!-- <logger name="si.mazi.rescu" level="TRACE" />-->
     <!--<logger name="org.cryptocoinpartners.module" level="debug"/>-->
    <!-- <logger name="org.hibernate.tool.hbm2ddl.SchemaExport" level="off"/>-->
     <!--<logger name="org.cryptocoinpartners.util.ConfigUtil" level="debug"/>-->

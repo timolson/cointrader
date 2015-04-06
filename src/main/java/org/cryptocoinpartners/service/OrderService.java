@@ -16,6 +16,8 @@ public interface OrderService {
     // send new Order events to the correct market
     public void placeOrder(Order order);
 
+    void init();
+
     public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio);
 
     public void handleCancelSpecificOrder(SpecificOrder specificOrder);

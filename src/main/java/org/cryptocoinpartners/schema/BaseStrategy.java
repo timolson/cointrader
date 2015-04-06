@@ -67,4 +67,10 @@ public class BaseStrategy implements Strategy {
     @Inject
     protected Logger log;
 
+    @Override
+    public void init() {
+        orderService.init();
+        // TODO Auto-generated method stub
+
+    }
 }

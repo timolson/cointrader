@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.service;
 
+
 /**
  * A Strategy represents a configurable approach to trading, but not a specific trading algorithm.  StrategyPortfolioManager
  * instantiates a Strategy by loading to a module which contains a Strategy service using a specific configuration set
@@ -9,4 +10,6 @@ package org.cryptocoinpartners.service;
  * @author Tim Olson
  */
 public interface Strategy {
+    public void init();
+
 }

@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -36,6 +37,7 @@ import org.cryptocoinpartners.schema.PositionUpdate;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.schema.Transaction;
 import org.cryptocoinpartners.service.OrderService;
+import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
@@ -51,10 +53,16 @@ import org.slf4j.Logger;
 public abstract class BaseOrderService implements OrderService {
 
     @Override
+    public void init() {
+        findTriggerOrders(portfolioService.getPortfolio());
+
+    }
+
+    @Override
     public void placeOrder(Order order) {
         PersitOrderFill(order);
         CreateTransaction(order);
-        updateOrderState(order, OrderState.NEW);
+        updateOrderState(order, OrderState.NEW, false);
         log.info("Created new order " + order);
         if (order instanceof GeneralOrder) {
             GeneralOrder generalOrder = (GeneralOrder) order;
@@ -66,13 +74,29 @@ public abstract class BaseOrderService implements OrderService {
 
     }
 
+    public void findTriggerOrders(Portfolio portfolio) {
+
+        List<Order> orders = PersistUtil.queryList(Order.class,
+                "select o from OrderUpdate u left join u.order o where portfolio = ?1 and u.state=?2 group by o", portfolio, OrderState.TRIGGER);
+
+        // and sequence=(select max(sequence) from OrderUpdate where order=o)
+        //   List<GeneralOrder> orders = PersistUtil.queryList(GeneralOrder.class, "select o from GeneralOrder o left join o.id OrderUpdate");
+        // where  sequence=(select max(sequence) from OrderUpdate  ) and portfolio = ?1 group by o",
+        //portfolio);
+
+        for (Order triggerOrder : orders) {
+            triggerOrders.add(triggerOrder);
+        }
+
+    }
+
     @Override
     public void cancelOrder(Order order) {
         //PersitOrderFill(order);
         //CreateTransaction(order);
         //updateOrderState(order, OrderState);
         log.info("Cancelling  order " + order);
-        updateOrderState(order, OrderState.CANCELLING);
+        updateOrderState(order, OrderState.CANCELLING, false);
 
     }
 
@@ -89,6 +113,8 @@ public abstract class BaseOrderService implements OrderService {
                     triggerOrder.getParentFill().setStopPriceCount(0);
             }
             triggerOrders.removeAll(cancelledOrders);
+            for (Order cancelledOrder : cancelledOrders)
+                updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
         }
     }
 
@@ -106,7 +132,8 @@ public abstract class BaseOrderService implements OrderService {
             }
 
             triggerOrders.removeAll(cancelledOrders);
-            updateOrderState(order, OrderState.CANCELLED);
+            for (Order cancelledOrder : cancelledOrders)
+                updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
         }
     }
 
@@ -160,23 +187,42 @@ public abstract class BaseOrderService implements OrderService {
 
     @When("@Priority(9) select * from OrderUpdate")
     public void handleOrderUpdate(OrderUpdate orderUpdate) {
+
         OrderState orderState = orderUpdate.getState();
         Order order = orderUpdate.getOrder();
         switch (orderState) {
             case NEW:
+                orderStateMap.put(order, orderState);
+                if (order.getParentOrder() != null)
+                    updateParentOrderState(order.getParentOrder(), order, orderState);
+
                 //TODO Order persitantce, keep getting TransientPropertyValueException  errors
                 //PersitOrderFill(orderUpdate.getOrder());
                 break;
             case TRIGGER:
+                orderStateMap.put(order, orderState);
+                if (order.getParentOrder() != null)
+                    updateParentOrderState(order.getParentOrder(), order, orderState);
                 break;
             case ROUTED:
+                orderStateMap.put(order, orderState);
+                if (order.getParentOrder() != null)
+                    updateParentOrderState(order.getParentOrder(), order, orderState);
                 break;
             case PLACED:
-                //	PersitOrderFill(orderUpdate.getOrder());
+                orderStateMap.put(order, orderState);
+                if (order.getParentOrder() != null)
+                    updateParentOrderState(order.getParentOrder(), order, orderState);
                 break;
             case PARTFILLED:
+                orderStateMap.put(order, orderState);
+                if (order.getParentOrder() != null)
+                    updateParentOrderState(order.getParentOrder(), order, orderState);
                 break;
             case FILLED:
+                orderStateMap.put(order, orderState);
+                if (order.getParentOrder() != null)
+                    updateParentOrderState(order.getParentOrder(), order, orderState);
                 break;
             case CANCELLING:
                 if (order instanceof GeneralOrder) {
@@ -188,10 +234,23 @@ public abstract class BaseOrderService implements OrderService {
                 }
                 break;
             case CANCELLED:
+                orderStateMap.put(order, orderState);
+                if (order.getParentOrder() != null) {
+                    updateParentOrderState(order.getParentOrder(), order, orderState);
+                }
+
                 break;
             case EXPIRED:
+                orderStateMap.put(order, orderState);
+                if (order.getParentOrder() != null)
+                    updateParentOrderState(order.getParentOrder(), order, orderState);
+
                 break;
             case REJECTED:
+                orderStateMap.put(order, orderState);
+                if (order.getParentOrder() != null)
+                    updateParentOrderState(order.getParentOrder(), order, orderState);
+
                 break;
         }
 
@@ -239,7 +298,7 @@ public abstract class BaseOrderService implements OrderService {
             log.warn("Fill received for Order in NEW state: skipping PLACED state");
         if (state.isOpen()) {
             OrderState newState = order.isFilled() ? OrderState.FILLED : OrderState.PARTFILLED;
-            updateOrderState(order, newState);
+            updateOrderState(order, newState, true);
         }
         PersitOrderFill(fill);
         CreateTransaction(fill);
@@ -292,20 +351,22 @@ public abstract class BaseOrderService implements OrderService {
                 specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
                 log.info("Routing Limit order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
                 log.info("Order State" + orderStateMap.get(generalOrder).toString());
+                updateOrderState(generalOrder, OrderState.ROUTED, false);
                 placeOrder(specificOrder);
                 break;
             case STOP_LIMIT:
                 addTriggerOrder(generalOrder);
-                updateOrderState(generalOrder, OrderState.TRIGGER);
+                updateOrderState(generalOrder, OrderState.TRIGGER, false);
                 log.info("Stop trade Entered at " + generalOrder.getStopPrice());
                 break;
             case TRAILING_STOP_LIMIT:
                 addTriggerOrder(generalOrder);
-                updateOrderState(generalOrder, OrderState.TRIGGER);
+                updateOrderState(generalOrder, OrderState.TRIGGER, false);
                 log.info("Trailing Stop trade Entered at " + generalOrder.getStopPrice());
                 break;
             case STOP_LOSS:
                 specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
+                updateOrderState(generalOrder, OrderState.ROUTED, false);
                 log.info("Routing Stop Loss order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
                 placeOrder(specificOrder);
                 break;
@@ -353,6 +414,8 @@ public abstract class BaseOrderService implements OrderService {
                                     + triggeredOrder.getMarket().getExchange().getSymbol());
                             //TODO need 
                             placeOrder(specificOrder);
+                            //   OrderState newState = order.isFilled() ? OrderState.FILLED : OrderState.PARTFILLED;
+                            // updateOrderState(triggeredOrder, OrderState.ROUTED);
                             context.publish(new PositionUpdate(null, specificOrder.getMarket(), PositionType.EXITING));
                             triggerOrders.remove(triggeredOrder);
 
@@ -378,6 +441,7 @@ public abstract class BaseOrderService implements OrderService {
                             SpecificOrder specificOrder = convertGeneralOrderToSpecific((GeneralOrder) triggeredOrder, triggeredOrder.getMarket());
                             log.info("At " + context.getTime() + " Routing trigger order " + specificOrder + " to "
                                     + specificOrder.getMarket().getExchange().getSymbol());
+                            // updateOrderState(triggeredOrder, OrderState.ROUTED);
                             placeOrder(specificOrder);
                             context.publish(new PositionUpdate(null, specificOrder.getMarket(), PositionType.EXITING));
                             triggerOrders.remove(triggeredOrder);
@@ -435,7 +499,8 @@ public abstract class BaseOrderService implements OrderService {
                 //we will put the stop order in at best bid or best ask
                 SpecificOrder stopOrder = builder.getOrder();
                 Offer offer = stopOrder.isBid() ? quotes.getLastBidForMarket(stopOrder.getMarket()) : quotes.getLastAskForMarket(stopOrder.getMarket());
-
+                if (offer == null)
+                    break;
                 discreteStop = offer.getPrice();
                 discreteLimit = volume.isNegative() ? discreteStop.decrement(4) : discreteStop.increment(4);
                 builder.withLimitPrice(discreteLimit);
@@ -456,7 +521,7 @@ public abstract class BaseOrderService implements OrderService {
 
     protected void reject(Order order, String message) {
         log.warn("Order " + order + " rejected: " + message);
-        updateOrderState(order, OrderState.REJECTED);
+        updateOrderState(order, OrderState.REJECTED, false);
     }
 
     protected abstract void handleSpecificOrder(SpecificOrder specificOrder);
@@ -466,6 +531,9 @@ public abstract class BaseOrderService implements OrderService {
 
     @Override
     public abstract Collection<SpecificOrder> getPendingOrders();
+
+    @Override
+    public abstract Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio);
 
     @Override
     public abstract void handleCancelSpecificOrder(SpecificOrder specificOrder);
@@ -479,13 +547,23 @@ public abstract class BaseOrderService implements OrderService {
     @Override
     public abstract void handleCancelAllSpecificOrders(Portfolio portfolio, Market market);
 
-    protected void updateOrderState(Order order, OrderState state) {
+    protected void updateOrderState(Order order, OrderState state, boolean route) {
         OrderState oldState = orderStateMap.get(order);
+        if (oldState != null && oldState.equals(state))
+            return;
         if (oldState == null)
             oldState = OrderState.NEW;
 
         orderStateMap.put(order, state);
-        context.route(new OrderUpdate(order, oldState, state));
+        // this.getClass()
+        // context.route(new OrderUpdate(order, oldState, state));
+        OrderUpdate orderUpdate = new OrderUpdate(order, oldState, state);
+        if (route)
+            context.route(orderUpdate);
+        else
+            context.publish(orderUpdate);
+
+        PersistUtil.insert(orderUpdate);
         if (order.getParentOrder() != null)
             updateParentOrderState(order.getParentOrder(), order, state);
     }
@@ -494,21 +572,41 @@ public abstract class BaseOrderService implements OrderService {
         OrderState oldState = orderStateMap.get(order);
         switch (childOrderState) {
             case NEW:
+                updateOrderState(order, childOrderState, false);
                 break;
             case TRIGGER:
+                //TODO: update state once all children have same state
+                updateOrderState(order, childOrderState, false);
                 break;
             case ROUTED:
+                //TODO: update state once all children have same state
+                updateOrderState(order, childOrderState, false);
                 break;
             case PLACED:
+                //TODO: update state once all children have same state
+                updateOrderState(order, childOrderState, false);
                 break;
             case PARTFILLED:
-                updateOrderState(order, OrderState.PARTFILLED);
+                updateOrderState(order, OrderState.PARTFILLED, false);
                 break;
             case FILLED:
-                if (order.isFilled())
-                    updateOrderState(order, OrderState.FILLED);
+                //if (oldState == OrderState.CANCELLING) {
+                boolean fullyFilled = true;
+                for (Order child : order.getChildren()) {
+                    if (orderStateMap.get(child).isOpen()) {
+                        fullyFilled = false;
+                        updateOrderState(order, OrderState.PARTFILLED, false);
+                        break;
+                    }
+                }
+                if (fullyFilled)
+                    updateOrderState(order, OrderState.FILLED, false);
+
                 break;
+
             case CANCELLING:
+                updateOrderState(order, childOrderState, false);
+
                 break;
             case CANCELLED:
                 if (oldState == OrderState.CANCELLING) {
@@ -520,16 +618,18 @@ public abstract class BaseOrderService implements OrderService {
                         }
                     }
                     if (fullyCancelled)
-                        updateOrderState(order, OrderState.CANCELLED);
+                        updateOrderState(order, OrderState.CANCELLED, false);
                 }
                 break;
             case REJECTED:
+                //TODO: update state once all children have same state
+                updateOrderState(order, childOrderState, false);
                 reject(order, "Child order was rejected");
                 break;
             case EXPIRED:
                 if (!childOrder.getExpiration().isEqual(order.getExpiration()))
                     throw new Error("Child order expirations must match parent order expirations");
-                updateOrderState(order, OrderState.EXPIRED);
+                updateOrderState(order, OrderState.EXPIRED, false);
                 break;
             default:
                 log.warn("Unknown order state: " + childOrderState);
@@ -614,16 +714,19 @@ public abstract class BaseOrderService implements OrderService {
         }
     };
 
+    public BaseOrderService() {
+    }
+
     @Inject
     protected Context context;
     @Inject
-    private Logger log;
-    private final Map<Order, OrderState> orderStateMap = new ConcurrentHashMap<>();
+    protected Logger log;
+    protected final Map<Order, OrderState> orderStateMap = new ConcurrentHashMap<>();
     @Inject
-    private QuoteService quotes;
-    // @Inject
-    // protected PortfolioService portfolioService;
-    private final static Collection<Order> triggerOrders = new ConcurrentLinkedQueue<Order>();
+    protected QuoteService quotes;
+    @Inject
+    protected PortfolioService portfolioService;
+    protected final static Collection<Order> triggerOrders = new ConcurrentLinkedQueue<Order>();
     private static Object lock = new Object();
 
 }

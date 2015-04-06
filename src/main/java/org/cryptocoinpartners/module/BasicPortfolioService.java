@@ -22,13 +22,10 @@ import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Offer;
-import org.cryptocoinpartners.schema.OrderBuilder;
-import org.cryptocoinpartners.schema.OrderBuilder.SpecificOrderBuilder;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.Position;
 import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.schema.Transaction;
-import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.PortfolioServiceException;
 import org.cryptocoinpartners.service.QuoteService;
@@ -718,17 +715,8 @@ public class BasicPortfolioService implements PortfolioService {
     @Override
     public void handleReducePosition(Position position, Amount amount) throws Exception {
 
-        Market market = position.getMarket();
-        OrderBuilder orderBuilder = new OrderBuilder(position.getPortfolio(), orderService);
-        if (orderBuilder != null) {
-            SpecificOrderBuilder exitOrder = orderBuilder.create(context.getTime(), market, amount.negate(), "Exit Order");
-            log.info("Entering trade with order " + exitOrder);
-            orderService.placeOrder(exitOrder.getOrder());
-        }
+        //TODO remove subsrcption
 
-        if (!position.isOpen()) {
-            //TODO remove subsrcption
-        }
     }
 
     @Override
@@ -747,11 +735,15 @@ public class BasicPortfolioService implements PortfolioService {
     protected Context context;
     @Inject
     protected QuoteService quotes;
-    @Inject
+    //  @Inject
     protected Portfolio portfolio;
     @Inject
-    protected OrderService orderService;
-    @Inject
     private Logger log;
+
+    @Override
+    public void setPortfolio(Portfolio portfolio) {
+        this.portfolio = portfolio;
+
+    }
 
 }

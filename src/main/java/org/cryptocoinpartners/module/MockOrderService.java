@@ -38,7 +38,8 @@ public class MockOrderService extends BaseOrderService {
             reject(specificOrder, "Stop prices unsupported");
 
         addOrder(specificOrder);
-        updateOrderState(specificOrder, OrderState.PLACED);
+        //TODO when placing the order it is on the same listener so it needs to be routed.
+        updateOrderState(specificOrder, OrderState.PLACED, true);
         specificOrder.setEntryTime(context.getTime());
     }
 
@@ -126,7 +127,7 @@ public class MockOrderService extends BaseOrderService {
         switch (orderState) {
             case CANCELLING:
                 removeOrder(order);
-                updateOrderState(order, OrderState.CANCELLED);
+                updateOrderState(order, OrderState.CANCELLED, true);
                 break;
             default:
                 removeOrder(order);
@@ -181,7 +182,7 @@ public class MockOrderService extends BaseOrderService {
                 // pendingOrders.removeAll(cancelledOrders);
             }
 
-            updateOrderState(specificOrder, OrderState.CANCELLED);
+            updateOrderState(specificOrder, OrderState.CANCELLED, true);
 
         }
 
@@ -258,5 +259,12 @@ public class MockOrderService extends BaseOrderService {
 
         }
         return portfolioPendingOrders;
+    }
+
+    @Override
+    public void init() {
+        super.init();
+        // TODO Auto-generated method stub
+
     }
 }

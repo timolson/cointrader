@@ -81,6 +81,8 @@ public interface PortfolioService {
 
     Portfolio getPortfolio();
 
+    void setPortfolio(Portfolio portfolio);
+
     ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>> getRealisedPnLByMarket();
 
     ConcurrentHashMap<Asset, Amount> getUnrealisedPnLs();

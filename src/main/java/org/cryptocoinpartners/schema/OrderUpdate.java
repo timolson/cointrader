@@ -1,7 +1,14 @@
 package org.cryptocoinpartners.schema;
 
+import java.io.Serializable;
+import java.util.UUID;
+
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.ManyToOne;
+import javax.persistence.Table;
 
 import org.cryptocoinpartners.enumeration.OrderState;
 
@@ -10,8 +17,68 @@ import org.cryptocoinpartners.enumeration.OrderState;
  *
  * @author Tim Olson
  */
+
+@SuppressWarnings("UnusedDeclaration")
 @Entity
-public class OrderUpdate extends Event {
+@Table(indexes = { @Index(columnList = "state") })
+//@IdClass(OrderUpdateID.class)
+//@Table(indexes = { @Index(columnList = "seq") })
+public class OrderUpdate extends Event implements Serializable {
+
+    //  @GeneratedValue(strategy = GenerationType.TABLE, generator = "tab")
+
+    //   @GeneratedValue(strategy = GenerationType.IDENTITY)
+    //  @Column(name = "id", unique = true, nullable = false, insertable = false, updatable = false)
+
+    public class OrderUpdateID extends Event {
+        UUID id;
+        Long sequence;
+
+        public OrderUpdateID() {
+        }
+
+        public OrderUpdateID(UUID id, Long sequence) {
+            this.id = id;
+            this.sequence = sequence;
+        }
+
+        @Override
+        public UUID getId() {
+
+            return id;
+        }
+
+        @Override
+        public void setId(UUID id) {
+
+            this.id = id;
+        }
+
+        public Long getSequence() {
+
+            return sequence;
+        }
+
+        public void setSequence(Long sequence) {
+
+            this.sequence = sequence;
+        }
+
+    }
+
+    // @Column(columnDefinition = "integer auto_increment")
+    //@GeneratedValue(strategy = IDENTITY)
+    //@Column(name = "columnName", unique = true, nullable = false, insertable = false, updatable = false)
+    // columnDefinition = "integer auto_increment", 
+    //@GeneratedValue(strategy = GenerationType.IDENTITY)
+    // @GeneratedValue(strategy = GenerationType.SEQUENCE)
+    // @Id
+    // @Column(columnDefinition = "integer auto_increment", name = "seq", unique = true, nullable = false, insertable = false, updatable = false)
+    @Id
+    @Column(columnDefinition = "integer auto_increment")
+    public Long getSequence() {
+        return sequence;
+    }
 
     @ManyToOne
     public Order getOrder() {
@@ -40,6 +107,10 @@ public class OrderUpdate extends Event {
         this.order = order;
     }
 
+    protected void setSequence(Long sequence) {
+        this.sequence = sequence;
+    }
+
     protected void setLastState(OrderState lastState) {
         this.lastState = lastState;
     }
@@ -49,6 +120,7 @@ public class OrderUpdate extends Event {
     }
 
     private Order order;
+    private Long sequence;
     private OrderState lastState;
     private OrderState state;
 

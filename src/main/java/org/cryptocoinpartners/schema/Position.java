@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.schema;
 
 import javax.persistence.Entity;
+import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.util.Remainder;
@@ -62,16 +63,19 @@ public class Position extends Holding {
         return (getVolume() == null || getVolume().isZero());
     }
 
-    @Transient
+    @ManyToOne(optional = false)
     public Market getMarket() {
-
         return market;
     }
 
-    @Transient
+    @ManyToOne(optional = false)
     public Portfolio getPortfolio() {
 
         return portfolio;
+    }
+
+    public void setPortfolio(Portfolio portfolio) {
+        this.portfolio = portfolio;
     }
 
     @Transient
@@ -163,6 +167,10 @@ public class Position extends Holding {
         return longAvgStopPrice;
     }
 
+    protected void setMarket(Market market) {
+        this.market = market;
+    }
+
     @Transient
     public Amount getShortAvgStopPrice() {
         if (shortAvgStopPrice == null)
@@ -212,7 +220,6 @@ public class Position extends Holding {
     public Position() {
     }
 
-    @Transient
     protected long getVolumeCount() {
         return volumeCount;
     }

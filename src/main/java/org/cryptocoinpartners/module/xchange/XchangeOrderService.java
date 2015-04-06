@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -18,6 +19,7 @@ import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.util.XchangeUtil;
 import org.slf4j.Logger;
 
+import com.google.common.collect.HashBiMap;
 import com.xeiam.xchange.Exchange;
 import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.Order;
@@ -47,11 +49,11 @@ public class XchangeOrderService extends BaseOrderService {
         String id = specificOrder.getId().toString();
         Date timestamp = specificOrder.getTime().toDate();
         if (specificOrder.getLimitPrice() != null) {
-            LimitOrder limitOrder = new LimitOrder(orderType, tradeableVolume, currencyPair, id, timestamp, specificOrder.getLimitPrice().asBigDecimal());
+            LimitOrder limitOrder = new LimitOrder(orderType, tradeableVolume, currencyPair, "", null, specificOrder.getLimitPrice().asBigDecimal());
             // todo put on a queue
             try {
-                tradeService.placeLimitOrder(limitOrder);
-                updateOrderState(specificOrder, OrderState.PLACED);
+                specificOrder.setRemoteKey(tradeService.placeLimitOrder(limitOrder));
+                updateOrderState(specificOrder, OrderState.PLACED, false);
             } catch (IOException e) {
                 e.printStackTrace();
                 // todo retry until expiration or reject as invalid
@@ -60,8 +62,8 @@ public class XchangeOrderService extends BaseOrderService {
             MarketOrder marketOrder = new MarketOrder(orderType, tradeableVolume, currencyPair, id, timestamp);
             // todo put on a queue
             try {
-                tradeService.placeMarketOrder(marketOrder);
-                updateOrderState(specificOrder, OrderState.PLACED);
+                specificOrder.setRemoteKey(tradeService.placeMarketOrder(marketOrder));
+                updateOrderState(specificOrder, OrderState.PLACED, false);
             } catch (IOException e) {
                 // todo retry until expiration or reject as invalid
                 log.warn("Could not place this order: " + specificOrder, e);
@@ -75,18 +77,40 @@ public class XchangeOrderService extends BaseOrderService {
 
     @Inject
     Logger log;
+    @Inject
+    private Portfolio portfolio;
 
     @Override
     public Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio) {
         com.xeiam.xchange.Exchange exchange = XchangeUtil.getExchangeForMarket(market.getExchange());
         PollingTradeService tradeService = exchange.getPollingTradeService();
         Collection<SpecificOrder> pendingOrders = new ArrayList<>();
+        SpecificOrder specificOrder;
         try {
             OpenOrders openOrders = tradeService.getOpenOrders();
+            for (LimitOrder xchangeOrder : openOrders.getOpenOrders()) {
+                for (org.cryptocoinpartners.schema.Order cointraderOrder : orderStateMap.keySet()) {
+                    if (cointraderOrder instanceof SpecificOrder) {
+                        specificOrder = (SpecificOrder) cointraderOrder;
+                        if (xchangeOrder.getId().equals(specificOrder.getRemoteKey()) && specificOrder.getMarket().equals(market)) {
+                            specificOrder.update(xchangeOrder);
+                            updateOrderState(specificOrder, OrderState.PLACED, false);
+                            pendingOrders.add(specificOrder);
+                            break;
+                        } else {
+                            specificOrder = new SpecificOrder(xchangeOrder, exchange, portfolio);
+                            updateOrderState(specificOrder, OrderState.PLACED, false);
+                            pendingOrders.add(specificOrder);
+                            break;
 
-            for (LimitOrder limitOrder : openOrders.getOpenOrders()) {
-                pendingOrders.add(new SpecificOrder(limitOrder, exchange, portfolio));
+                        }
+                    }
+                }
+                specificOrder = new SpecificOrder(xchangeOrder, exchange, portfolio);
+                updateOrderState(specificOrder, OrderState.PLACED, false);
+                pendingOrders.add(specificOrder);
 
+                log.debug("completed itteration of orders");
             }
 
         } catch (IOException e) {
@@ -130,6 +154,15 @@ public class XchangeOrderService extends BaseOrderService {
     @Override
     public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio) {
         return new ArrayList<>();
+
+    }
+
+    protected static final Collection<SpecificOrder> pendingOrders = new ConcurrentLinkedQueue<SpecificOrder>();
+    protected static final HashBiMap<SpecificOrder, com.xeiam.xchange.dto.Order> externalOrderMap = HashBiMap.create();
+
+    @Override
+    public void init() {
+        // TODO Auto-generated method stub
 
     }
 

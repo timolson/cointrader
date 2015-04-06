@@ -30,7 +30,7 @@ public class Stake extends EntityBase {
         return stake;
     }
 
-    @ManyToOne
+    @ManyToOne(optional = false)
     public Portfolio getPortfolio() {
         return portfolio;
     }

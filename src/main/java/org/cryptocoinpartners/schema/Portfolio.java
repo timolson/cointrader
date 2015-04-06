@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.inject.Inject;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
+import javax.persistence.NoResultException;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
@@ -17,6 +18,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.cryptocoinpartners.enumeration.PositionType;
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.module.Context;
+import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
 
@@ -320,6 +322,8 @@ public class Portfolio extends EntityBase {
 
     @Transient
     public void removeTransaction(Transaction reservation) {
+        if (reservation.getCurrency() == null)
+            return;
         if (transactions.get(reservation.getCurrency()) == null)
             return;
         if (transactions.get(reservation.getCurrency()).get(reservation.getExchange()) == null)
@@ -753,7 +757,7 @@ public class Portfolio extends EntityBase {
         return baseAsset;
     }
 
-    @ManyToOne
+    @Transient
     public PortfolioManager getManager() {
         return manager;
     }
@@ -794,6 +798,7 @@ public class Portfolio extends EntityBase {
         this.realisedProfits = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>>();
         this.balances = new ArrayList<>();
         this.transactions = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Transaction>>>>();
+
     }
 
     protected void setPositions(
@@ -820,6 +825,17 @@ public class Portfolio extends EntityBase {
 
     protected void setStakes(Collection<Stake> stakes) {
         this.stakes = stakes;
+    }
+
+    public static Portfolio findOrCreate(String portfolioName) {
+        final String queryStr = "select p from Portfolio p where name=?1";
+        try {
+            return PersistUtil.queryOne(Portfolio.class, queryStr, portfolioName);
+        } catch (NoResultException e) {
+            //  context.getInjector().getInstance(Portfolio.class);
+            // PersistUtil.insert(portfolio);
+            return null;
+        }
     }
 
     protected void setManager(PortfolioManager manager) {

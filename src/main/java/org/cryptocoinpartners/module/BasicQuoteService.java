@@ -78,9 +78,12 @@ public class BasicQuoteService implements QuoteService {
     public @Nullable
     Offer getLastBidForMarket(Market market) {
         Offer bestBid = null;
+        Offer testBestBid = null;
+
         // for( Market market : marketsByListing.get(listing.getSymbol()) ) {
         Book book = lastBookByMarket.get(market.getSymbol());
-        Offer testBestBid = book.getBestBid();
+        if (book != null)
+            testBestBid = book.getBestBid();
         //noinspection ConstantConditions
         if (bestBid == null || (testBestBid != null && testBestBid.getPrice().compareTo(bestBid.getPrice()) > 0))
             bestBid = testBestBid;
@@ -143,9 +146,10 @@ public class BasicQuoteService implements QuoteService {
     public @Nullable
     Offer getLastAskForMarket(Market market) {
         Offer bestAsk = null;
-
+        Offer testBestAsk = null;
         Book book = lastBookByMarket.get(market.getSymbol());
-        Offer testBestAsk = book.getBestAsk();
+        if (book != null)
+            testBestAsk = book.getBestAsk();
         //noinspection ConstantConditions
         if (bestAsk == null || (testBestAsk != null && testBestAsk.getPrice().compareTo(bestAsk.getPrice()) < 0))
             bestAsk = testBestAsk;

@@ -11,6 +11,8 @@ import javax.annotation.Nullable;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Index;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.JoinColumn;
@@ -36,7 +38,7 @@ import org.joda.time.format.DateTimeFormatter;
  */
 
 @Entity
-@Table(name = "\"Order\"")
+@Table(name = "\"Order\"", indexes = { @Index(columnList = "fillType"), @Index(columnList = "portfolio"), @Index(columnList = "market") })
 // This is required because ORDER is a SQL keyword and must be escaped
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @SuppressWarnings({ "JpaDataSourceORMInspection", "UnusedDeclaration" })
@@ -65,7 +67,7 @@ public abstract class Order extends Event {
         return !isBid();
     }
 
-    @Transient
+    @ManyToOne(optional = false)
     public Portfolio getPortfolio() {
         return portfolio;
     }
@@ -177,7 +179,7 @@ public abstract class Order extends Event {
     }
 
     @Nullable
-    @OneToMany(mappedBy = "order")
+    @OneToMany(mappedBy = "order", fetch = FetchType.EAGER)
     public Collection<Fill> getFills() {
         if (fills == null)
             fills = Collections.synchronizedList(new ArrayList<Fill>());
@@ -187,7 +189,7 @@ public abstract class Order extends Event {
     }
 
     @Nullable
-    @OneToMany(mappedBy = "order")
+    @OneToMany(mappedBy = "order", fetch = FetchType.EAGER)
     public Collection<Transaction> getTransactions() {
         if (transactions == null)
             transactions = Collections.synchronizedList(new ArrayList<Transaction>());
@@ -222,7 +224,7 @@ public abstract class Order extends Event {
     }
 
     @Nullable
-    @OneToMany
+    @OneToMany(fetch = FetchType.EAGER)
     public Collection<Order> getChildren() {
         if (children == null)
             children = new ArrayList<Order>();
@@ -326,7 +328,7 @@ public abstract class Order extends Event {
         this.emulation = emulation;
     }
 
-    protected void setPortfolio(Portfolio portfolio) {
+    public void setPortfolio(Portfolio portfolio) {
         this.portfolio = portfolio;
     }
 

@@ -63,7 +63,8 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     @When("@Priority(5) select * from OrderUpdate where state.open=false")
     private void removeReservation(OrderUpdate update) {
         //removes the reservation from the transactions
-        Transaction reservation = update.getOrder().getReservation();
+        Order order = update.getOrder();
+        Transaction reservation = order.getReservation();
         switch (update.getState()) {
             case NEW:
                 break;
@@ -76,18 +77,22 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
             case PARTFILLED:
                 break;
             case FILLED:
-                portfolio.removeTransaction(reservation);
+                if (order instanceof SpecificOrder)
+                    portfolio.removeTransaction(reservation);
                 break;
             case CANCELLING:
                 break;
             case CANCELLED:
-                portfolio.removeTransaction(reservation);
+                if (order instanceof SpecificOrder)
+                    portfolio.removeTransaction(reservation);
                 break;
             case REJECTED:
-                //portfolio.removeTransaction(reservation);
+                if (order instanceof SpecificOrder)
+                    portfolio.removeTransaction(reservation);
                 break;
             case EXPIRED:
-                //portfolio.removeTransaction(reservation);
+                if (order instanceof SpecificOrder)
+                    portfolio.removeTransaction(reservation);
                 break;
             default:
                 log.warn("Unknown order state: " + update.getState());
@@ -219,7 +224,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     private QuoteService quotes;
     @Inject
     private PortfolioService portfolioService;
-    @Inject
+    // @Inject
     private Portfolio portfolio;
 
 }

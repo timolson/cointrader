@@ -6,10 +6,14 @@ import java.util.Map;
 
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
+import javax.persistence.Transient;
 
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.MapConfiguration;
 import org.cryptocoinpartners.module.Context;
+import org.cryptocoinpartners.service.PortfolioService;
+import org.cryptocoinpartners.service.Strategy;
+import org.cryptocoinpartners.util.PersistUtil;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -52,6 +56,11 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
         return moduleName;
     }
 
+    @Transient
+    public Strategy getStrategy() {
+        return (Strategy) strategy;
+    }
+
     @ElementCollection
     public Map<String, String> getConfig() {
         return config;
@@ -68,14 +77,32 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
             @Override
             public void configure(Binder binder) {
                 binder.bind(StrategyInstance.class).toInstance(StrategyInstance.this);
-                (context.getInjector().getInstance(Portfolio.class)).setName(getModuleName());
-                (context.getInjector().getInstance(Portfolio.class)).setManager(StrategyInstance.this);
+                Portfolio portfolio = Portfolio.findOrCreate(getModuleName());
+                if (portfolio == null) {
+                    portfolio = context.getInjector().getInstance(Portfolio.class);
+                    portfolio.setName(getModuleName());
+                    PersistUtil.insert(portfolio);
+                }
+
+                else
+                    binder.bind(Portfolio.class).toInstance(portfolio);
+
+                //  portfolio = context.getInjector().getInstance(Portfolio.class);
+                //portfolio.setName(getModuleName());
+                portfolio.setManager(StrategyInstance.this);
+                StrategyInstance.this.setPortfolio(portfolio);
+                // binder.bind(Portfolio.class).toInstance(portfolio);
+
+                PortfolioService portfolioService = context.getInjector().getInstance(PortfolioService.class);
+                portfolioService.setPortfolio(portfolio);
                 //  portfolio.setName(getModuleName());
                 //  portfolio.setManager(this);
                 // binder.bind(Portfolio.class).toInstance(context.getInjector().getInstance(Portfolio.class));
                 // binder.bind(PortfolioService.class).toInstance(context.getInjector().getInstance(PortfolioService.class));
 
                 //              context.loadStatements("Portfolio");
+
+                // Need to rebuild state.
 
             }
         });

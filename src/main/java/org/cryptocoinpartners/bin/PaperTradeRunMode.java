@@ -48,8 +48,8 @@ public class PaperTradeRunMode extends RunMode {
 
         context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
-        context.attach(MockOrderService.class);
         context.attach(BasicPortfolioService.class);
+        context.attach(MockOrderService.class);
 
         for (String strategyName : strategyNames) {
             StrategyInstance strategyInstance = new StrategyInstance(strategyName);
@@ -72,8 +72,10 @@ public class PaperTradeRunMode extends RunMode {
     }
 
     private void setUpInitialPortfolio(StrategyInstance strategyInstance) {
-        Portfolio portfolio = context.getInjector().getInstance(Portfolio.class);
-        //Portfolio portfolio = strategyInstance.getPortfolio();
+        // @Inject
+        // Portfolio portfolio;
+        // ;= context.getInjector().getInstance(Portfolio.class);
+        Portfolio portfolio = strategyInstance.getPortfolio();
         if (positions.size() % 2 != 0) {
             System.err.println("You must supply an even number of arguments to the position switch. " + positions);
         }
@@ -84,9 +86,9 @@ public class PaperTradeRunMode extends RunMode {
             DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
             Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
             context.publish(initialCredit);
+            strategyInstance.getStrategy().init();
 
         }
-
     }
 
     @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")

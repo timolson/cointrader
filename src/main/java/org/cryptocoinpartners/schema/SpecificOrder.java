@@ -2,9 +2,9 @@ package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
 import java.util.Collection;
-import java.util.UUID;
 
 import javax.annotation.Nullable;
+import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
@@ -14,6 +14,7 @@ import org.apache.commons.lang.NotImplementedException;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.util.Remainder;
 import org.cryptocoinpartners.util.XchangeUtil;
+import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
 
 import com.xeiam.xchange.dto.trade.LimitOrder;
@@ -31,6 +32,7 @@ public class SpecificOrder extends Order {
 
     public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount) {
         super(time);
+        this.remoteKey = getId().toString();
         this.market = market;
         this.volumeCount = volumeCount;
         super.setPortfolio(portfolio);
@@ -41,6 +43,7 @@ public class SpecificOrder extends Order {
 
     public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount, String comment) {
         super(time);
+        this.remoteKey = getId().toString();
         this.market = market;
         this.volumeCount = volumeCount;
         super.setComment(comment);
@@ -52,6 +55,7 @@ public class SpecificOrder extends Order {
 
     public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount, Order parentOrder, String comment) {
         super(time);
+        this.remoteKey = getId().toString();
         this.market = market;
         this.volumeCount = volumeCount;
         super.setComment(comment);
@@ -65,6 +69,7 @@ public class SpecificOrder extends Order {
 
     public SpecificOrder(Instant time, Portfolio portfolio, Market market, Amount volume, String comment) {
         super(time);
+        this.remoteKey = getId().toString();
         this.market = market;
         this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
         super.setComment(comment);
@@ -81,12 +86,13 @@ public class SpecificOrder extends Order {
         Listing listing = Listing.forPair(baseCCY, quoteCCY);
         Exchange exchange = XchangeUtil.getExchangeForMarket(xchangeExchange);
         this.market = Market.findOrCreate(exchange, listing);
-        this.setId(UUID.fromString(limitOrder.getId()));
+        this.setRemoteKey(limitOrder.getId());
         long vol = limitOrder.getTradableAmount().divide(BigDecimal.valueOf(market.getPriceBasis())).longValue();
         this.volume = new DiscreteAmount(vol, market.getPriceBasis());
         this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
         this.positionEffect = PositionEffect.OPEN;
         super.setComment(comment);
+        this.placementCount = 1;
         //     parentOrder.addChild(this);
         //   this.setParentOrder(parentOrder);
         super.setPortfolio(portfolio);
@@ -95,6 +101,7 @@ public class SpecificOrder extends Order {
 
     public SpecificOrder(Instant time, Portfolio portfolio, Market market, Amount volume, Order parentOrder, String comment) {
         super(time);
+        this.remoteKey = getId().toString();
         this.market = market;
         this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
         super.setComment(comment);
@@ -117,6 +124,25 @@ public class SpecificOrder extends Order {
     @ManyToOne(optional = false, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
     public Market getMarket() {
         return market;
+    }
+
+    @Transient
+    public boolean update(LimitOrder limitOrder) {
+        try {
+            this.setRemoteKey(limitOrder.getId());
+            this.setTimeReceived(new Instant(limitOrder.getTimestamp()));
+            long vol = limitOrder.getTradableAmount().divide(BigDecimal.valueOf(market.getPriceBasis())).longValue();
+            this.volume = new DiscreteAmount(vol, market.getPriceBasis());
+            this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+            return true;
+        } catch (Error e) {
+            e.printStackTrace();
+            return false;
+        }
+
+        //     parentOrder.addChild(this);
+        //   this.setParentOrder(parentOrder);
+
     }
 
     @Override
@@ -198,11 +224,12 @@ public class SpecificOrder extends Order {
     @Override
     public String toString() {
 
-        return "SpecificOrder{ time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "id=" + getId() + SEPARATOR + "parentOrder="
-                + (getParentOrder() == null ? "null" : getParentOrder().getId()) + SEPARATOR + "portfolio=" + getPortfolio() + SEPARATOR + "market=" + market
-                + SEPARATOR + "volumeCount=" + getVolume() + (limitPriceCount != 0 ? (SEPARATOR + "limitPriceCount=" + getLimitPrice()) : "")
-                + (SEPARATOR + "PlacementCount=" + getPlacementCount()) + (getComment().isEmpty() ? "" : (SEPARATOR + "Comment=" + getComment()))
-                + (getFillType().getValue().isEmpty() ? "" : (SEPARATOR + "Order Type=" + getFillType()))
+        return "SpecificOrder{ time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "id=" + getId() + SEPARATOR + "remote key="
+                + getRemoteKey() + SEPARATOR + "parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + SEPARATOR + "portfolio="
+                + getPortfolio() + SEPARATOR + "market=" + market + SEPARATOR + "volumeCount=" + getVolume()
+                + (limitPriceCount != 0 ? (SEPARATOR + "limitPriceCount=" + getLimitPrice()) : "") + (SEPARATOR + "PlacementCount=" + getPlacementCount())
+                + (getComment() == null ? "" : (SEPARATOR + "Comment=" + getComment()))
+                + (getFillType() == null ? "" : (SEPARATOR + "Order Type=" + getFillType()))
                 + (hasFills() ? (SEPARATOR + "averageFillPrice=" + averageFillPrice()) : "") + "}";
     }
 
@@ -266,6 +293,32 @@ public class SpecificOrder extends Order {
 
     }
 
+    @Basic(optional = true)
+    public String getRemoteKey() {
+        return remoteKey;
+    }
+
+    public void setRemoteKey(@Nullable String remoteKey) {
+        this.remoteKey = remoteKey;
+    }
+
+    @Type(type = "org.jadira.usertype.dateandtime.joda.PersistentInstantAsMillisLong")
+    @Basic(optional = true)
+    public Instant getTimeReceived() {
+        return timeReceived;
+    }
+
+    @Transient
+    public long getTimestampReceived() {
+        return timestampReceived;
+    }
+
+    protected void setTimeReceived(@Nullable Instant timeReceived) {
+        this.timeReceived = timeReceived;
+        if (timeReceived != null)
+            this.timestampReceived = timeReceived.getMillis();
+    }
+
     private Market.MarketAmountBuilder amount() {
         if (amountBuilder == null)
             amountBuilder = market.buildAmount();
@@ -278,6 +331,9 @@ public class SpecificOrder extends Order {
     private int placementCount;
     private long volumeCount;
     private long limitPriceCount;
+    private String remoteKey;
+    private Instant timeReceived;
+    private long timestampReceived;
 
     private Market.MarketAmountBuilder amountBuilder;
 
