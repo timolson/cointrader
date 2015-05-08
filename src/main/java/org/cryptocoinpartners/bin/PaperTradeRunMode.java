@@ -18,13 +18,14 @@ import org.cryptocoinpartners.schema.Holding;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.StrategyInstance;
 import org.cryptocoinpartners.schema.Transaction;
-import org.cryptocoinpartners.util.Replay;
+import org.cryptocoinpartners.util.PersistUtil;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import com.espertech.esper.client.time.TimerControlEvent;
 
 /**
  * @author Tim Olson
@@ -36,16 +37,16 @@ public class PaperTradeRunMode extends RunMode {
     final ExecutorService service = Executors.newSingleThreadExecutor();
     private final Instant end = new DateTime(DateTime.now()).toInstant();
     Semaphore paperSemaphore = new Semaphore(0);
-    private final Instant start = end.minus(Duration.standardDays(10)).toInstant();
+    private final Instant start = end.minus(Duration.standardHours(2)).toInstant();
 
     // new DateTime(2013, 12, 20, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
     @Override
     public void run(Semaphore semaphore) {
         //context = Context.create();
-        Replay replay = Replay.between(start, end, true, paperSemaphore);
-        context = replay.getContext();
-
+        //  Replay replay = Replay.between(start, end, true, paperSemaphore);
+        //  context = replay.getContext();
+        context = Context.create();
         context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
         context.attach(BasicPortfolioService.class);
@@ -63,11 +64,17 @@ public class PaperTradeRunMode extends RunMode {
         //while (!future.isDone()) {
 
         //}
-        replay.run();
+
+        //  replay.run();
+        context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
+
+        // context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
+
+        //  context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
 
         context.attach(XchangeData.class);
-        if (semaphore != null)
-            semaphore.release();
+        //  if (semaphore != null)
+        //    semaphore.release();
 
     }
 
@@ -86,6 +93,8 @@ public class PaperTradeRunMode extends RunMode {
             DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
             Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
             context.publish(initialCredit);
+            PersistUtil.insert(initialCredit);
+
             strategyInstance.getStrategy().init();
 
         }

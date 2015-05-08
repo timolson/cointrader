@@ -17,7 +17,9 @@ import org.slf4j.LoggerFactory;
 public class FeesUtil {
 
     public static Amount getCommission(Fill fill) {
-        double rate = fill.getMarket().getFeeRate() * fill.getMarket().getMargin();
+        double rate = fill.getMarket().getFeeRate();
+        //* fill.getMarket().getContractSize();
+        //* fill.getMarket().getMargin();
         FeeMethod method = fill.getMarket().getFeeMethod();
         Amount price = fill.getPrice();
         Amount ammount = fill.getVolume();
@@ -29,6 +31,10 @@ public class FeesUtil {
                 return calculatePerUnit(ammount, rate, fill.getMarket());
             case PercentagePerUnitOpening:
                 commission = (fill.getOrder().getPositionEffect().equals(PositionEffect.OPEN)) ? calculatePercentagePerUnit(price, ammount, rate,
+                        fill.getMarket()) : DecimalAmount.ZERO;
+                return commission;
+            case FlatRatePerUnitOpening:
+                commission = (fill.getOrder().getPositionEffect().equals(PositionEffect.OPEN)) ? calculateFlatRatePerUnit(price, ammount, rate,
                         fill.getMarket()) : DecimalAmount.ZERO;
                 return commission;
             case PerUnitOpening:
@@ -43,6 +49,7 @@ public class FeesUtil {
 
     public static Amount getMargin(Amount price, Amount ammount, double rate, FeeMethod method, Market market, PositionEffect positionEffect) {
         Amount margin;
+        rate = market.getContractSize() / rate;
         switch (method) {
             case PercentagePerUnit:
                 return calculatePercentagePerUnit(price, ammount, rate, market);
@@ -87,6 +94,9 @@ public class FeesUtil {
                     return calculatePercentagePerUnit(price, ammount, rate, order.getMarket());
                 case PerUnit:
                     return calculatePerUnit(ammount, rate, order.getMarket());
+                case FlatRatePerUnitOpening:
+                    commission = (order.getPositionEffect().equals(PositionEffect.OPEN)) ? calculateFlatRatePerUnit(price, ammount, rate, order.getMarket())
+                            : DecimalAmount.ZERO;
                 case PercentagePerUnitOpening:
                     commission = (order.getPositionEffect().equals(PositionEffect.OPEN)) ? calculatePercentagePerUnit(price, ammount, rate, order.getMarket())
                             : DecimalAmount.ZERO;
@@ -189,6 +199,26 @@ public class FeesUtil {
             //precision = BigDecimal.valueOf(market.getTradedCurrency().getBasis());
         }
         Amount notional = ((price.times(amount, Remainder.ROUND_EVEN)).times(rate, Remainder.ROUND_EVEN).abs());
+
+        return notional.toBasis(market.getTradedCurrency().getBasis(), Remainder.ROUND_CEILING).negate();
+
+        //      
+        //      BigDecimal fees = notional.asBigDecimal().setScale(price.getScale(), BigDecimal.ROUND_UP);
+        //      fees = fees.divide(precision, BigDecimal.ROUND_UP);
+        //      long feeCount = fees.longValue();
+        //      DiscreteAmount newAmount = new DiscreteAmount(feeCount, precision.doubleValue());
+        //      return newAmount.negate();
+
+    }
+
+    private static Amount calculateFlatRatePerUnit(Amount price, Amount amount, double rate, Market market) {
+        //BigDecimal precision = BigDecimal.valueOf(market.getPriceBasis());
+
+        if (market.getTradedCurrency().equals(market.getBase())) {
+            price = price.invert();
+            //precision = BigDecimal.valueOf(market.getTradedCurrency().getBasis());
+        }
+        Amount notional = (amount.times(rate, Remainder.ROUND_EVEN).abs());
 
         return notional.toBasis(market.getTradedCurrency().getBasis(), Remainder.ROUND_CEILING).negate();
 

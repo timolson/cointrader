@@ -46,64 +46,77 @@ public class MockOrderService extends BaseOrderService {
     @SuppressWarnings("ConstantConditions")
     @When("@Priority(8) select * from Book")
     private void handleBook(Book b) {
-        // synchronized (lock) {
-        List<Fill> fills = new ArrayList<Fill>();
+        synchronized (lock) {
+            List<Fill> fills = new ArrayList<Fill>();
 
-        // todo multiple Orders may be filled with the same Offer.  We should deplete the Offers as we fill
-        for (SpecificOrder order : pendingOrders) {
+            // todo multiple Orders may be filled with the same Offer.  We should deplete the Offers as we fill
+            for (SpecificOrder order : pendingOrders) {
 
-            if (order.getMarket().equals(b.getMarket())) {
-                if (order.isBid()) {
-                    long remainingVolume = order.getUnfilledVolumeCount();
-                    for (Offer ask : b.getAsks()) {
-                        if (order.getLimitPrice() != null && order.getLimitPrice().getCount() < ask.getPriceCount())
-                            break;
-                        synchronized (lock) {
+                if (order.getMarket().equals(b.getMarket())) {
+                    // buy order, so hit ask
+                    if (order.isBid()) {
+                        long remainingVolume = order.getUnfilledVolumeCount();
+                        for (Offer ask : b.getAsks()) {
+                            if ((order.getLimitPrice() != null && order.getLimitPrice().getCount() < ask.getPriceCount()) || ask == null)
+                                //  || ask.getVolumeCount() == 0 || ask.getPriceCount() == 0)
+                                break;
+                            //  synchronized (lock) {
                             long fillVolume = Math.min(Math.abs(ask.getVolumeCount()), remainingVolume);
-                            Fill fill = new Fill(order, ask.getTime(), ask.getTime(), ask.getMarket(), ask.getPriceCount(), fillVolume, Long.toString(ask
-                                    .getTime().getMillis()));
-                            fills.add(fill);
-                            remainingVolume -= fillVolume;
-                            logFill(order, ask, fill);
-                            if (remainingVolume == 0) {
-                                pendingOrders.remove(order);
-                                // i--;
-                                // --removeOrder(order);
+                            if (fillVolume != 0) {
+
+                                Fill fill = new Fill(order, ask.getTime(), ask.getTime(), ask.getMarket(), ask.getPriceCount(), fillVolume, Long.toString(ask
+                                        .getTime().getMillis()));
+                                fills.add(fill);
+                                remainingVolume -= fillVolume;
+                                logFill(order, ask, fill);
+                                if (remainingVolume == 0) {
+                                    pendingOrders.remove(order);
+                                    // i--;
+                                    // --removeOrder(order);
+                                }
                             }
+                            //  }
+                            //   break;
+
                         }
-                        break;
                     }
-                }
-                if (order.isAsk()) {
-                    long remainingVolume = order.getUnfilledVolumeCount(); // this will be negative
-                    for (Offer bid : b.getBids()) {
-                        if (order.getLimitPrice() != null && order.getLimitPrice().getCount() > bid.getPriceCount())
-                            break;
-                        synchronized (lock) {
+                    // if sell order, fill if limint<=Bid
+                    if (order.isAsk()) {
+                        long remainingVolume = order.getUnfilledVolumeCount(); // this will be negative
+                        for (Offer bid : b.getBids()) {
+                            if ((order.getLimitPrice() != null && order.getLimitPrice().getCount() > bid.getPriceCount()) || bid == null)
+
+                                //|| bid.getVolumeCount() == 0 || bid.getPriceCount() == 0)
+
+                                break;
+                            // synchronized (lock) {
                             long fillVolume = -Math.min(bid.getVolumeCount(), Math.abs(remainingVolume));
-                            Fill fill = new Fill(order, bid.getTime(), bid.getTime(), bid.getMarket(), bid.getPriceCount(), fillVolume, Long.toString(bid
-                                    .getTime().getMillis()));
+                            if (fillVolume != 0) {
 
-                            fills.add(fill);
-                            remainingVolume -= fillVolume;
-                            logFill(order, bid, fill);
-                            if (remainingVolume == 0)
-                                pendingOrders.remove(order);
+                                Fill fill = new Fill(order, bid.getTime(), bid.getTime(), bid.getMarket(), bid.getPriceCount(), fillVolume, Long.toString(bid
+                                        .getTime().getMillis()));
+
+                                fills.add(fill);
+                                remainingVolume -= fillVolume;
+                                logFill(order, bid, fill);
+                                if (remainingVolume == 0)
+                                    pendingOrders.remove(order);
+                            }
+                            //  }
+                            // break;
+
                         }
-                        break;
-
                     }
                 }
             }
+            for (Fill fill : fills) {
+                fill.getOrder().addFill(fill);
+                context.publish(fill);
+                //context.route(fill);
+            }
         }
-        for (Fill fill : fills) {
-            fill.getOrder().addFill(fill);
-            context.publish(fill);
-            //       context.route(fill);
-        }
-    }
 
-    // }
+    }
 
     private void removeOrder(Order order) {
 
@@ -113,7 +126,7 @@ public class MockOrderService extends BaseOrderService {
 
     }
 
-    private void addOrder(SpecificOrder order) {
+    protected void addOrder(SpecificOrder order) {
 
         pendingOrders.add(order);
 
@@ -127,7 +140,7 @@ public class MockOrderService extends BaseOrderService {
         switch (orderState) {
             case CANCELLING:
                 removeOrder(order);
-                updateOrderState(order, OrderState.CANCELLED, true);
+                updateOrderState(order, OrderState.CANCELLED, false);
                 break;
             default:
                 removeOrder(order);
@@ -171,78 +184,78 @@ public class MockOrderService extends BaseOrderService {
     @Override
     public void handleCancelSpecificOrder(SpecificOrder specificOrder) {
         Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
-        synchronized (lock) {
-            for (SpecificOrder cancelledOrder : pendingOrders) {
+        // synchronized (lock) {
+        for (SpecificOrder cancelledOrder : pendingOrders) {
 
-                if (cancelledOrder.equals(specificOrder)) {
-                    pendingOrders.remove(cancelledOrder);
+            if (cancelledOrder.equals(specificOrder)) {
+                pendingOrders.remove(cancelledOrder);
 
-                }
-                //cancelledOrders.add(cancelledOrder);
-                // pendingOrders.removeAll(cancelledOrders);
             }
-
-            updateOrderState(specificOrder, OrderState.CANCELLED, true);
-
+            //cancelledOrders.add(cancelledOrder);
+            // pendingOrders.removeAll(cancelledOrders);
         }
 
+        updateOrderState(specificOrder, OrderState.CANCELLED, false);
+
     }
+
+    // }
 
     @Override
     public void handleCancelAllClosingSpecificOrders(Portfolio portfolio, Market market) {
         Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
-        synchronized (lock) {
-            for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
-                SpecificOrder specificOrder = it.next();
-                if (specificOrder.getMarket().equals(market) && specificOrder.getPositionEffect().equals(PositionEffect.CLOSE))
-                    //cancelledOrders.add(specificOrder);
-                    handleCancelSpecificOrder(specificOrder);
-            }
-            //          for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
-            //              SpecificOrder specificOrder = it.next();
-            //
-            //              
-            //          }
+        //   synchronized (lock) {
+        for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
+            SpecificOrder specificOrder = it.next();
+            if (specificOrder.getMarket().equals(market) && specificOrder.getPositionEffect().equals(PositionEffect.CLOSE))
+                //cancelledOrders.add(specificOrder);
+                handleCancelSpecificOrder(specificOrder);
         }
+        //          for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
+        //              SpecificOrder specificOrder = it.next();
+        //
+        //              
+        //          }
+        //  }
 
     }
 
     @Override
     public void handleCancelAllOpeningSpecificOrders(Portfolio portfolio, Market market) {
         Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
-        synchronized (lock) {
-            for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
-                SpecificOrder specificOrder = it.next();
-                if (specificOrder.getMarket().equals(market) && specificOrder.getPositionEffect().equals(PositionEffect.OPEN))
-                    //cancelledOrders.add(specificOrder);
-                    handleCancelSpecificOrder(specificOrder);
-            }
-            //          for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
-            //              SpecificOrder specificOrder = it.next();
-            //
-            //              
-            //          }
+        //  synchronized (lock) {
+        for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
+            SpecificOrder specificOrder = it.next();
+            if (specificOrder.getMarket().equals(market) && specificOrder.getPositionEffect().equals(PositionEffect.OPEN))
+                //cancelledOrders.add(specificOrder);
+                handleCancelSpecificOrder(specificOrder);
         }
+        //          for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
+        //              SpecificOrder specificOrder = it.next();
+        //
+        //              
+        //          }
+        //  }
 
     }
 
     @Override
     public void handleCancelAllSpecificOrders(Portfolio portfolio, Market market) {
         Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
-        synchronized (lock) {
-            for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
-                SpecificOrder specificOrder = it.next();
-                if (specificOrder.getMarket().equals(market))
-                    handleCancelSpecificOrder(specificOrder);
-                //cancelledOrders.add(specificOrder);
-                // updateOrderState(specificOrder, OrderState.CANCELLING);
-            }
-            //          for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
-            //              SpecificOrder specificOrder = it.next();
-            //
-            //              
-            //          }
+        // synchronized (lock) {
+        for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
+            SpecificOrder specificOrder = it.next();
+            if (specificOrder.getMarket().equals(market))
+                handleCancelSpecificOrder(specificOrder);
+            //cancelledOrders.add(specificOrder);
+            // updateOrderState(specificOrder, OrderState.CANCELLING);
         }
+        //          for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
+        //              SpecificOrder specificOrder = it.next();
+        //
+        //              
+        //          }
+        //  }
 
     }
 

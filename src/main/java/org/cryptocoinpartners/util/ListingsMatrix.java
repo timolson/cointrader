@@ -73,7 +73,7 @@ public class ListingsMatrix {
         ArgumentChecker.notNull(ccyToAdd, "Asset to add to the Listings matrix should not be null");
         ArgumentChecker.notNull(ccyReference, "Reference currency should not be null");
         ArgumentChecker.isTrue(!ccyToAdd.equals(ccyReference), "Currencies should be different");
-        if (listings.isEmpty() && rate != 0) { // Listings Matrix is empty.
+        if (listings.get(ccyReference) == null || (listings.isEmpty() && rate != 0)) { // Listings Matrix is empty.
             BigDecimal inverseRateBD = (((BigDecimal.valueOf(1.0 / (ccyReference.getBasis()))).divide(BigDecimal.valueOf(rate), ccyToAdd.getScale(),
                     RoundingMode.HALF_EVEN)).divide(BigDecimal.valueOf(ccyToAdd.getBasis())));
             long inverseCrossRate = inverseRateBD.longValue();
@@ -99,6 +99,23 @@ public class ListingsMatrix {
                     long crossRate = 0;
                     // new matrix create of rates that is _currenciesLookup (size) x _currenciesLookup.sise()
                     // loop over each of the quote currencies and get the cross rate, converting to th the baiss of the new curency
+                    //   if (listings.get(ccyReference)==null)
+                    //     listings.put(ccyReference, value)
+                    if (listings.get(ccyReference).get(ccy) == null) {
+                        BigDecimal inverseRateBD = (((BigDecimal.valueOf(1.0 / (ccyReference.getBasis()))).divide(BigDecimal.valueOf(rate),
+                                ccyToAdd.getScale(), RoundingMode.HALF_EVEN)).divide(BigDecimal.valueOf(ccy.getBasis())));
+                        inverseCrossRate = inverseRateBD.longValue();
+                        //listings.put(ccyReference, new ConcurrentHashMap<Asset, Long>());
+                        //listings.put(ccy, new ConcurrentHashMap<Asset, Long>());
+
+                        listings.get(ccy).put(ccyReference, rate);
+                        listings.get(ccy).put(ccy, (long) (1.0 / ccy.getBasis()));
+                        listings.get(ccyReference).put(ccy, inverseCrossRate);
+                        listings.get(ccyReference).put(ccyReference, (long) (1.0 / ccyReference.getBasis()));
+
+                    }
+
+                    // break;
 
                     crossRate = Math.round((rate * listings.get(ccyReference).get(ccy).longValue() * (ccyToAdd.getBasis())));
                     // get the rate for the 

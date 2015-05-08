@@ -2,6 +2,7 @@ package org.cryptocoinpartners.schema;
 
 import java.util.List;
 
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.NoResultException;
 
@@ -11,6 +12,7 @@ import org.cryptocoinpartners.util.PersistUtil;
  * @author Tim Olson
  */
 @Entity
+@Cacheable
 public class Currency extends Asset {
 
     public boolean isFiat() {

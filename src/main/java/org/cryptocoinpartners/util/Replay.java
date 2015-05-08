@@ -101,6 +101,7 @@ public class Replay implements Runnable {
         final Instant start = replayTimeInterval.getStart().toInstant();
         final Instant end = replayTimeInterval.getEnd().toInstant();
         int threadCount = 0;
+
         service = Executors.newFixedThreadPool(1);
         if (replayTimeInterval.toDuration().isLongerThan(timeStep)) {
             for (Instant now = start; !now.isAfter(end);) {

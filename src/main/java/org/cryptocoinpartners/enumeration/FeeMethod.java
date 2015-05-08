@@ -12,7 +12,8 @@ import javax.persistence.Transient;
  * 
  */
 public enum FeeMethod {
-    PercentagePerUnit("PercentagePerUnit"), PerUnit("PerUnit"), PercentagePerUnitOpening("PercentagePerUnitOpening"), PerUnitOpening("PerUnitOpening"), ;
+    PercentagePerUnit("PercentagePerUnit"), PerUnit("PerUnit"), PercentagePerUnitOpening("PercentagePerUnitOpening"), FlatRatePerUnitOpening(
+            "FlatRatePerUnitOpening"), PerUnitOpening("PerUnitOpening"), ;
 
     private final String enumValue;
 

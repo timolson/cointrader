@@ -159,6 +159,11 @@
 </dependency>
 
         <dependency>
+        	<groupId>org.hibernate</groupId>
+        	<artifactId>hibernate-ehcache</artifactId>
+        	<version>${hibernate.version}</version>
+        </dependency>
+        <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>5.1.29</version>
@@ -213,6 +218,7 @@
         	<artifactId>c3p0</artifactId>
         	<version>0.9.5</version>
         </dependency>
+
     </dependencies>
 
 

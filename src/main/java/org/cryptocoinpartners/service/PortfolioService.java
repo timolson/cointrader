@@ -2,7 +2,7 @@ package org.cryptocoinpartners.service;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
@@ -13,11 +13,9 @@ import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Asset;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Exchange;
-import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.Position;
-import org.cryptocoinpartners.schema.Transaction;
 
 /**
  * PortfolioService reports
@@ -45,14 +43,6 @@ public interface PortfolioService {
     public Amount getCashBalance(Asset quoteAsset);
 
     @Transient
-    @SuppressWarnings("null")
-    public List<Transaction> getCashFlows();
-
-    @Transient
-    @SuppressWarnings("null")
-    public List<Transaction> getTrades();
-
-    @Transient
     public DiscreteAmount getMarketPrice(Position postion);
 
     @Transient
@@ -73,7 +63,7 @@ public interface PortfolioService {
 
     ConcurrentHashMap<Asset, Amount> getMarketValues();
 
-    ConcurrentHashMap<Asset, Amount> getCashBalances();
+    Map<Asset, Amount> getCashBalances();
 
     ConcurrentHashMap<Asset, Amount> getRealisedPnLs();
 
@@ -91,7 +81,7 @@ public interface PortfolioService {
 
     Amount getUnrealisedPnL(Asset quoteAsset);
 
-    Collection<Fill> getPositions(Asset asset, Exchange exchange);
+    Collection<Position> getPositions(Asset asset, Exchange exchange);
 
     ConcurrentHashMap<Asset, Amount> getAvailableBalances();
 
@@ -108,5 +98,7 @@ public interface PortfolioService {
     Amount getAvailableBaseBalance(Asset quoteAsset);
 
     DiscreteAmount getNetPosition(Asset base, Exchange exchange);
+
+    void resetBalances();
 
 }

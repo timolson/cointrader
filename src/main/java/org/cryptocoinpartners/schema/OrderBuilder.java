@@ -172,7 +172,7 @@ public class OrderBuilder {
 
         public GeneralOrderBuilder withStopPrice(String price) {
             if (order.fillType.equals(FillType.STOP_LIMIT) || order.fillType.equals(FillType.STOP_LOSS) || order.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
-                order.setStopPrice(DecimalAmount.of(price));
+                order.setStopAmount(DecimalAmount.of(price));
                 return this;
             }
             throw new NotImplementedException();
@@ -187,9 +187,24 @@ public class OrderBuilder {
             throw new NotImplementedException();
         }
 
+        public GeneralOrderBuilder withStopAmount(BigDecimal price) {
+            if (order.fillType.equals(FillType.STOP_LIMIT) || order.fillType.equals(FillType.STOP_LOSS) || order.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
+                order.setStopAmount(DecimalAmount.of(price));
+                return this;
+            }
+
+            throw new NotImplementedException();
+        }
+
+        public GeneralOrderBuilder withTargetAmount(BigDecimal price) {
+            order.setTargetAmount(DecimalAmount.of(price));
+            return this;
+
+        }
+
         public GeneralOrderBuilder withTrailingStopPrice(BigDecimal price, BigDecimal trailingStopPrice) {
             if (order.fillType.equals(FillType.STOP_LIMIT) || order.fillType.equals(FillType.STOP_LOSS) || order.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
-                order.setStopPrice(DecimalAmount.of(price));
+                order.setStopAmount(DecimalAmount.of(price));
                 order.setTrailingStopPrice(DecimalAmount.of(trailingStopPrice));
                 return this;
             }
@@ -198,7 +213,7 @@ public class OrderBuilder {
 
         public GeneralOrderBuilder withTrailingStopPrice(String price, String trailingStopPrice) {
             if (order.fillType.equals(FillType.STOP_LIMIT) || order.fillType.equals(FillType.STOP_LOSS) || order.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
-                order.setStopPrice(DecimalAmount.of(price));
+                order.setStopAmount(DecimalAmount.of(price));
                 order.setTrailingStopPrice(DecimalAmount.of(trailingStopPrice));
                 return this;
             }

@@ -74,6 +74,7 @@ public class ConsoleStrategy extends SimpleStatefulStrategy {
         synchronized (lock) {
             if (positionMap.get(market) == null) {
                 ConcurrentHashMap<PositionType, Position> newPosition = new ConcurrentHashMap<PositionType, Position>();
+                //  Fill fill = new Fill();
                 Position position = new Position();
                 newPosition.put(type, position);
                 positionMap.put(market, newPosition);

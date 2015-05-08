@@ -66,7 +66,8 @@ public class BasicQuoteService implements QuoteService {
             Book book = bestBidByMarket.get(market.getSymbol());
             Offer testBestBid = book.getBestBid();
             //noinspection ConstantConditions
-            if (bestBid == null || (testBestBid != null && testBestBid.getPrice().compareTo(bestBid.getPrice()) > 0))
+            if (bestBid == null || bestBid.getVolumeCount() == 0 || bestBid.getPriceCount() == 0
+                    || (testBestBid != null && testBestBid.getPrice().compareTo(bestBid.getPrice()) > 0))
                 bestBid = testBestBid;
         }
         bestBid = ((bestBid == null) ? getImpliedBestAskForListing(listing) : bestBid);
@@ -85,7 +86,9 @@ public class BasicQuoteService implements QuoteService {
         if (book != null)
             testBestBid = book.getBestBid();
         //noinspection ConstantConditions
-        if (bestBid == null || (testBestBid != null && testBestBid.getPrice().compareTo(bestBid.getPrice()) > 0))
+
+        if (bestBid == null || bestBid.getVolumeCount() == 0 || bestBid.getPriceCount() == 0
+                || (testBestBid != null && testBestBid.getPrice().compareTo(bestBid.getPrice()) > 0))
             bestBid = testBestBid;
 
         return bestBid;
@@ -103,7 +106,8 @@ public class BasicQuoteService implements QuoteService {
                 Book book = bestAskByMarket.get(market.getSymbol());
                 Offer testBestAsk = book.getBestAsk();
                 //noinspection ConstantConditions
-                if (bestAsk == null || (testBestAsk != null && testBestAsk.getPrice().compareTo(bestAsk.getPrice()) < 0))
+                if (bestAsk == null || bestAsk.getVolumeCount() == 0 || bestAsk.getPriceCount() == 0
+                        || (testBestAsk != null && testBestAsk.getPrice().compareTo(bestAsk.getPrice()) < 0))
                     bestAsk = testBestAsk;
 
             }
@@ -151,7 +155,8 @@ public class BasicQuoteService implements QuoteService {
         if (book != null)
             testBestAsk = book.getBestAsk();
         //noinspection ConstantConditions
-        if (bestAsk == null || (testBestAsk != null && testBestAsk.getPrice().compareTo(bestAsk.getPrice()) < 0))
+        if (bestAsk == null || bestAsk.getVolumeCount() == 0 || bestAsk.getPriceCount() == 0
+                || (testBestAsk != null && testBestAsk.getPrice().compareTo(bestAsk.getPrice()) < 0))
             bestAsk = testBestAsk;
 
         return bestAsk;

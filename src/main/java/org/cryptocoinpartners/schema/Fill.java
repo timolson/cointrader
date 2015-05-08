@@ -40,7 +40,7 @@ public class Fill extends RemoteEvent {
         this.volumeCount = volumeCount;
         this.openVolumeCount = volumeCount;
         this.portfolio = order.getPortfolio();
-        this.stopPriceCount = (order.getStopPrice() != null) ? order.getStopPrice().getCount() : 0;
+        this.stopAmountCount = (order.getStopAmount() != null) ? order.getStopAmount().getCount() : 0;
 
     }
 
@@ -53,7 +53,7 @@ public class Fill extends RemoteEvent {
         this.openVolumeCount = volumeCount;
         this.commission = commission;
         this.portfolio = order.getPortfolio();
-        this.stopPriceCount = (order.getStopPrice() != null) ? order.getStopPrice().getCount() : 0;
+        this.stopAmountCount = (order.getStopAmount() != null) ? order.getStopAmount().getCount() : 0;
     }
 
     public @ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
@@ -114,7 +114,7 @@ public class Fill extends RemoteEvent {
     }
 
     @Nullable
-    @OneToMany(mappedBy = "fill")
+    @OneToMany(mappedBy = "fill", cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     //, mappedBy = "fill")
     //(fetch = FetchType.EAGER)
     public Collection<Transaction> getTransactions() {
@@ -136,7 +136,7 @@ public class Fill extends RemoteEvent {
         this.transactions = transactions;
     }
 
-    @ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+    @ManyToOne
     public Market getMarket() {
         return market;
     }
@@ -238,6 +238,14 @@ public class Fill extends RemoteEvent {
         this.priceCount = priceCount;
     }
 
+    public void setStopAmountCount(long stopAmountCount) {
+        this.stopAmountCount = stopAmountCount;
+    }
+
+    public void setTargetAmountCount(long targetAmountCount) {
+        this.targetAmountCount = targetAmountCount;
+    }
+
     public void setStopPriceCount(long stopPriceCount) {
         this.stopPriceCount = stopPriceCount;
     }
@@ -271,7 +279,9 @@ public class Fill extends RemoteEvent {
     private SpecificOrder order;
     private Market market;
     private long priceCount;
+    private long stopAmountCount;
     private long stopPriceCount;
+    private long targetAmountCount;
     private long targetPriceCount;
     private long volumeCount;
     private long openVolumeCount;

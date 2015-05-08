@@ -35,10 +35,50 @@ public class PersistUtil {
 
                 try {
                     for (EntityBase entity : entities) {
-                        if (em.contains(entity))
-                            em.merge(entity);
-                        else
-                            em.persist(entity);
+                        //em.refresh(entity);
+                        //if (em.contains(entity))
+                        //   em.merge(entity);
+                        //else
+                        em.persist(entity);
+                        PersistUtilHelper.commit();
+                    }
+
+                } catch (Exception | Error e) {
+                    persited = false;
+                    e.printStackTrace();
+                    if (PersistUtilHelper.isActive())
+                        PersistUtilHelper.rollback();
+                }
+            } finally {
+                if (persited)
+                    for (EntityBase entity : entities)
+                        log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
+                else
+                    for (EntityBase entity : entities)
+                        log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
+                if (em != null && em.isOpen())
+                    PersistUtilHelper.closeEntityManager();
+
+            }
+        }
+    }
+
+    public static void merge(EntityBase... entities) {
+        synchronized (lock) {
+            EntityManager em = null;
+            boolean persited = true;
+            try {
+                em = createEntityManager();
+                PersistUtilHelper.beginTransaction();
+
+                try {
+                    for (EntityBase entity : entities) {
+                        // em.
+                        // em.refresh(entity);
+                        //if (em.contains(entity))
+                        //   em.merge(entity);
+                        //else
+                        em.merge(entity);
                         PersistUtilHelper.commit();
                     }
 
@@ -176,6 +216,24 @@ public class PersistUtil {
         }
     }
 
+    public static <T> T namedQueryOne(Class<T> resultType, String namedQuery, Object... params) throws NoResultException {
+        EntityManager em = null;
+        try {
+            em = createEntityManager();
+            final TypedQuery<T> query = em.createNamedQuery(namedQuery, resultType);
+            if (params != null) {
+                for (int i = 0; i < params.length; i++) {
+                    Object param = params[i];
+                    query.setParameter(i + 1, param); // JPA uses 1-based indexes
+                }
+            }
+            return query.getSingleResult();
+        } finally {
+            if (em != null)
+                PersistUtilHelper.closeEntityManager();
+        }
+    }
+
     /**
      returns a single result entity or null if not found
      */
@@ -184,6 +242,28 @@ public class PersistUtil {
         try {
             em = createEntityManager();
             final TypedQuery<T> query = em.createQuery(queryStr, resultType);
+            if (params != null) {
+                for (int i = 0; i < params.length; i++) {
+                    Object param = params[i];
+                    query.setParameter(i + 1, param); // JPA uses 1-based indexes
+                }
+            }
+            try {
+                return query.getSingleResult();
+            } catch (NoResultException x) {
+                return null;
+            }
+        } finally {
+            if (em != null)
+                PersistUtilHelper.closeEntityManager();
+        }
+    }
+
+    public static <T> T namedQueryZeroOne(Class<T> resultType, String namedQuery, Object... params) {
+        EntityManager em = null;
+        try {
+            em = createEntityManager();
+            final TypedQuery<T> query = em.createNamedQuery(namedQuery, resultType);
             if (params != null) {
                 for (int i = 0; i < params.length; i++) {
                     Object param = params[i];
@@ -254,6 +334,9 @@ public class PersistUtil {
         properties.put("hibernate.ejb.naming_strategy", "org.hibernate.cfg.ImprovedNamingStrategy");
         properties.put("hibernate.connection.autocommit", "true");
         properties.put("hibernate.connection.provider_class", "org.hibernate.connection.C3P0ConnectionProvider");
+        properties.put("hibernate.cache.region.factory_class", "org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory");
+        properties.put("hibernate.cache.use_second_level_cache", "true");
+        properties.put("hibernate.cache.use_query_cache", "true");
         properties.put("hibernate.c3p0.min_size", "1");
         properties.put("hibernate.c3p0.max_size", ConfigUtil.combined().getString("db.pool.size"));
         properties.put("hibernate.c3p0.acquire_increment", ConfigUtil.combined().getString("db.pool.growth"));
@@ -266,6 +349,7 @@ public class PersistUtil {
         properties.put("hibernate.c3p0.acquireRetryDelay", "1000");
         properties.put("hibernate.c3p0.acquireRetryAttempts", "0");
         properties.put("hibernate.c3p0.breakAfterAcquireFailure", "false");
+        properties.put("javax.persistence.sharedCache.mode", "ENABLE_SELECTIVE");
 
         try {
             PersistUtilHelper emh = new PersistUtilHelper(properties);

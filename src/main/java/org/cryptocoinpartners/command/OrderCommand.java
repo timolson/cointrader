@@ -64,7 +64,7 @@ public abstract class OrderCommand extends AntlrCommandBase {
         if (limit != null)
             builder = builder.withLimitPrice(limit);
         if (stop != null)
-            builder = builder.withStopPrice(stop);
+            builder = builder.withStopAmount(stop);
         Order order = builder.place();
     }
 

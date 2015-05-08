@@ -150,26 +150,47 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
     private static long removeSeconds(long timestamp) {
         Calendar cal = GregorianCalendar.getInstance();
         cal.setTimeInMillis(timestamp);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+
         //TODO: need to support bars for mulitiple days
         if ((interval / 86400) > 1) {
-            cal.set(Calendar.DAY_OF_YEAR, 0);
+            int days = (int) Math.round(interval / 86400);
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            int modulo = cal.get(Calendar.DAY_OF_YEAR) % days;
+            if (modulo > 0) {
+
+                cal.add(Calendar.DAY_OF_YEAR, -modulo);
+            }
+            //cal.set(Calendar.DAY_OF_YEAR, 0);
             // round interval to nearest day
             interval = ((double) Math.round(interval / 86400)) * 86400;
         }
 
         if ((interval / 3600) > 1) {
-            cal.set(Calendar.HOUR_OF_DAY, 0);
+            int hours = (int) Math.round(interval / 3600);
+            cal.set(Calendar.MINUTE, 0);
+            int modulo = cal.get(Calendar.HOUR_OF_DAY) % hours;
+            if (modulo > 0) {
+
+                cal.add(Calendar.HOUR_OF_DAY, -modulo);
+            }
+
+            // cal.set(Calendar.HOUR_OF_DAY, 0);
             // round interval to nearest hour
             interval = ((double) Math.round(interval / 3600)) * 3600;
         }
 
         if ((interval / 60) > 1) {
-            cal.set(Calendar.MINUTE, 0);
-            // round interval to nearest day
+            int mins = (int) (Math.round(interval / 60));
+
+            int modulo = cal.get(Calendar.MINUTE) % mins;
+            if (modulo > 0) {
+
+                cal.add(Calendar.MINUTE, -modulo);
+            }
             interval = ((double) Math.round(interval / 60)) * 60;
         }
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
         return cal.getTimeInMillis();
     }
 
@@ -183,7 +204,7 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
         long currentTime = agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime();
         long currentRemoveSeconds = removeSeconds(currentTime);
         //long targetTime = currentRemoveSeconds + (86400 + LATE_EVENT_SLACK_SECONDS) * 1000; // leave some seconds for late comers
-        long targetTime = currentRemoveSeconds + (interval.longValue() + LATE_EVENT_SLACK_SECONDS) * 1000; // leave some seconds for late comers
+        long targetTime = currentRemoveSeconds + ((interval.longValue() + LATE_EVENT_SLACK_SECONDS) * 1000); // leave some seconds for late comers
 
         long scheduleAfterMSec = targetTime - currentTime;
 

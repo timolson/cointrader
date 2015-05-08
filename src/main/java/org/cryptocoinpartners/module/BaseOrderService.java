@@ -23,6 +23,7 @@ import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.DecimalAmount;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.EntityBase;
+import org.cryptocoinpartners.schema.Event;
 import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.GeneralOrder;
 import org.cryptocoinpartners.schema.Market;
@@ -61,8 +62,8 @@ public abstract class BaseOrderService implements OrderService {
     @Override
     public void placeOrder(Order order) {
         PersitOrderFill(order);
-        CreateTransaction(order);
-        updateOrderState(order, OrderState.NEW, false);
+        CreateTransaction(order, false);
+        updateOrderState(order, OrderState.NEW, true);
         log.info("Created new order " + order);
         if (order instanceof GeneralOrder) {
             GeneralOrder generalOrder = (GeneralOrder) order;
@@ -79,13 +80,20 @@ public abstract class BaseOrderService implements OrderService {
         List<Order> orders = PersistUtil.queryList(Order.class,
                 "select o from OrderUpdate u left join u.order o where portfolio = ?1 and u.state=?2 group by o", portfolio, OrderState.TRIGGER);
 
+        //  List<Order> orders = PersistUtil.queryList(Order.class, " select ou from OrderUpdate ou " + "INNER JOIN "
+        //        + "(   SELECT  oum.order, MAX(oum.sequence) AS sequence " + "FROM    OrderUpdate oum" + "GROUP BY oum.order " + ") MaxP "
+        //       + "ON MaxP.order = ou.order " + "AND MaxP.sequence= ou.sequence " + "left join ou.order o where portfolio = ?1 and u.state=?2", portfolio,
+        //     OrderState.TRIGGER);
+
         // and sequence=(select max(sequence) from OrderUpdate where order=o)
         //   List<GeneralOrder> orders = PersistUtil.queryList(GeneralOrder.class, "select o from GeneralOrder o left join o.id OrderUpdate");
         // where  sequence=(select max(sequence) from OrderUpdate  ) and portfolio = ?1 group by o",
         //portfolio);
+        //Assumes every trigger order has a parent order
 
         for (Order triggerOrder : orders) {
-            triggerOrders.add(triggerOrder);
+            addTriggerOrder(triggerOrder);
+
         }
 
     }
@@ -103,44 +111,82 @@ public abstract class BaseOrderService implements OrderService {
     @Override
     public void handleCancelAllStopOrders(Portfolio portfolio, Market market) {
         Collection<Order> cancelledOrders = new ArrayList<>();
-        synchronized (lock) {
-            for (Iterator<Order> it = triggerOrders.iterator(); it.hasNext();) {
+        Fill parentFill;
+        Order parentOrder;
+        //synchronized (lock) {
+        for (Iterator<Event> ite = triggerOrders.keySet().iterator(); ite.hasNext();) {
+            Event parentKey = ite.next();
+            for (Iterator<Order> it = triggerOrders.get(parentKey).iterator(); it.hasNext();) {
                 Order triggerOrder = it.next();
+
                 if (triggerOrder.getMarket().equals(market))
+
                     cancelledOrders.add(triggerOrder);
                 //TODO could be a condition here where we have not removed the trigger order but we have set the stop price to 0 on the fill
                 if (triggerOrder.getParentFill() != null)
                     triggerOrder.getParentFill().setStopPriceCount(0);
             }
-            triggerOrders.removeAll(cancelledOrders);
+            triggerOrders.get(parentKey).removeAll(cancelledOrders);
             for (Order cancelledOrder : cancelledOrders)
                 updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
+
+            if (triggerOrders.get(parentKey).isEmpty())
+                triggerOrders.remove(parentKey);
+
+            //                if(parentKey instanceof Fill) 
+            //                      parentFill = (Fill) parentKey;
+            //                if(parentKey instanceof Order) 
+            //                     parentOrder = (Order) parentKey;
+            //                if ((parentFill!=null && parentFill.getMarket().equals(market)) || (parentOrder!=null && parentOrder.getMarket().equals(market)))
+            //                    triggerOrders.remove(parentKey);
+
+            //TODO could be a condition here where we have not removed the trigger order but we have set the stop price to 0 on the fill
+
         }
+        // }
     }
 
     @Override
     public void handleCancelGeneralOrder(GeneralOrder order) {
         Collection<Order> cancelledOrders = new ArrayList<>();
-        synchronized (lock) {
-            for (Iterator<Order> it = triggerOrders.iterator(); it.hasNext();) {
+        //synchronized (lock) {
+        for (Iterator<Event> ite = triggerOrders.keySet().iterator(); ite.hasNext();) {
+            Event parentKey = ite.next();
+            for (Iterator<Order> it = triggerOrders.get(parentKey).iterator(); it.hasNext();) {
                 Order triggerOrder = it.next();
+
                 if (triggerOrder.equals(order))
+
                     cancelledOrders.add(triggerOrder);
+                //TODO could be a condition here where we have not removed the trigger order but we have set the stop price to 0 on the fill
                 if (triggerOrder.getParentFill() != null)
                     triggerOrder.getParentFill().setStopPriceCount(0);
-
             }
-
-            triggerOrders.removeAll(cancelledOrders);
+            triggerOrders.get(parentKey).removeAll(cancelledOrders);
             for (Order cancelledOrder : cancelledOrders)
                 updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
+
+            if (triggerOrders.get(parentKey).isEmpty())
+                triggerOrders.remove(parentKey);
+
+            //                if(parentKey instanceof Fill) 
+            //                      parentFill = (Fill) parentKey;
+            //                if(parentKey instanceof Order) 
+            //                     parentOrder = (Order) parentKey;
+            //                if ((parentFill!=null && parentFill.getMarket().equals(market)) || (parentOrder!=null && parentOrder.getMarket().equals(market)))
+            //                    triggerOrders.remove(parentKey);
+
+            //TODO could be a condition here where we have not removed the trigger order but we have set the stop price to 0 on the fill
+
         }
+        // }
     }
 
     @Override
     public void adjustStopLoss(Amount price, Amount amount) {
-        synchronized (lock) {
-            for (Order triggerOrder : triggerOrders) {
+        // synchronized (lock) {
+        for (Event parentKey : triggerOrders.keySet()) {
+            for (Order triggerOrder : triggerOrders.get(parentKey)) {
                 //			    if(myList.get(i).equals("3")){
                 //			        myList.remove(i);
                 //			        i--;
@@ -151,14 +197,14 @@ public abstract class BaseOrderService implements OrderService {
                     long stopPrice = Math.min((triggerOrder.getStopPrice().toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount(),
                             (price.plus(amount.abs()).toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount());
                     DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggerOrder.getMarket().getPriceBasis()));
-                    triggerOrder.setStopPrice(stopDiscrete);
+                    triggerOrder.setStopAmount(stopDiscrete);
                     if (triggerOrder.getParentFill() != null)
                         triggerOrder.getParentFill().setStopPriceCount(stopPrice);
                 } else if (triggerOrder.isAsk()) {
                     long stopPrice = Math.max((triggerOrder.getStopPrice().toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount(),
                             (price.minus(amount.abs()).toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount());
                     DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggerOrder.getMarket().getPriceBasis()));
-                    triggerOrder.setStopPrice(stopDiscrete);
+                    triggerOrder.setStopAmount(stopDiscrete);
                     if (triggerOrder.getParentFill() != null)
                         triggerOrder.getParentFill().setStopPriceCount(stopPrice);
 
@@ -171,8 +217,8 @@ public abstract class BaseOrderService implements OrderService {
                 //					triggerOrder.setStopPrice(stopPrice);
 
             }
-
         }
+        //   }
     }
 
     // loop over our  tigger orders
@@ -301,23 +347,55 @@ public abstract class BaseOrderService implements OrderService {
             updateOrderState(order, newState, true);
         }
         PersitOrderFill(fill);
-        CreateTransaction(fill);
+        CreateTransaction(fill, false);
 
     }
 
     private CommonOrderBuilder buildStopLimitOrder(Fill fill) {
         OrderBuilder order = new OrderBuilder(fill.getOrder().getPortfolio(), this);
 
-        if (fill.getOrder().getParentOrder().getStopPrice() != null) {
+        if (fill.getOrder().getParentOrder().getStopPrice() != null || fill.getOrder().getParentOrder().getStopAmount() != null) {
+            Amount stopPrice;
+            Amount targetPrice;
+            DiscreteAmount targetPriceDiscrete;
+            DiscreteAmount stopPriceDiscrete;
+            BigDecimal bdTargetPrice;
+            BigDecimal bdStopPrice;
+            BigDecimal bdLimitPrice;
+            GeneralOrderBuilder generalOrder;
             BigDecimal bdVolume = fill.getVolume().asBigDecimal();
-            DiscreteAmount stopPriceDiscrete = new DiscreteAmount(DiscreteAmount.roundedCountForBasis(fill.getOrder().getParentOrder().getStopPrice()
-                    .asBigDecimal(), fill.getMarket().getPriceBasis()), fill.getMarket().getPriceBasis());
-            BigDecimal bdStopPrice = stopPriceDiscrete.asBigDecimal();
-            BigDecimal bdLimitPrice = (fill.getVolume().isNegative()) ? stopPriceDiscrete.increment(2).asBigDecimal() : stopPriceDiscrete.decrement(2)
-                    .asBigDecimal();
-            GeneralOrderBuilder generalOrder = order.create(context.getTime(), fill, fill.getMarket(), bdVolume.negate(), FillType.STOP_LIMIT)
-                    .withComment("Stop Order").withStopPrice(bdStopPrice).withLimitPrice(bdLimitPrice).withPositionEffect(PositionEffect.CLOSE);
+            if (fill.getOrder().getParentOrder().getStopAmount() != null)
+                stopPrice = (fill.isLong()) ? fill.getPrice().minus(fill.getOrder().getParentOrder().getStopAmount()) : fill.getPrice().plus(
+                        fill.getOrder().getParentOrder().getStopAmount());
+            else
+                stopPrice = fill.getOrder().getParentOrder().getStopPrice();
 
+            if (fill.getOrder().getParentOrder().getTargetAmount() != null)
+                targetPrice = (fill.isLong()) ? fill.getPrice().plus(fill.getOrder().getParentOrder().getTargetAmount()) : fill.getPrice().minus(
+                        fill.getOrder().getParentOrder().getTargetAmount());
+            else
+                targetPrice = fill.getOrder().getParentOrder().getTargetPrice();
+
+            stopPriceDiscrete = new DiscreteAmount(DiscreteAmount.roundedCountForBasis(stopPrice.asBigDecimal(), fill.getMarket().getPriceBasis()), fill
+                    .getMarket().getPriceBasis());
+            bdStopPrice = stopPriceDiscrete.asBigDecimal();
+
+            bdLimitPrice = (fill.getVolume().isNegative()) ? stopPriceDiscrete.increment(2).asBigDecimal() : stopPriceDiscrete.decrement(2).asBigDecimal();
+            if (targetPrice != null) {
+                targetPriceDiscrete = new DiscreteAmount(DiscreteAmount.roundedCountForBasis(targetPrice.asBigDecimal(), fill.getMarket().getPriceBasis()),
+                        fill.getMarket().getPriceBasis());
+                bdTargetPrice = targetPriceDiscrete.asBigDecimal();
+                generalOrder = order.create(context.getTime(), fill, fill.getMarket(), bdVolume.negate(), FillType.STOP_LIMIT)
+                        .withComment("Stop Order with Price Target").withTargetPrice(bdTargetPrice).withStopPrice(bdStopPrice).withLimitPrice(bdLimitPrice)
+                        .withPositionEffect(PositionEffect.CLOSE);
+                fill.setTargetPriceCount(targetPriceDiscrete.getCount());
+                //  fill.setTargetAmountCount(targetAmountCount);
+
+            } else {
+
+                generalOrder = order.create(context.getTime(), fill, fill.getMarket(), bdVolume.negate(), FillType.STOP_LIMIT).withComment("Stop Order")
+                        .withStopPrice(bdStopPrice).withLimitPrice(bdLimitPrice).withPositionEffect(PositionEffect.CLOSE);
+            }
             generalOrder.getOrder().copyCommonFillProperties(fill);
             fill.setStopPriceCount(stopPriceDiscrete.getCount());
             return generalOrder;
@@ -357,7 +435,10 @@ public abstract class BaseOrderService implements OrderService {
             case STOP_LIMIT:
                 addTriggerOrder(generalOrder);
                 updateOrderState(generalOrder, OrderState.TRIGGER, false);
-                log.info("Stop trade Entered at " + generalOrder.getStopPrice());
+                if (generalOrder.getTargetPrice() != null)
+                    log.info("Stop trade Entered at " + generalOrder.getStopPrice());
+                if (generalOrder.getTargetPrice() != null)
+                    log.info("Target trade Entered at " + generalOrder.getTargetPrice());
                 break;
             case TRAILING_STOP_LIMIT:
                 addTriggerOrder(generalOrder);
@@ -375,18 +456,25 @@ public abstract class BaseOrderService implements OrderService {
 
     }
 
+    //    @SuppressWarnings("ConstantConditions")
+    //    @When("@Priority(9) select * from Trade")
+    //    private void handleTrade(Trade t) {
+    //
+    //    }
+
     @SuppressWarnings("ConstantConditions")
     @When("@Priority(9) select * from Book")
     private void handleBook(Book b) {
-        Offer ask = b.getBestAsk();
-        Offer bid = b.getBestBid();
+        Offer bid = b.getBestAsk();
+        Offer ask = b.getBestBid();
+
         synchronized (lock) {
             for (SpecificOrder pendingOrder : getPendingOrders()) {
 
                 if (pendingOrder.getMarket().equals(b.getMarket())
                         && ((pendingOrder.getParentOrder() != null && pendingOrder.getParentOrder().getFillType() == FillType.STOP_LIMIT) || pendingOrder
                                 .getPositionEffect() == PositionEffect.CLOSE)) {
-                    Offer offer = pendingOrder.isBid() ? quotes.getLastBidForMarket(pendingOrder.getMarket()) : quotes.getLastAskForMarket(pendingOrder
+                    Offer offer = pendingOrder.isBid() ? quotes.getLastAskForMarket(pendingOrder.getMarket()) : quotes.getLastBidForMarket(pendingOrder
                             .getMarket());
                     DiscreteAmount limitPrice = (pendingOrder.getVolume().isNegative()) ? offer.getPrice().decrement(
                             (long) (Math.pow(pendingOrder.getPlacementCount(), 2))) : offer.getPrice().increment(
@@ -400,74 +488,78 @@ public abstract class BaseOrderService implements OrderService {
         }
 
         synchronized (lock) {
+            for (Event parentKey : triggerOrders.keySet()) {
+                for (Order triggeredOrder : triggerOrders.get(parentKey)) {
 
-            for (Order triggeredOrder : triggerOrders) {
+                    if (triggeredOrder.getMarket().equals(b.getMarket())) {
+                        if (triggeredOrder.isBid()) {
+                            if ((triggeredOrder.getStopPrice() != null && (bid.getPriceCount() >= (triggeredOrder.getStopPrice().toBasis(triggeredOrder
+                                    .getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()))
+                                    || (triggeredOrder.getTargetPrice() != null && (bid.getPriceCount() <= (triggeredOrder.getTargetPrice().toBasis(
+                                            triggeredOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()))) {
+                                //convert order to specfic order
+                                SpecificOrder specificOrder = convertGeneralOrderToSpecific((GeneralOrder) triggeredOrder, triggeredOrder.getMarket());
+                                log.info("At " + context.getTime() + " Routing trigger order " + triggeredOrder + " to "
+                                        + triggeredOrder.getMarket().getExchange().getSymbol());
+                                //TODO need 
+                                placeOrder(specificOrder);
+                                //   OrderState newState = order.isFilled() ? OrderState.FILLED : OrderState.PARTFILLED;
+                                // updateOrderState(triggeredOrder, OrderState.ROUTED);
+                                context.publish(new PositionUpdate(null, specificOrder.getMarket(), PositionType.SHORT, PositionType.EXITING));
+                                triggerOrders.remove(parentKey);
 
-                if (triggeredOrder.getMarket().equals(b.getMarket())) {
-                    if (triggeredOrder.isBid()) {
-                        if (triggeredOrder.getStopPrice() != null
-                                && bid.getPriceCount() >= (triggeredOrder.getStopPrice().toBasis(triggeredOrder.getMarket().getPriceBasis(),
-                                        Remainder.ROUND_EVEN)).getCount()) {
-                            //convert order to specfic order
-                            SpecificOrder specificOrder = convertGeneralOrderToSpecific((GeneralOrder) triggeredOrder, triggeredOrder.getMarket());
-                            log.info("At " + context.getTime() + " Routing trigger order " + triggeredOrder + " to "
-                                    + triggeredOrder.getMarket().getExchange().getSymbol());
-                            //TODO need 
-                            placeOrder(specificOrder);
-                            //   OrderState newState = order.isFilled() ? OrderState.FILLED : OrderState.PARTFILLED;
-                            // updateOrderState(triggeredOrder, OrderState.ROUTED);
-                            context.publish(new PositionUpdate(null, specificOrder.getMarket(), PositionType.EXITING));
-                            triggerOrders.remove(triggeredOrder);
+                                //i = Math.min(0, i - 1);
+                                //  triggerOrders.remove(triggerOrder);
+                                log.debug(triggeredOrder + " triggered as specificOrder " + specificOrder);
+                            } else if (triggeredOrder.getTrailingStopPrice() != null) {
+                                //current price is less than the stop price so I will update the stop price
+                                long stopPrice = Math.min((triggeredOrder.getStopPrice().toBasis(triggeredOrder.getMarket().getPriceBasis(),
+                                        Remainder.ROUND_EVEN)).getCount(), (bid.getPriceCount() + (triggeredOrder.getTrailingStopPrice().toBasis(triggeredOrder
+                                        .getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()));
+                                DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggeredOrder.getMarket().getPriceBasis()));
+                                triggeredOrder.setStopAmount(stopDiscrete);
 
-                            //i = Math.min(0, i - 1);
-                            //	triggerOrders.remove(triggerOrder);
-                            log.debug(triggeredOrder + " triggered as specificOrder " + specificOrder);
-                        } else if (triggeredOrder.getTrailingStopPrice() != null) {
-                            //current price is less than the stop price so I will update the stop price
-                            long stopPrice = Math.min((triggeredOrder.getStopPrice().toBasis(triggeredOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN))
-                                    .getCount(), (bid.getPriceCount() + (triggeredOrder.getTrailingStopPrice().toBasis(triggeredOrder.getMarket()
-                                    .getPriceBasis(), Remainder.ROUND_EVEN)).getCount()));
-                            DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggeredOrder.getMarket().getPriceBasis()));
-                            triggeredOrder.setStopPrice(stopDiscrete);
-
-                        }
-
-                    }
-                    if (triggeredOrder.isAsk()) {
-                        if (triggeredOrder.getStopPrice() != null
-                                && ask.getPriceCount() <= (triggeredOrder.getStopPrice().toBasis(triggeredOrder.getMarket().getPriceBasis(),
-                                        Remainder.ROUND_EVEN)).getCount()) {
-                            //Place order
-                            SpecificOrder specificOrder = convertGeneralOrderToSpecific((GeneralOrder) triggeredOrder, triggeredOrder.getMarket());
-                            log.info("At " + context.getTime() + " Routing trigger order " + specificOrder + " to "
-                                    + specificOrder.getMarket().getExchange().getSymbol());
-                            // updateOrderState(triggeredOrder, OrderState.ROUTED);
-                            placeOrder(specificOrder);
-                            context.publish(new PositionUpdate(null, specificOrder.getMarket(), PositionType.EXITING));
-                            triggerOrders.remove(triggeredOrder);
-                            // portfolioService.publishPositionUpdate(new Position(triggeredOrder.getPortfolio(), triggeredOrder.getMarket().getExchange(), triggeredOrder.getMarket(), triggeredOrder.getMarket().getBase(),
-                            //       DecimalAmount.ZERO, DecimalAmount.ZERO));
-
-                            //i = Math.min(0, i - 1);
-                            //triggeredOrders.add(triggeredOrder);
-                            log.debug(triggeredOrder + " triggered as specificOrder " + specificOrder);
-
-                        } else if (triggeredOrder.getTrailingStopPrice() != null) {
-                            //&& ((bid.getPriceCount() + order.getTrailingStopPrice().getCount() > (order.getStopPrice().getCount())))) {
-                            //current price is less than the stop price so I will update the stop price
-                            long stopPrice = Math.max((triggeredOrder.getStopPrice().toBasis(triggeredOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN))
-                                    .getCount(), (ask.getPriceCount() - (triggeredOrder.getTrailingStopPrice().toBasis(triggeredOrder.getMarket()
-                                    .getPriceBasis(), Remainder.ROUND_EVEN)).getCount()));
-                            DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggeredOrder.getMarket().getPriceBasis()));
-                            triggeredOrder.setStopPrice(stopDiscrete);
+                            }
 
                         }
+                        if (triggeredOrder.isAsk()) {
+                            if ((triggeredOrder.getStopPrice() != null && (ask.getPriceCount() <= (triggeredOrder.getStopPrice().toBasis(triggeredOrder
+                                    .getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()))
+                                    || (triggeredOrder.getTargetPrice() != null && (ask.getPriceCount() >= (triggeredOrder.getTargetPrice().toBasis(
+                                            triggeredOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()))) {
+                                //Place order
+                                SpecificOrder specificOrder = convertGeneralOrderToSpecific((GeneralOrder) triggeredOrder, triggeredOrder.getMarket());
+                                log.info("At " + context.getTime() + " Routing trigger order " + specificOrder + " to "
+                                        + specificOrder.getMarket().getExchange().getSymbol());
+                                // updateOrderState(triggeredOrder, OrderState.ROUTED);
+                                placeOrder(specificOrder);
+                                context.publish(new PositionUpdate(null, specificOrder.getMarket(), PositionType.LONG, PositionType.EXITING));
+                                triggerOrders.remove(parentKey);
+                                // portfolioService.publishPositionUpdate(new Position(triggeredOrder.getPortfolio(), triggeredOrder.getMarket().getExchange(), triggeredOrder.getMarket(), triggeredOrder.getMarket().getBase(),
+                                //       DecimalAmount.ZERO, DecimalAmount.ZERO));
 
+                                //i = Math.min(0, i - 1);
+                                //triggeredOrders.add(triggeredOrder);
+                                log.debug(triggeredOrder + " triggered as specificOrder " + specificOrder);
+
+                            } else if (triggeredOrder.getTrailingStopPrice() != null) {
+                                //&& ((bid.getPriceCount() + order.getTrailingStopPrice().getCount() > (order.getStopPrice().getCount())))) {
+                                //current price is less than the stop price so I will update the stop price
+                                long stopPrice = Math.max((triggeredOrder.getStopPrice().toBasis(triggeredOrder.getMarket().getPriceBasis(),
+                                        Remainder.ROUND_EVEN)).getCount(), (ask.getPriceCount() - (triggeredOrder.getTrailingStopPrice().toBasis(triggeredOrder
+                                        .getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()));
+                                DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggeredOrder.getMarket().getPriceBasis()));
+                                triggeredOrder.setStopAmount(stopDiscrete);
+
+                            }
+
+                        }
                     }
                 }
             }
             //triggerOrders.removeAll(triggeredOrders);
         }
+
     }
 
     private SpecificOrder convertGeneralOrderToSpecific(GeneralOrder generalOrder, Market market) {
@@ -572,22 +664,22 @@ public abstract class BaseOrderService implements OrderService {
         OrderState oldState = orderStateMap.get(order);
         switch (childOrderState) {
             case NEW:
-                updateOrderState(order, childOrderState, false);
+                updateOrderState(order, childOrderState, true);
                 break;
             case TRIGGER:
                 //TODO: update state once all children have same state
-                updateOrderState(order, childOrderState, false);
+                updateOrderState(order, childOrderState, true);
                 break;
             case ROUTED:
                 //TODO: update state once all children have same state
-                updateOrderState(order, childOrderState, false);
+                updateOrderState(order, childOrderState, true);
                 break;
             case PLACED:
                 //TODO: update state once all children have same state
-                updateOrderState(order, childOrderState, false);
+                updateOrderState(order, childOrderState, true);
                 break;
             case PARTFILLED:
-                updateOrderState(order, OrderState.PARTFILLED, false);
+                updateOrderState(order, OrderState.PARTFILLED, true);
                 break;
             case FILLED:
                 //if (oldState == OrderState.CANCELLING) {
@@ -595,17 +687,17 @@ public abstract class BaseOrderService implements OrderService {
                 for (Order child : order.getChildren()) {
                     if (orderStateMap.get(child).isOpen()) {
                         fullyFilled = false;
-                        updateOrderState(order, OrderState.PARTFILLED, false);
+                        updateOrderState(order, OrderState.PARTFILLED, true);
                         break;
                     }
                 }
                 if (fullyFilled)
-                    updateOrderState(order, OrderState.FILLED, false);
+                    updateOrderState(order, OrderState.FILLED, true);
 
                 break;
 
             case CANCELLING:
-                updateOrderState(order, childOrderState, false);
+                updateOrderState(order, childOrderState, true);
 
                 break;
             case CANCELLED:
@@ -618,18 +710,18 @@ public abstract class BaseOrderService implements OrderService {
                         }
                     }
                     if (fullyCancelled)
-                        updateOrderState(order, OrderState.CANCELLED, false);
+                        updateOrderState(order, OrderState.CANCELLED, true);
                 }
                 break;
             case REJECTED:
                 //TODO: update state once all children have same state
-                updateOrderState(order, childOrderState, false);
+                updateOrderState(order, childOrderState, true);
                 reject(order, "Child order was rejected");
                 break;
             case EXPIRED:
                 if (!childOrder.getExpiration().isEqual(order.getExpiration()))
                     throw new Error("Child order expirations must match parent order expirations");
-                updateOrderState(order, OrderState.EXPIRED, false);
+                updateOrderState(order, OrderState.EXPIRED, true);
                 break;
             default:
                 log.warn("Unknown order state: " + childOrderState);
@@ -648,25 +740,34 @@ public abstract class BaseOrderService implements OrderService {
 
     private void removeTriggerOrder(Order order) {
 
-        for (Order triggerOrder : triggerOrders) {
+        for (Event parentKey : triggerOrders.keySet()) {
+            for (Order triggerOrder : triggerOrders.get(parentKey)) {
 
-            if (triggerOrder == order) {
-                triggerOrders.remove(order);
-                // --removeOrder(order);
+                if (triggerOrder == order) {
+                    triggerOrders.get(parentKey).remove(order);
+                    // --removeOrder(order);
+                }
+
+                // pendingOrders.remove(order);
             }
-
-            // pendingOrders.remove(order);
         }
     }
 
-    private void addTriggerOrder(Order order) {
-        synchronized (lock) {
-            triggerOrders.add(order);
-        }
+    private void addTriggerOrder(Order triggerOrder) {
+        //If the trigger order is from a fill, we use the fill as the key for mutliple triggers, else we use the parent
+        //any one of the multiple triggers can trigger first, but once one is triggered, all others are removed at for either the same fill or same parent
+        Event eventKey = (triggerOrder.getParentFill() != null) ? triggerOrder.getParentFill() : triggerOrder.getParentOrder();
+        if (eventKey == null)
+            eventKey = triggerOrder;
+        // synchronized (lock) {
+        ConcurrentLinkedQueue<Order> triggerOrderQueue = new ConcurrentLinkedQueue<Order>();
+        triggerOrderQueue.add(triggerOrder);
+        triggerOrders.put(eventKey, triggerOrderQueue);
+        // }
 
     }
 
-    protected final void CreateTransaction(EntityBase entity) {
+    protected final void CreateTransaction(EntityBase entity, Boolean route) {
         Transaction transaction = null;
         Order order;
         switch (entity.getClass().getSimpleName()) {
@@ -676,7 +777,12 @@ public abstract class BaseOrderService implements OrderService {
                 try {
                     transaction = new Transaction(order);
                     log.info("Created new transaction " + transaction);
-                    context.publish(transaction);
+                    if (route)
+                        context.route(transaction);
+                    else
+                        context.publish(transaction);
+                    PersistUtil.insert(transaction);
+
                 } catch (Exception e1) {
                     // TODO Auto-generated catch block
                     e1.printStackTrace();
@@ -688,7 +794,12 @@ public abstract class BaseOrderService implements OrderService {
                 try {
                     transaction = new Transaction(fill);
                     log.info("Created new transaction " + transaction);
-                    context.publish(transaction);
+                    if (route)
+                        context.route(transaction);
+                    else
+                        context.publish(transaction);
+                    PersistUtil.insert(transaction);
+
                 } catch (Exception e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
@@ -726,7 +837,7 @@ public abstract class BaseOrderService implements OrderService {
     protected QuoteService quotes;
     @Inject
     protected PortfolioService portfolioService;
-    protected final static Collection<Order> triggerOrders = new ConcurrentLinkedQueue<Order>();
+    protected final static Map<Event, ConcurrentLinkedQueue<Order>> triggerOrders = new ConcurrentHashMap<Event, ConcurrentLinkedQueue<Order>>();
     private static Object lock = new Object();
 
 }

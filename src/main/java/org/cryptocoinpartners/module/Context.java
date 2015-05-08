@@ -50,6 +50,7 @@ import com.espertech.esper.client.deploy.EPDeploymentAdmin;
 import com.espertech.esper.client.deploy.ParseException;
 import com.espertech.esper.client.time.CurrentTimeEvent;
 import com.espertech.esper.client.time.CurrentTimeSpanEvent;
+import com.espertech.esper.client.time.TimerControlEvent;
 import com.espertech.esper.core.service.EPServiceProviderImpl;
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -200,6 +201,12 @@ public class Context {
         } else
             now = new Instant(epRuntime.getCurrentTime());
         e.publishedAt(now);
+        epRuntime.sendEvent(e);
+        //   epRuntime.route(e);
+    }
+
+    public void publish(TimerControlEvent e) {
+
         epRuntime.sendEvent(e);
         //   epRuntime.route(e);
     }

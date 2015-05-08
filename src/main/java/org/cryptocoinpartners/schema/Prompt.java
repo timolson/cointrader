@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema;
 import java.util.List;
 
 import javax.persistence.Basic;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.NoResultException;
@@ -15,6 +16,7 @@ import org.cryptocoinpartners.util.PersistUtil;
  * @author Tim Olson
  */
 @Entity
+@Cacheable
 public class Prompt extends EntityBase {
 
     public static Prompt forSymbol(String symbol) {
@@ -36,7 +38,7 @@ public class Prompt extends EntityBase {
 
     @Transient
     public Double getMultiplier() {
-        return this.tickValue * this.tickSize;
+        return this.contractSize * this.tickSize;
     }
 
     protected void setSymbol(String symbol) {

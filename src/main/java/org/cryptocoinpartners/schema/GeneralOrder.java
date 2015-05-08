@@ -2,7 +2,6 @@ package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
 
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
@@ -76,14 +75,14 @@ public class GeneralOrder extends Order {
         this.volume = DecimalAmount.of(volume);
     }
 
-    @ManyToOne(optional = false, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+    @ManyToOne(optional = false)
     //@EmbeddedId
     public Listing getListing() {
         return listing;
     }
 
     @Override
-    @ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+    @ManyToOne(optional = true)
     public Market getMarket() {
         return market;
     }
@@ -103,10 +102,31 @@ public class GeneralOrder extends Order {
 
     }
 
+    public BigDecimal getStopAmountDecimal() {
+        if (stopAmount == null)
+            return null;
+        return stopAmount.asBigDecimal();
+
+    }
+
+    public BigDecimal getTargetAmountDecimal() {
+        if (targetAmount == null)
+            return null;
+        return targetAmount.asBigDecimal();
+
+    }
+
     public BigDecimal getStopPriceDecimal() {
         if (stopPrice == null)
             return null;
         return stopPrice.asBigDecimal();
+
+    }
+
+    public BigDecimal getTargetPriceDecimal() {
+        if (targetPrice == null)
+            return null;
+        return targetPrice.asBigDecimal();
 
     }
 
@@ -126,6 +146,18 @@ public class GeneralOrder extends Order {
     @Transient
     public DecimalAmount getLimitPrice() {
         return limitPrice;
+    }
+
+    @Override
+    @Transient
+    public DecimalAmount getStopAmount() {
+        return stopAmount;
+    }
+
+    @Override
+    @Transient
+    public DecimalAmount getTargetAmount() {
+        return targetAmount;
     }
 
     @Override
@@ -182,8 +214,8 @@ public class GeneralOrder extends Order {
                 + listing + ", volume=" + volume;
         if (limitPrice != null && limitPrice.asBigDecimal() != null)
             s += ", limitPrice=" + limitPrice;
-        if (stopPrice != null && stopPrice.asBigDecimal() != null)
-            s += ", stopPrice=" + stopPrice;
+        if (stopAmount != null && stopAmount.asBigDecimal() != null)
+            s += ", stopPrice=" + stopAmount;
         if (trailingStopPrice != null && trailingStopPrice.asBigDecimal() != null)
             s += ", trailingStopPrice=" + trailingStopPrice;
         if (comment != null)
@@ -237,10 +269,36 @@ public class GeneralOrder extends Order {
     }
 
     @Override
+    public void setStopAmount(DecimalAmount stopAmount) {
+        if (this.parentFill != null)
+            parentFill.setStopAmountCount(stopAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+        this.stopAmount = stopAmount;
+    }
+
+    @Override
+    public void setTargetAmount(DecimalAmount targetAmount) {
+        if (this.parentFill != null)
+            parentFill.setTargetAmountCount(targetAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+        this.targetAmount = targetAmount;
+    }
+
+    @Override
     public void setStopPrice(DecimalAmount stopPrice) {
         if (this.parentFill != null)
             parentFill.setStopPriceCount(stopPrice.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
         this.stopPrice = stopPrice;
+    }
+
+    public void setStopAmountDecimal(BigDecimal stopAmount) {
+        if (stopAmount != null) {
+            this.stopAmount = DecimalAmount.of(stopAmount);
+        }
+    }
+
+    public void setTargetAmountDecimal(BigDecimal targetAmount) {
+        if (targetAmount != null) {
+            this.targetAmount = DecimalAmount.of(targetAmount);
+        }
     }
 
     public void setStopPriceDecimal(BigDecimal stopPrice) {
@@ -275,7 +333,9 @@ public class GeneralOrder extends Order {
     private Market market;
     private DecimalAmount volume;
     private DecimalAmount limitPrice;
+    private DecimalAmount stopAmount;
     private DecimalAmount stopPrice;
+    private DecimalAmount targetAmount;
     private DecimalAmount targetPrice;
     private DecimalAmount trailingStopPrice;
     private Amount forcastedFees;

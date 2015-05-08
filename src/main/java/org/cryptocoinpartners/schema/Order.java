@@ -100,6 +100,16 @@ public abstract class Order extends Event {
     @Nullable
     @Transient
     @Column(insertable = false, updatable = false)
+    public abstract Amount getStopAmount();
+
+    @Nullable
+    @Transient
+    @Column(insertable = false, updatable = false)
+    public abstract Amount getTargetAmount();
+
+    @Nullable
+    @Transient
+    @Column(insertable = false, updatable = false)
     public abstract Amount getStopPrice();
 
     @Nullable
@@ -119,9 +129,13 @@ public abstract class Order extends Event {
     @Transient
     public abstract Amount getUnfilledVolume();
 
+    public abstract void setStopAmount(DecimalAmount stopAmount);
+
+    public abstract void setTargetAmount(DecimalAmount targetAmount);
+
     public abstract void setStopPrice(DecimalAmount stopPrice);
 
-    public abstract void setTargetPrice(DecimalAmount stopPrice);
+    public abstract void setTargetPrice(DecimalAmount targetPrice);
 
     public abstract void setTrailingStopPrice(DecimalAmount trailingStopPrice);
 

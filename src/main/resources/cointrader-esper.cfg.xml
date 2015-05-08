@@ -18,15 +18,14 @@
 	<engine-settings>
 		<defaults>
 			<threading>
-			     <!--  <threadpool-inbound enabled="true" num-threads="1"/> -->
-      				<!--     <threadpool-outbound enabled="true" num-threads="1"/> -->
+			      <!-- <threadpool-inbound enabled="true" num-threads="1"/>-->
+      				<!--   <threadpool-outbound enabled="true" num-threads="1"/> -->
      				<!-- <threadpool-timerexec enabled="true" num-threads="1"/> -->
       				<!--  <threadpool-routeexec enabled="true" num-threads="1"/> -->
-				<internal-timer enabled="false" msec-resolution="500"/>
-				    <insert-into-dispatch preserve-order="true" timeout-msec="10" locking="spin"/>
+				<internal-timer enabled="true" msec-resolution="500"/>
+				<insert-into-dispatch preserve-order="true" timeout-msec="5000" locking="spin"/>
   				<threading engine-fairlock="true"/>
-				<listener-dispatch preserve-order="true" timeout-msec="100" locking="spin"/> 
-	
+				<listener-dispatch preserve-order="true" timeout-msec="5000" locking="spin"/>
 			</threading>
 			<expression udf-cache="false"/>
 			<execution prioritized="true"/>			

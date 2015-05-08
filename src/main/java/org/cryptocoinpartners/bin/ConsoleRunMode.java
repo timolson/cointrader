@@ -31,6 +31,7 @@ import org.cryptocoinpartners.schema.Holding;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.StrategyInstance;
 import org.cryptocoinpartners.schema.Transaction;
+import org.cryptocoinpartners.util.PersistUtil;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
@@ -171,6 +172,7 @@ public class ConsoleRunMode extends RunMode {
             DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
             Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
             context.publish(initialCredit);
+            PersistUtil.insert(initialCredit);
 
         }
         strategyInstance.getStrategy().init();

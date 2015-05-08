@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.schema;
 
 import javax.persistence.Basic;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.Transient;
 
@@ -13,6 +14,7 @@ import org.slf4j.LoggerFactory;
  * @author Tim Olson
  */
 @Entity
+@Cacheable
 public abstract class Asset extends EntityBase {
 
     public static Asset forSymbol(String symbol) {

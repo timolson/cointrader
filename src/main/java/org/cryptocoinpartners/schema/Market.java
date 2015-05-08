@@ -6,10 +6,14 @@ import java.util.Collection;
 import java.util.List;
 
 import javax.persistence.Basic;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.ManyToOne;
+import javax.persistence.NamedQuery;
 import javax.persistence.NoResultException;
 import javax.persistence.PostPersist;
+import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FeeMethod;
@@ -22,6 +26,9 @@ import org.cryptocoinpartners.util.RemainderHandler;
  * @author Tim Olson
  */
 @Entity
+@Cacheable
+@NamedQuery(name = "Market.findByMarket", query = "select m from Market m where exchange=?1 and listing=?2")
+@Table(indexes = { @Index(columnList = "exchange"), @Index(columnList = "listing"), @Index(columnList = "active") })
 public class Market extends EntityBase {
 
     public static Collection<Market> findAll() {
@@ -41,9 +48,9 @@ public class Market extends EntityBase {
     }
 
     public static Market findOrCreate(Exchange exchange, Listing listing, double quoteBasis, double volumeBasis) {
-        final String queryStr = "select m from Market m where exchange=?1 and listing=?2";
+        // final String queryStr = "select m from Market m where exchange=?1 and listing=?2";
         try {
-            return PersistUtil.queryOne(Market.class, queryStr, exchange, listing);
+            return PersistUtil.namedQueryOne(Market.class, "Market.findByMarket", exchange, listing);
         } catch (NoResultException e) {
             final Market ml = new Market(exchange, listing, quoteBasis, volumeBasis);
             PersistUtil.insert(ml);
@@ -175,6 +182,7 @@ public class Market extends EntityBase {
     }
 
     public static Market forSymbol(String marketSymbol) {
+
         for (Market market : findAll()) {
             if (market.getSymbol().equalsIgnoreCase(marketSymbol))
                 return market;

@@ -27,10 +27,19 @@ public class PositionUpdate extends Event {
         return type;
     }
 
-    public PositionUpdate(Position position, Market market, PositionType type) {
+    public PositionType getLastType() {
+        return lastType;
+    }
+
+    public void setLastType(PositionType lastType) {
+        this.lastType = lastType;
+    }
+
+    public PositionUpdate(Position position, Market market, PositionType lastType, PositionType type) {
         this.position = position;
         this.market = market;
         this.type = type;
+        this.lastType = lastType;
     }
 
     // JPA
@@ -45,12 +54,13 @@ public class PositionUpdate extends Event {
         this.market = market;
     }
 
-    protected void setType(PositionType type) {
+    public void setType(PositionType type) {
         this.type = type;
     }
 
     private Position position;
     private PositionType type;
+    private PositionType lastType;
     private Market market;
 
 }

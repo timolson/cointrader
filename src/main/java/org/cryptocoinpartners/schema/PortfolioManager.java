@@ -103,7 +103,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
     @When("@Priority(7) select * from Transaction")
     public void handleTransaction(Transaction transaction) {
-        PersistUtil.insert(transaction);
+        //  PersistUtil.insert(transaction);
         //	Transaction tans = new Transaction(this, position.getExchange(), position.getAsset(), TransactionType.CREDIT, position.getVolume(),
         //		position.getAvgPrice());
         //context.route(transaction);
@@ -121,6 +121,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
             Exchange exchange = transaction.getExchange();
             // Add transaction to approraite portfolio
             portfolio.addTransaction(transaction);
+            //  portfolioService.
             Position position;
             // update postion
             if (type == TransactionType.BUY || type == TransactionType.SELL) {
@@ -140,9 +141,11 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
                     Transaction initialDedit = new Transaction(transaction.getPortfolio(), transaction.getExchange(), transaction.getCurrency(),
                             TransactionType.DEBIT, transaction.getAmount().negate());
                     context.route(initialDedit);
+                    PersistUtil.insert(initialDedit);
                     Transaction initialCredit = new Transaction(transaction.getPortfolio(), transaction.getExchange(), transaction.getPortfolio()
                             .getBaseAsset(), TransactionType.CREDIT, transaction.getAmount().times(tradedRate.getPrice(), Remainder.ROUND_EVEN));
                     context.route(initialCredit);
+                    PersistUtil.insert(initialCredit);
 
                 }
             }

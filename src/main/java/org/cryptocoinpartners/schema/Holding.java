@@ -27,12 +27,12 @@ public class Holding extends EntityBase {
         this.asset = asset;
     }
 
-    @ManyToOne(optional = false)
+    @ManyToOne(optional = true)
     public Exchange getExchange() {
         return exchange;
     }
 
-    @OneToOne(optional = false)
+    @OneToOne(optional = true)
     public Asset getAsset() {
         return asset;
     }

@@ -3,10 +3,15 @@ package org.cryptocoinpartners.schema;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.ManyToOne;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
 import javax.persistence.NoResultException;
 import javax.persistence.PostPersist;
+import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FeeMethod;
@@ -17,6 +22,10 @@ import org.cryptocoinpartners.util.PersistUtil;
  */
 @SuppressWarnings("UnusedDeclaration")
 @Entity
+@Cacheable
+@NamedQueries({ @NamedQuery(name = "Listing.findByQuoteBase", query = "select a from Listing a where base=?1 and quote=?2 and prompt IS NULL"),
+        @NamedQuery(name = "Listing.findByQuoteBasePrompt", query = "select a from Listing a where base=?1 and quote=?2 and prompt=?3") })
+@Table(indexes = { @Index(columnList = "base"), @Index(columnList = "quote"), @Index(columnList = "prompt") })
 //@Table(name = "listing", uniqueConstraints = { @UniqueConstraint(columnNames = { "base", "quote", "prompt" }),
 //@UniqueConstraint(columnNames = { "base", "quote" }) })
 public class Listing extends EntityBase {
@@ -52,7 +61,7 @@ public class Listing extends EntityBase {
     public static Listing forPair(Asset base, Asset quote) {
 
         try {
-            Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2 and prompt IS NULL", base, quote);
+            Listing listing = PersistUtil.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBase", base, quote);
             if (listing == null) {
                 listing = new Listing(base, quote);
                 PersistUtil.insert(listing);
@@ -68,7 +77,7 @@ public class Listing extends EntityBase {
     public static Listing forPair(Asset base, Asset quote, Prompt prompt) {
         try {
 
-            Listing listing = PersistUtil.queryZeroOne(Listing.class, "select a from Listing a where base=?1 and quote=?2 and prompt=?3", base, quote, prompt);
+            Listing listing = PersistUtil.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBasePrompt", base, quote, prompt);
             if (listing == null) {
                 listing = new Listing(base, quote, prompt);
                 PersistUtil.insert(listing);
@@ -97,7 +106,7 @@ public class Listing extends EntityBase {
     protected double getMultiplier() {
         if (prompt != null)
             return prompt.getMultiplier();
-        return getTickValue() * getTickSize();
+        return getContractSize() * getTickSize();
     }
 
     @Transient

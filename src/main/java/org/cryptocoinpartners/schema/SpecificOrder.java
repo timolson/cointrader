@@ -5,7 +5,6 @@ import java.util.Collection;
 
 import javax.annotation.Nullable;
 import javax.persistence.Basic;
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
@@ -121,7 +120,7 @@ public class SpecificOrder extends Order {
     }
 
     @Override
-    @ManyToOne(optional = false, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+    @ManyToOne(optional = false)
     public Market getMarket() {
         return market;
     }
@@ -162,6 +161,18 @@ public class SpecificOrder extends Order {
         if (limitPrice == null)
             limitPrice = amount().fromPriceCount(limitPriceCount);
         return limitPrice;
+    }
+
+    @Override
+    @Transient
+    public DiscreteAmount getStopAmount() {
+        return null;
+    }
+
+    @Override
+    @Transient
+    public DiscreteAmount getTargetAmount() {
+        return null;
     }
 
     @Override
@@ -272,6 +283,18 @@ public class SpecificOrder extends Order {
 
     public void setPlacementCount(int placementCount) {
         this.placementCount = placementCount;
+
+    }
+
+    @Override
+    public void setStopAmount(DecimalAmount stopAmount) {
+        throw new NotImplementedException();
+
+    }
+
+    @Override
+    public void setTargetAmount(DecimalAmount targetAmount) {
+        throw new NotImplementedException();
 
     }
 

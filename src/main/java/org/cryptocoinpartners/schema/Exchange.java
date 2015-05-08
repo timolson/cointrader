@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema;
 import java.util.List;
 
 import javax.persistence.Basic;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 
@@ -13,6 +14,7 @@ import org.cryptocoinpartners.util.PersistUtil;
  * @author Tim Olson
  */
 @Entity
+@Cacheable
 public class Exchange extends EntityBase {
 
     public static Exchange forSymbolOrCreate(String symbol) {

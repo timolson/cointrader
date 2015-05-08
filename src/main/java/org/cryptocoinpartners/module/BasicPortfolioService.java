@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
@@ -18,7 +19,6 @@ import org.cryptocoinpartners.schema.Asset;
 import org.cryptocoinpartners.schema.DecimalAmount;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Exchange;
-import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Offer;
@@ -30,6 +30,7 @@ import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.PortfolioServiceException;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.FeesUtil;
+import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
 
@@ -46,6 +47,7 @@ import com.espertech.esper.client.deploy.ParseException;
 public class BasicPortfolioService implements PortfolioService {
 
     private final ConcurrentHashMap<Asset, Amount> allPnLs;
+    private static Object lock = new Object();
 
     public BasicPortfolioService(Portfolio portfolio) {
         this.portfolio = portfolio;
@@ -112,7 +114,7 @@ public class BasicPortfolioService implements PortfolioService {
 
     @Override
     @Nullable
-    public Collection<Fill> getPositions(Asset asset, Exchange exchange) {
+    public Collection<Position> getPositions(Asset asset, Exchange exchange) {
         return portfolio.getPositions(asset, exchange);
 
     }
@@ -145,9 +147,7 @@ public class BasicPortfolioService implements PortfolioService {
         Amount availableBalance = DecimalAmount.ZERO;
         ConcurrentHashMap<Asset, Amount> availableBalances = new ConcurrentHashMap<>();
 
-        Iterator<Transaction> itt = getTrades().iterator();
-        while (itt.hasNext()) {
-            Transaction transaction = itt.next();
+        for (Transaction transaction : getTrades()) {
             if (availableBalances.get(transaction.getAsset()) != null) {
 
                 availableBalance = availableBalances.get(transaction.getAsset());
@@ -163,109 +163,127 @@ public class BasicPortfolioService implements PortfolioService {
 
     @Override
     @Transient
-    public ConcurrentHashMap<Asset, Amount> getCashBalances() {
+    public Map<Asset, Amount> getCashBalances() {
+        synchronized (lock) {
+            if (balances == null || balances.isEmpty())
 
-        // sum of all transactions that belongs to this strategy
-        ConcurrentHashMap<Asset, Amount> balances = new ConcurrentHashMap<>();
-        Amount balance = DecimalAmount.ZERO;
-        Iterator<Transaction> itt = getTrades().iterator();
-        while (itt.hasNext()) {
-            balance = DecimalAmount.ZERO;
+                return getCurrentCashBalances(true);
 
-            Transaction transaction = itt.next();
-            if (balances.get(transaction.getAsset()) != null) {
+            else
+                //     synchronized (lock) {
 
-                balance = balances.get(transaction.getAsset());
-
-            }
-            Amount tranCost = transaction.getCost();
-            balance = balance.plus(tranCost);
-            balances.put(transaction.getAsset(), balance);
-
+                return getCurrentCashBalances(true);
         }
+    }
 
-        // plus part of all cashFlows
-        //Amount cashFlows = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
+    @Transient
+    private Map<Asset, Amount> getCurrentCashBalances(boolean reset) {
+        if (reset) {
+            // sum of all transactions that belongs to this strategy
+            balances = new ConcurrentHashMap<Asset, Amount>();
+            ConcurrentHashMap<Asset, Amount> bals = new ConcurrentHashMap<Asset, Amount>();
+            // balances.hashCode();
+            Amount balance = DecimalAmount.ZERO;
+            // tradesHasgetTrades().hashCode()
+            Iterator<Transaction> itt = getTrades().iterator();
+            while (itt.hasNext()) {
+                balance = DecimalAmount.ZERO;
 
-        Iterator<Transaction> itc = getCashFlows().iterator();
-        while (itc.hasNext()) {
-            Amount cashFlows = DecimalAmount.ZERO;
-            Transaction cashFlowTransaction = itc.next();
-            if (balances.get(cashFlowTransaction.getCurrency()) != null) {
+                Transaction transaction = itt.next();
+                if (bals.get(transaction.getAsset()) != null) {
 
-                cashFlows = balances.get(cashFlowTransaction.getCurrency());
-            }
-            Amount tranCost = cashFlowTransaction.getCost();
-            cashFlows = cashFlows.plus(tranCost);
-            balances.put(cashFlowTransaction.getCurrency(), cashFlows);
-
-        }
-        //Amount amount = balance.plus(cashFlows);
-
-        Iterator<Asset> it = getRealisedPnLByMarket().keySet().iterator();
-        while (it.hasNext()) {
-            Asset asset = it.next();
-            Iterator<Exchange> ite = getRealisedPnLByMarket().get(asset).keySet().iterator();
-            while (ite.hasNext()) {
-                Exchange exchange = ite.next();
-                Iterator<Listing> itm = getRealisedPnLByMarket().get(asset).get(exchange).keySet().iterator();
-                while (itm.hasNext()) {
-                    Listing listing = itm.next();
-                    Market market = Market.findOrCreate(exchange, listing);
-
-                    Amount realisedPnL = getRealisedPnLByMarket().get(asset).get(exchange).get(listing);
-                    // need to change this to the market and check the margin.
-                    if (!realisedPnL.isZero()) {
-                        if (balances.get(asset) != null) {
-
-                            balance = balances.get(asset);
-
-                        }
-                        balance = balance.plus(realisedPnL);
-                        balances.put(asset, balance);
-
-                    }
+                    balance = bals.get(transaction.getAsset());
 
                 }
+                Amount tranCost = transaction.getCost();
+                balance = balance.plus(tranCost);
+                bals.put(transaction.getAsset(), balance);
+
             }
 
-        }
+            // plus part of all cashFlows
+            //Amount cashFlows = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
 
-        Amount transferCredits = DecimalAmount.ZERO;
-        Amount transferDebits = DecimalAmount.ZERO;
-        Iterator<Transaction> itr = getTransfers().iterator();
-        while (itr.hasNext()) {
-            Transaction transactionTransaction = itr.next();
-            if (balances.get(transactionTransaction.getCurrency()) != null) {
+            Iterator<Transaction> itc = getCashFlows().iterator();
+            while (itc.hasNext()) {
+                Amount cashFlows = DecimalAmount.ZERO;
+                Transaction cashFlowTransaction = itc.next();
+                if (bals.get(cashFlowTransaction.getCurrency()) != null) {
 
-                transferDebits = balances.get(transactionTransaction.getCurrency());
+                    cashFlows = bals.get(cashFlowTransaction.getCurrency());
+                }
+                Amount tranCost = cashFlowTransaction.getCost();
+                cashFlows = cashFlows.plus(tranCost);
+                bals.put(cashFlowTransaction.getCurrency(), cashFlows);
+
             }
-            if (balances.get(transactionTransaction.getAsset()) != null) {
+            //Amount amount = balance.plus(cashFlows);
 
-                transferCredits = balances.get(transactionTransaction.getAsset());
+            Iterator<Asset> it = getRealisedPnLByMarket().keySet().iterator();
+            while (it.hasNext()) {
+                Asset asset = it.next();
+                Iterator<Exchange> ite = getRealisedPnLByMarket().get(asset).keySet().iterator();
+                while (ite.hasNext()) {
+                    Exchange exchange = ite.next();
+                    Iterator<Listing> itm = getRealisedPnLByMarket().get(asset).get(exchange).keySet().iterator();
+                    while (itm.hasNext()) {
+                        Listing listing = itm.next();
+                        Market market = Market.findOrCreate(exchange, listing);
+
+                        Amount realisedPnL = getRealisedPnLByMarket().get(asset).get(exchange).get(listing);
+                        // need to change this to the market and check the margin.
+                        if (!realisedPnL.isZero()) {
+                            if (bals.get(asset) != null) {
+
+                                balance = bals.get(asset);
+
+                            }
+                            balance = balance.plus(realisedPnL);
+                            bals.put(asset, balance);
+
+                        }
+
+                    }
+                }
+
             }
 
-            Amount tranCost = transactionTransaction.getCost();
-            transferCredits = transferCredits.plus(tranCost);
-            transferDebits = transferDebits.plus(transactionTransaction.getAmount());
-            balances.put(transactionTransaction.getCurrency(), transferDebits);
-            balances.put(transactionTransaction.getAsset(), transferCredits);
+            Amount transferCredits = DecimalAmount.ZERO;
+            Amount transferDebits = DecimalAmount.ZERO;
+            Iterator<Transaction> itr = getTransfers().iterator();
+            while (itr.hasNext()) {
+                Transaction transactionTransaction = itr.next();
+                if (bals.get(transactionTransaction.getCurrency()) != null) {
+
+                    transferDebits = bals.get(transactionTransaction.getCurrency());
+                }
+                if (bals.get(transactionTransaction.getAsset()) != null) {
+
+                    transferCredits = bals.get(transactionTransaction.getAsset());
+                }
+
+                Amount tranCost = transactionTransaction.getCost();
+                transferCredits = transferCredits.plus(tranCost);
+                transferDebits = transferDebits.plus(transactionTransaction.getAmount());
+                bals.put(transactionTransaction.getCurrency(), transferDebits);
+                bals.put(transactionTransaction.getAsset(), transferCredits);
+            }
+            //
+            balances = bals;
+            //   }
 
         }
 
         return balances;
     }
 
-    @Override
     @Transient
     @SuppressWarnings("null")
-    public List<Transaction> getCashFlows() {
+    private List<Transaction> getCashFlows() {
         // return all CREDIT,DEBIT,INTREST,FEES and REALISED PnL
 
         ArrayList<Transaction> cashFlows = new ArrayList<>();
-        Iterator<Transaction> it = portfolio.getTransactions().iterator();
-        while (it.hasNext()) {
-            Transaction transaction = it.next();
+        for (Transaction transaction : portfolio.getTransactions()) {
             if (transaction.getType() == TransactionType.CREDIT || transaction.getType() == TransactionType.DEBIT
                     || transaction.getType() == TransactionType.INTREST || transaction.getType() == TransactionType.FEES
                     || transaction.getType() == TransactionType.REALISED_PROFIT_LOSS) {
@@ -276,13 +294,11 @@ public class BasicPortfolioService implements PortfolioService {
         return cashFlows;
     }
 
-    public List<Transaction> getTransfers() {
+    private List<Transaction> getTransfers() {
         // return all CREDIT,DEBIT,INTREST,FEES and REALISED PnL
 
         ArrayList<Transaction> transfers = new ArrayList<>();
-        Iterator<Transaction> it = portfolio.getTransactions().iterator();
-        while (it.hasNext()) {
-            Transaction transaction = it.next();
+        for (Transaction transaction : portfolio.getTransactions()) {
             if (transaction.getType() == TransactionType.REBALANCE) {
                 transfers.add(transaction);
             }
@@ -291,20 +307,20 @@ public class BasicPortfolioService implements PortfolioService {
         return transfers;
     }
 
-    @Override
     @Transient
     @SuppressWarnings("null")
-    public List<Transaction> getTrades() {
+    private List<Transaction> getTrades() {
         //return all BUY and SELL
         ArrayList<Transaction> trades = new ArrayList<>();
-        Iterator<Transaction> it = portfolio.getTransactions().iterator();
-        while (it.hasNext()) {
-            Transaction transaction = it.next();
-
+        //  int transHashcode = portfolio.getTransactions().hashCode();
+        // log.info("transaction hascode" + transHashcode);
+        for (Transaction transaction : portfolio.getTransactions()) {
             if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL) {
                 trades.add(transaction);
             }
         }
+        // transactionsHashCode = portfolio.getTransactions().hashCode();
+
         return trades;
     }
 
@@ -372,9 +388,8 @@ public class BasicPortfolioService implements PortfolioService {
         //Amount marketValue = new DiscreteAmount(0, 0.01);
         ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
         //portfolio.getPositions().keySet()
-        Iterator<Position> it = portfolio.getPositions().iterator();
-        while (it.hasNext()) {
-            Position position = it.next();
+
+        for (Position position : portfolio.getPositions()) {
 
             if (position.isOpen()) {
                 if (marketValues.get(position.getAsset()) != null) {
@@ -399,9 +414,7 @@ public class BasicPortfolioService implements PortfolioService {
         //Amount marketValue = new DiscreteAmount(0, 0.01);
         ConcurrentHashMap<Asset, Amount> unrealisedPnLs = new ConcurrentHashMap<>();
         //portfolio.getPositions().keySet()
-        Iterator<Position> it = portfolio.getPositions().iterator();
-        while (it.hasNext()) {
-            Position position = it.next();
+        for (Position position : portfolio.getPositions()) {
 
             if (position.isOpen()) {
                 if (unrealisedPnLs.get(position.getAsset()) != null) {
@@ -432,10 +445,7 @@ public class BasicPortfolioService implements PortfolioService {
         Amount baseMarketValue = DecimalAmount.ZERO;
 
         ConcurrentHashMap<Asset, Amount> marketValues = getMarketValues();
-
-        Iterator<Asset> it = marketValues.keySet().iterator();
-        while (it.hasNext()) {
-            Asset baseAsset = it.next();
+        for (Asset baseAsset : marketValues.keySet()) {
             Listing listing = Listing.forPair(baseAsset, quoteAsset);
             Offer rate = quotes.getImpliedBestAskForListing(listing);
             baseMarketValue = baseMarketValue.plus(marketValues.get(baseAsset).times(rate.getPrice(), Remainder.ROUND_EVEN));
@@ -460,10 +470,8 @@ public class BasicPortfolioService implements PortfolioService {
         Amount marketValue = DecimalAmount.ZERO;
 
         ConcurrentHashMap<Asset, Amount> marketValues = getMarketValues();
+        for (Asset baseAsset : marketValues.keySet()) {
 
-        Iterator<Asset> it = marketValues.keySet().iterator();
-        while (it.hasNext()) {
-            Asset baseAsset = it.next();
             if (baseAsset.equals(quoteAsset)) {
                 marketValue = marketValue.plus(marketValues.get(baseAsset));
             }
@@ -486,10 +494,7 @@ public class BasicPortfolioService implements PortfolioService {
         Amount baseUnrealisedPnL = DecimalAmount.ZERO;
 
         ConcurrentHashMap<Asset, Amount> unrealisedPnLs = getUnrealisedPnLs();
-
-        Iterator<Asset> it = unrealisedPnLs.keySet().iterator();
-        while (it.hasNext()) {
-            Asset baseAsset = it.next();
+        for (Asset baseAsset : unrealisedPnLs.keySet()) {
             Listing listing = Listing.forPair(baseAsset, quoteAsset);
             Offer rate = quotes.getImpliedBestAskForListing(listing);
             baseUnrealisedPnL = baseUnrealisedPnL.plus(unrealisedPnLs.get(baseAsset).times(rate.getPrice(), Remainder.ROUND_EVEN));
@@ -513,9 +518,7 @@ public class BasicPortfolioService implements PortfolioService {
 
         ConcurrentHashMap<Asset, Amount> unrealisedPnLs = getUnrealisedPnLs();
 
-        Iterator<Asset> it = unrealisedPnLs.keySet().iterator();
-        while (it.hasNext()) {
-            Asset baseAsset = it.next();
+        for (Asset baseAsset : unrealisedPnLs.keySet()) {
             if (baseAsset.equals(quoteAsset)) {
                 unrealisedPnL = unrealisedPnL.plus(unrealisedPnLs.get(baseAsset));
             }
@@ -538,10 +541,7 @@ public class BasicPortfolioService implements PortfolioService {
         //Amount baseCashBalance = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
 
         ConcurrentHashMap<Asset, Amount> realisedPnLs = getRealisedPnLs();
-
-        Iterator<Asset> itp = realisedPnLs.keySet().iterator();
-        while (itp.hasNext()) {
-            Asset baseAsset = itp.next();
+        for (Asset baseAsset : realisedPnLs.keySet()) {
             Listing listing = Listing.forPair(baseAsset, quoteAsset);
             Offer rate = quotes.getImpliedBestAskForListing(listing);
             Amount localPnL = realisedPnLs.get(baseAsset);
@@ -564,10 +564,7 @@ public class BasicPortfolioService implements PortfolioService {
         //Amount baseCashBalance = new DiscreteAmount(0, portfolio.getBaseAsset().getBasis());
 
         ConcurrentHashMap<Asset, Amount> realisedPnLs = getRealisedPnLs();
-
-        Iterator<Asset> itp = realisedPnLs.keySet().iterator();
-        while (itp.hasNext()) {
-            Asset baseAsset = itp.next();
+        for (Asset baseAsset : realisedPnLs.keySet()) {
             if (baseAsset.equals(quoteAsset)) {
 
                 Amount localPnL = realisedPnLs.get(baseAsset);
@@ -582,11 +579,8 @@ public class BasicPortfolioService implements PortfolioService {
     @Transient
     public Amount getCashBalance(Asset quoteAsset) {
         Amount cashBalance = DecimalAmount.ZERO;
-        ConcurrentHashMap<Asset, Amount> cashBalances = getCashBalances();
-
-        Iterator<Asset> it = cashBalances.keySet().iterator();
-        while (it.hasNext()) {
-            Asset baseAsset = it.next();
+        Map<Asset, Amount> cashBalances = getCashBalances();
+        for (Asset baseAsset : cashBalances.keySet()) {
             if (baseAsset.equals(quoteAsset)) {
                 //	Listing listing = Listing.forPair(baseAsset, quoteAsset);
                 //Offer rate = quotes.getImpliedBestAskForListing(listing);
@@ -605,11 +599,8 @@ public class BasicPortfolioService implements PortfolioService {
     @Transient
     public Amount getBaseCashBalance(Asset quoteAsset) {
         Amount cashBalance = DecimalAmount.ZERO;
-        ConcurrentHashMap<Asset, Amount> cashBalances = getCashBalances();
-
-        Iterator<Asset> it = cashBalances.keySet().iterator();
-        while (it.hasNext()) {
-            Asset baseAsset = it.next();
+        Map<Asset, Amount> cashBalances = getCashBalances();
+        for (Asset baseAsset : cashBalances.keySet()) {
 
             Listing listing = Listing.forPair(baseAsset, quoteAsset);
             Offer rate = quotes.getImpliedBestAskForListing(listing);
@@ -628,10 +619,7 @@ public class BasicPortfolioService implements PortfolioService {
     public Amount getAvailableBalance(Asset quoteAsset) {
         Amount marginBalance = DecimalAmount.ZERO;
         ConcurrentHashMap<Asset, Amount> margins = getMargins(quoteAsset);
-
-        Iterator<Asset> it = margins.keySet().iterator();
-        while (it.hasNext()) {
-            Asset baseAsset = it.next();
+        for (Asset baseAsset : margins.keySet()) {
             Listing listing = Listing.forPair(baseAsset, quoteAsset);
             //Offer rate = quotes.getImpliedBestAskForListing(listing);
             Amount localMargin = margins.get(baseAsset);
@@ -649,10 +637,7 @@ public class BasicPortfolioService implements PortfolioService {
     public Amount getAvailableBaseBalance(Asset quoteAsset) {
         Amount marginBalance = DecimalAmount.ZERO;
         ConcurrentHashMap<Asset, Amount> margins = getMargins(quoteAsset);
-
-        Iterator<Asset> it = margins.keySet().iterator();
-        while (it.hasNext()) {
-            Asset baseAsset = it.next();
+        for (Asset baseAsset : margins.keySet()) {
             Listing listing = Listing.forPair(baseAsset, quoteAsset);
             Offer rate = quotes.getImpliedBestAskForListing(listing);
             Amount localMargin = margins.get(baseAsset);
@@ -666,15 +651,13 @@ public class BasicPortfolioService implements PortfolioService {
     }
 
     @Transient
-    public ConcurrentHashMap<Asset, Amount> getMargins(Asset quoteAsset) {
+    private ConcurrentHashMap<Asset, Amount> getMargins(Asset quoteAsset) {
         Amount baseAvailableBalance = DecimalAmount.ZERO;
         Amount totalMargin = DecimalAmount.ZERO;
 
         //Amount baseCashBalance = getCashBalance(quoteAsset);
         ConcurrentHashMap<Asset, Amount> margins = new ConcurrentHashMap<Asset, Amount>();
-        Iterator<Position> it = portfolio.getPositions().iterator();
-        while (it.hasNext()) {
-            Position position = it.next();
+        for (Position position : portfolio.getPositions()) {
             Asset baseAsset = position.getMarket().getTradedCurrency();
             if (position.isOpen() && baseAsset.equals(quoteAsset)) {
                 // calucate total margin
@@ -694,7 +677,15 @@ public class BasicPortfolioService implements PortfolioService {
     @Override
     public void CreateTransaction(Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price) {
         Transaction transaction = new Transaction(portfolio, exchange, asset, type, amount, price);
+
         context.route(transaction);
+        PersistUtil.insert(transaction);
+    }
+
+    @Override
+    public void resetBalances() {
+        getCurrentCashBalances(true);
+
     }
 
     @Override
@@ -739,6 +730,11 @@ public class BasicPortfolioService implements PortfolioService {
     protected Portfolio portfolio;
     @Inject
     private Logger log;
+    private static int transactionsHashCode;
+    private static int tradesHashCode;
+    private static int marginsHashCode;
+
+    private static Map<Asset, Amount> balances;
 
     @Override
     public void setPortfolio(Portfolio portfolio) {
