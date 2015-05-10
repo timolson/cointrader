@@ -18,7 +18,9 @@ import org.cryptocoinpartners.schema.Holding;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.StrategyInstance;
 import org.cryptocoinpartners.schema.Transaction;
+import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.util.PersistUtil;
+import org.cryptocoinpartners.util.Replay;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
@@ -37,16 +39,16 @@ public class PaperTradeRunMode extends RunMode {
     final ExecutorService service = Executors.newSingleThreadExecutor();
     private final Instant end = new DateTime(DateTime.now()).toInstant();
     Semaphore paperSemaphore = new Semaphore(0);
-    private final Instant start = end.minus(Duration.standardHours(2)).toInstant();
+    private final Instant start = end.minus(Duration.standardHours(5)).toInstant();
 
     // new DateTime(2013, 12, 20, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
     @Override
     public void run(Semaphore semaphore) {
         //context = Context.create();
-        //  Replay replay = Replay.between(start, end, true, paperSemaphore);
-        //  context = replay.getContext();
-        context = Context.create();
+        Replay replay = Replay.between(start, end, true, paperSemaphore);
+        context = replay.getContext();
+        // context = Context.create();
         context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
         context.attach(BasicPortfolioService.class);
@@ -65,9 +67,10 @@ public class PaperTradeRunMode extends RunMode {
 
         //}
 
-        //  replay.run();
+        replay.run();
         context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
-
+        OrderService orderService = context.getInjector().getInstance(OrderService.class);
+        orderService.setTradingEnabled(true); //  context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
         // context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
 
         //  context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));

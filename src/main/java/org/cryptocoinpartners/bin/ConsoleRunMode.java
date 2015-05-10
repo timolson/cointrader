@@ -31,6 +31,7 @@ import org.cryptocoinpartners.schema.Holding;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.StrategyInstance;
 import org.cryptocoinpartners.schema.Transaction;
+import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.util.PersistUtil;
 
 import com.beust.jcommander.Parameter;
@@ -121,6 +122,9 @@ public class ConsoleRunMode extends RunMode {
             context.attach(XchangeOrderService.class);
         else
             context.attach(MockOrderService.class);
+
+        OrderService orderService = context.getInjector().getInstance(OrderService.class);
+        orderService.setTradingEnabled(true);
 
         StrategyInstance strategyInstance = new StrategyInstance("ConsoleStrategy");
         context.attachInstance(strategyInstance);

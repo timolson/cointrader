@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.inject.Inject;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.NoResultException;
@@ -32,6 +33,7 @@ import com.google.inject.Singleton;
  */
 @Entity
 @Singleton
+@Cacheable
 public class Portfolio extends EntityBase {
 
     private static Object lock = new Object();

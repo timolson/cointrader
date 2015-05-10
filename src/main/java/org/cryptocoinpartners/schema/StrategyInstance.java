@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import javax.persistence.Cacheable;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.Transient;
@@ -27,6 +28,7 @@ import com.google.inject.Module;
  * @author Tim Olson
  */
 @Entity
+@Cacheable
 public class StrategyInstance extends PortfolioManager implements Context.AttachListener {
 
     public StrategyInstance(String moduleName) {

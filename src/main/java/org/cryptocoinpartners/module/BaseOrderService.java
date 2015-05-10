@@ -61,6 +61,10 @@ public abstract class BaseOrderService implements OrderService {
 
     @Override
     public void placeOrder(Order order) {
+        if (!enableTrading) {
+            log.info("Trading Mode Disabled");
+            return;
+        }
         PersitOrderFill(order);
         CreateTransaction(order, false);
         updateOrderState(order, OrderState.NEW, true);
@@ -197,14 +201,17 @@ public abstract class BaseOrderService implements OrderService {
                     long stopPrice = Math.min((triggerOrder.getStopPrice().toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount(),
                             (price.plus(amount.abs()).toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount());
                     DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggerOrder.getMarket().getPriceBasis()));
-                    triggerOrder.setStopAmount(stopDiscrete);
+                    //  Amount stopAmount = stopDiscrete.minus(triggerOrder.getLimitPrice());
+
+                    triggerOrder.setStopPrice(stopDiscrete);
                     if (triggerOrder.getParentFill() != null)
                         triggerOrder.getParentFill().setStopPriceCount(stopPrice);
                 } else if (triggerOrder.isAsk()) {
                     long stopPrice = Math.max((triggerOrder.getStopPrice().toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount(),
                             (price.minus(amount.abs()).toBasis(triggerOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount());
                     DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggerOrder.getMarket().getPriceBasis()));
-                    triggerOrder.setStopAmount(stopDiscrete);
+                    //Amount stopAmount = stopDiscrete.minus(triggerOrder.getLimitPrice());
+                    triggerOrder.setStopPrice(stopDiscrete);
                     if (triggerOrder.getParentFill() != null)
                         triggerOrder.getParentFill().setStopPriceCount(stopPrice);
 
@@ -229,6 +236,17 @@ public abstract class BaseOrderService implements OrderService {
         if (state == null)
             throw new IllegalStateException("Untracked order " + o);
         return state;
+    }
+
+    @Override
+    public boolean getTradingEnabled() {
+
+        return enableTrading;
+    }
+
+    @Override
+    public void setTradingEnabled(Boolean enableTrading) {
+        this.enableTrading = enableTrading;
     }
 
     @When("@Priority(9) select * from OrderUpdate")
@@ -493,9 +511,9 @@ public abstract class BaseOrderService implements OrderService {
 
                     if (triggeredOrder.getMarket().equals(b.getMarket())) {
                         if (triggeredOrder.isBid()) {
-                            if ((triggeredOrder.getStopPrice() != null && (bid.getPriceCount() >= (triggeredOrder.getStopPrice().toBasis(triggeredOrder
+                            if ((triggeredOrder.getStopPrice() != null && (ask.getPriceCount() >= (triggeredOrder.getStopPrice().toBasis(triggeredOrder
                                     .getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()))
-                                    || (triggeredOrder.getTargetPrice() != null && (bid.getPriceCount() <= (triggeredOrder.getTargetPrice().toBasis(
+                                    || (triggeredOrder.getTargetPrice() != null && (ask.getPriceCount() <= (triggeredOrder.getTargetPrice().toBasis(
                                             triggeredOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()))) {
                                 //convert order to specfic order
                                 SpecificOrder specificOrder = convertGeneralOrderToSpecific((GeneralOrder) triggeredOrder, triggeredOrder.getMarket());
@@ -514,7 +532,7 @@ public abstract class BaseOrderService implements OrderService {
                             } else if (triggeredOrder.getTrailingStopPrice() != null) {
                                 //current price is less than the stop price so I will update the stop price
                                 long stopPrice = Math.min((triggeredOrder.getStopPrice().toBasis(triggeredOrder.getMarket().getPriceBasis(),
-                                        Remainder.ROUND_EVEN)).getCount(), (bid.getPriceCount() + (triggeredOrder.getTrailingStopPrice().toBasis(triggeredOrder
+                                        Remainder.ROUND_EVEN)).getCount(), (ask.getPriceCount() + (triggeredOrder.getTrailingStopPrice().toBasis(triggeredOrder
                                         .getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()));
                                 DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggeredOrder.getMarket().getPriceBasis()));
                                 triggeredOrder.setStopAmount(stopDiscrete);
@@ -523,9 +541,9 @@ public abstract class BaseOrderService implements OrderService {
 
                         }
                         if (triggeredOrder.isAsk()) {
-                            if ((triggeredOrder.getStopPrice() != null && (ask.getPriceCount() <= (triggeredOrder.getStopPrice().toBasis(triggeredOrder
+                            if ((triggeredOrder.getStopPrice() != null && (bid.getPriceCount() <= (triggeredOrder.getStopPrice().toBasis(triggeredOrder
                                     .getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()))
-                                    || (triggeredOrder.getTargetPrice() != null && (ask.getPriceCount() >= (triggeredOrder.getTargetPrice().toBasis(
+                                    || (triggeredOrder.getTargetPrice() != null && (bid.getPriceCount() >= (triggeredOrder.getTargetPrice().toBasis(
                                             triggeredOrder.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()))) {
                                 //Place order
                                 SpecificOrder specificOrder = convertGeneralOrderToSpecific((GeneralOrder) triggeredOrder, triggeredOrder.getMarket());
@@ -546,7 +564,7 @@ public abstract class BaseOrderService implements OrderService {
                                 //&& ((bid.getPriceCount() + order.getTrailingStopPrice().getCount() > (order.getStopPrice().getCount())))) {
                                 //current price is less than the stop price so I will update the stop price
                                 long stopPrice = Math.max((triggeredOrder.getStopPrice().toBasis(triggeredOrder.getMarket().getPriceBasis(),
-                                        Remainder.ROUND_EVEN)).getCount(), (ask.getPriceCount() - (triggeredOrder.getTrailingStopPrice().toBasis(triggeredOrder
+                                        Remainder.ROUND_EVEN)).getCount(), (bid.getPriceCount() - (triggeredOrder.getTrailingStopPrice().toBasis(triggeredOrder
                                         .getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()));
                                 DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggeredOrder.getMarket().getPriceBasis()));
                                 triggeredOrder.setStopAmount(stopDiscrete);
@@ -832,6 +850,7 @@ public abstract class BaseOrderService implements OrderService {
     protected Context context;
     @Inject
     protected Logger log;
+    protected boolean enableTrading = false;
     protected final Map<Order, OrderState> orderStateMap = new ConcurrentHashMap<>();
     @Inject
     protected QuoteService quotes;

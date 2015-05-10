@@ -4,6 +4,7 @@ package org.cryptocoinpartners.schema;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
@@ -31,6 +32,7 @@ import org.slf4j.LoggerFactory;
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @Singleton
+@Cacheable
 public class PortfolioManager extends EntityBase implements Context.AttachListener {
 
     // private BasicPortfolioService portfolioService;

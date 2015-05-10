@@ -63,4 +63,8 @@ public interface OrderService {
 
     Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio);
 
+    void setTradingEnabled(Boolean enableTrading);
+
+    boolean getTradingEnabled();
+
 }
