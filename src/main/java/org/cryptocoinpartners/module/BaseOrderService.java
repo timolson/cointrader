@@ -81,13 +81,37 @@ public abstract class BaseOrderService implements OrderService {
 
     public void findTriggerOrders(Portfolio portfolio) {
 
-        List<Order> orders = PersistUtil.queryList(Order.class,
-                "select o from OrderUpdate u left join u.order o where portfolio = ?1 and u.state=?2 group by o", portfolio, OrderState.TRIGGER);
+        //        SELECT  hex(order_update.order)
+        //        FROM    order_update
+        //                INNER JOIN
+        //                (   SELECT  order_update.order as latestorder, MAX(sequence) AS sequence
+        //                    FROM    order_update
+        //                    GROUP BY order_update.order
+        //                ) MaxP
+        //                    ON MaxP.latestorder = order_update.order
+        //                    AND MaxP.sequence = order_update.sequence
+        //                    where  order_update.state=1;
+        String queryNativeStr = "select * from general_order where id in (SELECT  order_update.order" + " FROM    order_update"
+                + " INNER JOIN  (   SELECT  order_update.order as latestorder, MAX(sequence) AS sequence" + " FROM    order_update GROUP BY order_update.order"
+                + ") MaxP ON MaxP.latestorder = order_update.order AND MaxP.sequence = order_update.sequence" + " where  order_update.state=1)";
 
-        //  List<Order> orders = PersistUtil.queryList(Order.class, " select ou from OrderUpdate ou " + "INNER JOIN "
-        //        + "(   SELECT  oum.order, MAX(oum.sequence) AS sequence " + "FROM    OrderUpdate oum" + "GROUP BY oum.order " + ") MaxP "
-        //       + "ON MaxP.order = ou.order " + "AND MaxP.sequence= ou.sequence " + "left join ou.order o where portfolio = ?1 and u.state=?2", portfolio,
-        //     OrderState.TRIGGER);
+        //"SELECT  order_update.order FROM    order_update INNER JOIN (   SELECT  order_update.order as latestorder, MAX(sequence) AS sequence FROM    order_update GROUP BY order_update.order ) MaxP ON MaxP.latestorder = order_update.order AND MaxP.sequence = order_update.sequence where  order_update.state=1";
+
+        //"SELECT  OrderUpdate.order FROM order_update INNER JOIN (SELECT  order_update.order as latestorder, MAX(sequence) AS sequence FROM    order_update GROUP BY order_update.order ) MaxP ON MaxP.latestorder = order_update.order AND MaxP.sequence = order_update.sequence where  order_update.state=1";
+        //   String queryStr = "SELECT o as latestorder, MAX(sequence) as sequence FROM GROUP BY o";
+
+        String queryStr = "SELECT  order FROM OrderUpdate INNER JOIN (SELECT  order as latestorder, MAX(sequence) as sequence FROM OrderUpdate GROUP BY latestorder) where OrderUpdate.state==?1";
+
+        List<GeneralOrder> orders = PersistUtil.queryNativeList(GeneralOrder.class, queryNativeStr, null);
+
+        //  "select ou from OrderUpdate ou INNER JOIN (SELECT oum.order latestorder, MAX(sequence)  sequence FROM OrderUpdate oum GROUP BY oum.order ) MaxP ON MaxP.latestorder = order_update.order AND MaxP.sequence = order_update.sequence where  ou.state=?1",
+
+        //List<Order> orders = PersistUtil.queryList(Order.class,
+        //      "select o from OrderUpdate u left join u.order o where portfolio = ?1 and u.state=?2 group by o", portfolio, OrderState.TRIGGER);
+        // " GROUP BY oum.order " + 
+        //  List<Order> orders = PersistUtil.queryList(Order.class, "select ou from OrderUpdate ou " + "INNER JOIN "
+        //        + "(SELECT oum.order, max(oum.sequence) AS sequence " + "FROM OrderUpdate oum" + ") MaxP " + "ON MaxP.order = ou.order "
+        //      + "AND MaxP.sequence= ou.sequence " + "left join ou.order o where portfolio = ?1 and ou.state=?2", portfolio, OrderState.TRIGGER);
 
         // and sequence=(select max(sequence) from OrderUpdate where order=o)
         //   List<GeneralOrder> orders = PersistUtil.queryList(GeneralOrder.class, "select o from GeneralOrder o left join o.id OrderUpdate");

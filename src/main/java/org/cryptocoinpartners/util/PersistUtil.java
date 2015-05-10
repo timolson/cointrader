@@ -195,6 +195,25 @@ public class PersistUtil {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public static <T> List<T> queryNativeList(Class<T> resultType, String queryStr, Object... params) {
+        EntityManager em = null;
+        try {
+            em = createEntityManager();
+            final Query query = em.createNativeQuery(queryStr, resultType);
+            if (params != null) {
+                for (int i = 0; i < params.length; i++) {
+                    Object param = params[i];
+                    query.setParameter(i + 1, param); // JPA uses 1-based indexes
+                }
+            }
+            return query.getResultList();
+        } finally {
+            if (em != null)
+                PersistUtilHelper.closeEntityManager();
+        }
+    }
+
     /**
      returns a single result entity.  if none found, a javax.persistence.NoResultException is thrown.
      */
