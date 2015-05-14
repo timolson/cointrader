@@ -2,7 +2,6 @@ package org.cryptocoinpartners.schema;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.ManyToOne;
@@ -57,7 +56,7 @@ public class Transaction extends Event {
         this.setPortfolioName(portfolio);
     }
 
-    public Transaction(Fill fill) throws Exception {
+    public Transaction(Fill fill, Instant creationTime) throws Exception {
         Portfolio portfolio = fill.getOrder().getPortfolio();
         TransactionType transactionType = null;
 
@@ -68,7 +67,7 @@ public class Transaction extends Event {
             // is either  buying base currency and selling quote or selling base currency and buying quote
             transactionType = TransactionType.REBALANCE;
         }
-
+        this.time = creationTime;
         this.asset = fill.getMarket().getTradedCurrency();
         this.assetAmount = this.asset.equals(fill.getMarket().getQuote()) ? fill.getVolume().times(fill.getPrice(), Remainder.ROUND_EVEN).negate() : fill
                 .getVolume().negate();
@@ -91,11 +90,12 @@ public class Transaction extends Event {
 
     }
 
-    public Transaction(Order order) throws Exception {
+    public Transaction(Order order, Instant creationTime) throws Exception {
         Portfolio portfolio = order.getPortfolio();
 
         TransactionType transactionType = order.getVolume().isPositive() ? TransactionType.BUY_RESERVATION : TransactionType.SELL_RESERVATION;
         order.addTransaction(this);
+        this.time = creationTime;
         this.asset = order.getMarket().getTradedCurrency();
 
         //if traded=quote, then do this, if traded== base then just volume
@@ -238,13 +238,15 @@ public class Transaction extends Event {
         return commissionCurrency;
     }
 
-    public @ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+    public @ManyToOne(optional = true)
+    //, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
     // @JoinColumn(name = "`order`")
     Order getOrder() {
         return order;
     }
 
-    public @ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+    public @ManyToOne(optional = true)
+    //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     Fill getFill() {
         return fill;
     }

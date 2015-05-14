@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.schema;
 
+import java.io.Serializable;
 import java.util.UUID;
 
 import javax.persistence.Column;
@@ -14,7 +15,12 @@ import javax.persistence.Version;
  */
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @MappedSuperclass
-public abstract class EntityBase {
+public abstract class EntityBase implements Serializable {
+
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -7893439827939854533L;
 
     @Id
     @Column(columnDefinition = "BINARY(16)", length = 16, updatable = false, nullable = false)
@@ -65,4 +71,5 @@ public abstract class EntityBase {
     }
 
     private UUID id;
+
 }

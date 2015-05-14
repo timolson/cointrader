@@ -10,6 +10,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -46,7 +47,7 @@ public class Position extends Holding {
     //    }
 
     public Position(Fill fill) {
-
+        this.addFill(fill);
         this.exchange = fill.getMarket().getExchange();
         this.market = fill.getMarket();
         this.volume = fill.getVolume();
@@ -61,7 +62,7 @@ public class Position extends Holding {
         this.longAvgStopPrice = fill.getStopPrice() != null && fill.isLong() ? fill.getStopPrice() : DecimalAmount.ZERO;
         this.asset = fill.getMarket().getListing().getBase();
         this.portfolio = fill.getPortfolio();
-        this.addFill(fill);
+
     }
 
     public Position(Collection<Fill> fills) {
@@ -331,7 +332,9 @@ public class Position extends Holding {
     }
 
     @Nullable
+    @Transient
     protected long getVolumeCount() {
+        reset();
         if (hasFills())
             for (Fill fill : getFills()) {
                 volumeCount += fill.getOpenVolumeCount();
@@ -341,7 +344,9 @@ public class Position extends Holding {
     }
 
     @Nullable
+    @Transient
     protected long getLongVolumeCount() {
+        reset();
         if (hasFills())
             for (Fill fill : getFills()) {
                 if (fill.isLong())
@@ -352,7 +357,9 @@ public class Position extends Holding {
     }
 
     @Nullable
+    @Transient
     protected long getShortVolumeCount() {
+        reset();
         if (hasFills())
             for (Fill fill : getFills()) {
                 if (fill.isShort())
@@ -395,6 +402,26 @@ public class Position extends Holding {
 
     }
 
+    protected void Persit() {
+
+        //  if (this.hasFills()) {
+        //     for (Fill fill : this.getFills())
+        //        PersistUtil.merge(fill);
+        // }
+        PersistUtil.insert(this);
+
+    }
+
+    protected void Merge() {
+
+        //  if (this.hasFills()) {
+        //     for (Fill fill : this.getFills())
+        //        PersistUtil.merge(fill);
+        // }
+        PersistUtil.merge(this);
+
+    }
+
     public void addFill(Fill fill) {
         synchronized (lock) {
             getFills().add(fill);
@@ -426,6 +453,7 @@ public class Position extends Holding {
         synchronized (lock) {
             getFills().remove(fill);
         }
+        PersistUtil.merge(fill);
         this.exchange = fill.getMarket().getExchange();
         this.market = fill.getMarket();
         this.portfolio = fill.getPortfolio();
@@ -481,7 +509,7 @@ public class Position extends Holding {
     private long shortVolumeCount;
     private long volumeCount;
     private SpecificOrder order;
-    private Collection<Fill> fills;
+    private Collection<Fill> fills = new ConcurrentLinkedQueue<Fill>();
     private static Object lock = new Object();
 
 }

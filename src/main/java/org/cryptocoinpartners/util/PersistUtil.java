@@ -35,10 +35,10 @@ public class PersistUtil {
 
                 try {
                     for (EntityBase entity : entities) {
-                        //em.refresh(entity);
-                        //if (em.contains(entity))
-                        //   em.merge(entity);
-                        //else
+                        // em.refresh(entity);
+                        // if (em.contains(entity))
+                        ///    em.merge(entity);
+                        // else
                         em.persist(entity);
                         PersistUtilHelper.commit();
                     }
@@ -73,6 +73,7 @@ public class PersistUtil {
 
                 try {
                     for (EntityBase entity : entities) {
+                        // em.find(entity.getClass(), entity.getId());
                         // em.
                         // em.refresh(entity);
                         //if (em.contains(entity))

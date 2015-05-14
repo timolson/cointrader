@@ -63,6 +63,22 @@ public class Portfolio extends EntityBase {
         return allPositions;
     }
 
+    protected @Transient
+    void persistPositions() {
+        for (Asset asset : positions.keySet()) {
+            for (Exchange exchange : positions.get(asset).keySet()) {
+                for (Listing listing : positions.get(asset).get(exchange).keySet()) {
+                    for (TransactionType transactionType : positions.get(asset).get(exchange).get(listing).keySet()) {
+
+                        for (Position position : positions.get(asset).get(exchange).get(listing).get(transactionType)) {
+                            position.Merge();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     public @Transient
     Collection<Position> getPositions() {
         ConcurrentLinkedQueue<Position> allPositions = new ConcurrentLinkedQueue<Position>();
@@ -506,8 +522,7 @@ public class Portfolio extends EntityBase {
         if (assetPositions == null) {
             ConcurrentLinkedQueue<Position> detailPosition = new ConcurrentLinkedQueue<Position>();
             Position detPosition = new Position(fill);
-            //     detPosition.addFill(fill);
-            //  PersistUtil.insert(detPosition);
+            detPosition.Persit();
             detailPosition.add(detPosition);
             ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>> positionType = new ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>();
             positionType.put(transactionType, detailPosition);
@@ -538,8 +553,7 @@ public class Portfolio extends EntityBase {
                 ConcurrentLinkedQueue<Position> detailPosition = new ConcurrentLinkedQueue<Position>();
                 ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>> positionType = new ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>();
                 Position detPosition = new Position(fill);
-                // detPosition.addFill(fill);
-                //   PersistUtil.insert(detPosition);
+                detPosition.Persit();
                 detailPosition.add(detPosition);
                 positionType.put(transactionType, detailPosition);
 
@@ -567,8 +581,8 @@ public class Portfolio extends EntityBase {
                 if (listingPositions == null) {
                     ConcurrentLinkedQueue<Position> listingsDetailPosition = new ConcurrentLinkedQueue<Position>();
                     Position detPosition = new Position(fill);
-                    // detPosition.addFill(fill);
-                    //        PersistUtil.insert(detPosition);
+                    detPosition.Persit();
+
                     listingsDetailPosition.add(detPosition);
                     exchangePositions.get(fill.getMarket().getListing()).put(transactionType, listingsDetailPosition);
                     listingPositions = exchangePositions.get(fill.getMarket().getListing()).get(transactionType);
@@ -584,6 +598,7 @@ public class Portfolio extends EntityBase {
 
                     if (!listingPositions.isEmpty() || listingPositions.peek() != null) {
                         listingPositions.peek().addFill(fill);
+                        listingPositions.peek().Merge();
                         // TODO need to persit the updated postitions
                         //PersistUtil.merge(listingPositions.peek());
 
@@ -591,6 +606,7 @@ public class Portfolio extends EntityBase {
                         Position detPosition = new Position(fill);
                         //   detPosition.addFill(fill);
                         listingPositions.add(detPosition);
+                        detPosition.Persit();
                         //           PersistUtil.insert(detPosition);
                     }
 
@@ -607,12 +623,13 @@ public class Portfolio extends EntityBase {
                     //position.getVolumeCount() 
                     Iterator<Position> itPos = listingPositions.iterator();
                     while (itPos.hasNext()) {
-                        // closing possition
+                        // closing position
                         Position pos = itPos.next();
 
                         Iterator<Fill> itP = pos.getFills().iterator();
-                        while (itP.hasNext()) {
+                        while (itP.hasNext() && pos.hasFills()) {
                             //closing fill
+                            // smoething is not righgt here.
                             Fill p = itP.next();
 
                             //Fill p = itp.next();
@@ -627,11 +644,11 @@ public class Portfolio extends EntityBase {
 
                             //  for (Position openPos : openingListingPositions) {
                             Iterator<Position> itOlp = openingListingPositions.iterator();
-                            while (itOlp.hasNext()) {
+                            while (itOlp.hasNext() && pos.hasFills()) {
                                 // openg postion
                                 Position openPos = itOlp.next();
                                 Iterator<Fill> itOp = openPos.getFills().iterator();
-                                while (itOp.hasNext()) {
+                                while (itOp.hasNext() && pos.hasFills()) {
                                     //open fill
                                     Fill openPosition = itOp.next();
                                     if (Math.abs(p.getOpenVolumeCount()) > 0) {
@@ -639,11 +656,13 @@ public class Portfolio extends EntityBase {
                                         if ((Long.signum(openPosition.getOpenVolumeCount()) + Long.signum(p.getOpenVolumeCount())) != 0) {
                                             if (Math.abs(p.getOpenVolumeCount()) == 0 || Math.abs(openPosition.getOpenVolumeCount()) == 0)
                                                 // openingListingPositions.(openPosition);
-
-                                                if (!openPos.hasFills())
-                                                    openingListingPositions.remove(openPos);
-                                            // itOlp.remove();
+                                                itOp.remove();
                                             openPos.removeFill(openPosition);
+
+                                            if (!openPos.hasFills())
+                                                itOlp.remove();
+                                            //openingListingPositions.remove(openPos);
+
                                             // itOp.remove();
                                             //  openPos.removeFill(openPosition);
 
@@ -701,23 +720,38 @@ public class Portfolio extends EntityBase {
                                         long updatedVolumeCount = p.getOpenVolumeCount() + closingVolumeCount;
                                         //updatedVolumeCount = (p.isShort()) ? updatedVolumeCount * -1 : updatedVolumeCount;
                                         p.setOpenVolumeCount(updatedVolumeCount);
+                                        pos.Merge();
                                         if (Math.abs(updatedVolumeCount) == 0) {
-                                            if (!pos.hasFills())
-                                                listingPositions.remove(pos);
-                                            // itPos.remove();
+                                            //itPos.remove();
+                                            itP.remove();
                                             pos.removeFill(p);
+
+                                            //pos.Merge();
+                                            if (!pos.hasFills())
+                                                itPos.remove();
+                                            //listingPositions.remove(pos);
+
                                             //  itP.remove();
                                             //            PersistUtil.merge(pos);
+
                                             //listingPositions.remove(pos);
                                         }
                                         // listingPositions.remove(p);
+                                        itOp.remove();
                                         openPosition.setOpenVolumeCount(0);
+                                        //openPos.Merge();
                                         //itOp.remove();
+                                        //
+
                                         openPos.removeFill(openPosition);
-                                        //openPos.removeFill(openPosition);
+
+                                        //openPos.Merge();
+                                        //openPos.removeFill(openPosition)
+
                                         //    PersistUtil.merge(openPos);
                                         if (!openPos.hasFills())
-                                            openingListingPositions.remove(openPos);
+                                            itOlp.remove();
+                                        // openingListingPositions.remove(openPos);
                                         //  itOlp.remove();
                                         //
                                         //  openingListingPositions.remove(openPos);
@@ -727,26 +761,40 @@ public class Portfolio extends EntityBase {
                                     } else {
                                         long updatedVolumeCount = openPosition.getOpenVolumeCount() + p.getOpenVolumeCount();
                                         openPosition.setOpenVolumeCount(updatedVolumeCount);
-
+                                        openPos.Merge();
                                         if (Math.abs(updatedVolumeCount) == 0) {
-                                            if (!openPos.hasFills())
-                                                openingListingPositions.remove(openPos);
-                                            //itOlp.remove();
-                                            //itOp.remove();
+                                            itOp.remove();
                                             openPos.removeFill(openPosition);
+
+                                            if (!openPos.hasFills())
+                                                itOlp.remove();
+                                            // openingListingPositions.remove(openPos);
+                                            //
+                                            //
+
                                             //  openPos.removeFill(openPosition);
                                             //    PersistUtil.merge(openPosition);
 
                                             //  openingListingPositions.remove(openPos);
+                                            openPos.Merge();
                                         }
                                         //  openingListingPositions.remove(openPosition);
+                                        itP.remove();
                                         p.setOpenVolumeCount(0);
 
+                                        pos.removeFill(p);
+
                                         if (!pos.hasFills())
-                                            listingPositions.remove(pos);
+                                            itPos.remove();
+                                        // listingPositions.remove(pos);
+                                        // pos.Merge();
                                         //itPos.remove();
-                                        if (itP != null)
-                                            pos.removeFill(p);
+                                        // if (itP != null)
+                                        //if (itPos.hasNext())
+                                        //   
+
+                                        // pos.Merge();
+
                                         //pos.removeFill(p)  itP.remove();
                                         // pos.removeFill(p);
                                         //           PersistUtil.merge(openPosition);
@@ -911,6 +959,7 @@ public class Portfolio extends EntityBase {
         assert fill != null;
         boolean modifiedExistingPosition = false;
         merge(fill);
+        persistPositions();
 
         // if 
 

@@ -1,11 +1,10 @@
 package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.annotation.Nullable;
 import javax.persistence.Basic;
@@ -49,6 +48,7 @@ public abstract class Order extends Event {
     protected static final String SEPARATOR = ",";
 
     @ManyToOne(optional = true)
+    //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     public Order getParentOrder() {
         return parentOrder;
     }
@@ -196,7 +196,8 @@ public abstract class Order extends Event {
     @OneToMany(mappedBy = "order", fetch = FetchType.EAGER)
     public Collection<Fill> getFills() {
         if (fills == null)
-            fills = Collections.synchronizedList(new ArrayList<Fill>());
+            fills = new ConcurrentLinkedQueue<Fill>();
+
         synchronized (lock) {
             return fills;
         }
@@ -206,7 +207,7 @@ public abstract class Order extends Event {
     @OneToMany(mappedBy = "order", fetch = FetchType.EAGER)
     public Collection<Transaction> getTransactions() {
         if (transactions == null)
-            transactions = Collections.synchronizedList(new ArrayList<Transaction>());
+            transactions = new ConcurrentLinkedQueue<Transaction>();
         synchronized (lock) {
             return transactions;
         }
@@ -241,7 +242,7 @@ public abstract class Order extends Event {
     @OneToMany(fetch = FetchType.EAGER)
     public Collection<Order> getChildren() {
         if (children == null)
-            children = new ArrayList<Order>();
+            children = new ConcurrentLinkedQueue<Order>();
         synchronized (lock) {
             return children;
         }

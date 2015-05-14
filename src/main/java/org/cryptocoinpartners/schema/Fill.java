@@ -1,9 +1,8 @@
 package org.cryptocoinpartners.schema;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
@@ -56,7 +55,7 @@ public class Fill extends RemoteEvent {
         this.stopAmountCount = (order.getStopAmount() != null) ? order.getStopAmount().getCount() : 0;
     }
 
-    public @ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE })
+    public @ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE, CascadeType.REFRESH })
     @JoinColumn(name = "`order`")
     SpecificOrder getOrder() {
         return order;
@@ -92,7 +91,7 @@ public class Fill extends RemoteEvent {
     @OneToMany
     public Collection<Order> getChildren() {
         if (children == null)
-            children = new ArrayList<Order>();
+            children = new ConcurrentLinkedQueue<Order>();
         synchronized (lock) {
             return children;
         }
@@ -119,7 +118,8 @@ public class Fill extends RemoteEvent {
     //(fetch = FetchType.EAGER)
     public Collection<Transaction> getTransactions() {
         if (transactions == null)
-            transactions = Collections.synchronizedList(new ArrayList<Transaction>());
+            transactions = new ConcurrentLinkedQueue<Transaction>();
+
         synchronized (lock) {
             return transactions;
         }

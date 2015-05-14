@@ -692,12 +692,13 @@ public abstract class BaseOrderService implements OrderService {
         // this.getClass()
         // context.route(new OrderUpdate(order, oldState, state));
         OrderUpdate orderUpdate = new OrderUpdate(order, oldState, state);
+
         if (route)
             context.route(orderUpdate);
         else
             context.publish(orderUpdate);
-
         PersistUtil.insert(orderUpdate);
+
         if (order.getParentOrder() != null)
             updateParentOrderState(order.getParentOrder(), order, state);
     }
@@ -817,13 +818,13 @@ public abstract class BaseOrderService implements OrderService {
             case "SpecificOrder":
                 order = (Order) entity;
                 try {
-                    transaction = new Transaction(order);
+                    transaction = new Transaction(order, context.getTime());
+                    PersistUtil.insert(transaction);
                     log.info("Created new transaction " + transaction);
                     if (route)
                         context.route(transaction);
                     else
                         context.publish(transaction);
-                    PersistUtil.insert(transaction);
 
                 } catch (Exception e1) {
                     // TODO Auto-generated catch block
@@ -834,13 +835,13 @@ public abstract class BaseOrderService implements OrderService {
             case "Fill":
                 Fill fill = (Fill) entity;
                 try {
-                    transaction = new Transaction(fill);
+                    transaction = new Transaction(fill, context.getTime());
+                    PersistUtil.insert(transaction);
                     log.info("Created new transaction " + transaction);
                     if (route)
                         context.route(transaction);
                     else
                         context.publish(transaction);
-                    PersistUtil.insert(transaction);
 
                 } catch (Exception e) {
                     // TODO Auto-generated catch block
