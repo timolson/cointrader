@@ -81,11 +81,10 @@
             <version>4.0-beta4</version>
         </dependency>
         <dependency>
-    <groupId>com.google.guava</groupId>
-    <artifactId>guava</artifactId>
-    <version>18.0</version>
-</dependency>
-        
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>18.0</version>
+        </dependency>
         <dependency>
             <groupId>com.xeiam.xchange</groupId>
             <artifactId>xchange-core</artifactId>
@@ -151,13 +150,11 @@
             <artifactId>hibernate-entitymanager</artifactId>
             <version>${hibernate.version}</version>
         </dependency>
-        
         <dependency>
-	<groupId>org.hibernate</groupId>
-	<artifactId>hibernate-c3p0</artifactId>
-	<version>${hibernate.version}</version>
-</dependency>
-
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-c3p0</artifactId>
+            <version>${hibernate.version}</version>
+        </dependency>
         <dependency>
         	<groupId>org.hibernate</groupId>
         	<artifactId>hibernate-ehcache</artifactId>
