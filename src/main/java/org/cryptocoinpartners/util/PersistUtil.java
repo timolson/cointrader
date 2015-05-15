@@ -365,7 +365,8 @@ public class PersistUtil {
         properties.put("hibernate.c3p0.timeout", "0");
         properties.put("hibernate.c3p0.preferredTestQuery", "SELECT 1 from exchange");
         properties.put("hibernate.c3p0.maxConnectionAge", ConfigUtil.combined().getString("db.max.connection.age"));
-        properties.put("hibernate.c3p0.testConnectionOnCheckout", ConfigUtil.combined().getString("db.test.connection"));
+        final String testConnection = resetDatabase ? "false" : ConfigUtil.combined().getString("db.test.connection");
+        properties.put("hibernate.c3p0.testConnectionOnCheckout", testConnection);
         properties.put("hibernate.c3p0.acquireRetryDelay", "1000");
         properties.put("hibernate.c3p0.acquireRetryAttempts", "0");
         properties.put("hibernate.c3p0.breakAfterAcquireFailure", "false");
