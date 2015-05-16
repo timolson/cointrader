@@ -35,7 +35,7 @@ public class ConsoleStrategy extends SimpleStatefulStrategy {
 
     }
 
-    @When("@Priority(9) select * from PositionUpdate(PositionUpdate.market=TestStrategy.getMarket())")
+    @When("@Priority(9) select * from PositionUpdate")
     void handlePositionUpdate(PositionUpdate positionUpdate) {
         synchronized (lock) {
             if (positionUpdate.getPosition() != null)
