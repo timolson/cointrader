@@ -23,83 +23,78 @@ import org.slf4j.LoggerFactory;
 public class PersistUtil {
 
     private static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
-    private static Object lock = new Object();
 
     public static void insert(EntityBase... entities) {
-        synchronized (lock) {
-            EntityManager em = null;
-            boolean persited = true;
+        EntityManager em = null;
+        boolean persited = true;
+        try {
+            em = createEntityManager();
+            PersistUtilHelper.beginTransaction();
+
             try {
-                em = createEntityManager();
-                PersistUtilHelper.beginTransaction();
-
-                try {
-                    for (EntityBase entity : entities) {
-                        // em.refresh(entity);
-                        // if (em.contains(entity))
-                        ///    em.merge(entity);
-                        // else
-                        em.persist(entity);
-                        PersistUtilHelper.commit();
-                    }
-
-                } catch (Exception | Error e) {
-                    persited = false;
-                    e.printStackTrace();
-                    if (PersistUtilHelper.isActive())
-                        PersistUtilHelper.rollback();
+                for (EntityBase entity : entities) {
+                    // em.refresh(entity);
+                    // if (em.contains(entity))
+                    ///    em.merge(entity);
+                    // else
+                    em.persist(entity);
+                    PersistUtilHelper.commit();
                 }
-            } finally {
-                if (persited)
-                    for (EntityBase entity : entities)
-                        log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
-                else
-                    for (EntityBase entity : entities)
-                        log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
-                if (em != null && em.isOpen())
-                    PersistUtilHelper.closeEntityManager();
 
+            } catch (Exception | Error e) {
+                persited = false;
+                e.printStackTrace();
+                if (PersistUtilHelper.isActive())
+                    PersistUtilHelper.rollback();
             }
+        } finally {
+            if (persited) {
+                if( log.isDebugEnabled() ) {
+                    for( EntityBase entity : entities )
+                        log.debug(entity.getClass().getSimpleName() + ": " +
+                                          entity.getId().toString() + " saved to database");
+                }
+            }
+            else {
+                for( EntityBase entity : entities )
+                    log.error(entity.getClass().getSimpleName() + ": " +
+                                      entity.getId().toString() + " not saved to database");
+            }
+            if( em != null && em.isOpen())
+                PersistUtilHelper.closeEntityManager();
+
         }
     }
 
     public static void merge(EntityBase... entities) {
-        synchronized (lock) {
-            EntityManager em = null;
-            boolean persited = true;
+        EntityManager em = null;
+        boolean persited = true;
+        try {
+            em = createEntityManager();
+            PersistUtilHelper.beginTransaction();
+
             try {
-                em = createEntityManager();
-                PersistUtilHelper.beginTransaction();
-
-                try {
-                    for (EntityBase entity : entities) {
-                        // em.find(entity.getClass(), entity.getId());
-                        // em.
-                        // em.refresh(entity);
-                        //if (em.contains(entity))
-                        //   em.merge(entity);
-                        //else
-                        em.merge(entity);
-                        PersistUtilHelper.commit();
-                    }
-
-                } catch (Exception | Error e) {
-                    persited = false;
-                    e.printStackTrace();
-                    if (PersistUtilHelper.isActive())
-                        PersistUtilHelper.rollback();
+                for (EntityBase entity : entities) {
+                    em.merge(entity);
+                    PersistUtilHelper.commit();
                 }
-            } finally {
-                if (persited)
-                    for (EntityBase entity : entities)
-                        log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
-                else
-                    for (EntityBase entity : entities)
-                        log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
-                if (em != null && em.isOpen())
-                    PersistUtilHelper.closeEntityManager();
 
+            } catch (Exception | Error e) {
+                persited = false;
+                e.printStackTrace();
+                if (PersistUtilHelper.isActive())
+                    PersistUtilHelper.rollback();
             }
+        } finally {
+            if (persited)
+                for (EntityBase entity : entities)
+                    log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
+            else
+                for (EntityBase entity : entities)
+                    log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
+            if (em != null && em.isOpen())
+                PersistUtilHelper.closeEntityManager();
+
         }
     }
 
@@ -308,7 +303,6 @@ public class PersistUtil {
     public static EntityManager createEntityManager() {
         init(false);
         return PersistUtilHelper.getEntityManager();
-        // return entityManagerFactory.createEntityManager();
     }
 
     public static void resetDatabase() {
@@ -392,6 +386,5 @@ public class PersistUtil {
         Prompts.THIS_WEEK.getSymbol();
     }
 
-    //private static EntityManagerFactory entityManagerFactory;
     private static final int defaultBatchSize = 20;
 }

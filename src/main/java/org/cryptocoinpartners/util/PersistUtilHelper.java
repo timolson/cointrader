@@ -26,7 +26,6 @@ public class PersistUtilHelper {
     }
 
     public static EntityManagerFactory getEntityManagerFactory() {
-
         return emf;
     }
 
