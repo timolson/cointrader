@@ -6,6 +6,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.annotation.Nullable;
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.Transient;
@@ -394,7 +395,7 @@ public class Position extends Holding {
 
     //  fetch = FetchType.EAGER,
     @Nullable
-    @OneToMany(cascade = { CascadeType.MERGE, CascadeType.REFRESH })
+    @OneToMany(fetch = FetchType.EAGER, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     public Collection<Fill> getFills() {
         if (fills == null)
             fills = new ConcurrentLinkedQueue<Fill>();

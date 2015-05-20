@@ -64,6 +64,19 @@ public class BasicPortfolioService implements PortfolioService {
     }
 
     @Override
+    public void init() {
+        findPositions();
+
+    }
+
+    private void findPositions() {
+        String queryStr = "select p from Position p  join p.fills f where f.openVolumeCount!=0 and p.portfolio = ?1";
+        List<Position> positions = PersistUtil.queryList(Position.class, queryStr, portfolio);
+        for (Position position : positions)
+            portfolio.insert(position);
+    }
+
+    @Override
     @Nullable
     public ArrayList<Position> getPositions() {
         return (ArrayList<Position>) portfolio.getPositions();

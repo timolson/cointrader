@@ -69,8 +69,8 @@ public class BaseStrategy implements Strategy {
 
     @Override
     public void init() {
+        portfolioService.init();
         orderService.init();
-        // TODO Auto-generated method stub
 
     }
 }

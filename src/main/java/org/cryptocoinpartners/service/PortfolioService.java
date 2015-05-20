@@ -101,4 +101,6 @@ public interface PortfolioService {
 
     void resetBalances();
 
+    void init();
+
 }

@@ -496,6 +496,26 @@ public class Portfolio extends EntityBase {
     }
 
     @Transient
+    public void insert(Position position) {
+        TransactionType transactionType = (position.isLong()) ? TransactionType.BUY : TransactionType.SELL;
+
+        ConcurrentLinkedQueue<Position> detailPosition = new ConcurrentLinkedQueue<Position>();
+        //Position detPosition = new Position(fill);
+        //detPosition.Persit();
+        detailPosition.add(position);
+        ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>> positionType = new ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>();
+        positionType.put(transactionType, detailPosition);
+        ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>> listingPosition = new ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>();
+
+        listingPosition.put(position.getMarket().getListing(), positionType);
+
+        ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>> assetPositions = new ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>>();
+        assetPositions.put(position.getMarket().getExchange(), listingPosition);
+        positions.put(position.getMarket().getBase(), assetPositions);
+
+    }
+
+    @Transient
     private boolean merge(Fill fill) {
         //synchronized (lock) {
         // We need to have a queue of buys and a queue of sells ( two array lists), ensure the itterator is descendingIterator for LIFO,
@@ -504,6 +524,7 @@ public class Portfolio extends EntityBase {
         // 2) times price diff by min(trade quantity or the position) and add to relasied PnL
         // 3) update the quaitity of the postion and remove from queue if zero
         // 4) move onto next postion until the qty =0
+
         // https://github.com/webpat/jquant-core/blob/173d5ca79b318385a3754c8e1357de79ece47be4/src/main/java/org/jquant/portfolio/Portfolio.java
         TransactionType transactionType = (fill.isLong()) ? TransactionType.BUY : TransactionType.SELL;
         TransactionType openingTransactionType = (transactionType.equals(TransactionType.BUY)) ? TransactionType.SELL : TransactionType.BUY;
@@ -598,7 +619,7 @@ public class Portfolio extends EntityBase {
 
                     if (!listingPositions.isEmpty() || listingPositions.peek() != null) {
                         listingPositions.peek().addFill(fill);
-                        listingPositions.peek().Merge();
+                        //   listingPositions.peek().Merge();
                         // TODO need to persit the updated postitions
                         //PersistUtil.merge(listingPositions.peek());
 
@@ -720,7 +741,8 @@ public class Portfolio extends EntityBase {
                                         long updatedVolumeCount = p.getOpenVolumeCount() + closingVolumeCount;
                                         //updatedVolumeCount = (p.isShort()) ? updatedVolumeCount * -1 : updatedVolumeCount;
                                         p.setOpenVolumeCount(updatedVolumeCount);
-                                        pos.Merge();
+                                        PersistUtil.merge(p);
+                                        // pos.Merge();
                                         if (Math.abs(updatedVolumeCount) == 0) {
                                             //itPos.remove();
                                             itP.remove();
@@ -739,6 +761,7 @@ public class Portfolio extends EntityBase {
                                         // listingPositions.remove(p);
                                         itOp.remove();
                                         openPosition.setOpenVolumeCount(0);
+                                        PersistUtil.merge(openPosition);
                                         //openPos.Merge();
                                         //itOp.remove();
                                         //
@@ -761,7 +784,8 @@ public class Portfolio extends EntityBase {
                                     } else {
                                         long updatedVolumeCount = openPosition.getOpenVolumeCount() + p.getOpenVolumeCount();
                                         openPosition.setOpenVolumeCount(updatedVolumeCount);
-                                        openPos.Merge();
+                                        PersistUtil.merge(openPosition);
+                                        // openPos.Merge();
                                         if (Math.abs(updatedVolumeCount) == 0) {
                                             itOp.remove();
                                             openPos.removeFill(openPosition);
@@ -776,11 +800,12 @@ public class Portfolio extends EntityBase {
                                             //    PersistUtil.merge(openPosition);
 
                                             //  openingListingPositions.remove(openPos);
-                                            openPos.Merge();
+                                            //openPos.Merge();
                                         }
                                         //  openingListingPositions.remove(openPosition);
                                         itP.remove();
                                         p.setOpenVolumeCount(0);
+                                        PersistUtil.merge(p);
 
                                         pos.removeFill(p);
 
@@ -902,7 +927,9 @@ public class Portfolio extends EntityBase {
                 //listingPositions.add(position);
                 //// true;
                 if (getPosition(fill.getMarket().getBase(), fill.getMarket()) == null) {
-                    publishPositionUpdate(new Position(fill), PositionType.FLAT, fill.getMarket());
+                    Position detPosition = new Position(fill);
+                    detPosition.Persit();
+                    publishPositionUpdate(detPosition, PositionType.FLAT, fill.getMarket());
                 } else {
                     PositionType lastType = (openingTransactionType == TransactionType.BUY) ? PositionType.LONG : PositionType.SHORT;
                     publishPositionUpdate(getPosition(fill.getMarket().getBase(), fill.getMarket()), lastType, fill.getMarket());
