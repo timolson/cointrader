@@ -3,12 +3,12 @@ package org.cryptocoinpartners.schema;
 import javax.inject.Inject;
 import javax.persistence.Transient;
 
-import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.service.Strategy;
+import org.cryptocoinpartners.util.PersistUtil;
 import org.slf4j.Logger;
 
 /**
@@ -21,14 +21,16 @@ import org.slf4j.Logger;
  */
 public class BaseStrategy implements Strategy {
 
-    @Inject
-    protected void setPortfolio(BasicPortfolioService portfolioService) {
+    @Override
+    public void setPortfolio(Portfolio portfolio) {
         // portfolioService
         //    this.portfolio = portfolio;
+        this.portfolio = portfolio;
         SubscribePortfolio portfolioSubcribeEvent = new SubscribePortfolio(portfolio);
         context.publish(portfolioSubcribeEvent);
         Asset baseAsset = Asset.forSymbol(context.getConfig().getString("base.symbol", "USD"));
         portfolio.setBaseAsset(baseAsset);
+        PersistUtil.merge(portfolio);
         order = new OrderBuilder(portfolio, orderService);
     }
 
@@ -37,9 +39,32 @@ public class BaseStrategy implements Strategy {
         this.portfolioService = portfolioService;
     }
 
+    protected void setQuotes(QuoteService quotes) {
+        this.quotes = quotes;
+    }
+
+    protected void setOrderService(OrderService orderService) {
+        this.orderService = orderService;
+    }
+
     @Transient
     protected PortfolioService getPortfolioService() {
         return this.portfolioService;
+    }
+
+    @Transient
+    protected OrderService getOrderService() {
+        return this.orderService;
+    }
+
+    @Transient
+    protected QuoteService getQuotes() {
+        return this.quotes;
+    }
+
+    @Transient
+    protected Portfolio getPortfolio() {
+        return this.portfolio;
     }
 
     /** This tracks the assets you have for trading */
@@ -53,16 +78,15 @@ public class BaseStrategy implements Strategy {
 
     /** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
     @Inject
-    protected QuoteService quotes;
+    protected transient QuoteService quotes;
 
+    protected transient Portfolio portfolio;
     @Inject
-    protected Context context;
+    protected transient Context context;
     @Inject
-    protected OrderService orderService;
+    protected transient OrderService orderService;
     @Inject
-    protected PortfolioService portfolioService;
-    @Inject
-    protected Portfolio portfolio;
+    protected transient PortfolioService portfolioService;
 
     @Inject
     protected Logger log;

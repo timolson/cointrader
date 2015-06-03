@@ -43,6 +43,15 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         return portfolio;
     }
 
+    public void setContext(Context context) {
+        this.context = context;
+    }
+
+    @Transient
+    public Context getContext() {
+        return context;
+    }
+
     @Transient
     public PortfolioService getPortfolioService() {
         return portfolioService;
@@ -168,8 +177,8 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         //   portfolio.setName(portfolioName);
         // portfolio.setManager(this);
         // this.portfolio = new Portfolio(portfolioName, this);
-        portfolioService.getPortfolio().setName(portfolioName);
-        portfolioService.getPortfolio().setManager(this);
+        // portfolioService.getPortfolio().setName(portfolioName);
+        // portfolioService.getPortfolio().setManager(this);
         //  this.portfolioService = new BasicPortfolioService(portfolio);
     }
 
@@ -191,7 +200,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
                     + portfolioService.getBaseRealisedPnL(portfolio.getBaseAsset()) + " Open Trade Equity:"
                     + portfolioService.getBaseUnrealisedPnL(portfolio.getBaseAsset()) + " MarketValue:"
                     + portfolioService.getBaseMarketValue(portfolio.getBaseAsset()) + ")");
-            logger.info(portfolio.getPositions().toString());
+            logger.info(portfolio.getNetPositions().toString());
             logger.info(portfolio.getDetailedPositions().toString());
             //			Object itt = portfolio.getPositions().iterator();
             //			while (itt.hasNext()) {
@@ -224,7 +233,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     @Inject
     private static Logger log;
     @Inject
-    protected Context context;
+    protected transient Context context;
     @Inject
     private QuoteService quotes;
     @Inject

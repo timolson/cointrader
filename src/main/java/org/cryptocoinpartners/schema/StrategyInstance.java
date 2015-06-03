@@ -73,13 +73,16 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
         // attach the actual Strategy instead of this StrategyInstance
         // Set ourselves as the StrategyInstance
         //      context.loadStatements("BasicPortfolioService");
+        portfolio = null;
         strategy = context.attach(moduleName, new MapConfiguration(config), new Module()
 
         {
             @Override
             public void configure(Binder binder) {
+
                 binder.bind(StrategyInstance.class).toInstance(StrategyInstance.this);
-                Portfolio portfolio = Portfolio.findOrCreate(getModuleName());
+                portfolio = Portfolio.findOrCreate(getModuleName());
+                //  boolean cahced = PersistUtil.cached(portfolio);
                 if (portfolio == null) {
                     portfolio = context.getInjector().getInstance(Portfolio.class);
                     portfolio.setName(getModuleName());
@@ -96,7 +99,7 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
                 // binder.bind(Portfolio.class).toInstance(portfolio);
 
                 PortfolioService portfolioService = context.getInjector().getInstance(PortfolioService.class);
-                portfolioService.setPortfolio(portfolio);
+                portfolioService.addPortfolio(portfolio);
                 //  portfolio.setName(getModuleName());
                 //  portfolio.setManager(this);
                 // binder.bind(Portfolio.class).toInstance(context.getInjector().getInstance(Portfolio.class));
@@ -108,6 +111,7 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
 
             }
         });
+        ((Strategy) strategy).setPortfolio(portfolio);
 
     }
 
@@ -124,6 +128,7 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
     }
 
     private String moduleName;
+    private Portfolio portfolio;
     private Map<String, String> config;
     private Object strategy;
 }

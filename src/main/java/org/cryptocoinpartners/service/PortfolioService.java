@@ -30,7 +30,7 @@ public interface PortfolioService {
     @Nullable
     public ArrayList<Position> getPositions();
 
-    public void CreateTransaction(Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price);
+    public void CreateTransaction(Portfolio portfolio, Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price);
 
     /** returns all Postions for the given Exchange.  NOTE: if you have open orders, you will not be able to trade
      * all the Positions returned by this method.  Use getTradeablePositions() instead. */
@@ -69,9 +69,11 @@ public interface PortfolioService {
 
     Amount getRealisedPnL(Asset quoteAsset);
 
-    Portfolio getPortfolio();
+    Collection<Portfolio> getPortfolios();
 
-    void setPortfolio(Portfolio portfolio);
+    abstract void setPortfolios(Collection<Portfolio> Portfolios);
+
+    void addPortfolio(Portfolio portfolio);
 
     ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>> getRealisedPnLByMarket();
 

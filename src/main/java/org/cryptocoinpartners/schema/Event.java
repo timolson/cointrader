@@ -1,9 +1,10 @@
 package org.cryptocoinpartners.schema;
 
-import org.joda.time.Instant;
+import java.io.Serializable;
 
 import javax.persistence.MappedSuperclass;
 
+import org.joda.time.Instant;
 
 /**
  * Subclasses of Event may be posted to Context
@@ -11,18 +12,16 @@ import javax.persistence.MappedSuperclass;
  * @author Tim Olson
  */
 @MappedSuperclass
-public abstract class Event extends Temporal {
-
+public abstract class Event extends Temporal implements Serializable {
 
     /**
      * If the Event's time has not been set when it is being published, it will be set to the current time of the
      * publishing Context
      */
     public void publishedAt(Instant instant) {
-        if( getTime() == null )
+        if (getTime() == null)
             setTime(instant);
     }
-
 
     /** Most events should use this constructor to provide the time of the original happening, not the time of
      *  object creation */
@@ -30,8 +29,7 @@ public abstract class Event extends Temporal {
         super(time);
     }
 
-
-    protected Event() {}
-
+    protected Event() {
+    }
 
 }

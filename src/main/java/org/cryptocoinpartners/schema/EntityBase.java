@@ -23,7 +23,7 @@ public abstract class EntityBase implements Serializable {
     private static final long serialVersionUID = -7893439827939854533L;
 
     @Id
-    @Column(columnDefinition = "BINARY(16)", length = 16, updatable = false, nullable = false)
+    @Column(columnDefinition = "BINARY(16)", length = 16, updatable = true, nullable = false)
     public UUID getId() {
         ensureId();
         return id;

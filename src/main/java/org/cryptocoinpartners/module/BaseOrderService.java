@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.inject.Inject;
+import javax.persistence.Transient;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.cryptocoinpartners.enumeration.FillType;
@@ -55,7 +56,8 @@ public abstract class BaseOrderService implements OrderService {
 
     @Override
     public void init() {
-        findTriggerOrders(portfolioService.getPortfolio());
+        for (Portfolio portfolio : portfolioService.getPortfolios())
+            findTriggerOrders(portfolio);
 
     }
 
@@ -93,7 +95,8 @@ public abstract class BaseOrderService implements OrderService {
         //                    where  order_update.state=1;
         String queryNativeStr = "select * from general_order where id in (SELECT  order_update.order" + " FROM    order_update"
                 + " INNER JOIN  (   SELECT  order_update.order as latestorder, MAX(sequence) AS sequence" + " FROM    order_update GROUP BY order_update.order"
-                + ") MaxP ON MaxP.latestorder = order_update.order AND MaxP.sequence = order_update.sequence" + " where  order_update.state=1)";
+                + ") MaxP ON MaxP.latestorder = order_update.order AND MaxP.sequence = order_update.sequence"
+                + " where  order_update.state=1 and general_order.portfolio = ?1)";
 
         //"SELECT  order_update.order FROM    order_update INNER JOIN (   SELECT  order_update.order as latestorder, MAX(sequence) AS sequence FROM    order_update GROUP BY order_update.order ) MaxP ON MaxP.latestorder = order_update.order AND MaxP.sequence = order_update.sequence where  order_update.state=1";
 
@@ -102,7 +105,7 @@ public abstract class BaseOrderService implements OrderService {
 
         String queryStr = "SELECT  order FROM OrderUpdate INNER JOIN (SELECT  order as latestorder, MAX(sequence) as sequence FROM OrderUpdate GROUP BY latestorder) where OrderUpdate.state==?1";
 
-        List<GeneralOrder> orders = PersistUtil.queryNativeList(GeneralOrder.class, queryNativeStr, null);
+        List<GeneralOrder> orders = PersistUtil.queryNativeList(GeneralOrder.class, queryNativeStr, portfolio);
 
         //  "select ou from OrderUpdate ou INNER JOIN (SELECT oum.order latestorder, MAX(sequence)  sequence FROM OrderUpdate oum GROUP BY oum.order ) MaxP ON MaxP.latestorder = order_update.order AND MaxP.sequence = order_update.sequence where  ou.state=?1",
 
@@ -525,6 +528,7 @@ public abstract class BaseOrderService implements OrderService {
                     pendingOrder.setLimitPriceCount(limitPrice.getCount());
 
                     pendingOrder.setPlacementCount(pendingOrder.getPlacementCount() + 1);
+                    PersistUtil.merge(pendingOrder);
                 }
             }
         }
@@ -560,7 +564,7 @@ public abstract class BaseOrderService implements OrderService {
                                         .getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()));
                                 DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggeredOrder.getMarket().getPriceBasis()));
                                 triggeredOrder.setStopAmount(stopDiscrete);
-
+                                PersistUtil.merge(triggeredOrder);
                             }
 
                         }
@@ -592,10 +596,11 @@ public abstract class BaseOrderService implements OrderService {
                                         .getMarket().getPriceBasis(), Remainder.ROUND_EVEN)).getCount()));
                                 DecimalAmount stopDiscrete = DecimalAmount.of(new DiscreteAmount(stopPrice, triggeredOrder.getMarket().getPriceBasis()));
                                 triggeredOrder.setStopAmount(stopDiscrete);
-
+                                PersistUtil.merge(triggeredOrder);
                             }
 
                         }
+
                     }
                 }
             }
@@ -868,6 +873,24 @@ public abstract class BaseOrderService implements OrderService {
         }
     };
 
+    @Transient
+    public PortfolioService getPortfolioService() {
+        return portfolioService;
+    }
+
+    protected void setQuotes(QuoteService quotes) {
+        this.quotes = quotes;
+    }
+
+    @Transient
+    public QuoteService getQuotes() {
+        return quotes;
+    }
+
+    protected void setPortfolioService(PortfolioService portfolioService) {
+        this.portfolioService = portfolioService;
+    }
+
     public BaseOrderService() {
     }
 
@@ -878,9 +901,9 @@ public abstract class BaseOrderService implements OrderService {
     protected boolean enableTrading = false;
     protected final Map<Order, OrderState> orderStateMap = new ConcurrentHashMap<>();
     @Inject
-    protected QuoteService quotes;
+    protected transient QuoteService quotes;
     @Inject
-    protected PortfolioService portfolioService;
+    protected transient PortfolioService portfolioService;
     protected final static Map<Event, ConcurrentLinkedQueue<Order>> triggerOrders = new ConcurrentHashMap<Event, ConcurrentLinkedQueue<Order>>();
     private static Object lock = new Object();
 

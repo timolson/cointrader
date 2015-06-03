@@ -49,6 +49,7 @@ public class Position extends Holding {
 
     public Position(Fill fill) {
         this.addFill(fill);
+        fill.setPosition(this);
         this.exchange = fill.getMarket().getExchange();
         this.market = fill.getMarket();
         this.volume = fill.getVolume();
@@ -62,6 +63,7 @@ public class Position extends Holding {
         this.shortAvgStopPrice = fill.getStopPrice() != null && fill.isShort() ? fill.getStopPrice() : DecimalAmount.ZERO;
         this.longAvgStopPrice = fill.getStopPrice() != null && fill.isLong() ? fill.getStopPrice() : DecimalAmount.ZERO;
         this.asset = fill.getMarket().getListing().getBase();
+        fill.getPortfolio().addPosition(this);
         this.portfolio = fill.getPortfolio();
 
     }
@@ -82,9 +84,11 @@ public class Position extends Holding {
             this.shortAvgStopPrice = fill.getStopPrice() != null && fill.isShort() ? fill.getStopPrice() : DecimalAmount.ZERO;
             this.longAvgStopPrice = fill.getStopPrice() != null && fill.isLong() ? fill.getStopPrice() : DecimalAmount.ZERO;
             this.asset = fill.getMarket().getListing().getBase();
+            fill.getPortfolio().addPosition(this);
             this.portfolio = fill.getPortfolio();
             //       this.fills.add(fill);
             this.addFill(fill);
+            fill.setPosition(this);
         }
     }
 
@@ -112,12 +116,12 @@ public class Position extends Holding {
         return (getVolume() == null || getVolume().isZero());
     }
 
-    @ManyToOne(optional = true)
+    @ManyToOne(optional = false)
     public Market getMarket() {
         return market;
     }
 
-    @ManyToOne(optional = true)
+    @ManyToOne(optional = false)
     public Portfolio getPortfolio() {
 
         return portfolio;
@@ -394,8 +398,8 @@ public class Position extends Holding {
     }
 
     //  fetch = FetchType.EAGER,
-    @Nullable
-    @OneToMany(fetch = FetchType.EAGER, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
+
+    @OneToMany(mappedBy = "position", fetch = FetchType.EAGER, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     public Collection<Fill> getFills() {
         if (fills == null)
             fills = new ConcurrentLinkedQueue<Fill>();
@@ -409,7 +413,7 @@ public class Position extends Holding {
         //     for (Fill fill : this.getFills())
         //        PersistUtil.merge(fill);
         // }
-        PersistUtil.insert(this);
+        // PersistUtil.insert(this);
 
     }
 

@@ -2,6 +2,7 @@ package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
 
+import javax.annotation.Nullable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
@@ -75,13 +76,14 @@ public class GeneralOrder extends Order {
         this.volume = DecimalAmount.of(volume);
     }
 
-    @ManyToOne(optional = false)
-    //@EmbeddedId
+    @Nullable
+    @ManyToOne(optional = true)
     public Listing getListing() {
         return listing;
     }
 
     @Override
+    @Nullable
     @ManyToOne(optional = true)
     public Market getMarket() {
         return market;

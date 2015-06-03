@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.service;
 
+import org.cryptocoinpartners.schema.Portfolio;
 
 /**
  * A Strategy represents a configurable approach to trading, but not a specific trading algorithm.  StrategyPortfolioManager
@@ -11,5 +12,7 @@ package org.cryptocoinpartners.service;
  */
 public interface Strategy {
     public void init();
+
+    void setPortfolio(Portfolio portfolio);
 
 }

@@ -11,6 +11,7 @@ import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.MockOrderService;
+import org.cryptocoinpartners.module.SaveMarketData;
 import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.module.xchange.XchangeData;
 import org.cryptocoinpartners.schema.DiscreteAmount;
@@ -76,6 +77,7 @@ public class PaperTradeRunMode extends RunMode {
         //  context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
 
         context.attach(XchangeData.class);
+        context.attach(SaveMarketData.class);
         //  if (semaphore != null)
         //    semaphore.release();
 

@@ -64,6 +64,8 @@ public class Listing extends EntityBase {
             Listing listing = PersistUtil.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBase", base, quote);
             if (listing == null) {
                 listing = new Listing(base, quote);
+                PersistUtil.find(base);
+                PersistUtil.find(quote);
                 PersistUtil.insert(listing);
             }
             return listing;
@@ -98,7 +100,7 @@ public class Listing extends EntityBase {
     @Transient
     public String getSymbol() {
         if (prompt != null)
-            return base.getSymbol() + '.' + quote.getSymbol() + '.' + prompt;
+            return base.getSymbol() + '.' + quote.getSymbol() + '.' + prompt.getSymbol();
         return base.getSymbol() + '.' + quote.getSymbol();
     }
 

@@ -61,6 +61,13 @@ public class Fill extends RemoteEvent {
         return order;
     }
 
+    @Nullable
+    public @ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE, CascadeType.REFRESH })
+    @JoinColumn(name = "position")
+    Position getPosition() {
+        return position;
+    }
+
     @Transient
     @Nullable
     public Double getPriceAsDouble() {
@@ -274,6 +281,10 @@ public class Fill extends RemoteEvent {
         this.margin = margin;
     }
 
+    protected void setPosition(Position position) {
+        this.position = position;
+    }
+
     private Collection<Order> children;
 
     private SpecificOrder order;
@@ -289,5 +300,6 @@ public class Fill extends RemoteEvent {
     private Amount margin;
     private Collection<Transaction> transactions;
     private Portfolio portfolio;
+    private Position position;
 
 }

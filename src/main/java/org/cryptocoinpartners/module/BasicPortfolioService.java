@@ -7,10 +7,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import javax.persistence.FetchType;
+import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.TransactionType;
@@ -19,6 +22,7 @@ import org.cryptocoinpartners.schema.Asset;
 import org.cryptocoinpartners.schema.DecimalAmount;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Exchange;
+import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Offer;
@@ -50,7 +54,7 @@ public class BasicPortfolioService implements PortfolioService {
     private static Object lock = new Object();
 
     public BasicPortfolioService(Portfolio portfolio) {
-        this.portfolio = portfolio;
+        this.addPortfolio(portfolio);
         this.allPnLs = new ConcurrentHashMap<Asset, Amount>();
 
     }
@@ -70,16 +74,34 @@ public class BasicPortfolioService implements PortfolioService {
     }
 
     private void findPositions() {
-        String queryStr = "select p from Position p  join p.fills f where f.openVolumeCount!=0 and p.portfolio = ?1";
-        List<Position> positions = PersistUtil.queryList(Position.class, queryStr, portfolio);
-        for (Position position : positions)
-            portfolio.insert(position);
+        // String queryPortfolioStr = "select pf from Portfolio pf";
+        // List<Portfolio> portfolios = PersistUtil.queryList(Portfolio.class, queryPortfolioStr, null);
+        for (Portfolio portfolio : portfolios) {
+
+            String queryStr = "select p from Position p  join p.fills f where f.openVolumeCount!=0 and p.portfolio = ?1 group by p";
+            // String queryStr = "select p from Position p  where p.portfolio = ?1 group by p";
+            List<Position> positions = PersistUtil.queryList(Position.class, queryStr, portfolio);
+            for (Position position : positions) {
+                portfolio.addPosition(position);
+                position.setPortfolio(portfolio);
+                for (Fill fill : position.getFills()) {
+                    portfolio.merge(fill);
+
+                }
+
+            }
+        }
     }
 
     @Override
     @Nullable
     public ArrayList<Position> getPositions() {
-        return (ArrayList<Position>) portfolio.getPositions();
+        ArrayList<Position> AllPositions = new ArrayList<Position>();
+        for (Portfolio portfolio : getPortfolios()) {
+            for (Position position : portfolio.getNetPositions())
+                AllPositions.add(position);
+        }
+        return AllPositions;
     }
 
     @Transient
@@ -87,35 +109,54 @@ public class BasicPortfolioService implements PortfolioService {
         return context;
     }
 
-    @Override
-    @Transient
-    public Portfolio getPortfolio() {
-        return portfolio;
+    protected void setContext(Context context) {
+        this.context = context;
     }
 
     @Override
     @Nullable
     public ConcurrentHashMap<Asset, Amount> getRealisedPnLs() {
-        return portfolio.getRealisedPnLs();
+        ConcurrentHashMap<Asset, Amount> AllRealisedPnLs = new ConcurrentHashMap<Asset, Amount>();
+        for (Portfolio portfolio : getPortfolios()) {
+            for (Asset asset : portfolio.getRealisedPnLs().keySet())
+                if (AllRealisedPnLs.get(asset) == null)
+                    AllRealisedPnLs.put(asset, portfolio.getRealisedPnLs().get(asset));
+                else
+                    AllRealisedPnLs.get(asset).plus(portfolio.getRealisedPnLs().get(asset));
+
+        }
+        return AllRealisedPnLs;
+
     }
 
     @Override
     @Nullable
     public ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>> getRealisedPnLByMarket() {
-        return portfolio.getRealisedPnL();
+
+        ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>> AllRealisedPnL = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>>();
+        for (Portfolio portfolio : getPortfolios()) {
+            for (Asset asset : portfolio.getRealisedPnL().keySet())
+                if (AllRealisedPnL.get(asset) == null)
+                    AllRealisedPnL.put(asset, portfolio.getRealisedPnL().get(asset));
+            //  else
+            //    AllRealisedPnL.get(asset).plus(portfolio.getRealisedPnL().get(asset));
+
+        }
+        return AllRealisedPnL;
+
     }
 
     public DiscreteAmount getLongPosition(Asset asset, Exchange exchange) {
-        return portfolio.getLongPosition(asset, exchange);
+        return null;
     }
 
     public DiscreteAmount getShortPosition(Asset asset, Exchange exchange) {
-        return portfolio.getShortPosition(asset, exchange);
+        return null;
     }
 
     @Override
     public DiscreteAmount getNetPosition(Asset asset, Exchange exchange) {
-        return portfolio.getNetPosition(asset, exchange);
+        return null;
     }
 
     @Override
@@ -128,7 +169,8 @@ public class BasicPortfolioService implements PortfolioService {
     @Override
     @Nullable
     public Collection<Position> getPositions(Asset asset, Exchange exchange) {
-        return portfolio.getPositions(asset, exchange);
+        // return portfolio.getPositions(asset, exchange);
+        return null;
 
     }
 
@@ -296,14 +338,15 @@ public class BasicPortfolioService implements PortfolioService {
         // return all CREDIT,DEBIT,INTREST,FEES and REALISED PnL
 
         ArrayList<Transaction> cashFlows = new ArrayList<>();
-        for (Transaction transaction : portfolio.getTransactions()) {
-            if (transaction.getType() == TransactionType.CREDIT || transaction.getType() == TransactionType.DEBIT
-                    || transaction.getType() == TransactionType.INTREST || transaction.getType() == TransactionType.FEES
-                    || transaction.getType() == TransactionType.REALISED_PROFIT_LOSS) {
-                cashFlows.add(transaction);
+        for (Portfolio portfolio : getPortfolios()) {
+            for (Transaction transaction : portfolio.getTransactions()) {
+                if (transaction.getType() == TransactionType.CREDIT || transaction.getType() == TransactionType.DEBIT
+                        || transaction.getType() == TransactionType.INTREST || transaction.getType() == TransactionType.FEES
+                        || transaction.getType() == TransactionType.REALISED_PROFIT_LOSS) {
+                    cashFlows.add(transaction);
+                }
             }
         }
-
         return cashFlows;
     }
 
@@ -311,9 +354,12 @@ public class BasicPortfolioService implements PortfolioService {
         // return all CREDIT,DEBIT,INTREST,FEES and REALISED PnL
 
         ArrayList<Transaction> transfers = new ArrayList<>();
-        for (Transaction transaction : portfolio.getTransactions()) {
-            if (transaction.getType() == TransactionType.REBALANCE) {
-                transfers.add(transaction);
+
+        for (Portfolio portfolio : getPortfolios()) {
+            for (Transaction transaction : portfolio.getTransactions()) {
+                if (transaction.getType() == TransactionType.REBALANCE) {
+                    transfers.add(transaction);
+                }
             }
         }
 
@@ -327,13 +373,14 @@ public class BasicPortfolioService implements PortfolioService {
         ArrayList<Transaction> trades = new ArrayList<>();
         //  int transHashcode = portfolio.getTransactions().hashCode();
         // log.info("transaction hascode" + transHashcode);
-        for (Transaction transaction : portfolio.getTransactions()) {
-            if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL) {
-                trades.add(transaction);
+        for (Portfolio portfolio : getPortfolios()) {
+            for (Transaction transaction : portfolio.getTransactions()) {
+                if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL) {
+                    trades.add(transaction);
+                }
             }
+            // transactionsHashCode = portfolio.getTransactions().hashCode();
         }
-        // transactionsHashCode = portfolio.getTransactions().hashCode();
-
         return trades;
     }
 
@@ -401,17 +448,18 @@ public class BasicPortfolioService implements PortfolioService {
         //Amount marketValue = new DiscreteAmount(0, 0.01);
         ConcurrentHashMap<Asset, Amount> marketValues = new ConcurrentHashMap<>();
         //portfolio.getPositions().keySet()
+        for (Portfolio portfolio : getPortfolios()) {
+            for (Position position : portfolio.getNetPositions()) {
 
-        for (Position position : portfolio.getPositions()) {
+                if (position.isOpen()) {
+                    if (marketValues.get(position.getAsset()) != null) {
+                        marketValue = marketValues.get(position.getAsset());
+                    }
+                    marketValue = marketValue.plus(getMarketValue(position));
 
-            if (position.isOpen()) {
-                if (marketValues.get(position.getAsset()) != null) {
-                    marketValue = marketValues.get(position.getAsset());
+                    marketValues.put(position.getMarket().getTradedCurrency(), marketValue);
+
                 }
-                marketValue = marketValue.plus(getMarketValue(position));
-
-                marketValues.put(position.getMarket().getTradedCurrency(), marketValue);
-
             }
         }
 
@@ -427,16 +475,18 @@ public class BasicPortfolioService implements PortfolioService {
         //Amount marketValue = new DiscreteAmount(0, 0.01);
         ConcurrentHashMap<Asset, Amount> unrealisedPnLs = new ConcurrentHashMap<>();
         //portfolio.getPositions().keySet()
-        for (Position position : portfolio.getPositions()) {
+        for (Portfolio portfolio : getPortfolios()) {
+            for (Position position : portfolio.getNetPositions()) {
 
-            if (position.isOpen()) {
-                if (unrealisedPnLs.get(position.getAsset()) != null) {
-                    unrealisedPnL = unrealisedPnLs.get(position.getAsset());
+                if (position.isOpen()) {
+                    if (unrealisedPnLs.get(position.getAsset()) != null) {
+                        unrealisedPnL = unrealisedPnLs.get(position.getAsset());
+                    }
+                    unrealisedPnL = unrealisedPnL.plus(getUnrealisedPnL(position));
+
+                    unrealisedPnLs.put(position.getMarket().getTradedCurrency(), unrealisedPnL);
+
                 }
-                unrealisedPnL = unrealisedPnL.plus(getUnrealisedPnL(position));
-
-                unrealisedPnLs.put(position.getMarket().getTradedCurrency(), unrealisedPnL);
-
             }
         }
 
@@ -670,17 +720,20 @@ public class BasicPortfolioService implements PortfolioService {
 
         //Amount baseCashBalance = getCashBalance(quoteAsset);
         ConcurrentHashMap<Asset, Amount> margins = new ConcurrentHashMap<Asset, Amount>();
-        for (Position position : portfolio.getPositions()) {
-            Asset baseAsset = position.getMarket().getTradedCurrency();
-            if (position.isOpen() && baseAsset.equals(quoteAsset)) {
-                // calucate total margin
+        for (Portfolio portfolio : getPortfolios()) {
 
-                if (margins.get(baseAsset) != null)
-                    totalMargin = margins.get(baseAsset);
-                totalMargin = totalMargin.plus(FeesUtil.getMargin(position));
+            for (Position position : portfolio.getNetPositions()) {
+                Asset baseAsset = position.getMarket().getTradedCurrency();
+                if (position.isOpen() && baseAsset.equals(quoteAsset)) {
+                    // calucate total margin
 
+                    if (margins.get(baseAsset) != null)
+                        totalMargin = margins.get(baseAsset);
+                    totalMargin = totalMargin.plus(FeesUtil.getMargin(position));
+
+                }
+                margins.put(baseAsset, totalMargin);
             }
-            margins.put(baseAsset, totalMargin);
         }
 
         return margins;
@@ -688,7 +741,7 @@ public class BasicPortfolioService implements PortfolioService {
     }
 
     @Override
-    public void CreateTransaction(Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price) {
+    public void CreateTransaction(Portfolio portfolio, Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price) {
         Transaction transaction = new Transaction(portfolio, exchange, asset, type, amount, price);
 
         context.route(transaction);
@@ -736,11 +789,10 @@ public class BasicPortfolioService implements PortfolioService {
     }
 
     @Inject
-    protected Context context;
+    protected transient Context context;
     @Inject
-    protected QuoteService quotes;
-    //  @Inject
-    protected Portfolio portfolio;
+    protected transient QuoteService quotes;
+
     @Inject
     private Logger log;
     private static int transactionsHashCode;
@@ -748,10 +800,32 @@ public class BasicPortfolioService implements PortfolioService {
     private static int marginsHashCode;
 
     private static Map<Asset, Amount> balances;
+    private Collection<Portfolio> portfolios;
 
     @Override
-    public void setPortfolio(Portfolio portfolio) {
-        this.portfolio = portfolio;
+    @Nullable
+    @OneToMany(fetch = FetchType.EAGER)
+    public Collection<Portfolio> getPortfolios() {
+        if (portfolios == null)
+            portfolios = new ConcurrentLinkedQueue<Portfolio>();
+
+        synchronized (lock) {
+            return portfolios;
+        }
+
+    }
+
+    @Override
+    public void setPortfolios(Collection<Portfolio> portfolios) {
+
+        this.portfolios = portfolios;
+    }
+
+    @Override
+    public void addPortfolio(Portfolio portfolio) {
+        synchronized (lock) {
+            getPortfolios().add(portfolio);
+        }
 
     }
 

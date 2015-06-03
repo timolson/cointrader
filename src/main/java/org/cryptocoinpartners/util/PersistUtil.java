@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.persistence.Cache;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.Query;
@@ -49,21 +50,42 @@ public class PersistUtil {
             }
         } finally {
             if (persited) {
-                if( log.isDebugEnabled() ) {
-                    for( EntityBase entity : entities )
-                        log.debug(entity.getClass().getSimpleName() + ": " +
-                                          entity.getId().toString() + " saved to database");
+                if (log.isDebugEnabled()) {
+                    for (EntityBase entity : entities) {
+                        log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
+                        // Cache cache = PersistUtilHelper.getEntityManagerFactory().getCache();
+                        //boolean inCahce = cache.contains(entity.getClass(), entity.getId());
+                        // log.debug("true");
+                    }
+
                 }
+            } else {
+                for (EntityBase entity : entities)
+                    log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
             }
-            else {
-                for( EntityBase entity : entities )
-                    log.error(entity.getClass().getSimpleName() + ": " +
-                                      entity.getId().toString() + " not saved to database");
-            }
-            if( em != null && em.isOpen())
+            if (em != null && em.isOpen())
                 PersistUtilHelper.closeEntityManager();
 
         }
+    }
+
+    public static boolean cached(EntityBase... entities) {
+        EntityManager em = null;
+        boolean cached = false;
+        try {
+            for (EntityBase entity : entities) {
+                Cache cache = PersistUtilHelper.getEntityManagerFactory().getCache();
+                cached = cache.contains(entity.getClass(), entity.getId());
+
+            }
+
+        } catch (Exception | Error e) {
+
+            e.printStackTrace();
+
+        }
+        return cached;
+
     }
 
     public static void merge(EntityBase... entities) {
@@ -75,6 +97,7 @@ public class PersistUtil {
 
             try {
                 for (EntityBase entity : entities) {
+                    // em.find(entity.getClass(), entity.getId());
                     em.merge(entity);
                     PersistUtilHelper.commit();
                 }
@@ -92,6 +115,38 @@ public class PersistUtil {
             else
                 for (EntityBase entity : entities)
                     log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
+            if (em != null && em.isOpen())
+                PersistUtilHelper.closeEntityManager();
+
+        }
+    }
+
+    public static void find(EntityBase... entities) {
+        EntityManager em = null;
+        boolean found = true;
+        try {
+            em = createEntityManager();
+            PersistUtilHelper.beginTransaction();
+
+            try {
+                for (EntityBase entity : entities) {
+                    em.find(entity.getClass(), entity.getId());
+                    PersistUtilHelper.commit();
+                }
+
+            } catch (Exception | Error e) {
+                found = false;
+                e.printStackTrace();
+                if (PersistUtilHelper.isActive())
+                    PersistUtilHelper.rollback();
+            }
+        } finally {
+            if (found)
+                for (EntityBase entity : entities)
+                    log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " found in database");
+            else
+                for (EntityBase entity : entities)
+                    log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not found in database");
             if (em != null && em.isOpen())
                 PersistUtilHelper.closeEntityManager();
 
@@ -364,7 +419,7 @@ public class PersistUtil {
         properties.put("hibernate.c3p0.acquireRetryDelay", "1000");
         properties.put("hibernate.c3p0.acquireRetryAttempts", "0");
         properties.put("hibernate.c3p0.breakAfterAcquireFailure", "false");
-        properties.put("javax.persistence.sharedCache.mode", "ENABLE_SELECTIVE");
+        properties.put("javax.persistence.sharedCache.mode", "ALL");
 
         try {
             PersistUtilHelper emh = new PersistUtilHelper(properties);

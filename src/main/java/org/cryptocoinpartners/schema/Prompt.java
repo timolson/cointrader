@@ -31,11 +31,6 @@ public class Prompt extends EntityBase {
     protected Prompt() {
     }
 
-    @Override
-    public String toString() {
-        return symbol;
-    }
-
     @Transient
     public Double getMultiplier() {
         return this.contractSize * this.tickSize;

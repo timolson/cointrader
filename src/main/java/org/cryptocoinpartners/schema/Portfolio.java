@@ -6,9 +6,12 @@ import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.persistence.Cacheable;
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.ManyToOne;
 import javax.persistence.NoResultException;
 import javax.persistence.OneToMany;
@@ -23,8 +26,6 @@ import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
 
-import com.google.inject.Singleton;
-
 /**
  * Many Owners may have Stakes in the Portfolio, but there is only one PortfolioManager, who is not necessarily an Owner.  The
  * Portfolio has multiple Positions.
@@ -32,7 +33,6 @@ import com.google.inject.Singleton;
  * @author Tim Olson
  */
 @Entity
-@Singleton
 @Cacheable
 public class Portfolio extends EntityBase {
 
@@ -43,12 +43,12 @@ public class Portfolio extends EntityBase {
     Collection<Fill> getDetailedPositions() {
         Collection<Fill> allPositions = new ConcurrentLinkedQueue<Fill>();
 
-        for (Asset asset : positions.keySet()) {
+        for (Asset asset : positionsMap.keySet()) {
             // Asset asset = it.next();
-            for (Exchange exchange : positions.get(asset).keySet()) {
-                for (Listing listing : positions.get(asset).get(exchange).keySet()) {
-                    for (TransactionType transactionType : positions.get(asset).get(exchange).get(listing).keySet()) {
-                        for (Iterator<Position> itp = positions.get(asset).get(exchange).get(listing).get(transactionType).iterator(); itp.hasNext();) {
+            for (Exchange exchange : positionsMap.get(asset).keySet()) {
+                for (Listing listing : positionsMap.get(asset).get(exchange).keySet()) {
+                    for (TransactionType transactionType : positionsMap.get(asset).get(exchange).get(listing).keySet()) {
+                        for (Iterator<Position> itp = positionsMap.get(asset).get(exchange).get(listing).get(transactionType).iterator(); itp.hasNext();) {
                             Position pos = itp.next();
                             for (Fill fill : pos.getFills()) {
                                 allPositions.add(fill);
@@ -65,12 +65,12 @@ public class Portfolio extends EntityBase {
 
     protected @Transient
     void persistPositions() {
-        for (Asset asset : positions.keySet()) {
-            for (Exchange exchange : positions.get(asset).keySet()) {
-                for (Listing listing : positions.get(asset).get(exchange).keySet()) {
-                    for (TransactionType transactionType : positions.get(asset).get(exchange).get(listing).keySet()) {
+        for (Asset asset : positionsMap.keySet()) {
+            for (Exchange exchange : positionsMap.get(asset).keySet()) {
+                for (Listing listing : positionsMap.get(asset).get(exchange).keySet()) {
+                    for (TransactionType transactionType : positionsMap.get(asset).get(exchange).get(listing).keySet()) {
 
-                        for (Position position : positions.get(asset).get(exchange).get(listing).get(transactionType)) {
+                        for (Position position : positionsMap.get(asset).get(exchange).get(listing).get(transactionType)) {
                             position.Merge();
                         }
                     }
@@ -79,20 +79,36 @@ public class Portfolio extends EntityBase {
         }
     }
 
+    //  fetch = FetchType.EAGER,
+    @Nullable
+    @OneToMany(fetch = FetchType.EAGER, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
+    public Collection<Position> getPositions() {
+        if (positions == null)
+            positions = new ConcurrentLinkedQueue<Position>();
+        return positions;
+
+    }
+
+    protected void setPositions(Collection<Position> positions) {
+
+        this.positions = positions;
+
+    }
+
     public @Transient
-    Collection<Position> getPositions() {
+    Collection<Position> getNetPositions() {
         ConcurrentLinkedQueue<Position> allPositions = new ConcurrentLinkedQueue<Position>();
-        for (Asset asset : positions.keySet()) {
-            for (Exchange exchange : positions.get(asset).keySet()) {
-                for (Listing listing : positions.get(asset).get(exchange).keySet()) {
-                    for (TransactionType transactionType : positions.get(asset).get(exchange).get(listing).keySet()) {
+        for (Asset asset : positionsMap.keySet()) {
+            for (Exchange exchange : positionsMap.get(asset).keySet()) {
+                for (Listing listing : positionsMap.get(asset).get(exchange).keySet()) {
+                    for (TransactionType transactionType : positionsMap.get(asset).get(exchange).get(listing).keySet()) {
                         Amount longVolume = DecimalAmount.ZERO;
                         Amount longAvgPrice = DecimalAmount.ZERO;
                         Amount longAvgStopPrice = DecimalAmount.ZERO;
                         Amount shortVolume = DecimalAmount.ZERO;
                         Amount shortAvgPrice = DecimalAmount.ZERO;
                         Amount shortAvgStopPrice = DecimalAmount.ZERO;
-                        for (Position position : positions.get(asset).get(exchange).get(listing).get(transactionType)) {
+                        for (Position position : positionsMap.get(asset).get(exchange).get(listing).get(transactionType)) {
                             allPositions.add(position);
                             //                            for (Fill pos : position.getFills()) {
                             //
@@ -146,7 +162,7 @@ public class Portfolio extends EntityBase {
         //  Position position = new Position(null, market.getExchange(), market, asset, DecimalAmount.ZERO, DecimalAmount.ZERO);
         // new ConcurrentLinkedQueue<Transaction>();
         Collection<Fill> fills = new ConcurrentLinkedQueue<Fill>();
-        for (TransactionType transactionType : positions.get(asset).get(market.getExchange()).get(market.getListing()).keySet()) {
+        for (TransactionType transactionType : positionsMap.get(asset).get(market.getExchange()).get(market.getListing()).keySet()) {
 
             //            Amount longVolume = DecimalAmount.ZERO;
             //            Amount longAvgPrice = DecimalAmount.ZERO;
@@ -154,7 +170,7 @@ public class Portfolio extends EntityBase {
             //            Amount shortVolume = DecimalAmount.ZERO;
             //            Amount shortAvgPrice = DecimalAmount.ZERO;
             //            Amount shortAvgStopPrice = DecimalAmount.ZERO;
-            for (Position detailedPosition : positions.get(asset).get(market.getExchange()).get(market.getListing()).get(transactionType)) {
+            for (Position detailedPosition : positionsMap.get(asset).get(market.getExchange()).get(market.getListing()).get(transactionType)) {
 
                 for (Fill pos : detailedPosition.getFills()) {
                     fills.add(pos);
@@ -201,14 +217,14 @@ public class Portfolio extends EntityBase {
     Collection<Position> getPositions(Asset asset, Exchange exchange) {
         Collection<Position> allPositions = new ConcurrentLinkedQueue<Position>();
 
-        if (positions.get(asset) != null && positions.get(asset).get(exchange) != null) {
+        if (positionsMap.get(asset) != null && positionsMap.get(asset).get(exchange) != null) {
             synchronized (lock) {
-                for (Iterator<Listing> itl = positions.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+                for (Iterator<Listing> itl = positionsMap.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
                     Listing listing = itl.next();
-                    for (Iterator<TransactionType> itt = positions.get(asset).get(exchange).get(listing).keySet().iterator(); itt.hasNext();) {
+                    for (Iterator<TransactionType> itt = positionsMap.get(asset).get(exchange).get(listing).keySet().iterator(); itt.hasNext();) {
                         TransactionType transactionType = itt.next();
 
-                        for (Iterator<Position> itp = positions.get(asset).get(exchange).get(listing).get(transactionType).iterator(); itp.hasNext();) {
+                        for (Iterator<Position> itp = positionsMap.get(asset).get(exchange).get(listing).get(transactionType).iterator(); itp.hasNext();) {
                             Position pos = itp.next();
                             allPositions.add(pos);
                         }
@@ -276,10 +292,10 @@ public class Portfolio extends EntityBase {
     DiscreteAmount getLongPosition(Asset asset, Exchange exchange) {
         long longVolumeCount = 0;
         synchronized (lock) {
-            if (positions.get(asset) != null && positions.get(asset).get(exchange) != null) {
-                for (Iterator<Listing> itl = positions.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+            if (positionsMap.get(asset) != null && positionsMap.get(asset).get(exchange) != null) {
+                for (Iterator<Listing> itl = positionsMap.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
                     Listing listing = itl.next();
-                    for (Position itpos : positions.get(asset).get(exchange).get(listing).get(TransactionType.BUY)) {
+                    for (Position itpos : positionsMap.get(asset).get(exchange).get(listing).get(TransactionType.BUY)) {
 
                         for (Iterator<Fill> itp = itpos.getFills().iterator(); itp.hasNext();) {
                             Fill pos = itp.next();
@@ -299,13 +315,13 @@ public class Portfolio extends EntityBase {
         long netVolumeCount = 0;
         Fill pos = null;
         synchronized (lock) {
-            if (positions.get(asset) != null && positions.get(asset).get(exchange) != null) {
-                for (Iterator<Listing> itl = positions.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+            if (positionsMap.get(asset) != null && positionsMap.get(asset).get(exchange) != null) {
+                for (Iterator<Listing> itl = positionsMap.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
                     Listing listing = itl.next();
-                    for (Iterator<TransactionType> itt = positions.get(asset).get(exchange).get(listing).keySet().iterator(); itt.hasNext();) {
+                    for (Iterator<TransactionType> itt = positionsMap.get(asset).get(exchange).get(listing).keySet().iterator(); itt.hasNext();) {
                         TransactionType transactionType = itt.next();
 
-                        for (Position itpos : positions.get(asset).get(exchange).get(listing).get(transactionType)) {
+                        for (Position itpos : positionsMap.get(asset).get(exchange).get(listing).get(transactionType)) {
                             for (Iterator<Fill> itp = itpos.getFills().iterator(); itp.hasNext();) {
 
                                 pos = itp.next();
@@ -325,11 +341,11 @@ public class Portfolio extends EntityBase {
         long shortVolumeCount = 0;
         synchronized (lock) {
 
-            if (positions.get(asset) != null && positions.get(asset).get(exchange) != null) {
-                for (Iterator<Listing> itl = positions.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+            if (positionsMap.get(asset) != null && positionsMap.get(asset).get(exchange) != null) {
+                for (Iterator<Listing> itl = positionsMap.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
                     Listing listing = itl.next();
 
-                    for (Position itpos : positions.get(asset).get(exchange).get(listing).get(TransactionType.SELL)) {
+                    for (Position itpos : positionsMap.get(asset).get(exchange).get(listing).get(TransactionType.SELL)) {
                         for (Iterator<Fill> itp = itpos.getFills().iterator(); itp.hasNext();) {
 
                             Fill pos = itp.next();
@@ -495,28 +511,77 @@ public class Portfolio extends EntityBase {
         context.route(new PositionUpdate(position, market, lastType, mergedType));
     }
 
+    public void addPosition(Position position) {
+        synchronized (lock) {
+            getPositions().add(position);
+        }
+    }
+
     @Transient
     public void insert(Position position) {
+
+        //baseCCY->Exchange->Listing->TransactionType
         TransactionType transactionType = (position.isLong()) ? TransactionType.BUY : TransactionType.SELL;
+        ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>> assetPositions = positionsMap
+                .get(position.getMarket().getBase());
+        if (assetPositions == null) {
+            assetPositions = new ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>>();
+            ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>> listingPosition = new ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>();
+            ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>> positionType = new ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>();
 
-        ConcurrentLinkedQueue<Position> detailPosition = new ConcurrentLinkedQueue<Position>();
-        //Position detPosition = new Position(fill);
-        //detPosition.Persit();
-        detailPosition.add(position);
-        ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>> positionType = new ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>();
-        positionType.put(transactionType, detailPosition);
-        ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>> listingPosition = new ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>();
+            ConcurrentLinkedQueue<Position> detailPosition = new ConcurrentLinkedQueue<Position>();
+            detailPosition.add(position);
+            positionType.put(transactionType, detailPosition);
+            listingPosition.put(position.getMarket().getListing(), positionType);
+            assetPositions.put(position.getMarket().getExchange(), listingPosition);
+            positionsMap.put(position.getMarket().getBase(), assetPositions);
+            return;
 
-        listingPosition.put(position.getMarket().getListing(), positionType);
+        } else {
+            ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>> listingPosition = assetPositions.get(position
+                    .getMarket().getExchange());
+            if (listingPosition == null) {
+                listingPosition = new ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>();
+                ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>> positionType = new ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>();
+                ConcurrentLinkedQueue<Position> detailPosition = new ConcurrentLinkedQueue<Position>();
+                detailPosition.add(position);
+                positionType.put(transactionType, detailPosition);
+                listingPosition.put(position.getMarket().getListing(), positionType);
+                assetPositions.put(position.getMarket().getExchange(), listingPosition);
+                return;
 
-        ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>> assetPositions = new ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>>();
-        assetPositions.put(position.getMarket().getExchange(), listingPosition);
-        positions.put(position.getMarket().getBase(), assetPositions);
+            } else {
+                ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>> positionType = listingPosition.get(position.getMarket().getListing());
+                if (positionType == null) {
+                    positionType = new ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>();
+                    ConcurrentLinkedQueue<Position> detailPosition = new ConcurrentLinkedQueue<Position>();
+                    detailPosition.add(position);
+                    positionType.put(transactionType, detailPosition);
+                    listingPosition.put(position.getMarket().getListing(), positionType);
+                    return;
+
+                } else {
+                    ConcurrentLinkedQueue<Position> positions = positionType.get(transactionType);
+                    if (positions == null) {
+                        ConcurrentLinkedQueue<Position> detailPosition = new ConcurrentLinkedQueue<Position>();
+                        detailPosition.add(position);
+                        positionType.put(transactionType, detailPosition);
+                        return;
+                    } else {
+                        positions.add(position);
+                        return;
+                    }
+
+                }
+
+            }
+
+        }
 
     }
 
     @Transient
-    private boolean merge(Fill fill) {
+    public boolean merge(Fill fill) {
         //synchronized (lock) {
         // We need to have a queue of buys and a queue of sells ( two array lists), ensure the itterator is descendingIterator for LIFO,
         // when we get a new trade coem in we add it to the buy or sell queue
@@ -526,10 +591,11 @@ public class Portfolio extends EntityBase {
         // 4) move onto next postion until the qty =0
 
         // https://github.com/webpat/jquant-core/blob/173d5ca79b318385a3754c8e1357de79ece47be4/src/main/java/org/jquant/portfolio/Portfolio.java
+
         TransactionType transactionType = (fill.isLong()) ? TransactionType.BUY : TransactionType.SELL;
         TransactionType openingTransactionType = (transactionType.equals(TransactionType.BUY)) ? TransactionType.SELL : TransactionType.BUY;
 
-        ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>> assetPositions = positions
+        ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>> assetPositions = positionsMap
                 .get(fill.getMarket().getBase());
         ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>> listingPosition = new ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>();
         //ConcurrentHashMap<Listing, ArrayList<Position>> listingPosition = new ConcurrentHashMap<Listing, ArrayList<Position>>();
@@ -551,7 +617,7 @@ public class Portfolio extends EntityBase {
             listingPosition.put(fill.getMarket().getListing(), positionType);
             assetPositions = new ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>>();
             assetPositions.put(fill.getMarket().getExchange(), listingPosition);
-            positions.put(fill.getMarket().getBase(), assetPositions);
+            positionsMap.put(fill.getMarket().getBase(), assetPositions);
 
             Amount profits = DecimalAmount.ZERO;
             if (assetRealisedProfits == null) {
@@ -960,12 +1026,22 @@ public class Portfolio extends EntityBase {
         return name;
     }
 
-    @OneToMany
+    @Transient
+    public Context getContext() {
+        return context;
+    }
+
+    @Transient
+    public PortfolioService getPortfolioService() {
+        return portfolioService;
+    }
+
+    @OneToMany(fetch = FetchType.EAGER, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     public Collection<Stake> getStakes() {
         return stakes;
     }
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.EAGER, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     public Asset getBaseAsset() {
         return baseAsset;
     }
@@ -981,7 +1057,7 @@ public class Portfolio extends EntityBase {
      * @param authorization
      */
     @Transient
-    protected void modifyPosition(Fill fill, Authorization authorization) {
+    public void modifyPosition(Fill fill, Authorization authorization) {
         assert authorization != null;
         assert fill != null;
         boolean modifiedExistingPosition = false;
@@ -1008,7 +1084,7 @@ public class Portfolio extends EntityBase {
 
     // JPA
     public Portfolio() {
-        this.positions = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>>>();
+        this.positionsMap = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>>>();
         this.realisedProfits = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>>();
         this.balances = new ConcurrentLinkedQueue<>();
         this.transactions = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Transaction>>>>();
@@ -1017,7 +1093,7 @@ public class Portfolio extends EntityBase {
 
     protected void setPositions(
             ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>>> positions) {
-        this.positions = positions;
+        this.positionsMap = positions;
     }
 
     protected void setBalances(Collection<Balance> balances) {
@@ -1035,6 +1111,14 @@ public class Portfolio extends EntityBase {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    protected void setContext(Context context) {
+        this.context = context;
+    }
+
+    protected void setPortfolioService(PortfolioService portfolioService) {
+        this.portfolioService = portfolioService;
     }
 
     protected void setStakes(Collection<Stake> stakes) {
@@ -1073,19 +1157,42 @@ public class Portfolio extends EntityBase {
         // HibernateEntity.vsl merge-point
     }
 
+    @Override
+    public boolean equals(Object object) {
+        boolean result = false;
+        if (object == null || object.getClass() != getClass()) {
+            result = false;
+        } else {
+            Portfolio portfolio = (Portfolio) object;
+            if (this.getName() == portfolio.getName()) {
+                result = true;
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 7 * hash + Long.valueOf(this.getName()).hashCode();
+        return hash;
+    }
+
     private PortfolioManager manager;
     @Inject
     private Logger log;
     @Inject
-    protected Context context;
+    protected transient Context context;
     @Inject
-    protected PortfolioService portfolioService;
+    protected transient PortfolioService portfolioService;
     private Asset baseAsset;
-    private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>>> positions;
+    private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>>> positionsMap;
     private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>> realisedProfits;
     private Collection<Balance> balances = Collections.emptyList();
     private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Transaction>>>> transactions;
     private Collection<Stake> stakes = Collections.emptyList();
+    private Collection<Position> positions;
+
     //private ConcurrentHashMap<Market, ConcurrentSkipListMap<Long,ArrayList<TaxLot>>> longTaxLots;
     //private ConcurrentHashMap<Market, ConcurrentSkipListMap<Long,ArrayList<TaxLot>>> shortTaxLots;
     private final Collection<Balance> trades = Collections.emptyList();

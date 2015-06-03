@@ -2,6 +2,7 @@ package org.cryptocoinpartners.util;
 
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -90,6 +91,14 @@ public class XchangeUtil {
             spec.setExchangeSpecificParametersItem("Use_Futures", Boolean.valueOf(config.getString(baseKey + "exchangeSpecificParameters.futures", "false")));
             spec.setSslUri(config.getString(baseKey + "ssluri", null));
             spec.setHost(config.getString(baseKey + "host", null));
+            List<String> listings = config.getList(baseKey + "listings");
+
+            for (String listingSymbol : listings) {
+                Listing listing = Listing.forSymbol(listingSymbol.toUpperCase());
+                if (listing.getPrompt() != null)
+                    spec.setExchangeSpecificParametersItem("Futures_Contract_String", listing.getPrompt().getSymbol());
+
+            }
 
             com.xeiam.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
             exchangesByMarket.put(getExchangeForTag(exchangeTag), exchange);

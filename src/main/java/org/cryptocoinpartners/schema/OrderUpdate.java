@@ -1,6 +1,5 @@
 package org.cryptocoinpartners.schema;
 
-import java.io.Serializable;
 import java.util.UUID;
 
 import javax.persistence.Column;
@@ -23,7 +22,7 @@ import org.cryptocoinpartners.enumeration.OrderState;
 @Table(indexes = { @Index(columnList = "state") })
 //@IdClass(OrderUpdateID.class)
 //@Table(indexes = { @Index(columnList = "seq") })
-public class OrderUpdate extends Event implements Serializable {
+public class OrderUpdate extends Event {
 
     //  @GeneratedValue(strategy = GenerationType.TABLE, generator = "tab")
 
