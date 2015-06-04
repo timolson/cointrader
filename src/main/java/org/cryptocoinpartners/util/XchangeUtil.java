@@ -8,8 +8,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.configuration.CombinedConfiguration;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.text.WordUtils;
 import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Listing;
 
@@ -52,8 +50,10 @@ public class XchangeUtil {
     }
 
     public static FuturesContract getContractForListing(Listing listing) {
-        String prompt = StringUtils.remove(WordUtils.capitalizeFully(listing.getPrompt().toString(), new char[] { '_' }), "_");
-        return FuturesContract.valueOf(prompt);
+
+        //String prompt = StringUtils.remove(WordUtils.capitalizeFully(listing.getPrompt().toString(), new char[] { '_' }), "_");
+
+        return FuturesContract.valueOfIgnoreCase(FuturesContract.class, listing.getPrompt().getSymbol());
     }
 
     private static HashBiMap<Exchange, com.xeiam.xchange.Exchange> exchangesByMarket;

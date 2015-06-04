@@ -37,6 +37,8 @@ import com.xeiam.xchange.dto.marketdata.Trades;
 import com.xeiam.xchange.dto.trade.LimitOrder;
 import com.xeiam.xchange.okcoin.FuturesContract;
 import com.xeiam.xchange.service.polling.marketdata.PollingMarketDataService;
+import com.xeiam.xchange.service.streaming.ExchangeStreamingConfiguration;
+import com.xeiam.xchange.service.streaming.StreamingExchangeService;
 
 /**
  * @author Tim Olson
@@ -61,10 +63,11 @@ public class XchangeData {
             if (exchange != null) {
                 String prefix = configPrefix + "." + tag + '.';
                 final String helperClassName = config.getString(prefix + "helper.class", null);
+                final String streamingConfigClassName = config.getString(prefix + "streaming.config.class", null);
                 int queries = config.getInt(prefix + "rate.queries", 1);
                 Duration period = Duration.millis((long) (1000 * config.getDouble(prefix + "rate.period", 1))); // rate.period in seconds
                 final List listings = config.getList(prefix + "listings");
-                initExchange(helperClassName, queries, period, exchange, listings);
+                initExchange(helperClassName, streamingConfigClassName, queries, period, exchange, listings);
             } else {
                 log.warn("Could not find Exchange for property \"xchange." + tag + ".*\"");
             }
@@ -87,8 +90,10 @@ public class XchangeData {
         void handleOrderBook(OrderBook orderBook);
     }
 
-    private void initExchange(@Nullable String helperClassName, int queries, Duration per, Exchange coinTraderExchange, List listings) {
+    private void initExchange(@Nullable String helperClassName, @Nullable String streamingConfigClassName, int queries, Duration per,
+            Exchange coinTraderExchange, List listings) {
         com.xeiam.xchange.Exchange xchangeExchange = XchangeUtil.getExchangeForMarket(coinTraderExchange);
+        StreamingExchangeService streamingDataService;
         Helper helper = null;
         if (helperClassName != null && !helperClassName.isEmpty()) {
             if (helperClassName.indexOf('.') == -1)
@@ -109,7 +114,36 @@ public class XchangeData {
                 return;
             }
         }
+
+        ExchangeStreamingConfiguration streamingConfiguration = null;
+        //        if (streamingConfigClassName != null && !streamingConfigClassName.isEmpty()) {
+        //            if (streamingConfigClassName.indexOf('.') == -1)
+        //                streamingConfigClassName = XchangeData.class.getPackage().getName() + '.' + streamingConfigClassName;
+        //            try {
+        //                final Class<?> streamingConfigClass = getClass().getClassLoader().loadClass(streamingConfigClassName);
+        //                try {
+        //                    streamingConfiguration = (ExchangeStreamingConfiguration) streamingConfigClass.newInstance();
+        //                } catch (InstantiationException | IllegalAccessException e) {
+        //                    log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName
+        //                            + " could not be instantiated ", e);
+        //                    return;
+        //                } catch (ClassCastException e) {
+        //                    log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName + " does not implement "
+        //                            + ExchangeStreamingConfiguration.class);
+        //                    return;
+        //                }
+        //            } catch (ClassNotFoundException e) {
+        //                log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName + " was not found");
+        //                return;
+        //            }
+        //        }
+
+        // ExchangeStreamingConfiguration streamingConfiguration = new OkCoinExchangeStreamingConfiguration();
+
         PollingMarketDataService dataService = xchangeExchange.getPollingMarketDataService();
+        if (streamingConfiguration != null)
+            streamingDataService = xchangeExchange.getStreamingExchangeService(streamingConfiguration);
+
         RateLimiter rateLimiter = new RateLimiter(queries, per);
         Collection<Market> markets = new ArrayList<>(listings.size());
         Market market;
