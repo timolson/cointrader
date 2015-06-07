@@ -21,29 +21,32 @@ import org.slf4j.Logger;
 @Singleton
 public class SaveMarketData {
 
-    private static ExecutorService service = Executors.newFixedThreadPool(10);
+    private static ExecutorService service = Executors.newFixedThreadPool(1);
+    static Future future;
 
     @When("select * from MarketData")
     public void handleMarketData(MarketData m) {
-        Future future = service.submit(new saveMarketData(m));
-        try {
-            //   if (future.isDone())
-            future.get();
-        } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
+        if (future == null || future.isDone()) {
+            Future future = service.submit(new saveMarketData(m));
+            try {
+                //   if (future.isDone())
+                future.get();
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
 
-            e.printStackTrace();
-            Thread.currentThread().interrupt();
+                e.printStackTrace();
+                Thread.currentThread().interrupt();
 
-        } catch (ExecutionException ex) {
+            } catch (ExecutionException ex) {
 
-            ex.getCause().printStackTrace();
+                ex.getCause().printStackTrace();
+
+            }
+
+            //  startSignal.countDown();
+            // endSignal.await();
 
         }
-
-        //  startSignal.countDown();
-        // endSignal.await();
-
     }
 
     private class saveMarketData implements Runnable {
@@ -75,8 +78,8 @@ public class SaveMarketData {
 
             else if (m instanceof Book) {
                 Book book = (Book) m;
-                //if (book.getParent() != null)
-                //PersistUtil.insert(book.getParent());
+                //  if (book.getParent() != null)
+                //    PersistUtil.insert(book.getParent());
                 PersistUtil.insert(book);
 
             } else { // if not a Trade, persist unconditionally

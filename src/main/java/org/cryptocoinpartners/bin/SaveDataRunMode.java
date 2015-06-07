@@ -18,8 +18,9 @@ public class SaveDataRunMode extends RunMode {
     @Override
     public void run(Semaphore semaphore) {
         Context context = Context.create();
-        context.attach(XchangeData.class);
         context.attach(SaveMarketData.class);
+        context.attach(XchangeData.class);
+
         if (semaphore != null)
             semaphore.release();
     }

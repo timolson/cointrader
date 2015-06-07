@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.module.xchange;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -8,6 +9,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executors;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -23,6 +25,7 @@ import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.MarketDataError;
 import org.cryptocoinpartners.schema.Prompt;
+import org.cryptocoinpartners.util.CompareUtils;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.RateLimiter;
 import org.cryptocoinpartners.util.XchangeUtil;
@@ -37,6 +40,8 @@ import com.xeiam.xchange.dto.marketdata.Trades;
 import com.xeiam.xchange.dto.trade.LimitOrder;
 import com.xeiam.xchange.okcoin.FuturesContract;
 import com.xeiam.xchange.service.polling.marketdata.PollingMarketDataService;
+import com.xeiam.xchange.service.streaming.ExchangeEvent;
+import com.xeiam.xchange.service.streaming.ExchangeEventType;
 import com.xeiam.xchange.service.streaming.ExchangeStreamingConfiguration;
 import com.xeiam.xchange.service.streaming.StreamingExchangeService;
 
@@ -116,49 +121,202 @@ public class XchangeData {
         }
 
         ExchangeStreamingConfiguration streamingConfiguration = null;
-        //        if (streamingConfigClassName != null && !streamingConfigClassName.isEmpty()) {
-        //            if (streamingConfigClassName.indexOf('.') == -1)
-        //                streamingConfigClassName = XchangeData.class.getPackage().getName() + '.' + streamingConfigClassName;
-        //            try {
-        //                final Class<?> streamingConfigClass = getClass().getClassLoader().loadClass(streamingConfigClassName);
-        //                try {
-        //                    streamingConfiguration = (ExchangeStreamingConfiguration) streamingConfigClass.newInstance();
-        //                } catch (InstantiationException | IllegalAccessException e) {
-        //                    log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName
-        //                            + " could not be instantiated ", e);
-        //                    return;
-        //                } catch (ClassCastException e) {
-        //                    log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName + " does not implement "
-        //                            + ExchangeStreamingConfiguration.class);
-        //                    return;
-        //                }
-        //            } catch (ClassNotFoundException e) {
-        //                log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName + " was not found");
-        //                return;
-        //            }
-        //        }
-
-        // ExchangeStreamingConfiguration streamingConfiguration = new OkCoinExchangeStreamingConfiguration();
-
-        PollingMarketDataService dataService = xchangeExchange.getPollingMarketDataService();
-        if (streamingConfiguration != null)
-            streamingDataService = xchangeExchange.getStreamingExchangeService(streamingConfiguration);
-
-        RateLimiter rateLimiter = new RateLimiter(queries, per);
+        if (streamingConfigClassName != null && !streamingConfigClassName.isEmpty()) {
+        }
         Collection<Market> markets = new ArrayList<>(listings.size());
         Market market;
-
+        //  ExchangeStreamingConfiguration streamingConfiguration = new OkCoinExchangeStreamingConfiguration();
         for (Iterator<List> il = listings.iterator(); il.hasNext(); markets.add(market)) {
             Object listingSymbol = il.next();
             Listing listing = Listing.forSymbol(listingSymbol.toString().toUpperCase());
             market = Market.findOrCreate(coinTraderExchange, listing);
         }
 
-        for (Iterator<Market> im = markets.iterator(); im.hasNext(); rateLimiter.execute(new FetchTradesRunnable(context, market, rateLimiter, dataService,
-                helper)))
-            market = im.next();
+        if (streamingConfigClassName != null) {
+            // streamingDataService = xchangeExchange.getStreamingExchangeService(streamingConfiguration);
+            for (Iterator<Market> im = markets.iterator(); im.hasNext(); Executors.newSingleThreadExecutor().execute(
+                    new StreamTradesRunnable(context, xchangeExchange, market, streamingConfigClassName, helper)))
+                market = im.next();
 
-        return;
+            return;
+        } else {
+            PollingMarketDataService dataService = xchangeExchange.getPollingMarketDataService();
+
+            RateLimiter rateLimiter = new RateLimiter(queries, per);
+
+            for (Iterator<Market> im = markets.iterator(); im.hasNext(); rateLimiter.execute(new FetchTradesRunnable(context, market, rateLimiter, dataService,
+                    helper)))
+                market = im.next();
+
+            return;
+        }
+    }
+
+    private class StreamTradesRunnable implements Runnable {
+
+        private final Helper helper;
+        DateFormat dateFormat = new SimpleDateFormat("ddMMyy");
+        private ExchangeStreamingConfiguration streamingConfiguration;
+        private CurrencyPair[] pairs;
+
+        public StreamTradesRunnable(Context context, com.xeiam.xchange.Exchange xchangeExchange, Market market, String streamingConfigClassName,
+                @Nullable Helper helper) {
+            this.context = context;
+            this.market = market;
+            this.helper = helper;
+            this.prompt = market.getListing().getPrompt();
+            pairs = new CurrencyPair[] { XchangeUtil.getCurrencyPairForListing(market.getListing()) };
+            contract = prompt == null ? null : XchangeUtil.getContractForListing(market.getListing());
+
+            if (streamingConfigClassName.indexOf('.') == -1)
+                streamingConfigClassName = XchangeData.class.getPackage().getName() + '.' + streamingConfigClassName;
+            try {
+                final Class<?> streamingConfigClass = getClass().getClassLoader().loadClass(streamingConfigClassName);
+                //  CurrencyPair[] ccy = new CurrencyPair[] { CurrencyPair.BTC_USD };
+                try {
+                    streamingConfiguration = (ExchangeStreamingConfiguration) CompareUtils.tryToCreateBestMatch(streamingConfigClass, new Object[] { pairs });
+                    dataService = xchangeExchange.getStreamingExchangeService(streamingConfiguration);
+                    dataService.connect();
+
+                    String str = streamingConfigClass.getCanonicalName();
+                } catch (InstantiationException e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
+                } catch (IllegalAccessException e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
+                } catch (InvocationTargetException e1) {
+                    // TODO Auto-generated catch block
+                    e1.printStackTrace();
+                }
+
+                try {
+                    streamingConfiguration = (ExchangeStreamingConfiguration) streamingConfigClass.newInstance();
+
+                    //           StreamingExchangeService service = xchangeExchange.getStreamingExchangeService(new (ExchangeStreamingConfiguration) streamingConfigClass(new CurrencyPair[]{ CurrencyPair.BTC_USD }));
+
+                } catch (InstantiationException | IllegalAccessException e) {
+                    log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName
+                            + " could not be instantiated ", e);
+                    return;
+                } catch (ClassCastException e) {
+                    log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName + " does not implement "
+                            + ExchangeStreamingConfiguration.class);
+                    return;
+                }
+            } catch (ClassNotFoundException e) {
+                log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName + " was not found");
+                return;
+            }
+
+            Class<? extends ExchangeStreamingConfiguration> myclass = streamingConfiguration.getClass();
+            Class<?> streamingConfigClass = null;
+            try {
+                streamingConfigClass = getClass().getClassLoader().loadClass(streamingConfigClassName);
+            } catch (ClassNotFoundException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+            try {
+                streamingConfiguration = (ExchangeStreamingConfiguration) streamingConfigClass.newInstance();
+            } catch (InstantiationException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            EntityManager entityManager = PersistUtil.createEntityManager();
+            try {
+
+                TypedQuery<org.cryptocoinpartners.schema.Trade> query = entityManager.createQuery(
+                        "select t from Trade t where market=?1 and time=(select max(time) from Trade where market=?1)",
+                        org.cryptocoinpartners.schema.Trade.class);
+                query.setParameter(1, market);
+                for (org.cryptocoinpartners.schema.Trade trade : query.getResultList()) {
+                    // org.cryptocoinpartners.schema.Trade trade = query.getSingleResult();
+                    long millis = trade.getTime().getMillis();
+                    if (millis > lastTradeTime)
+                        lastTradeTime = millis;
+                    // todo this is broken and assumes an increasing integer remote key
+                    // Long remoteId = Long.valueOf(trade.getRemoteKey().concat(String.valueOf(trade.getTimestamp())));
+                    Long remoteId = Long.valueOf(trade.getRemoteKey());
+                    if (remoteId > lastTradeId)
+                        lastTradeId = remoteId;
+                }
+            } finally {
+                entityManager.close();
+            }
+
+            //StreamingExchangeService streamingDataService = xchangeExchange.getStreamingExchangeService(streamingConfiguration,new CurrencyPair[]{ CurrencyPair.BTC_USD }));
+
+            lastTradeTime = 0;
+            lastTradeId = 0;
+
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    ExchangeEvent event = dataService.getNextEvent();
+
+                    if (event != null) {
+                        //System.out.println("---> " + event.getPayload() + " " + event.getEventType());
+
+                        if (event.getEventType().equals(ExchangeEventType.TRADE)) {
+                            com.xeiam.xchange.dto.marketdata.Trade trade = (com.xeiam.xchange.dto.marketdata.Trade) event.getPayload();
+                            // long remoteId = Long.valueOf(String.valueOf(dateFormat.format(trade.getTimestamp()).concat(trade.getId()))).longValue();
+                            //if (remoteId > lastTradeId) {
+                            // timestamp set t 1970.
+                            Instant tradeInstant = new Instant(trade.getTimestamp());
+                            org.cryptocoinpartners.schema.Trade ourTrade = new org.cryptocoinpartners.schema.Trade(market, tradeInstant, trade.getId(),
+                                    trade.getPrice(), trade.getTradableAmount());
+                            context.publish(ourTrade);
+                            // lastTradeTime = tradeInstant.getMillis();
+                            //lastTradeId = remoteId;
+                            // }
+
+                        } else if (event.getEventType().equals(ExchangeEventType.DEPTH)) {
+                            OrderBook orderBook = (OrderBook) event.getPayload();
+                            if (helper != null)
+                                helper.handleOrderBook(orderBook);
+                            bookBuilder.start(new Instant(orderBook.getTimeStamp()), null, market);
+                            LimitOrder limitOrder;
+                            for (Iterator<LimitOrder> itb = orderBook.getBids().iterator(); itb.hasNext(); bookBuilder.addBid(limitOrder.getLimitPrice(),
+                                    limitOrder.getTradableAmount()))
+                                limitOrder = itb.next();
+
+                            for (Iterator<LimitOrder> ita = orderBook.getAsks().iterator(); ita.hasNext(); bookBuilder.addAsk(limitOrder.getLimitPrice(),
+                                    limitOrder.getTradableAmount()))
+                                limitOrder = ita.next();
+
+                            Book book = bookBuilder.build();
+                            context.publish(book);
+
+                        }
+
+                    }
+
+                } catch (InterruptedException e) {
+                    dataService.disconnect();
+                    Thread.currentThread().interrupt();
+
+                }
+            }
+        }
+
+        private final Book.Builder bookBuilder = new Book.Builder();
+        private final boolean getTradesNext = true;
+        private StreamingExchangeService dataService = null;;
+        private final Context context;
+        private final Market market;
+
+        private final FuturesContract contract;
+        private long lastTradeTime;
+        private final Prompt prompt;
+        private long lastTradeId;
     }
 
     private class FetchTradesRunnable implements Runnable {

@@ -1,5 +1,12 @@
 package org.cryptocoinpartners.util;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -198,4 +205,99 @@ public final class CompareUtils {
             }
         }
     }
+
+    private static final Comparator<? super Constructor<?>> CTOR_COMPARATOR = new Comparator<Constructor<?>>() {
+        @Override
+        public int compare(Constructor<?> ctorA, Constructor<?> ctorB) {
+            Class<?>[] params1 = ctorA.getParameterTypes();
+            Class<?>[] params2 = ctorB.getParameterTypes();
+
+            if (params1.length != params2.length)
+                throw new IllegalArgumentException(ctorA + " can't be compared to " + ctorB);
+
+            for (int i = 0; i < params1.length; i++) {
+                Class<?> aClass = params1[i];
+                Class<?> bClass = params2[i];
+                if (!aClass.equals(bClass)) {
+                    if (aClass.isAssignableFrom(bClass))
+                        return 1;
+                    if (bClass.isAssignableFrom(aClass))
+                        return -1;
+                    throw new IllegalArgumentException(ctorA + " can't be compared to " + ctorB + ": args at pos " + i + " aren't comparable: " + aClass
+                            + " vs " + bClass);
+                }
+            }
+
+            return 0;
+        }
+    };
+
+    public static <T> T tryToCreateBestMatch(Class<T> aClass, Object[] oa) throws InstantiationException, IllegalAccessException, InvocationTargetException {
+        //noinspection unchecked
+        Constructor<T>[] declaredConstructors = (Constructor<T>[]) aClass.getDeclaredConstructors();
+        Class<?>[] argClasses = getClasses(oa);
+        List<Constructor<T>> matchedCtors = new ArrayList<>();
+        for (Constructor<T> ctr : declaredConstructors) {
+            Class<?>[] parameterTypes = ctr.getParameterTypes();
+            if (ctorMatches(parameterTypes, argClasses)) {
+                matchedCtors.add(ctr);
+            }
+        }
+
+        if (matchedCtors.isEmpty())
+            return null;
+
+        Collections.sort(matchedCtors, CTOR_COMPARATOR);
+        return matchedCtors.get(0).newInstance(oa);
+    }
+
+    private static boolean ctorMatches(Class<?>[] ctrParamTypes, Class<?>[] argClasses) {
+        if (ctrParamTypes.length != argClasses.length)
+            return false;
+        for (int i = 0; i < ctrParamTypes.length; i++) {
+            Class<?> ctrParamType = ctrParamTypes[i];
+            Class<?> argClass = argClasses[i];
+
+            if (!compatible(ctrParamType, argClass))
+                return false;
+        }
+        return true;
+    }
+
+    private static boolean compatible(Class<?> ctrParamType, Class<?> argClass) {
+        if (ctrParamType.isAssignableFrom(argClass))
+            return true;
+        if (ctrParamType.isPrimitive())
+            return compareAgainstPrimitive(ctrParamType.getName(), argClass);
+        return false;
+    }
+
+    private static boolean compareAgainstPrimitive(String primitiveType, Class<?> argClass) {
+        switch (primitiveType) {
+            case "short":
+            case "byte":
+            case "int":
+            case "long":
+                return INTEGER_WRAPPERS.contains(argClass.getName());
+            case "float":
+            case "dobule":
+                return FP_WRAPPERS.contains(argClass.getName());
+        }
+        throw new IllegalArgumentException("Unexpected primitive type?!?!: " + primitiveType);
+    }
+
+    private static final HashSet<String> INTEGER_WRAPPERS = new HashSet<>(Arrays.asList("java.lang.Integer", "java.lang.Short", "java.lang.Byte",
+            "java.lang.Long"));
+    private static final HashSet<String> FP_WRAPPERS = new HashSet<>(Arrays.asList("java.lang.Float", "java.lang.Double"));
+
+    private static Class<?>[] getClasses(Object[] oa) {
+        if (oa == null)
+            return new Class[0];
+        Class<?>[] ret = new Class[oa.length];
+        for (int i = 0; i < oa.length; i++) {
+            ret[i] = oa[i] == null ? Object.class : oa[i].getClass();
+        }
+        return ret;
+    }
+
 }

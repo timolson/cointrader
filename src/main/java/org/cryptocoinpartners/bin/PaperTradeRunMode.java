@@ -50,6 +50,7 @@ public class PaperTradeRunMode extends RunMode {
         Replay replay = Replay.between(start, end, true, paperSemaphore);
         context = replay.getContext();
         // context = Context.create();
+        context.attach(SaveMarketData.class);
         context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
         context.attach(BasicPortfolioService.class);
@@ -77,7 +78,7 @@ public class PaperTradeRunMode extends RunMode {
         //  context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
 
         context.attach(XchangeData.class);
-        context.attach(SaveMarketData.class);
+
         //  if (semaphore != null)
         //    semaphore.release();
 

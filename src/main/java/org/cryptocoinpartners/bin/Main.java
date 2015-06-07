@@ -108,7 +108,7 @@ public class Main {
         } catch (Throwable t) {
             log.error("Uncaught error while running " + runMode.getClass().getSimpleName(), t);
         } finally {
-            PersistUtil.shutdown();
+            //      PersistUtil.shutdown();
         }
     }
 

@@ -328,6 +328,7 @@ public class Book extends MarketData implements Spread {
     //@PrimaryKeyJoinColumn
     //cascade = { CascadeType.REFRESH, CascadeType.MERGE }
     @ManyToOne(optional = true)
+    //, cascade = { CascadeType.REFRESH, CascadeType.MERGE, CascadeType.PERSIST })
     public Book getParent() {
         return parent;
     }
