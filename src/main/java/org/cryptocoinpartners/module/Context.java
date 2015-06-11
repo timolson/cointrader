@@ -499,6 +499,10 @@ public class Context {
         return childInjector;
     }
 
+    public void setTimeProvider(TimeProvider timeProvider) {
+        this.timeProvider = timeProvider;
+    }
+
     private Context(TimeProvider timeProvider) {
         this.timeProvider = timeProvider;
 

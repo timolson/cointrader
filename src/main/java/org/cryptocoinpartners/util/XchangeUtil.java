@@ -27,6 +27,7 @@ public class XchangeUtil {
     }
 
     public static Set<String> getExchangeTags() {
+
         return exchangeTags;
     }
 
@@ -76,7 +77,10 @@ public class XchangeUtil {
         exchangesByMarket = HashBiMap.create();
 
         //= new HashMap<>();
-        for (String exchangeTag : exchangeTags) {
+        Iterator ite = exchangeTags.iterator();
+        while (ite.hasNext()) {
+            // for (String exchangeTag : exchangeTags) {
+            String exchangeTag = (String) ite.next();
             String baseKey = "xchange." + exchangeTag + ".";
             String key = baseKey + "class";
             String exchangeClassName = config.getString(key);
@@ -92,16 +96,20 @@ public class XchangeUtil {
             spec.setSslUri(config.getString(baseKey + "ssluri", null));
             spec.setHost(config.getString(baseKey + "host", null));
             List<String> listings = config.getList(baseKey + "listings");
+            if (listings == null || listings.isEmpty()) {
+                ite.remove();
+                // break;
+            } else {
 
-            for (String listingSymbol : listings) {
-                Listing listing = Listing.forSymbol(listingSymbol.toUpperCase());
-                if (listing.getPrompt() != null)
-                    spec.setExchangeSpecificParametersItem("Futures_Contract_String", listing.getPrompt().getSymbol());
-
+                for (String listingSymbol : listings) {
+                    Listing listing = Listing.forSymbol(listingSymbol.toUpperCase());
+                    if (listing.getPrompt() != null)
+                        spec.setExchangeSpecificParametersItem("Futures_Contract_String", listing.getPrompt().getSymbol());
+                    com.xeiam.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
+                    exchangesByMarket.put(getExchangeForTag(exchangeTag), exchange);
+                }
             }
 
-            com.xeiam.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
-            exchangesByMarket.put(getExchangeForTag(exchangeTag), exchange);
         }
     }
 }

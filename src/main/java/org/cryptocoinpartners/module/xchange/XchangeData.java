@@ -267,16 +267,16 @@ public class XchangeData {
 
                         if (event.getEventType().equals(ExchangeEventType.TRADE)) {
                             com.xeiam.xchange.dto.marketdata.Trade trade = (com.xeiam.xchange.dto.marketdata.Trade) event.getPayload();
-                            // long remoteId = Long.valueOf(String.valueOf(dateFormat.format(trade.getTimestamp()).concat(trade.getId()))).longValue();
-                            //if (remoteId > lastTradeId) {
-                            // timestamp set t 1970.
-                            Instant tradeInstant = new Instant(trade.getTimestamp());
-                            org.cryptocoinpartners.schema.Trade ourTrade = new org.cryptocoinpartners.schema.Trade(market, tradeInstant, trade.getId(),
-                                    trade.getPrice(), trade.getTradableAmount());
-                            context.publish(ourTrade);
-                            // lastTradeTime = tradeInstant.getMillis();
-                            //lastTradeId = remoteId;
-                            // }
+                            long remoteId = Long.valueOf(String.valueOf(dateFormat.format(trade.getTimestamp()).concat(trade.getId()))).longValue();
+                            if (remoteId > lastTradeId) {
+
+                                Instant tradeInstant = new Instant(trade.getTimestamp());
+                                org.cryptocoinpartners.schema.Trade ourTrade = new org.cryptocoinpartners.schema.Trade(market, tradeInstant, trade.getId(),
+                                        trade.getPrice(), trade.getTradableAmount());
+                                context.publish(ourTrade);
+                                lastTradeTime = tradeInstant.getMillis();
+                                lastTradeId = remoteId;
+                            }
 
                         } else if (event.getEventType().equals(ExchangeEventType.DEPTH)) {
                             OrderBook orderBook = (OrderBook) event.getPayload();

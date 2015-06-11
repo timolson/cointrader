@@ -23,16 +23,17 @@ public class SaveMarketData {
 
     private static ExecutorService service = Executors.newFixedThreadPool(1);
     static Future future;
+    private static MarketData lastMktData = null;
 
-    @When("select * from MarketData")
-    public void handleMarketData(MarketData m) {
+    //@When("select * from MarketData")
+    @When("select * from MarketData.std:firstunique(id)")
+    public static void handleMarketData(MarketData m) {
+
         if (future == null || future.isDone()) {
-            Future future = service.submit(new saveMarketData(m));
+            Future future = service.submit(new saveDataRunnable(m));
             try {
-                //   if (future.isDone())
                 future.get();
             } catch (InterruptedException e) {
-                // TODO Auto-generated catch block
 
                 e.printStackTrace();
                 Thread.currentThread().interrupt();
@@ -42,15 +43,11 @@ public class SaveMarketData {
                 ex.getCause().printStackTrace();
 
             }
-
-            //  startSignal.countDown();
-            // endSignal.await();
-
         }
     }
 
-    private class saveMarketData implements Runnable {
-        MarketData m;
+    private static class saveDataRunnable implements Runnable {
+        static MarketData m;
 
         @Override
         public void run() {
@@ -58,11 +55,11 @@ public class SaveMarketData {
 
         }
 
-        public saveMarketData(MarketData m) {
+        public saveDataRunnable(MarketData m) {
             this.m = m;
         }
 
-        public void saveData() {
+        public static void saveData() {
 
             if (m instanceof Trade) {
                 Trade trade = (Trade) m;
@@ -78,8 +75,9 @@ public class SaveMarketData {
 
             else if (m instanceof Book) {
                 Book book = (Book) m;
-                //  if (book.getParent() != null)
-                //    PersistUtil.insert(book.getParent());
+                //if (book.getParent() != null)
+                //  PersistUtil.merge(book.getParent());
+                //  book.setParent(null);
                 PersistUtil.insert(book);
 
             } else { // if not a Trade, persist unconditionally
@@ -90,8 +88,12 @@ public class SaveMarketData {
                 }
             }
         }
-
-        @Inject
-        private Logger log;
     }
+
+    public SaveMarketData() {
+        int myint = 1;
+    }
+
+    @Inject
+    private static Logger log;
 }
