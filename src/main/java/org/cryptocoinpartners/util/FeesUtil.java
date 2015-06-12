@@ -69,8 +69,10 @@ public class FeesUtil {
     }
 
     public static Amount getMargin(Fill fill) {
-        double rate = fill.getMarket().getMargin();
-        FeeMethod method = fill.getMarket().getMarginFeeMethod();
+
+        double rate = (fill.getMarket().getMargin() == 0) ? 1 : fill.getMarket().getMargin();
+        FeeMethod method = (fill.getMarket().getMarginFeeMethod() == null) ? FeeMethod.PercentagePerUnit : fill.getMarket().getMarginFeeMethod();
+
         Amount price = fill.getPrice();
         Amount ammount = fill.getVolume();
         Market market = fill.getMarket();
@@ -117,8 +119,9 @@ public class FeesUtil {
     public static Amount getMargin(Order order) {
         if (order.getMarket() != null) {
 
-            double rate = order.getMarket().getMargin();
-            FeeMethod method = order.getMarket().getMarginFeeMethod();
+            double rate = (order.getMarket().getMargin() == 0) ? 1 : order.getMarket().getMargin();
+            // need a check in here to see if margin fee moethos is null they assume full margin
+            FeeMethod method = (order.getMarket().getMarginFeeMethod() == null) ? FeeMethod.PercentagePerUnit : order.getMarket().getMarginFeeMethod();
             Amount price = order.getLimitPrice();
             Amount ammount = order.getVolume().abs();
             Market market = order.getMarket();
@@ -133,8 +136,9 @@ public class FeesUtil {
     public static Amount getMargin(Position position) {
         if (position.isOpen()) {
 
-            double rate = position.getMarket().getMargin();
-            FeeMethod method = position.getMarket().getMarginFeeMethod();
+            double rate = (position.getMarket().getMargin() == 0) ? 1 : position.getMarket().getMargin();
+            FeeMethod method = (position.getMarket().getMarginFeeMethod() == null) ? FeeMethod.PercentagePerUnit : position.getMarket().getMarginFeeMethod();
+
             Amount price = (position.isLong()) ? position.getLongAvgPrice() : position.getShortAvgPrice();
             Amount ammount = (position.isLong()) ? position.getLongVolume() : position.getShortVolume();
             Market market = position.getMarket();
