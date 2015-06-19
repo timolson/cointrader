@@ -44,7 +44,7 @@ public class Book extends MarketData implements Spread {
 
     /** Books will be saved in the database as diffs against the previous Book, but a full Book will be saved if the
      * number of parent hops to the previous full Book reaches MAX_PARENT_CHAIN_LENGTH */
-    private static final int MAX_PARENT_CHAIN_LENGTH = 20;
+    private static final int MAX_PARENT_CHAIN_LENGTH = 1;
 
     public static void find(Interval timeInterval, Visitor<Book> visitor) {
         PersistUtil.queryEach(Book.class, visitor, "select b from Book b where time > ?1 and time < ?2", timeInterval.getStartMillis(),
@@ -458,9 +458,10 @@ public class Book extends MarketData implements Spread {
 
     @PostPersist
     private void postPersist() {
-        //if (getParentBook() != null)
-        //PersistUtil.detach(getParentBook());
-        ///PersistUtil.detach(this);
+        //    if (this.parent != null)
+
+        //    PersistUtil.detach(this.parent);
+        //  PersistUtil.detach(this);
         clearBlobs();
 
     }
@@ -505,6 +506,7 @@ public class Book extends MarketData implements Spread {
     }
 
     private void clearBlobs() {
+        // parent = null;
         bidDeletionsBlob = null;
         askDeletionsBlob = null;
         bidInsertionsBlob = null;
