@@ -44,7 +44,7 @@ public class Book extends MarketData implements Spread {
 
     /** Books will be saved in the database as diffs against the previous Book, but a full Book will be saved if the
      * number of parent hops to the previous full Book reaches MAX_PARENT_CHAIN_LENGTH */
-    private static final int MAX_PARENT_CHAIN_LENGTH = 1;
+    private static final int MAX_PARENT_CHAIN_LENGTH = 20;
 
     public static void find(Interval timeInterval, Visitor<Book> visitor) {
         PersistUtil.queryEach(Book.class, visitor, "select b from Book b where time > ?1 and time < ?2", timeInterval.getStartMillis(),

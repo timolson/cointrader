@@ -26,7 +26,7 @@ public class SaveMarketData {
     private static MarketData lastMktData = null;
 
     //@When("select * from MarketData")
-    @When("select * from MarketData.std:firstunique(id)")
+    @When("select * from MarketData.std:lastevent()")
     public static void handleMarketData(MarketData m) {
 
         if (future == null || future.isDone()) {
@@ -75,10 +75,15 @@ public class SaveMarketData {
 
             else if (m instanceof Book) {
                 Book book = (Book) m;
+
+                final Book duplicate = PersistUtil.queryZeroOne(Book.class, "select b from Book b where b=?1", book);
+                if (duplicate == null)
+                    PersistUtil.insert(book);
+
                 //if (book.getParent() != null)
                 //  PersistUtil.merge(book.getParent());
                 //  book.setParent(null);
-                PersistUtil.insert(book);
+                // PersistUtil.insert(book);
 
             } else { // if not a Trade, persist unconditionally
                 try {
