@@ -1,20 +1,26 @@
 package org.cryptocoinpartners.schema;
 
+import java.util.List;
+
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.Index;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.TransactionType;
+import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A Transaction represents the modification of multiple Positions, whether it is a purchase on a Market or a
@@ -22,6 +28,7 @@ import org.slf4j.Logger;
  * @author Tim Olson
  */
 @Entity
+@Cacheable
 @Table(indexes = { @Index(columnList = "type") })
 public class Transaction extends Event {
 
@@ -33,7 +40,8 @@ public class Transaction extends Event {
     private static final String SEPARATOR = ",";
 
     public Transaction(Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount, Amount price) {
-
+        this.id = getId();
+        this.version = getVersion();
         this.setAmount(amount);
         this.amountCount = amount.toBasis(currency.getBasis(), Remainder.ROUND_EVEN).getCount();
         this.setCurrency(currency);
@@ -46,7 +54,8 @@ public class Transaction extends Event {
     }
 
     public Transaction(Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount) {
-
+        this.id = getId();
+        this.version = getVersion();
         this.setAmount(amount);
         this.amountCount = amount.toBasis(currency.getBasis(), Remainder.ROUND_EVEN).getCount();
         this.setCurrency(currency);
@@ -57,6 +66,8 @@ public class Transaction extends Event {
     }
 
     public Transaction(Fill fill, Instant creationTime) throws Exception {
+        this.id = getId();
+        this.version = getVersion();
         Portfolio portfolio = fill.getOrder().getPortfolio();
         TransactionType transactionType = null;
 
@@ -91,6 +102,8 @@ public class Transaction extends Event {
     }
 
     public Transaction(Order order, Instant creationTime) throws Exception {
+        this.id = getId();
+        this.version = getVersion();
         Portfolio portfolio = order.getPortfolio();
 
         TransactionType transactionType = order.getVolume().isPositive() ? TransactionType.BUY_RESERVATION : TransactionType.SELL_RESERVATION;
@@ -240,7 +253,7 @@ public class Transaction extends Event {
 
     public @ManyToOne(optional = true)
     //, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
-    // @JoinColumn(name = "`order`")
+    @JoinColumn(name = "`order`")
     Order getOrder() {
         return order;
     }
@@ -249,6 +262,24 @@ public class Transaction extends Event {
     //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     Fill getFill() {
         return fill;
+    }
+
+    public void persit() {
+        List<Transaction> duplicate = PersistUtil.queryList(Transaction.class, "select t from  Transaction t where t=?1", this);
+
+        if (getOrder() != null)
+            getOrder().persit();
+
+        if (getFill() != null)
+            getFill().persit();
+        if (duplicate == null || duplicate.isEmpty())
+            PersistUtil.insert(this);
+        else
+            PersistUtil.merge(this);
+        //  }
+        // if (this.parentOrder != null)
+        //    parentOrder.persit();
+
     }
 
     @ManyToOne(optional = false)
@@ -400,6 +431,6 @@ public class Transaction extends Event {
 
     private Asset commissionCurrency;
     private Market market;
-    @Inject
-    private Logger log;
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.transaction");
+
 }

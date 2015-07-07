@@ -38,17 +38,20 @@ public class BacktestRunMode extends RunMode {
     private Context context;
     private static ExecutorService service;
     Semaphore backTestSemaphore = new Semaphore(0);
+
     private final Instant start = new DateTime(2015, 02, 15, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    //private final Instant start = new DateTime(2015, 2, , 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
     //private final Instant start = new DateTime(2014, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
-    private final Instant end = new DateTime(2015, 05, 29, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    private final Instant end = new DateTime(2015, 02, 23, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
     //private final Instant end = new DateTime(2015, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
     //private final Instant start = new DateTime(2014, 9, 9, 23, 0, 0, 0, DateTimeZone.UTC).toInstant();
     //private final Instant end = new DateTime(2014, 9, 10, 6, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
     @Parameter(names = { "-p", "--position" }, arity = 2, description = "specify initial portfolio positions as {Exchange}:{Asset} {Amount} e.g. BITFINEX:BTC 1.0")
-    public List<String> positions = Arrays.asList("OKCOIN:USD", "1000000");
+    // public List<String> positions = Arrays.asList("BITSTAMP:USD", "1000000");
+    public List<String> positions = Arrays.asList("OKCOIN_THISWEEK:USD", "1000000");
 
     @Parameter(names = { "-" }, description = "No-op switch used to end list of positions before supplying the strategy name")
     boolean noop = false;

@@ -7,7 +7,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -59,22 +58,22 @@ public class Book extends MarketData implements Spread {
 
     @Transient
     public List<Offer> getBids() {
-        synchronized (lock) {
-            resolveDiff();
-            if (bids == null)
-                return (new ArrayList<>());
-            return bids;
-        }
+        // synchronized (lock) {
+        resolveDiff();
+        if (bids == null)
+            return (new ArrayList<>());
+        return bids;
+        //}
     }
 
     @Transient
     public List<Offer> getAsks() {
-        synchronized (lock) {
-            resolveDiff();
-            if (asks == null)
-                return (new ArrayList<>());
-            return asks;
-        }
+        //  synchronized (lock) {
+        resolveDiff();
+        if (asks == null)
+            return (new ArrayList<>());
+        return asks;
+        // }
     }
 
     @Override
@@ -189,16 +188,16 @@ public class Book extends MarketData implements Spread {
     }
 
     public static class DiffResult {
-        Collection<Offer> newOffers = new ArrayList<>();
-        Collection<Offer> removedOffers = new ArrayList<>();
+        List<Offer> newOffers = new ArrayList<>();
+        List<Offer> removedOffers = new ArrayList<>();
     }
 
     public DiffResult diff(Book previousBook) {
         DiffResult result = new DiffResult();
-        synchronized (lock) {
-            diff(result, getBids(), previousBook.getBids());
-            diff(result, getAsks(), previousBook.getAsks());
-        }
+        //   synchronized (lock) {
+        diff(result, getBids(), previousBook.getBids());
+        diff(result, getAsks(), previousBook.getAsks());
+        //  }
         return result;
     }
 
@@ -225,19 +224,19 @@ public class Book extends MarketData implements Spread {
 
         public Builder addBid(BigDecimal price, BigDecimal volume) {
             Market market = book.getMarket();
-            synchronized (lock) {
-                book.bids.add(Offer.bid(market, book.getTime(), book.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
-                        DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
-            }
+            //   synchronized (lock) {
+            book.bids.add(Offer.bid(market, book.getTime(), book.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
+                    DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
+            //   }
             return this;
         }
 
         public Builder addAsk(BigDecimal price, BigDecimal volume) {
             Market market = book.getMarket();
-            synchronized (lock) {
-                book.asks.add(Offer.ask(market, book.getTime(), book.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
-                        DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
-            }
+            // synchronized (lock) {
+            book.asks.add(Offer.ask(market, book.getTime(), book.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
+                    DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
+            //  }
             return this;
         }
 
@@ -390,7 +389,7 @@ public class Book extends MarketData implements Spread {
         this.bidInsertionsBlob = bidInsertionsBlob;
     }
 
-    protected void setChildren(Collection<Book> children) {
+    protected void setChildren(List<Book> children) {
         this.children = children;
     }
 
@@ -488,17 +487,17 @@ public class Book extends MarketData implements Spread {
         List<Offer> parentBids = parent.getBids();
         for (int i = 0; i < parentBids.size(); i++) {
             if (!bidDeletionIndexes.contains(i))
-                synchronized (lock) {
-                    bids.add(parentBids.get(i));
-                }
+                //  synchronized (lock) {
+                bids.add(parentBids.get(i));
+            // }
         }
         List<Integer> askDeletionIndexes = convertDatabaseBlobToIndexList(askDeletionsBlob); // these should be already sorted
         List<Offer> parentAsks = parent.getAsks();
         for (int i = 0; i < parentAsks.size(); i++) {
             if (!askDeletionIndexes.contains(i))
-                synchronized (lock) {
-                    asks.add(parentAsks.get(i));
-                }
+                //   synchronized (lock) {
+                asks.add(parentAsks.get(i));
+            //    }
         }
         sortBook();
         clearBlobs();
@@ -625,29 +624,29 @@ public class Book extends MarketData implements Spread {
     }
 
     private void sortBook() {
-        synchronized (lock) {
-            Collections.sort(bids, new Comparator<Offer>() {
-                @Override
-                @SuppressWarnings("ConstantConditions")
-                public int compare(Offer bid, Offer bid2) {
-                    return -bid.getPriceCount().compareTo(bid2.getPriceCount()); // high to low
-                }
-            });
-        }
-        synchronized (lock) {
-            Collections.sort(asks, new Comparator<Offer>() {
-                @Override
-                @SuppressWarnings("ConstantConditions")
-                public int compare(Offer ask, Offer ask2) {
-                    return ask.getPriceCount().compareTo(ask2.getPriceCount()); // low to high
-                }
-            });
-        }
+        //  synchronized (lock) {
+        Collections.sort(bids, new Comparator<Offer>() {
+            @Override
+            @SuppressWarnings("ConstantConditions")
+            public int compare(Offer bid, Offer bid2) {
+                return -bid.getPriceCount().compareTo(bid2.getPriceCount()); // high to low
+            }
+        });
+        //    }
+        //    synchronized (lock) {
+        Collections.sort(asks, new Comparator<Offer>() {
+            @Override
+            @SuppressWarnings("ConstantConditions")
+            public int compare(Offer ask, Offer ask2) {
+                return ask.getPriceCount().compareTo(ask2.getPriceCount()); // low to high
+            }
+        });
+        //   }
     }
 
     private List<Offer> bids;
     private List<Offer> asks;
-    private Collection<Book> children;
+    private List<Book> children;
     private Book parent;// if this is not null, then the Book is persisted as a diff against the parent Book
     private byte[] bidDeletionsBlob;
     private byte[] askDeletionsBlob;

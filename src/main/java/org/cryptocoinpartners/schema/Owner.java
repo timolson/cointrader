@@ -2,7 +2,7 @@ package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.List;
 
 import javax.persistence.Basic;
 import javax.persistence.Entity;
@@ -28,7 +28,7 @@ public class Owner extends PortfolioManager {
     }
 
     @OneToMany
-    public Collection<Stake> getStakes() {
+    public List<Stake> getStakes() {
         return stakes;
     }
 
@@ -40,10 +40,10 @@ public class Owner extends PortfolioManager {
         this.name = name;
     }
 
-    protected void setStakes(Collection<Stake> stakes) {
+    protected void setStakes(List<Stake> stakes) {
         this.stakes = stakes;
     }
 
-    private Collection<Stake> stakes = new ArrayList<>();
+    private List<Stake> stakes = new ArrayList<>();
     private String name;
 }

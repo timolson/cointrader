@@ -9,20 +9,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
-import javax.inject.Inject;
-
-import jline.internal.Log;
-
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.Event;
 import org.cryptocoinpartners.schema.RemoteEvent;
 import org.cryptocoinpartners.schema.Trade;
-import org.cryptocoinpartners.service.PortfolioService;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.joda.time.Interval;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.espertech.esper.client.EPRuntime;
 
@@ -149,8 +145,8 @@ public class Replay implements Runnable {
             try {
                 // perform interesting task
 
-                Log.debug(context.getInjector().toString());
-                PortfolioService port = context.getInjector().getInstance(PortfolioService.class);
+                // Log.debug(context.getInjector().toString());
+                //PortfolioService port = context.getInjector().getInstance(PortfolioService.class);
                 Iterator<RemoteEvent> ite = queryEvents(start, stop).iterator();
                 while (ite.hasNext()) {
                     RemoteEvent event = ite.next();
@@ -250,8 +246,8 @@ public class Replay implements Runnable {
         }
     }
 
-    @Inject
-    private Logger log;
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.replay");
+
     private final Interval replayTimeInterval;
     private final Semaphore semaphore;
     private static ExecutorService service;

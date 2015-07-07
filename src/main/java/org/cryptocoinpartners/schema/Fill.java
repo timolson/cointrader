@@ -1,19 +1,20 @@
 package org.cryptocoinpartners.schema;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.Nullable;
-import javax.persistence.CascadeType;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.util.FeesUtil;
+import org.cryptocoinpartners.util.PersistUtil;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -25,6 +26,7 @@ import org.joda.time.format.DateTimeFormatter;
  * @author Tim Olson
  */
 @Entity
+@Cacheable
 public class Fill extends RemoteEvent {
     private static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
     private static Object lock = new Object();
@@ -33,13 +35,17 @@ public class Fill extends RemoteEvent {
 
     public Fill(SpecificOrder order, Instant time, Instant timeReceived, Market market, long priceCount, long volumeCount, String remoteKey) {
         //   super(time, timeReceived, remoteKey);
-        this.order = order;
-        this.market = market;
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
         this.openVolumeCount = volumeCount;
+        this.order = order;
+        this.market = market;
+        if (priceCount == 0)
+            this.priceCount = priceCount;
         this.portfolio = order.getPortfolio();
         this.stopAmountCount = (order.getStopAmount() != null) ? order.getStopAmount().getCount() : 0;
+        this.id = getId();
+        this.version = getVersion();
 
     }
 
@@ -47,6 +53,9 @@ public class Fill extends RemoteEvent {
         // super(time, timeReceived, remoteKey);
         this.order = order;
         this.market = market;
+        if (priceCount == 0)
+            this.priceCount = priceCount;
+
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
         this.openVolumeCount = volumeCount;
@@ -55,16 +64,63 @@ public class Fill extends RemoteEvent {
         this.stopAmountCount = (order.getStopAmount() != null) ? order.getStopAmount().getCount() : 0;
     }
 
-    public @ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE, CascadeType.REFRESH })
+    // public @ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE, CascadeType.REFRESH })
+    public @ManyToOne
     @JoinColumn(name = "`order`")
     SpecificOrder getOrder() {
         return order;
     }
 
-    @Nullable
-    public @ManyToOne(optional = true, cascade = { CascadeType.MERGE, CascadeType.REMOVE, CascadeType.REFRESH })
+    public void persit() {
+        //   synchronized (persistanceLock) {
+        //  if (this.hasFills()) {
+        //    for (Fill fill : this.getFills())
+
+        //PersistUtil.merge(fill);
+        //}
+
+        List<Fill> duplicate = PersistUtil.queryList(Fill.class, "select f from Fill f where f=?1", this);
+        if (getPosition() != null)
+            getPosition().Persit();
+
+        if (duplicate == null || duplicate.isEmpty())
+            PersistUtil.insert(this);
+        else
+            PersistUtil.merge(this);
+        //  }
+        //Iterator<Order> itc = getChildren().iterator();
+        //while (itc.hasNext()) {
+        //                //  for (Fill pos : getFills()) {
+        //  Order order = itc.next();
+
+        // order.persit();
+        // }
+
+        //   synchronized (persistanceLock) {
+        //  if (this.hasFills()) {
+        //    for (Fill fill : this.getFills())
+
+        //PersistUtil.merge(fill);
+        //}
+        //if (this.hasFills()) {
+        // for (Fill fill : getFills()) {
+        // if (this.hasChildren()) {
+        //   for (Order order : this.getChildren())
+        //     if (order.getParentFill() == this)
+        //       order.persit();
+        //PersistUtil.merge(order);
+        // }
+
+    }
+
+    //@Nullable
+    public @ManyToOne(optional = true)
+    //, fetch = FetchType.EAGER)
+    //cascade = CascadeType.ALL)
     @JoinColumn(name = "position")
     Position getPosition() {
+        if (openVolumeCount == 0)
+            return null;
         return position;
     }
 
@@ -84,7 +140,8 @@ public class Fill extends RemoteEvent {
 
     @Transient
     public boolean isLong() {
-
+        if (getOpenVolume() == null)
+            return getOpenVolume().isZero();
         return getOpenVolume().isPositive();
     }
 
@@ -96,12 +153,14 @@ public class Fill extends RemoteEvent {
 
     @Nullable
     @OneToMany
-    public Collection<Order> getChildren() {
+    //(mappedBy = "parentFill", fetch = FetchType.LAZY)
+    @OrderBy
+    public List<Order> getChildren() {
         if (children == null)
-            children = new ConcurrentLinkedQueue<Order>();
-        synchronized (lock) {
-            return children;
-        }
+            children = new CopyOnWriteArrayList<Order>();
+        //  synchronized (//) {
+        return children;
+        // }
     }
 
     protected void setChildren(List<Order> children) {
@@ -114,32 +173,41 @@ public class Fill extends RemoteEvent {
     }
 
     @Transient
+    public boolean hasTransaction() {
+        return !getTransactions().isEmpty();
+    }
+
+    @Transient
     public boolean isShort() {
 
         return getOpenVolume().isNegative();
     }
 
-    @Nullable
-    @OneToMany(mappedBy = "fill", cascade = { CascadeType.MERGE, CascadeType.REFRESH })
+    // @Nullable
+    // @OneToMany(mappedBy = "fill")
+    // , fetch = FetchType.EAGER)
+    // , cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     //, mappedBy = "fill")
     //(fetch = FetchType.EAGER)
-    public Collection<Transaction> getTransactions() {
-        if (transactions == null)
-            transactions = new ConcurrentLinkedQueue<Transaction>();
 
-        synchronized (lock) {
-            return transactions;
-        }
+    @Transient
+    public List<Transaction> getTransactions() {
+        if (transactions == null)
+            transactions = new CopyOnWriteArrayList<Transaction>();
+
+        //synchronized (lock) {
+        return transactions;
+        // }
     }
 
     public void addTransaction(Transaction transaction) {
 
-        synchronized (lock) {
-            getTransactions().add(transaction);
-        }
+        // synchronized (lock) {
+        getTransactions().add(transaction);
+        //  }
     }
 
-    protected void setTransactions(Collection<Transaction> transactions) {
+    protected void setTransactions(List<Transaction> transactions) {
         this.transactions = transactions;
     }
 
@@ -150,6 +218,10 @@ public class Fill extends RemoteEvent {
 
     @Transient
     public Amount getPrice() {
+        if (priceCount == 0)
+            return null;
+        if (market.getPriceBasis() == 0)
+            return null;
         return new DiscreteAmount(priceCount, market.getPriceBasis());
     }
 
@@ -181,6 +253,8 @@ public class Fill extends RemoteEvent {
 
     @Transient
     public Amount getVolume() {
+        if (volumeCount == 0)
+            return null;
         return new DiscreteAmount(volumeCount, market.getVolumeBasis());
     }
 
@@ -190,6 +264,8 @@ public class Fill extends RemoteEvent {
 
     @Transient
     public Amount getOpenVolume() {
+        //   if (openVolumeCount == 0)
+        //     return null;
         return new DiscreteAmount(openVolumeCount, market.getVolumeBasis());
     }
 
@@ -224,9 +300,11 @@ public class Fill extends RemoteEvent {
 
     @Override
     public String toString() {
-
-        return "FillID" + getId() + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "OrderID=" + order.getId() + SEPARATOR
-                + "Type=" + getFillType() + SEPARATOR + "Market=" + market + SEPARATOR + "Price=" + getPrice() + SEPARATOR + "Volume=" + getVolume();
+        // + (order.getId() != null ? order.getId() : "")
+        //   + (getFillType() != null ? getFillType() : "")
+        return "FillID" + (getId() != null ? getId() : "") + SEPARATOR + "OrderID=" + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "")
+                + SEPARATOR + "Type=" + SEPARATOR + "Market=" + (market != null ? market : "") + SEPARATOR + "Price=" + (getPrice() != null ? getPrice() : "")
+                + SEPARATOR + "Volume=" + (getVolume() != null ? getVolume() : "");
     }
 
     // JPA
@@ -242,6 +320,8 @@ public class Fill extends RemoteEvent {
     }
 
     protected void setPriceCount(long priceCount) {
+        if (priceCount == 0)
+            this.priceCount = priceCount;
         this.priceCount = priceCount;
     }
 
@@ -285,7 +365,7 @@ public class Fill extends RemoteEvent {
         this.position = position;
     }
 
-    private Collection<Order> children;
+    private List<Order> children = new CopyOnWriteArrayList<Order>();
 
     private SpecificOrder order;
     private Market market;
@@ -298,7 +378,7 @@ public class Fill extends RemoteEvent {
     private long openVolumeCount;
     private Amount commission;
     private Amount margin;
-    private Collection<Transaction> transactions;
+    private List<Transaction> transactions = new CopyOnWriteArrayList<Transaction>();
     private Portfolio portfolio;
     private Position position;
 

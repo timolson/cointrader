@@ -33,4 +33,8 @@ public enum OrderState {
         return this == OrderState.NEW || this == OrderState.TRIGGER || this == OrderState.ROUTED || this == OrderState.PLACED || this == OrderState.PARTFILLED;
     }
 
+    public boolean isCancelled() {
+        return this == OrderState.CANCELLED;
+    }
+
 }

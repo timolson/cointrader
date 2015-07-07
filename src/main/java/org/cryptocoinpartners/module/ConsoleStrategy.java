@@ -35,16 +35,16 @@ public class ConsoleStrategy extends SimpleStatefulStrategy {
 
     }
 
-    @When("@Priority(9) select * from PositionUpdate")
+    @When("@Priority(9) select * from PositionUpdate.std:lastevent()")
     void handlePositionUpdate(PositionUpdate positionUpdate) {
-        synchronized (lock) {
-            if (positionUpdate.getPosition() != null)
-                updatePositionMap(positionUpdate.getMarket(), positionUpdate.getType(), positionUpdate.getPosition());
-            else
-                updatePositionMap(positionUpdate.getMarket(), positionUpdate.getType());
-        }
-
+        //  synchronized (lock) {
+        if (positionUpdate.getPosition() != null)
+            updatePositionMap(positionUpdate.getMarket(), positionUpdate.getType(), positionUpdate.getPosition());
+        else
+            updatePositionMap(positionUpdate.getMarket(), positionUpdate.getType());
     }
+
+    //}
 
     public boolean updatePositionMap(Market market, PositionType type, Position position) {
 
@@ -71,26 +71,26 @@ public class ConsoleStrategy extends SimpleStatefulStrategy {
 
     public boolean updatePositionMap(Market market, PositionType type) {
         // Need to get existing position
-        synchronized (lock) {
-            if (positionMap.get(market) == null) {
-                ConcurrentHashMap<PositionType, Position> newPosition = new ConcurrentHashMap<PositionType, Position>();
-                //  Fill fill = new Fill();
-                Position position = new Position();
-                newPosition.put(type, position);
-                positionMap.put(market, newPosition);
-                return true;
-            }
-
-            for (PositionType positionType : positionMap.get(market).keySet())
-
-            {
-                ConcurrentHashMap<PositionType, Position> position = new ConcurrentHashMap<PositionType, Position>();
-                position.put(type, positionMap.get(market).get(positionType));
-                positionMap.put(market, position);
-                return true;
-            }
-            return false;
+        //  synchronized (lock) {
+        if (positionMap.get(market) == null) {
+            ConcurrentHashMap<PositionType, Position> newPosition = new ConcurrentHashMap<PositionType, Position>();
+            //  Fill fill = new Fill();
+            Position position = new Position();
+            newPosition.put(type, position);
+            positionMap.put(market, newPosition);
+            return true;
         }
+
+        for (PositionType positionType : positionMap.get(market).keySet())
+
+        {
+            ConcurrentHashMap<PositionType, Position> position = new ConcurrentHashMap<PositionType, Position>();
+            position.put(type, positionMap.get(market).get(positionType));
+            positionMap.put(market, position);
+            return true;
+        }
+        return false;
+        //  }
     }
 
     @Override

@@ -1,13 +1,16 @@
 package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
-import java.util.Collection;
+import java.util.List;
 
 import javax.annotation.Nullable;
 import javax.persistence.Basic;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
+
+import jline.internal.Log;
 
 import org.apache.commons.lang.NotImplementedException;
 import org.cryptocoinpartners.enumeration.PositionEffect;
@@ -27,6 +30,7 @@ import com.xeiam.xchange.dto.trade.LimitOrder;
  */
 @SuppressWarnings("UnusedDeclaration")
 @Entity
+@Cacheable
 public class SpecificOrder extends Order {
 
     public SpecificOrder(Instant time, Portfolio portfolio, Market market, long volumeCount) {
@@ -100,8 +104,8 @@ public class SpecificOrder extends Order {
 
     public SpecificOrder(Instant time, Portfolio portfolio, Market market, Amount volume, Order parentOrder, String comment) {
         super(time);
-        this.remoteKey = getId().toString();
         this.market = market;
+        this.remoteKey = getId().toString();
         this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
         super.setComment(comment);
         parentOrder.addChild(this);
@@ -122,6 +126,15 @@ public class SpecificOrder extends Order {
     @Override
     @ManyToOne(optional = false)
     public Market getMarket() {
+        if (market == null) {
+            Log.debug("null market");
+            return null;
+        }
+        if (market.getListing() == null) {
+            Log.debug("null listing");
+            return null;
+        }
+
         return market;
     }
 
@@ -135,6 +148,7 @@ public class SpecificOrder extends Order {
             this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
             return true;
         } catch (Error e) {
+
             e.printStackTrace();
             return false;
         }
@@ -203,7 +217,7 @@ public class SpecificOrder extends Order {
     @Transient
     public long getUnfilledVolumeCount() {
         long filled = 0;
-        Collection<Fill> fills = getFills();
+        List<Fill> fills = getFills();
         if (fills == null)
             return volumeCount;
         for (Fill fill : fills)

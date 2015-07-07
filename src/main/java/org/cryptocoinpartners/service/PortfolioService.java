@@ -1,6 +1,5 @@
 package org.cryptocoinpartners.service;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,14 +27,14 @@ public interface PortfolioService {
     /** returns all Positions in all Exchanges.  NOTE: if you have open orders, you will not be able to trade
      * all the Positions returned by this method.  Use getTradeablePositions() instead. */
     @Nullable
-    public ArrayList<Position> getPositions();
+    public Collection<Position> getPositions();
 
     public void CreateTransaction(Portfolio portfolio, Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price);
 
     /** returns all Postions for the given Exchange.  NOTE: if you have open orders, you will not be able to trade
      * all the Positions returned by this method.  Use getTradeablePositions() instead. */
     @Nullable
-    public ArrayList<Position> getPositions(Exchange exchange);
+    public Collection<Position> getPositions(Exchange exchange);
 
     public DiscreteAmount getLastTrade();
 

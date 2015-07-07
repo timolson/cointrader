@@ -11,6 +11,7 @@ import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.util.MathUtil;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Tim Olson
@@ -94,6 +95,6 @@ public class MockTicker {
     private volatile boolean running;
 
     private final Context context;
-    @Inject
-    private Logger log;
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.mockTicker");
+
 }

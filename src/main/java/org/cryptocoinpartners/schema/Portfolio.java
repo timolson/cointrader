@@ -1,20 +1,21 @@
 package org.cryptocoinpartners.schema;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.persistence.Cacheable;
-import javax.persistence.CascadeType;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.ManyToOne;
 import javax.persistence.NoResultException;
 import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
 import javax.persistence.Transient;
 
 import org.apache.commons.lang.NotImplementedException;
@@ -25,6 +26,7 @@ import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Many Owners may have Stakes in the Portfolio, but there is only one PortfolioManager, who is not necessarily an Owner.  The
@@ -40,8 +42,8 @@ public class Portfolio extends EntityBase {
 
     /** returns all Positions, whether they are tied to an open Order or not.  Use getTradeablePositions() */
     public @Transient
-    Collection<Fill> getDetailedPositions() {
-        Collection<Fill> allPositions = new ConcurrentLinkedQueue<Fill>();
+    List<Fill> getDetailedPositions() {
+        List<Fill> allPositions = new CopyOnWriteArrayList<Fill>();
 
         for (Asset asset : positionsMap.keySet()) {
             // Asset asset = it.next();
@@ -64,32 +66,30 @@ public class Portfolio extends EntityBase {
     }
 
     protected @Transient
-    void persistPositions() {
-        for (Asset asset : positionsMap.keySet()) {
-            for (Exchange exchange : positionsMap.get(asset).keySet()) {
-                for (Listing listing : positionsMap.get(asset).get(exchange).keySet()) {
-                    for (TransactionType transactionType : positionsMap.get(asset).get(exchange).get(listing).keySet()) {
-
-                        for (Position position : positionsMap.get(asset).get(exchange).get(listing).get(transactionType)) {
-                            position.Merge();
-                        }
-                    }
+    void persistPositions(Asset asset, Exchange exchange, Listing listing) {
+        if (positionsMap != null && positionsMap.get(asset) != null && positionsMap.get(asset).get(exchange) != null
+                && positionsMap.get(asset).get(exchange).get(listing) != null)
+            for (TransactionType transactionType : positionsMap.get(asset).get(exchange).get(listing).keySet()) {
+                for (Position position : positionsMap.get(asset).get(exchange).get(listing).get(transactionType)) {
+                    position.Persit();
                 }
             }
-        }
+
     }
 
     //  fetch = FetchType.EAGER,
     @Nullable
-    @OneToMany(fetch = FetchType.EAGER, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
-    public Collection<Position> getPositions() {
+    @OneToMany(fetch = FetchType.LAZY)
+    @OrderBy
+    //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
+    public List<Position> getPositions() {
         if (positions == null)
-            positions = new ConcurrentLinkedQueue<Position>();
+            positions = new CopyOnWriteArrayList<Position>();
         return positions;
 
     }
 
-    protected void setPositions(Collection<Position> positions) {
+    protected void setPositions(List<Position> positions) {
 
         this.positions = positions;
 
@@ -155,46 +155,54 @@ public class Portfolio extends EntityBase {
     }
 
     public @Transient
-    Position getPosition(Asset asset, Market market) {
+    Position getNetPosition(Asset asset, Market market) {
         //ArrayList<Position> allPositions = new ArrayList<Position>();
         Position position = null;
         //TODO need to add these per portfoio, portoflio should not be null
         //  Position position = new Position(null, market.getExchange(), market, asset, DecimalAmount.ZERO, DecimalAmount.ZERO);
         // new ConcurrentLinkedQueue<Transaction>();
-        Collection<Fill> fills = new ConcurrentLinkedQueue<Fill>();
-        for (TransactionType transactionType : positionsMap.get(asset).get(market.getExchange()).get(market.getListing()).keySet()) {
+        List<Fill> fills = new CopyOnWriteArrayList<Fill>();
+        if (positionsMap.get(asset) != null && positionsMap.get(asset).get(market.getExchange()) != null
+                && positionsMap.get(asset).get(market.getExchange()).get(market.getListing()) != null)
+            for (TransactionType transactionType : positionsMap.get(asset).get(market.getExchange()).get(market.getListing()).keySet()) {
 
-            //            Amount longVolume = DecimalAmount.ZERO;
-            //            Amount longAvgPrice = DecimalAmount.ZERO;
-            //            Amount longAvgStopPrice = DecimalAmount.ZERO;
-            //            Amount shortVolume = DecimalAmount.ZERO;
-            //            Amount shortAvgPrice = DecimalAmount.ZERO;
-            //            Amount shortAvgStopPrice = DecimalAmount.ZERO;
-            for (Position detailedPosition : positionsMap.get(asset).get(market.getExchange()).get(market.getListing()).get(transactionType)) {
+                //                           Amount longVolume = DecimalAmount.ZERO;
+                //                            Amount longAvgPrice = DecimalAmount.ZERO;
+                //                            Amount longAvgStopPrice = DecimalAmount.ZERO;
+                //                            Amount shortVolume = DecimalAmount.ZERO;
+                //                            Amount shortAvgPrice = DecimalAmount.ZERO;
+                //                            Amount shortAvgStopPrice = DecimalAmount.ZERO;
+                for (Position detailedPosition : positionsMap.get(asset).get(market.getExchange()).get(market.getListing()).get(transactionType)) {
 
-                for (Fill pos : detailedPosition.getFills()) {
-                    fills.add(pos);
+                    for (Fill pos : detailedPosition.getFills()) {
+                        fills.add(pos);
 
-                    //                    if (pos.isLong()) {
-                    //                        longAvgPrice = ((longAvgPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getPrice(),
-                    //                                Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
-                    //                        if (pos.getStopPrice() != null)
-                    //                            longAvgStopPrice = ((longAvgStopPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getStopPrice(),
-                    //                                    Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
-                    //
-                    //                        longVolume = longVolume.plus(pos.getOpenVolume());
-                    //                    } else if (pos.isShort()) {
-                    //                        shortAvgPrice = ((shortAvgPrice.times(shortVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getPrice(),
-                    //                                Remainder.ROUND_EVEN))).dividedBy(shortVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
-                    //                        if (pos.getStopPrice() != null)
-                    //                            shortAvgStopPrice = ((shortAvgStopPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getStopPrice(),
-                    //                                    Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
-                    //
-                    //                        shortVolume = shortVolume.plus(pos.getOpenVolume());
+                        //                                            if (pos.isLong()) {
+                        //                                                longAvgPrice = ((longAvgPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getPrice(),
+                        //                                                        Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+                        //                                                if (pos.getStopPrice() != null)
+                        //                                                    longAvgStopPrice = ((longAvgStopPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getStopPrice(),
+                        //                                                            Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+                        //                        //
+                        //                                                longVolume = longVolume.plus(pos.getOpenVolume());
+                        //                                            } else if (pos.isShort()) {
+                        //                                                shortAvgPrice = ((shortAvgPrice.times(shortVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getPrice(),
+                        //                                                        Remainder.ROUND_EVEN))).dividedBy(shortVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+                        //                                                if (pos.getStopPrice() != null)
+                        //                                                    shortAvgStopPrice = ((shortAvgStopPrice.times(longVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getStopPrice(),
+                        //                                                            Remainder.ROUND_EVEN))).dividedBy(longVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+                        //                        //
+                        //                                                shortVolume = shortVolume.plus(pos.getOpenVolume());
+                        //                    }
+                    }
                 }
             }
-        }
+
         // need to change this to just return one position that is the total, not one long and one short.
+        //Position netPosition=new Position();
+        //
+        //netPosition.setExchange(market.getExchange());
+        //netPosition.setExchange(market.getExchange());
 
         //        
         //        if (!shortVolume.isZero() || !longVolume.isZero()) {
@@ -218,19 +226,19 @@ public class Portfolio extends EntityBase {
         Collection<Position> allPositions = new ConcurrentLinkedQueue<Position>();
 
         if (positionsMap.get(asset) != null && positionsMap.get(asset).get(exchange) != null) {
-            synchronized (lock) {
-                for (Iterator<Listing> itl = positionsMap.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
-                    Listing listing = itl.next();
-                    for (Iterator<TransactionType> itt = positionsMap.get(asset).get(exchange).get(listing).keySet().iterator(); itt.hasNext();) {
-                        TransactionType transactionType = itt.next();
+            //synchronized (lock) {
+            for (Iterator<Listing> itl = positionsMap.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+                Listing listing = itl.next();
+                for (Iterator<TransactionType> itt = positionsMap.get(asset).get(exchange).get(listing).keySet().iterator(); itt.hasNext();) {
+                    TransactionType transactionType = itt.next();
 
-                        for (Iterator<Position> itp = positionsMap.get(asset).get(exchange).get(listing).get(transactionType).iterator(); itp.hasNext();) {
-                            Position pos = itp.next();
-                            allPositions.add(pos);
-                        }
+                    for (Iterator<Position> itp = positionsMap.get(asset).get(exchange).get(listing).get(transactionType).iterator(); itp.hasNext();) {
+                        Position pos = itp.next();
+                        allPositions.add(pos);
                     }
                 }
             }
+            // }
         }
 
         return allPositions;
@@ -241,27 +249,27 @@ public class Portfolio extends EntityBase {
     ConcurrentHashMap<Asset, Amount> getRealisedPnLs() {
 
         ConcurrentHashMap<Asset, Amount> allPnLs = new ConcurrentHashMap<Asset, Amount>();
-        synchronized (lock) {
-            for (Iterator<Asset> it = realisedProfits.keySet().iterator(); it.hasNext();) {
+        //  synchronized (lock) {
+        for (Iterator<Asset> it = realisedProfits.keySet().iterator(); it.hasNext();) {
 
-                Asset asset = it.next();
-                for (Iterator<Exchange> ite = realisedProfits.get(asset).keySet().iterator(); ite.hasNext();) {
-                    Exchange exchange = ite.next();
-                    for (Iterator<Listing> itl = realisedProfits.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
-                        Listing listing = itl.next();
-                        Amount realisedPnL = realisedProfits.get(asset).get(exchange).get(listing);
+            Asset asset = it.next();
+            for (Iterator<Exchange> ite = realisedProfits.get(asset).keySet().iterator(); ite.hasNext();) {
+                Exchange exchange = ite.next();
+                for (Iterator<Listing> itl = realisedProfits.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+                    Listing listing = itl.next();
+                    Amount realisedPnL = realisedProfits.get(asset).get(exchange).get(listing);
 
-                        if (allPnLs.get(asset) == null) {
-                            allPnLs.put(asset, realisedPnL);
-                        } else {
-                            allPnLs.put(asset, allPnLs.get(asset).plus(realisedPnL));
-                        }
+                    if (allPnLs.get(asset) == null) {
+                        allPnLs.put(asset, realisedPnL);
+                    } else {
+                        allPnLs.put(asset, allPnLs.get(asset).plus(realisedPnL));
                     }
-
                 }
 
             }
+
         }
+        // }
 
         return allPnLs;
     }
@@ -291,21 +299,21 @@ public class Portfolio extends EntityBase {
     public @Transient
     DiscreteAmount getLongPosition(Asset asset, Exchange exchange) {
         long longVolumeCount = 0;
-        synchronized (lock) {
-            if (positionsMap.get(asset) != null && positionsMap.get(asset).get(exchange) != null) {
-                for (Iterator<Listing> itl = positionsMap.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
-                    Listing listing = itl.next();
-                    for (Position itpos : positionsMap.get(asset).get(exchange).get(listing).get(TransactionType.BUY)) {
+        //   synchronized (lock) {
+        if (positionsMap.get(asset) != null && positionsMap.get(asset).get(exchange) != null) {
+            for (Iterator<Listing> itl = positionsMap.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+                Listing listing = itl.next();
+                for (Position itpos : positionsMap.get(asset).get(exchange).get(listing).get(TransactionType.BUY)) {
 
-                        for (Iterator<Fill> itp = itpos.getFills().iterator(); itp.hasNext();) {
-                            Fill pos = itp.next();
-                            longVolumeCount += pos.getOpenVolumeCount();
-                        }
+                    for (Iterator<Fill> itp = itpos.getFills().iterator(); itp.hasNext();) {
+                        Fill pos = itp.next();
+                        longVolumeCount += pos.getOpenVolumeCount();
                     }
-
                 }
+
             }
         }
+        //  }
         return new DiscreteAmount(longVolumeCount, asset.getBasis());
 
     }
@@ -314,48 +322,48 @@ public class Portfolio extends EntityBase {
     DiscreteAmount getNetPosition(Asset asset, Exchange exchange) {
         long netVolumeCount = 0;
         Fill pos = null;
-        synchronized (lock) {
-            if (positionsMap.get(asset) != null && positionsMap.get(asset).get(exchange) != null) {
-                for (Iterator<Listing> itl = positionsMap.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
-                    Listing listing = itl.next();
-                    for (Iterator<TransactionType> itt = positionsMap.get(asset).get(exchange).get(listing).keySet().iterator(); itt.hasNext();) {
-                        TransactionType transactionType = itt.next();
+        //  synchronized (lock) {
+        if (positionsMap.get(asset) != null && positionsMap.get(asset).get(exchange) != null) {
+            for (Iterator<Listing> itl = positionsMap.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+                Listing listing = itl.next();
+                for (Iterator<TransactionType> itt = positionsMap.get(asset).get(exchange).get(listing).keySet().iterator(); itt.hasNext();) {
+                    TransactionType transactionType = itt.next();
 
-                        for (Position itpos : positionsMap.get(asset).get(exchange).get(listing).get(transactionType)) {
-                            for (Iterator<Fill> itp = itpos.getFills().iterator(); itp.hasNext();) {
+                    for (Position itpos : positionsMap.get(asset).get(exchange).get(listing).get(transactionType)) {
+                        for (Iterator<Fill> itp = itpos.getFills().iterator(); itp.hasNext();) {
 
-                                pos = itp.next();
-                                netVolumeCount += pos.getOpenVolumeCount();
-                            }
+                            pos = itp.next();
+                            netVolumeCount += pos.getOpenVolumeCount();
                         }
-
                     }
+
                 }
             }
         }
+        // }
         return new DiscreteAmount(netVolumeCount, asset.getBasis());
     }
 
     public @Transient
     DiscreteAmount getShortPosition(Asset asset, Exchange exchange) {
         long shortVolumeCount = 0;
-        synchronized (lock) {
+        //  synchronized (lock) {
 
-            if (positionsMap.get(asset) != null && positionsMap.get(asset).get(exchange) != null) {
-                for (Iterator<Listing> itl = positionsMap.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
-                    Listing listing = itl.next();
+        if (positionsMap.get(asset) != null && positionsMap.get(asset).get(exchange) != null) {
+            for (Iterator<Listing> itl = positionsMap.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+                Listing listing = itl.next();
 
-                    for (Position itpos : positionsMap.get(asset).get(exchange).get(listing).get(TransactionType.SELL)) {
-                        for (Iterator<Fill> itp = itpos.getFills().iterator(); itp.hasNext();) {
+                for (Position itpos : positionsMap.get(asset).get(exchange).get(listing).get(TransactionType.SELL)) {
+                    for (Iterator<Fill> itp = itpos.getFills().iterator(); itp.hasNext();) {
 
-                            Fill pos = itp.next();
-                            shortVolumeCount += pos.getOpenVolumeCount();
+                        Fill pos = itp.next();
+                        shortVolumeCount += pos.getOpenVolumeCount();
 
-                        }
                     }
                 }
             }
         }
+        // }
         return new DiscreteAmount(shortVolumeCount, asset.getBasis());
 
     }
@@ -394,22 +402,24 @@ public class Portfolio extends EntityBase {
 
     @Transient
     public void removeTransaction(Transaction reservation) {
+        if (transactions == null || transactions.isEmpty())
+            return;
         if (transactions.get(reservation.getCurrency()) == null)
             return;
         if (transactions.get(reservation.getCurrency()).get(reservation.getExchange()) == null)
             return;
         if (transactions.get(reservation.getCurrency()).get(reservation.getExchange()).get(reservation.getType()) == null)
             return;
-        synchronized (lock) {
-            transactions.get(reservation.getCurrency()).get(reservation.getExchange()).get(reservation.getType()).remove(reservation);
+        // synchronized (lock) {
+        transactions.get(reservation.getCurrency()).get(reservation.getExchange()).get(reservation.getType()).remove(reservation);
 
-            //            Iterator<Transaction> it = transactions.get(reservation.getCurrency()).get(reservation.getExchange()).get(reservation.getType()).iterator();
-            //            while (it.hasNext()) {
-            //                Transaction transaction = it.next();
-            //                if (transaction != null && reservation != null && transaction.equals(reservation))
-            //                    it.remove();
-            // }
-        }
+        //            Iterator<Transaction> it = transactions.get(reservation.getCurrency()).get(reservation.getExchange()).get(reservation.getType()).iterator();
+        //            while (it.hasNext()) {
+        //                Transaction transaction = it.next();
+        //                if (transaction != null && reservation != null && transaction.equals(reservation))
+        //                    it.remove();
+        // }
+        //   }
     }
 
     /**
@@ -508,13 +518,13 @@ public class Portfolio extends EntityBase {
 
         PositionType mergedType = (position.isShort()) ? PositionType.SHORT : (position.isLong()) ? PositionType.LONG : PositionType.FLAT;
 
-        context.route(new PositionUpdate(position, market, lastType, mergedType));
+        context.publish(new PositionUpdate(position, market, lastType, mergedType));
     }
 
     public void addPosition(Position position) {
-        synchronized (lock) {
-            getPositions().add(position);
-        }
+        // synchronized (lock) {
+        getPositions().add(position);
+        // }
     }
 
     @Transient
@@ -609,7 +619,7 @@ public class Portfolio extends EntityBase {
         if (assetPositions == null) {
             ConcurrentLinkedQueue<Position> detailPosition = new ConcurrentLinkedQueue<Position>();
             Position detPosition = new Position(fill);
-            detPosition.Persit();
+            PersistUtil.insert(detPosition);
             detailPosition.add(detPosition);
             ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>> positionType = new ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>();
             positionType.put(transactionType, detailPosition);
@@ -627,7 +637,7 @@ public class Portfolio extends EntityBase {
                 assetRealisedProfits.put(fill.getMarket().getExchange(), marketRealisedProfits);
                 realisedProfits.put(fill.getMarket().getTradedCurrency(), assetRealisedProfits);
             }
-            publishPositionUpdate(getPosition(fill.getMarket().getBase(), fill.getMarket()), PositionType.FLAT, fill.getMarket());
+            publishPositionUpdate(getNetPosition(fill.getMarket().getBase(), fill.getMarket()), PositionType.FLAT, fill.getMarket());
             return true;
         } else {
             //asset is present, so check the market
@@ -640,7 +650,8 @@ public class Portfolio extends EntityBase {
                 ConcurrentLinkedQueue<Position> detailPosition = new ConcurrentLinkedQueue<Position>();
                 ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>> positionType = new ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>();
                 Position detPosition = new Position(fill);
-                detPosition.Persit();
+                PersistUtil.insert(detPosition);
+
                 detailPosition.add(detPosition);
                 positionType.put(transactionType, detailPosition);
 
@@ -653,7 +664,7 @@ public class Portfolio extends EntityBase {
                     marketRealisedProfits.put(fill.getMarket().getListing(), profits);
                     realisedProfits.get(fill.getMarket().getTradedCurrency()).put(fill.getMarket().getExchange(), marketRealisedProfits);
                 }
-                publishPositionUpdate(getPosition(fill.getMarket().getBase(), fill.getMarket()), PositionType.FLAT, fill.getMarket());
+                publishPositionUpdate(getNetPosition(fill.getMarket().getBase(), fill.getMarket()), PositionType.FLAT, fill.getMarket());
 
                 return true;
             } else {
@@ -668,8 +679,7 @@ public class Portfolio extends EntityBase {
                 if (listingPositions == null) {
                     ConcurrentLinkedQueue<Position> listingsDetailPosition = new ConcurrentLinkedQueue<Position>();
                     Position detPosition = new Position(fill);
-                    detPosition.Persit();
-
+                    PersistUtil.insert(detPosition);
                     listingsDetailPosition.add(detPosition);
                     exchangePositions.get(fill.getMarket().getListing()).put(transactionType, listingsDetailPosition);
                     listingPositions = exchangePositions.get(fill.getMarket().getListing()).get(transactionType);
@@ -685,15 +695,17 @@ public class Portfolio extends EntityBase {
 
                     if (!listingPositions.isEmpty() || listingPositions.peek() != null) {
                         listingPositions.peek().addFill(fill);
+                        fill.setPosition(listingPositions.peek());
                         //   listingPositions.peek().Merge();
                         // TODO need to persit the updated postitions
                         //PersistUtil.merge(listingPositions.peek());
 
                     } else {
                         Position detPosition = new Position(fill);
+                        PersistUtil.insert(detPosition);
                         //   detPosition.addFill(fill);
                         listingPositions.add(detPosition);
-                        detPosition.Persit();
+
                         //           PersistUtil.insert(detPosition);
                     }
 
@@ -743,8 +755,8 @@ public class Portfolio extends EntityBase {
                                         if ((Long.signum(openPosition.getOpenVolumeCount()) + Long.signum(p.getOpenVolumeCount())) != 0) {
                                             if (Math.abs(p.getOpenVolumeCount()) == 0 || Math.abs(openPosition.getOpenVolumeCount()) == 0)
                                                 // openingListingPositions.(openPosition);
-                                                itOp.remove();
-                                            openPos.removeFill(openPosition);
+                                                // itOp.remove();
+                                                openPos.removeFill(openPosition);
 
                                             if (!openPos.hasFills())
                                                 itOlp.remove();
@@ -807,11 +819,11 @@ public class Portfolio extends EntityBase {
                                         long updatedVolumeCount = p.getOpenVolumeCount() + closingVolumeCount;
                                         //updatedVolumeCount = (p.isShort()) ? updatedVolumeCount * -1 : updatedVolumeCount;
                                         p.setOpenVolumeCount(updatedVolumeCount);
-                                        PersistUtil.merge(p);
+
                                         // pos.Merge();
                                         if (Math.abs(updatedVolumeCount) == 0) {
                                             //itPos.remove();
-                                            itP.remove();
+                                            //     itP.remove();
                                             pos.removeFill(p);
 
                                             //pos.Merge();
@@ -824,10 +836,11 @@ public class Portfolio extends EntityBase {
 
                                             //listingPositions.remove(pos);
                                         }
+                                        //    PersistUtil.merge(p);
                                         // listingPositions.remove(p);
-                                        itOp.remove();
+                                        //  itOp.remove();
                                         openPosition.setOpenVolumeCount(0);
-                                        PersistUtil.merge(openPosition);
+                                        //  PersistUtil.merge(openPosition);
                                         //openPos.Merge();
                                         //itOp.remove();
                                         //
@@ -850,10 +863,10 @@ public class Portfolio extends EntityBase {
                                     } else {
                                         long updatedVolumeCount = openPosition.getOpenVolumeCount() + p.getOpenVolumeCount();
                                         openPosition.setOpenVolumeCount(updatedVolumeCount);
-                                        PersistUtil.merge(openPosition);
+
                                         // openPos.Merge();
                                         if (Math.abs(updatedVolumeCount) == 0) {
-                                            itOp.remove();
+                                            // itOp.remove();
                                             openPos.removeFill(openPosition);
 
                                             if (!openPos.hasFills())
@@ -868,13 +881,14 @@ public class Portfolio extends EntityBase {
                                             //  openingListingPositions.remove(openPos);
                                             //openPos.Merge();
                                         }
+                                        // PersistUtil.merge(openPosition);
+
                                         //  openingListingPositions.remove(openPosition);
-                                        itP.remove();
+                                        //  itP.remove();
                                         p.setOpenVolumeCount(0);
-                                        PersistUtil.merge(p);
 
                                         pos.removeFill(p);
-
+                                        //   PersistUtil.merge(p);
                                         if (!pos.hasFills())
                                             itPos.remove();
                                         // listingPositions.remove(pos);
@@ -929,7 +943,7 @@ public class Portfolio extends EntityBase {
                                 Transaction trans = new Transaction(this, p.getMarket().getExchange(), p.getMarket().getTradedCurrency(),
                                         TransactionType.REALISED_PROFIT_LOSS, RealisedPnL, new DiscreteAmount(0, p.getMarket().getTradedCurrency().getBasis()));
 
-                                context.route(trans);
+                                context.publish(trans);
                                 PersistUtil.insert(trans);
                                 //		manager.getPortfolioService().CreateTransaction(position.getExchange(), position.getMarket().getQuote(),
                                 //			TransactionType.REALISED_PROFIT_LOSS, TotalRealisedPnL.minus(PreviousPnL), DecimalAmount.ZERO);
@@ -989,17 +1003,23 @@ public class Portfolio extends EntityBase {
                         }
                     }
 
+                    //listingPositions.add(position);
+                    //// true;
+                    if (getNetPosition(fill.getMarket().getBase(), fill.getMarket()) == null) {
+                        Position detPosition = new Position(fill);
+                        PersistUtil.insert(detPosition);
+
+                        publishPositionUpdate(detPosition, PositionType.FLAT, fill.getMarket());
+                    } else {
+                        PositionType lastType = (openingTransactionType == TransactionType.BUY) ? PositionType.LONG : PositionType.SHORT;
+                        publishPositionUpdate(getNetPosition(fill.getMarket().getBase(), fill.getMarket()), lastType, fill.getMarket());
+                    }
+                    return true;
                 }
-                //listingPositions.add(position);
-                //// true;
-                if (getPosition(fill.getMarket().getBase(), fill.getMarket()) == null) {
-                    Position detPosition = new Position(fill);
-                    detPosition.Persit();
-                    publishPositionUpdate(detPosition, PositionType.FLAT, fill.getMarket());
-                } else {
-                    PositionType lastType = (openingTransactionType == TransactionType.BUY) ? PositionType.LONG : PositionType.SHORT;
-                    publishPositionUpdate(getPosition(fill.getMarket().getBase(), fill.getMarket()), lastType, fill.getMarket());
-                }
+                PositionType lastType = (fill.isLong()) ? PositionType.LONG : PositionType.SHORT;
+
+                publishPositionUpdate(getNetPosition(fill.getMarket().getBase(), fill.getMarket()), lastType, fill.getMarket());
+
                 return true;
 
             }//else {
@@ -1036,12 +1056,13 @@ public class Portfolio extends EntityBase {
         return portfolioService;
     }
 
-    @OneToMany(fetch = FetchType.EAGER, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
-    public Collection<Stake> getStakes() {
+    @OneToMany(fetch = FetchType.LAZY)
+    @OrderBy
+    public List<Stake> getStakes() {
         return stakes;
     }
 
-    @ManyToOne(fetch = FetchType.EAGER, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
+    @ManyToOne(fetch = FetchType.LAZY)
     public Asset getBaseAsset() {
         return baseAsset;
     }
@@ -1049,6 +1070,11 @@ public class Portfolio extends EntityBase {
     @Transient
     public PortfolioManager getManager() {
         return manager;
+    }
+
+    @Transient
+    public Logger getLogger() {
+        return log;
     }
 
     /**
@@ -1060,9 +1086,9 @@ public class Portfolio extends EntityBase {
     public void modifyPosition(Fill fill, Authorization authorization) {
         assert authorization != null;
         assert fill != null;
-        boolean modifiedExistingPosition = false;
         merge(fill);
-        persistPositions();
+        fill.persit();
+        persistPositions(fill.getMarket().getBase(), fill.getMarket().getExchange(), fill.getMarket().getListing());
 
         // if 
 
@@ -1086,7 +1112,7 @@ public class Portfolio extends EntityBase {
     public Portfolio() {
         this.positionsMap = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>>>();
         this.realisedProfits = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>>();
-        this.balances = new ConcurrentLinkedQueue<>();
+        //this.balances = new CopyOnWriteArrayList<>();
         this.transactions = new ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Transaction>>>>();
 
     }
@@ -1096,7 +1122,7 @@ public class Portfolio extends EntityBase {
         this.positionsMap = positions;
     }
 
-    protected void setBalances(Collection<Balance> balances) {
+    protected void setBalances(List<Balance> balances) {
         this.balances = balances;
     }
 
@@ -1121,7 +1147,7 @@ public class Portfolio extends EntityBase {
         this.portfolioService = portfolioService;
     }
 
-    protected void setStakes(Collection<Stake> stakes) {
+    protected void setStakes(List<Stake> stakes) {
         this.stakes = stakes;
     }
 
@@ -1179,8 +1205,8 @@ public class Portfolio extends EntityBase {
     }
 
     private PortfolioManager manager;
-    @Inject
-    private Logger log;
+
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.portfolio");
     @Inject
     protected transient Context context;
     @Inject
@@ -1188,13 +1214,13 @@ public class Portfolio extends EntityBase {
     private Asset baseAsset;
     private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>>> positionsMap;
     private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>> realisedProfits;
-    private Collection<Balance> balances = Collections.emptyList();
+    private List<Balance> balances = new CopyOnWriteArrayList<>();
     private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Transaction>>>> transactions;
-    private Collection<Stake> stakes = Collections.emptyList();
-    private Collection<Position> positions;
+    private List<Stake> stakes = new CopyOnWriteArrayList<>();
+    private List<Position> positions = new CopyOnWriteArrayList<>();
 
     //private ConcurrentHashMap<Market, ConcurrentSkipListMap<Long,ArrayList<TaxLot>>> longTaxLots;
     //private ConcurrentHashMap<Market, ConcurrentSkipListMap<Long,ArrayList<TaxLot>>> shortTaxLots;
-    private final Collection<Balance> trades = Collections.emptyList();
+    private final Collection<Balance> trades = new CopyOnWriteArrayList<>();
 
 }

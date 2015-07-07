@@ -42,6 +42,7 @@ public class PortfolioServiceException extends RuntimeException {
                 }
             } catch (Exception ex) {
                 // just print the exception and continue
+
                 ex.printStackTrace();
             }
 

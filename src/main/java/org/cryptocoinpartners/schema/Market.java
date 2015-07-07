@@ -2,13 +2,13 @@ package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 import javax.persistence.Basic;
 import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.Index;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQuery;
 import javax.persistence.NoResultException;
@@ -31,7 +31,7 @@ import org.cryptocoinpartners.util.RemainderHandler;
 @Table(indexes = { @Index(columnList = "exchange"), @Index(columnList = "listing"), @Index(columnList = "active") })
 public class Market extends EntityBase {
 
-    public static Collection<Market> findAll() {
+    public static List<Market> findAll() {
         return PersistUtil.queryList(Market.class, "select m from Market m");
     }
 
@@ -61,14 +61,14 @@ public class Market extends EntityBase {
     /**
      @return active Markets for the given exchange
      */
-    public static Collection<Market> find(Exchange exchange) {
+    public static List<Market> find(Exchange exchange) {
         return PersistUtil.queryList(Market.class, "select s from Market s where exchange=?1 and active=?2", exchange, true);
     }
 
     /**
      @return active Markets for the given listing
      */
-    public static Collection<Market> find(Listing listing) {
+    public static List<Market> find(Listing listing) {
         return PersistUtil.queryList(Market.class, "select s from Market s where listing=?1 and active=?2", listing, true);
     }
 
@@ -78,6 +78,7 @@ public class Market extends EntityBase {
     }
 
     @ManyToOne(optional = false)
+    @JoinColumn(name = "listing")
     public Listing getListing() {
         return listing;
     }

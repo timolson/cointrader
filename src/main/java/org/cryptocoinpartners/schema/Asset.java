@@ -64,5 +64,5 @@ public abstract class Asset extends EntityBase {
     private String symbol;
     private double basis;
 
-    private static Logger log = LoggerFactory.getLogger(Asset.class);
+    protected static Logger log = LoggerFactory.getLogger(Asset.class);
 }

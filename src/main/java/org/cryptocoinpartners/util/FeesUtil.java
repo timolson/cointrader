@@ -197,7 +197,8 @@ public class FeesUtil {
 
     private static Amount calculatePercentagePerUnit(Amount price, Amount amount, double rate, Market market) {
         //BigDecimal precision = BigDecimal.valueOf(market.getPriceBasis());
-
+        if (price == null)
+            log.debug("null price");
         if (market.getTradedCurrency().equals(market.getBase())) {
             price = price.invert();
             //precision = BigDecimal.valueOf(market.getTradedCurrency().getBasis());

@@ -5,11 +5,11 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.OrderState;
 import org.cryptocoinpartners.module.BaseOrderService;
@@ -55,6 +55,8 @@ public class XchangeOrderService extends BaseOrderService {
                 specificOrder.setRemoteKey(tradeService.placeLimitOrder(limitOrder));
                 updateOrderState(specificOrder, OrderState.PLACED, false);
             } catch (IOException e) {
+                log.error("Threw a Execption, full stack trace follows:", e);
+
                 e.printStackTrace();
                 // todo retry until expiration or reject as invalid
             }
@@ -81,10 +83,11 @@ public class XchangeOrderService extends BaseOrderService {
     private Portfolio portfolio;
 
     @Override
+    @Transient
     public Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio) {
         com.xeiam.xchange.Exchange exchange = XchangeUtil.getExchangeForMarket(market.getExchange());
         PollingTradeService tradeService = exchange.getPollingTradeService();
-        Collection<SpecificOrder> pendingOrders = new ArrayList<>();
+        Collection<SpecificOrder> pendingOrders = new ConcurrentLinkedQueue<SpecificOrder>();
         SpecificOrder specificOrder;
         try {
             OpenOrders openOrders = tradeService.getOpenOrders();
@@ -114,6 +117,8 @@ public class XchangeOrderService extends BaseOrderService {
             }
 
         } catch (IOException e) {
+            log.error("Threw a Execption, full stack trace follows:", e);
+
             e.printStackTrace();
 
         }
@@ -122,8 +127,8 @@ public class XchangeOrderService extends BaseOrderService {
     }
 
     @Override
-    public List<SpecificOrder> getPendingOrders() {
-        return new ArrayList<>();
+    public Collection<SpecificOrder> getPendingOrders() {
+        return new ConcurrentLinkedQueue<>();
 
     }
 

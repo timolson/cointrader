@@ -7,6 +7,7 @@ import javax.inject.Inject;
 import org.apache.commons.configuration.Configuration;
 import org.cryptocoinpartners.util.Injector;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.beust.jcommander.Parameters;
 
@@ -30,10 +31,11 @@ public abstract class RunMode implements Runnable {
     //      System.exit(404);
     //  }
 
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.runMode");
+
     @Inject
     protected Injector injector;
     @Inject
     protected Configuration config;
-    @Inject
-    protected Logger log;
+
 }

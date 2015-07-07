@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema;
 import java.math.BigDecimal;
 
 import javax.annotation.Nullable;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
@@ -20,6 +21,7 @@ import org.joda.time.Instant;
  */
 @SuppressWarnings("UnusedDeclaration")
 @Entity
+@Cacheable
 public class GeneralOrder extends Order {
 
     public GeneralOrder(Instant time, Portfolio portfolio, Listing listing, BigDecimal volume) {

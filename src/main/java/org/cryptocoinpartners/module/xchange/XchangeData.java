@@ -5,11 +5,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -32,7 +33,13 @@ import org.cryptocoinpartners.util.XchangeUtil;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.xeiam.xchange.currency.CurrencyPair;
 import com.xeiam.xchange.dto.marketdata.OrderBook;
 import com.xeiam.xchange.dto.marketdata.Trade;
@@ -123,7 +130,7 @@ public class XchangeData {
         ExchangeStreamingConfiguration streamingConfiguration = null;
         if (streamingConfigClassName != null && !streamingConfigClassName.isEmpty()) {
         }
-        Collection<Market> markets = new ArrayList<>(listings.size());
+        List<Market> markets = new ArrayList<>(listings.size());
         Market market;
         //  ExchangeStreamingConfiguration streamingConfiguration = new OkCoinExchangeStreamingConfiguration();
         for (Iterator<List> il = listings.iterator(); il.hasNext(); markets.add(market)) {
@@ -133,11 +140,32 @@ public class XchangeData {
         }
 
         if (streamingConfigClassName != null) {
+            RateLimiter rateLimiter = new RateLimiter(queries, per);
             // streamingDataService = xchangeExchange.getStreamingExchangeService(streamingConfiguration);
-            for (Iterator<Market> im = markets.iterator(); im.hasNext(); Executors.newSingleThreadExecutor().execute(
-                    new StreamTradesRunnable(context, xchangeExchange, market, streamingConfigClassName, helper)))
+            for (Iterator<Market> im = markets.iterator(); im.hasNext();) {
                 market = im.next();
 
+                ListeningExecutorService service = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
+                ListenableFuture<StreamTradesRunnable> streamingTradesFuture = service.submit(new StreamTradesRunnable(context, xchangeExchange, market,
+                        rateLimiter, streamingConfigClassName, helper));
+
+                Futures.addCallback(streamingTradesFuture, new FutureCallback<StreamTradesRunnable>() {
+                    // we want this handler to run immediately after we push the big red button!
+                    @Override
+                    public void onSuccess(StreamTradesRunnable streamingTradesFuture) {
+                        System.out.println("complete");
+
+                        //walkAwayFrom(explosion);
+                    }
+
+                    @Override
+                    public void onFailure(Throwable thrown) {
+                        System.out.println("failed");
+                        //battleArchNemesis(); // escaped the explosion!
+                    }
+                });
+
+            }
             return;
         } else {
             PollingMarketDataService dataService = xchangeExchange.getPollingMarketDataService();
@@ -152,21 +180,29 @@ public class XchangeData {
         }
     }
 
-    private class StreamTradesRunnable implements Runnable {
+    private class StreamTradesRunnable implements Callable {
 
         private final Helper helper;
         DateFormat dateFormat = new SimpleDateFormat("ddMMyy");
         private ExchangeStreamingConfiguration streamingConfiguration;
         private CurrencyPair[] pairs;
 
-        public StreamTradesRunnable(Context context, com.xeiam.xchange.Exchange xchangeExchange, Market market, String streamingConfigClassName,
-                @Nullable Helper helper) {
+        public StreamTradesRunnable(Context context, com.xeiam.xchange.Exchange xchangeExchange, Market market, RateLimiter rateLimiter,
+                String streamingConfigClassName, @Nullable Helper helper) {
             this.context = context;
+            this.rateLimiter = rateLimiter;
             this.market = market;
             this.helper = helper;
             this.prompt = market.getListing().getPrompt();
             pairs = new CurrencyPair[] { XchangeUtil.getCurrencyPairForListing(market.getListing()) };
             contract = prompt == null ? null : XchangeUtil.getContractForListing(market.getListing());
+
+            //            Thread.currentThread().setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+            //                @Override
+            //                public void uncaughtException(Thread t, Throwable e) {
+            //                    e.printStackTrace();
+            //                }
+            //            });
 
             if (streamingConfigClassName.indexOf('.') == -1)
                 streamingConfigClassName = XchangeData.class.getPackage().getName() + '.' + streamingConfigClassName;
@@ -181,13 +217,24 @@ public class XchangeData {
                     String str = streamingConfigClass.getCanonicalName();
                 } catch (InstantiationException e1) {
                     // TODO Auto-generated catch block
+                    log.error("Threw a Execption, full stack trace follows:", e1);
+
                     e1.printStackTrace();
                 } catch (IllegalAccessException e1) {
                     // TODO Auto-generated catch block
+                    log.error("Threw a Execption, full stack trace follows:", e1);
+
                     e1.printStackTrace();
                 } catch (InvocationTargetException e1) {
                     // TODO Auto-generated catch block
+                    log.error("Threw a Execption, full stack trace follows:", e1);
+
                     e1.printStackTrace();
+                } catch (Exception | Error e2) {
+                    // TODO Auto-generated catch block
+                    log.error("Threw a Execption, full stack trace follows:", e2);
+
+                    e2.printStackTrace();
                 }
 
                 try {
@@ -203,10 +250,21 @@ public class XchangeData {
                     log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName + " does not implement "
                             + ExchangeStreamingConfiguration.class);
                     return;
+                } catch (Exception | Error e2) {
+                    // TODO Auto-generated catch block
+                    log.error("Threw a Execption, full stack trace follows:", e2);
+
+                    e2.printStackTrace();
+                    return;
                 }
             } catch (ClassNotFoundException e) {
                 log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName + " was not found");
                 return;
+            } catch (Exception | Error e2) {
+                log.error("Threw a Execption, full stack trace follows:", e2);
+
+                // TODO Auto-generated catch block
+                e2.printStackTrace();
             }
 
             Class<? extends ExchangeStreamingConfiguration> myclass = streamingConfiguration.getClass();
@@ -215,17 +273,33 @@ public class XchangeData {
                 streamingConfigClass = getClass().getClassLoader().loadClass(streamingConfigClassName);
             } catch (ClassNotFoundException e) {
                 // TODO Auto-generated catch block
+                log.error("Threw a Execption, full stack trace follows:", e);
+
                 e.printStackTrace();
+            } catch (Exception | Error e2) {
+                // TODO Auto-generated catch block
+                log.error("Threw a Execption, full stack trace follows:", e2);
+
+                e2.printStackTrace();
             }
 
             try {
                 streamingConfiguration = (ExchangeStreamingConfiguration) streamingConfigClass.newInstance();
             } catch (InstantiationException e) {
                 // TODO Auto-generated catch block
+                log.error("Threw a Execption, full stack trace follows:", e);
+
                 e.printStackTrace();
             } catch (IllegalAccessException e) {
                 // TODO Auto-generated catch block
+                log.error("Threw a Execption, full stack trace follows:", e);
+
                 e.printStackTrace();
+            } catch (Exception | Error e2) {
+                log.error("Threw a Execption, full stack trace follows:", e2);
+
+                // TODO Auto-generated catch block
+                e2.printStackTrace();
             }
             EntityManager entityManager = PersistUtil.createEntityManager();
             try {
@@ -257,9 +331,10 @@ public class XchangeData {
         }
 
         @Override
-        public void run() {
-            while (true) {
-                try {
+        public Object call() {
+            try {
+                while (true) {
+
                     ExchangeEvent event = dataService.getNextEvent();
 
                     if (event != null) {
@@ -298,13 +373,27 @@ public class XchangeData {
                         }
 
                     }
-
-                } catch (InterruptedException e) {
-                    dataService.disconnect();
-                    Thread.currentThread().interrupt();
-
                 }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                dataService.disconnect();
+                // Thread.currentThread().interrupt();
+
+            } catch (RejectedExecutionException rej) {
+                log.error("Threw a Execption, full stack trace follows:", rej);
+
+                rej.printStackTrace();
             }
+
+            catch (Exception | Error e2) {
+                // TODO Auto-generated catch block
+                log.error("Threw a Execption, full stack trace follows:", e2);
+
+                e2.printStackTrace();
+
+            }
+
+            return Thread.currentThread();
         }
 
         private final Book.Builder bookBuilder = new Book.Builder();
@@ -312,7 +401,7 @@ public class XchangeData {
         private StreamingExchangeService dataService = null;;
         private final Context context;
         private final Market market;
-
+        private final RateLimiter rateLimiter;
         private final FuturesContract contract;
         private long lastTradeTime;
         private final Prompt prompt;
@@ -460,7 +549,7 @@ public class XchangeData {
         private long lastTradeId;
     }
 
-    @Inject
-    private Logger log;
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.xchangeData");
+
     private final Context context;
 }

@@ -1,22 +1,21 @@
 package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.Nullable;
 import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
@@ -24,6 +23,7 @@ import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.util.FeesUtil;
+import org.cryptocoinpartners.util.PersistUtil;
 import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
@@ -48,13 +48,16 @@ public abstract class Order extends Event {
     protected static final String SEPARATOR = ",";
 
     @ManyToOne(optional = true)
+    //@JoinColumn(name = "parentOrder")
     //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
+    //@Transient
     public Order getParentOrder() {
         return parentOrder;
     }
 
     // @ManyToOne(optional = true)
-    @Transient
+    @ManyToOne(optional = true)
+    //@Transient
     public Fill getParentFill() {
         return parentFill;
     }
@@ -193,24 +196,66 @@ public abstract class Order extends Event {
     }
 
     @Nullable
-    @OneToMany(mappedBy = "order", fetch = FetchType.EAGER)
-    public Collection<Fill> getFills() {
+    @OneToMany(mappedBy = "order")
+    //, fetch = FetchType.LAZY)
+    @OrderBy
+    // @OrderColumn(name = "id")
+    //, fetch = FetchType.EAGER)
+    //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
+    public List<Fill> getFills() {
         if (fills == null)
-            fills = new ConcurrentLinkedQueue<Fill>();
+            fills = new CopyOnWriteArrayList<Fill>();
 
-        synchronized (lock) {
-            return fills;
-        }
+        // synchronized (lock) {
+        return fills;
+        // }
     }
 
     @Nullable
-    @OneToMany(mappedBy = "order", fetch = FetchType.EAGER)
-    public Collection<Transaction> getTransactions() {
+    @OneToMany(mappedBy = "order")
+    @OrderBy
+    // @OrderColumn(name = "id")
+    //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
+    public List<Transaction> getTransactions() {
         if (transactions == null)
-            transactions = new ConcurrentLinkedQueue<Transaction>();
-        synchronized (lock) {
-            return transactions;
+            transactions = new CopyOnWriteArrayList<Transaction>();
+        //  synchronized (lock) {
+        return transactions;
+        // }
+    }
+
+    public void persit() {
+        //   synchronized (persistanceLock) {
+        //  if (this.hasFills()) {
+        //    for (Fill fill : this.getFills())
+
+        //PersistUtil.merge(fill);
+        //}
+        //if (this.hasFills()) {
+        // for (Fill fill : getFills()) {
+        // if (this.parentFill != null)
+        //   parentFill.persit();
+        //   PersistUtil.insert(this);
+
+        //  PersistUtil.find(this);
+        List<Order> duplicate = PersistUtil.queryList(Order.class, "select o from Order o where o=?1", this);
+
+        if (this.parentOrder != null)
+            parentOrder.persit();
+
+        if (duplicate == null || duplicate.isEmpty())
+            PersistUtil.insert(this);
+        else
+            PersistUtil.merge(this);
+        //  }
+        Iterator<Fill> itf = getFills().iterator();
+        while (itf.hasNext()) {
+            //                //  for (Fill pos : getFills()) {
+            Fill fill = itf.next();
+
+            fill.persit();
         }
+
     }
 
     @Transient
@@ -239,31 +284,28 @@ public abstract class Order extends Event {
     }
 
     @Nullable
-    @OneToMany(fetch = FetchType.EAGER)
-    public Collection<Order> getChildren() {
+    @OneToMany
+    //(mappedBy = "parentOrder")
+    @OrderBy
+    //  @OrderColumn(name = "id")
+    public List<Order> getChildren() {
         if (children == null)
-            children = new ConcurrentLinkedQueue<Order>();
-        synchronized (lock) {
-            return children;
-        }
+            children = new CopyOnWriteArrayList<Order>();
+        //  synchronized (lock) {
+        return children;
+        //  }
     }
 
     public void addFill(Fill fill) {
-        synchronized (lock) {
-            getFills().add(fill);
-        }
+        getFills().add(fill);
     }
 
     public void addTransaction(Transaction transaction) {
-        synchronized (lock) {
-            getTransactions().add(transaction);
-        }
+        getTransactions().add(transaction);
     }
 
     public void addChild(Order order) {
-        synchronized (lock) {
-            getChildren().add(order);
-        }
+        getChildren().add(order);
     }
 
     @Transient
@@ -284,7 +326,7 @@ public abstract class Order extends Event {
             return null;
         BigDecimal sumProduct = BigDecimal.ZERO;
         BigDecimal volume = BigDecimal.ZERO;
-        Collection<Fill> fills = getFills();
+        List<Fill> fills = getFills();
         for (Fill fill : fills) {
             BigDecimal priceBd = fill.getPrice().asBigDecimal();
             BigDecimal volumeBd = fill.getVolume().asBigDecimal();
@@ -303,11 +345,11 @@ public abstract class Order extends Event {
 
     }
 
-    protected void setFills(Collection<Fill> fills) {
+    protected void setFills(List<Fill> fills) {
         this.fills = fills;
     }
 
-    protected void setTransactions(Collection<Transaction> transactions) {
+    protected void setTransactions(List<Transaction> transactions) {
         this.transactions = transactions;
     }
 
@@ -362,13 +404,13 @@ public abstract class Order extends Event {
         this.children = children;
     }
 
-    private Collection<Order> children;
+    private List<Order> children = new CopyOnWriteArrayList<Order>();
 
     protected Instant entryTime;
 
     private Portfolio portfolio;
-    private Collection<Fill> fills;
-    private Collection<Transaction> transactions;
+    private List<Fill> fills = new CopyOnWriteArrayList<Fill>();
+    private List<Transaction> transactions = new CopyOnWriteArrayList<Transaction>();
     protected FillType fillType;
     private MarginType marginType;
     private Amount commission;

@@ -6,7 +6,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.cryptocoinpartners.enumeration.OrderState;
@@ -21,7 +20,6 @@ import org.cryptocoinpartners.schema.OrderUpdate;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.service.QuoteService;
-import org.slf4j.Logger;
 
 /**
  * MockOrderService simulates the Filling of Orders by looking at broadcast Book data for price and volume information.
@@ -34,6 +32,7 @@ public class MockOrderService extends BaseOrderService {
 
     @Override
     protected void handleSpecificOrder(SpecificOrder specificOrder) {
+        specificOrder.persit();
         if (specificOrder.getStopPrice() != null)
             reject(specificOrder, "Stop prices unsupported");
 
@@ -44,76 +43,74 @@ public class MockOrderService extends BaseOrderService {
     }
 
     @SuppressWarnings("ConstantConditions")
-    @When("@Priority(8) select * from Book")
+    @When("@Priority(9) select * from Book.std:lastevent()")
     private void handleBook(Book b) {
-        synchronized (lock) {
-            List<Fill> fills = new ArrayList<Fill>();
+        List<Fill> fills = new ArrayList<Fill>();
 
-            // todo multiple Orders may be filled with the same Offer.  We should deplete the Offers as we fill
-            for (SpecificOrder order : pendingOrders) {
+        // todo multiple Orders may be filled with the same Offer.  We should deplete the Offers as we fill
+        for (SpecificOrder order : pendingOrders) {
 
-                if (order.getMarket().equals(b.getMarket())) {
-                    // buy order, so hit ask
-                    if (order.isBid()) {
-                        long remainingVolume = order.getUnfilledVolumeCount();
-                        for (Offer ask : b.getAsks()) {
-                            if ((order.getLimitPrice() != null && order.getLimitPrice().getCount() < ask.getPriceCount()) || ask == null)
-                                //  || ask.getVolumeCount() == 0 || ask.getPriceCount() == 0)
-                                break;
-                            //  synchronized (lock) {
-                            long fillVolume = Math.min(Math.abs(ask.getVolumeCount()), remainingVolume);
-                            if (fillVolume != 0) {
+            if (order.getMarket().equals(b.getMarket())) {
+                // buy order, so hit ask
+                if (order.isBid()) {
+                    long remainingVolume = order.getUnfilledVolumeCount();
+                    for (Offer ask : b.getAsks()) {
+                        if ((order.getLimitPrice() != null && order.getLimitPrice().getCount() < ask.getPriceCount()) || ask == null)
+                            //  || ask.getVolumeCount() == 0 || ask.getPriceCount() == 0)
+                            break;
+                        //  synchronized (lock) {
+                        long fillVolume = Math.min(Math.abs(ask.getVolumeCount()), remainingVolume);
+                        if (fillVolume != 0) {
 
-                                Fill fill = new Fill(order, ask.getTime(), ask.getTime(), ask.getMarket(), ask.getPriceCount(), fillVolume, Long.toString(ask
-                                        .getTime().getMillis()));
-                                fills.add(fill);
-                                remainingVolume -= fillVolume;
-                                logFill(order, ask, fill);
-                                if (remainingVolume == 0) {
-                                    pendingOrders.remove(order);
-                                    // i--;
-                                    // --removeOrder(order);
-                                }
+                            Fill fill = new Fill(order, ask.getTime(), ask.getTime(), ask.getMarket(), ask.getPriceCount(), fillVolume, Long.toString(ask
+                                    .getTime().getMillis()));
+                            fills.add(fill);
+                            remainingVolume -= fillVolume;
+                            logFill(order, ask, fill);
+                            if (remainingVolume == 0) {
+                                pendingOrders.remove(order);
+                                // i--;
+                                // --removeOrder(order);
                             }
-                            //  }
-                            //   break;
-
                         }
+                        //  }
+                        //   break;
+
                     }
-                    // if sell order, fill if limint<=Bid
-                    if (order.isAsk()) {
-                        long remainingVolume = order.getUnfilledVolumeCount(); // this will be negative
-                        for (Offer bid : b.getBids()) {
-                            if ((order.getLimitPrice() != null && order.getLimitPrice().getCount() > bid.getPriceCount()) || bid == null)
+                }
+                // if sell order, fill if limint<=Bid
+                if (order.isAsk()) {
+                    long remainingVolume = order.getUnfilledVolumeCount(); // this will be negative
+                    for (Offer bid : b.getBids()) {
+                        if ((order.getLimitPrice() != null && order.getLimitPrice().getCount() > bid.getPriceCount()) || bid == null)
 
-                                //|| bid.getVolumeCount() == 0 || bid.getPriceCount() == 0)
+                            //|| bid.getVolumeCount() == 0 || bid.getPriceCount() == 0)
 
-                                break;
-                            // synchronized (lock) {
-                            long fillVolume = -Math.min(bid.getVolumeCount(), Math.abs(remainingVolume));
-                            if (fillVolume != 0) {
+                            break;
+                        // synchronized (lock) {
+                        long fillVolume = -Math.min(bid.getVolumeCount(), Math.abs(remainingVolume));
+                        if (fillVolume != 0) {
 
-                                Fill fill = new Fill(order, bid.getTime(), bid.getTime(), bid.getMarket(), bid.getPriceCount(), fillVolume, Long.toString(bid
-                                        .getTime().getMillis()));
+                            Fill fill = new Fill(order, bid.getTime(), bid.getTime(), bid.getMarket(), bid.getPriceCount(), fillVolume, Long.toString(bid
+                                    .getTime().getMillis()));
 
-                                fills.add(fill);
-                                remainingVolume -= fillVolume;
-                                logFill(order, bid, fill);
-                                if (remainingVolume == 0)
-                                    pendingOrders.remove(order);
-                            }
-                            //  }
-                            // break;
-
+                            fills.add(fill);
+                            remainingVolume -= fillVolume;
+                            logFill(order, bid, fill);
+                            if (remainingVolume == 0)
+                                pendingOrders.remove(order);
                         }
+                        //  }
+                        // break;
+
                     }
                 }
             }
-            for (Fill fill : fills) {
-                fill.getOrder().addFill(fill);
-                context.publish(fill);
-                //context.route(fill);
-            }
+        }
+        for (Fill fill : fills) {
+            fill.getOrder().addFill(fill);
+            context.publish(fill);
+            //context.route(fill);
         }
 
     }
@@ -154,15 +151,13 @@ public class MockOrderService extends BaseOrderService {
             log.debug("Mock fill of Order " + order + " with Offer " + offer + ": " + fill);
     }
 
-    @Inject
-    private Logger log;
-    private static Object lock = new Object();
+    // private static Object lock = new Object();
     protected static final Collection<SpecificOrder> pendingOrders = new ConcurrentLinkedQueue<SpecificOrder>();
     private QuoteService quotes;
 
     @Override
     public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio) {
-        Collection<SpecificOrder> portfolioPendingOrders = new ArrayList<>();
+        Collection<SpecificOrder> portfolioPendingOrders = new ConcurrentLinkedQueue<>();
 
         for (SpecificOrder pendingOrder : pendingOrders) {
             if (pendingOrder.getPortfolio().equals(portfolio)) {
@@ -230,6 +225,8 @@ public class MockOrderService extends BaseOrderService {
                 //cancelledOrders.add(specificOrder);
                 handleCancelSpecificOrder(specificOrder);
         }
+        // Order order = new GeneralOrder()
+        //updateOrderState(null, OrderState.CANCELLED, false);
         //          for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
         //              SpecificOrder specificOrder = it.next();
         //

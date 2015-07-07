@@ -12,8 +12,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import javax.persistence.FetchType;
-import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.TransactionType;
@@ -37,6 +35,7 @@ import org.cryptocoinpartners.util.FeesUtil;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.espertech.esper.client.deploy.DeploymentException;
 import com.espertech.esper.client.deploy.ParseException;
@@ -95,8 +94,8 @@ public class BasicPortfolioService implements PortfolioService {
 
     @Override
     @Nullable
-    public ArrayList<Position> getPositions() {
-        ArrayList<Position> AllPositions = new ArrayList<Position>();
+    public ConcurrentLinkedQueue<Position> getPositions() {
+        ConcurrentLinkedQueue<Position> AllPositions = new ConcurrentLinkedQueue<Position>();
         for (Portfolio portfolio : getPortfolios()) {
             for (Position position : portfolio.getNetPositions())
                 AllPositions.add(position);
@@ -187,6 +186,8 @@ public class BasicPortfolioService implements PortfolioService {
             }
         } catch (ParseException | DeploymentException | IOException e) {
             // TODO Auto-generated catch block
+            log.error("Threw a Execption, full stack trace follows:", e);
+
             e.printStackTrace();
         }
         return null;
@@ -219,16 +220,16 @@ public class BasicPortfolioService implements PortfolioService {
     @Override
     @Transient
     public Map<Asset, Amount> getCashBalances() {
-        synchronized (lock) {
-            if (balances == null || balances.isEmpty())
+        //synchronized (lock) {
+        if (balances == null || balances.isEmpty())
 
-                return getCurrentCashBalances(true);
+            return getCurrentCashBalances(true);
 
-            else
-                //     synchronized (lock) {
+        else
+            //     synchronized (lock) {
 
-                return getCurrentCashBalances(true);
-        }
+            return getCurrentCashBalances(false);
+        //  }
     }
 
     @Transient
@@ -750,7 +751,7 @@ public class BasicPortfolioService implements PortfolioService {
 
     @Override
     public void resetBalances() {
-        getCurrentCashBalances(true);
+        //  getCurrentCashBalances(true);
 
     }
 
@@ -793,8 +794,8 @@ public class BasicPortfolioService implements PortfolioService {
     @Inject
     protected transient QuoteService quotes;
 
-    @Inject
-    private Logger log;
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.portfolioService");
+
     private static int transactionsHashCode;
     private static int tradesHashCode;
     private static int marginsHashCode;
@@ -803,15 +804,13 @@ public class BasicPortfolioService implements PortfolioService {
     private Collection<Portfolio> portfolios;
 
     @Override
-    @Nullable
-    @OneToMany(fetch = FetchType.EAGER)
     public Collection<Portfolio> getPortfolios() {
         if (portfolios == null)
             portfolios = new ConcurrentLinkedQueue<Portfolio>();
 
-        synchronized (lock) {
-            return portfolios;
-        }
+        // synchronized (lock) {
+        return portfolios;
+        // }
 
     }
 
@@ -823,9 +822,9 @@ public class BasicPortfolioService implements PortfolioService {
 
     @Override
     public void addPortfolio(Portfolio portfolio) {
-        synchronized (lock) {
-            getPortfolios().add(portfolio);
-        }
+        // synchronized (lock) {
+        getPortfolios().add(portfolio);
+        //}
 
     }
 

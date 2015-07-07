@@ -5,7 +5,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.cryptocoinpartners.esper.annotation.When;
@@ -14,6 +13,7 @@ import org.cryptocoinpartners.schema.MarketData;
 import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Tim Olson
@@ -34,11 +34,13 @@ public class SaveMarketData {
             try {
                 future.get();
             } catch (InterruptedException e) {
+                log.error("Threw a Execption, full stack trace follows:", e);
 
                 e.printStackTrace();
                 Thread.currentThread().interrupt();
 
             } catch (ExecutionException ex) {
+                log.error("Threw a Execption, full stack trace follows:", ex);
 
                 ex.getCause().printStackTrace();
 
@@ -99,6 +101,6 @@ public class SaveMarketData {
         int myint = 1;
     }
 
-    @Inject
-    private static Logger log;
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.saveMarketData");
+
 }

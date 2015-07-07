@@ -59,6 +59,7 @@ public class Main {
         try {
             parameterParser.parse();
         } catch (Throwable t) {
+            log.error("Threw a Execption, full stack trace follows:", t);
             t.printStackTrace();
             System.exit(1);
         }

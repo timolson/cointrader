@@ -6,15 +6,25 @@ import java.util.Map;
 import java.util.UUID;
 
 import javax.persistence.Cache;
+import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
+import javax.persistence.EntityNotFoundException;
 import javax.persistence.NoResultException;
+import javax.persistence.OptimisticLockException;
+import javax.persistence.PersistenceException;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
 import org.cryptocoinpartners.schema.Currencies;
+import org.cryptocoinpartners.schema.Currency;
 import org.cryptocoinpartners.schema.EntityBase;
+import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Exchanges;
+import org.cryptocoinpartners.schema.Listing;
+import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.Prompt;
 import org.cryptocoinpartners.schema.Prompts;
+import org.hibernate.TransientPropertyValueException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,48 +34,106 @@ import org.slf4j.LoggerFactory;
 public class PersistUtil {
 
     private static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
+    private static Object lock = new Object();
 
     public static void insert(EntityBase... entities) {
         EntityManager em = null;
         boolean persited = true;
-        try {
-            em = createEntityManager();
-            PersistUtilHelper.beginTransaction();
-
+        synchronized (lock) {
             try {
-                for (EntityBase entity : entities) {
-                    // em.refresh(entity);
-                    // if (em.contains(entity))
-                    ///    em.merge(entity);
-                    // else
-                    em.persist(entity);
-                    PersistUtilHelper.commit();
-                }
+                em = createEntityManager();
+                em.setProperty("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH);
 
-            } catch (Exception | Error e) {
-                persited = false;
-                e.printStackTrace();
-                if (PersistUtilHelper.isActive())
-                    PersistUtilHelper.rollback();
-            }
-        } finally {
-            if (persited) {
-                if (log.isDebugEnabled()) {
+                PersistUtilHelper.beginTransaction();
+
+                try {
                     for (EntityBase entity : entities) {
-                        log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
-                        // Cache cache = PersistUtilHelper.getEntityManagerFactory().getCache();
-                        //boolean inCahce = cache.contains(entity.getClass(), entity.getId());
-                        // log.debug("true");
+                        // em.lock(entity, LockModeType.PESSIMISTIC_WRITE);
+                        // em.refresh(entity);
+                        // if (em.contains(entity))
+                        ///    em.merge(entity);
+                        // else
+                        em.persist(entity);
+                        em.flush();
+
                     }
 
-                }
-            } else {
-                for (EntityBase entity : entities)
-                    log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
-            }
-            if (em != null && em.isOpen())
-                PersistUtilHelper.closeEntityManager();
+                } catch (OptimisticLockException ole) {
+                    persited = false;
+                    if (PersistUtilHelper.isActive())
+                        PersistUtilHelper.rollback();
+                    for (EntityBase entity : entities) {
+                        //  if (entity.getRetryCount() <= retryCount) {
+                        //    entity.incermentRetryCount();
+                        //   insert(entities);
+                        //}
 
+                        //else
+                        entity.incermentRetryCount();
+
+                        log.error(entity.getClass().getSimpleName() + ": Later verion of " + entity.getId().toString()
+                                + " already persisted to database, entity was not saved to database after " + entity.getRetryCount() + " attempts.");
+                    }
+
+                } catch (PersistenceException pe) {
+                    //persited = false;
+
+                    //  for (EntityBase entity : entities)
+                    if (PersistUtilHelper.isActive())
+                        PersistUtilHelper.rollback();
+                    PersistUtilHelper.beginTransaction();
+                    for (EntityBase entity : entities) {
+                        log.error(entity.getClass().getSimpleName() + ": entity already exists, we need to merge records");
+
+                        em.merge(entity);
+
+                        PersistUtilHelper.commit();
+                    }
+                } catch (TransientPropertyValueException tpe) {
+                    //persited = false;
+
+                    //  for (EntityBase entity : entities)
+                    if (PersistUtilHelper.isActive())
+                        PersistUtilHelper.rollback();
+                    PersistUtilHelper.beginTransaction();
+                    for (EntityBase entity : entities) {
+                        log.error(entity.getClass().getSimpleName() + ": entity has transietn values, reinerseting");
+
+                        em.merge(entity);
+
+                        PersistUtilHelper.commit();
+                    }
+                } catch (Exception | Error e) {
+                    persited = false;
+
+                    log.error("Threw a Execpton or Error in  org.cryptocoinpartners.util.persistUtil::insert, full stack trace follows:", e);
+                    e.printStackTrace();
+                    if (PersistUtilHelper.isActive())
+                        PersistUtilHelper.rollback();
+                }
+
+            } finally {
+                if (PersistUtilHelper.isActive())
+                    PersistUtilHelper.commit();
+                if (em != null)
+                    PersistUtilHelper.closeEntityManager();
+
+                if (persited) {
+                    if (log.isDebugEnabled()) {
+                        for (EntityBase entity : entities) {
+                            log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
+                            // Cache cache = PersistUtilHelper.getEntityManagerFactory().getCache();
+                            //boolean inCahce = cache.contains(entity.getClass(), entity.getId());
+                            // log.debug("true");
+                        }
+
+                    }
+                } else {
+                    for (EntityBase entity : entities)
+                        log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
+                }
+
+            }
         }
     }
 
@@ -80,8 +148,7 @@ public class PersistUtil {
             }
 
         } catch (Exception | Error e) {
-
-            e.printStackTrace();
+            log.error("Threw a Execpton or Error, full stack trace follows:", e);
 
         }
         return cached;
@@ -91,33 +158,86 @@ public class PersistUtil {
     public static void merge(EntityBase... entities) {
         EntityManager em = null;
         boolean persited = true;
-        try {
-            em = createEntityManager();
-            PersistUtilHelper.beginTransaction();
-
+        synchronized (lock) {
             try {
-                for (EntityBase entity : entities) {
-                    // em.find(entity.getClass(), entity.getId());
-                    em.merge(entity);
-                    PersistUtilHelper.commit();
+                em = createEntityManager();
+                //  em.setProperty("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH);
+
+                PersistUtilHelper.beginTransaction();
+
+                try {
+                    for (EntityBase entity : entities) {
+                        // em.lock(entity, LockModeType.PESSIMISTIC_WRITE);
+                        //   em.setProperty("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH);
+                        //em.find(entity.getClass(), entity.getId());
+                        //  em.refresh(entity.getId());
+
+                        em.merge(entity);
+                        em.flush();
+
+                    }
+
+                } catch (EntityNotFoundException enf) {
+                    persited = false;
+                    if (PersistUtilHelper.isActive())
+                        PersistUtilHelper.rollback();
+                    //TODO put a limit how many times we loop the persistance
+                    //  merge(entities);
+                } catch (OptimisticLockException ole) {
+                    persited = false;
+                    if (PersistUtilHelper.isActive())
+                        PersistUtilHelper.rollback();
+                    //                  PersistUtilHelper.beginTransaction();
+                    for (EntityBase entity : entities) {
+
+                        entity.incermentRetryCount();
+
+                        log.error(entity.getClass().getSimpleName() + ": Later verion of " + entity.getId().toString()
+                                + " already persisted to database, entity was not saved to database after " + entity.getRetryCount() + " attempts.");
+
+                    }
+                    //                        if (entity.getRetryCount() <= retryCount) {
+                    //                            em.persist(entity);
+                    //                            em.flush();
+                    //                        } else {
+                    //                            log.error(entity.getClass().getSimpleName() + ": Later verion of " + entity.getId().toString()
+                    //                                    + " already persisted to database, entity was not saved to database");
+                    //                        }
+                    //
+                    //                    }
+
                 }
+                //            } catch (OptimisticLockException ole) {
+                //                log.error("Optimistic Lock");
+                //                persited = false;
+                //                if (PersistUtilHelper.isActive())
+                //                    PersistUtilHelper.rollback();
+                //
+                //            }
 
-            } catch (Exception | Error e) {
-                persited = false;
-                e.printStackTrace();
+                catch (Exception | Error e) {
+                    persited = false;
+                    log.error("Threw a Execpton or Error in  org.cryptocoinpartners.util.persistUtil::insert, full stack trace follows:", e);
+
+                    e.printStackTrace();
+                    if (PersistUtilHelper.isActive())
+                        PersistUtilHelper.rollback();
+                }
+            } finally {
                 if (PersistUtilHelper.isActive())
-                    PersistUtilHelper.rollback();
-            }
-        } finally {
-            if (persited)
-                for (EntityBase entity : entities)
-                    log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
-            else
-                for (EntityBase entity : entities)
-                    log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
-            if (em != null && em.isOpen())
-                PersistUtilHelper.closeEntityManager();
+                    PersistUtilHelper.commit();
 
+                if (em != null)
+                    PersistUtilHelper.closeEntityManager();
+
+                if (persited)
+                    for (EntityBase entity : entities)
+                        log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " saved to database");
+                else
+                    for (EntityBase entity : entities)
+                        log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
+
+            }
         }
     }
 
@@ -136,19 +256,21 @@ public class PersistUtil {
 
             } catch (Exception | Error e) {
                 found = false;
+                log.error("Threw a Execpton or Error in  org.cryptocoinpartners.util.persistUtil::insert, full stack trace follows:", e);
+
                 e.printStackTrace();
                 if (PersistUtilHelper.isActive())
                     PersistUtilHelper.rollback();
             }
         } finally {
+            if (em != null)
+                PersistUtilHelper.closeEntityManager();
             if (found)
                 for (EntityBase entity : entities)
                     log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " found in database");
             else
                 for (EntityBase entity : entities)
                     log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not found in database");
-            if (em != null && em.isOpen())
-                PersistUtilHelper.closeEntityManager();
 
         }
     }
@@ -232,6 +354,7 @@ public class PersistUtil {
         EntityManager em = null;
         try {
             em = createEntityManager();
+
             final TypedQuery<T> query = em.createQuery(queryStr, resultType);
             if (params != null) {
                 for (int i = 0; i < params.length; i++) {
@@ -394,6 +517,7 @@ public class PersistUtil {
             createMode = "create";
         else
             createMode = "update";
+        retryCount = ConfigUtil.combined().getInt("db.persist.retry");
         properties.put("hibernate.hbm2ddl.auto", createMode);
         properties.put("hibernate.connection.driver_class", ConfigUtil.combined().getString("db.driver"));
         properties.put("hibernate.dialect", ConfigUtil.combined().getString("db.dialect"));
@@ -402,25 +526,31 @@ public class PersistUtil {
         properties.put("hibernate.connection.password", ConfigUtil.combined().getString("db.password"));
         properties.put("hibernate.ejb.naming_strategy", "org.hibernate.cfg.ImprovedNamingStrategy");
         properties.put("hibernate.connection.autocommit", "true");
+        properties.put("hibernate.connection.autocommit", "true");
+        properties.put("hibernate.connection.release_mode", "auto");
         properties.put("hibernate.connection.provider_class", "org.hibernate.connection.C3P0ConnectionProvider");
         properties.put("hibernate.cache.region.factory_class", "org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory");
         properties.put("hibernate.cache.use_second_level_cache", "true");
         properties.put("hibernate.cache.use_query_cache", "true");
-        properties.put("hibernate.c3p0.min_size", "1");
+        properties.put("hibernate.c3p0.min_size", "10");
         properties.put("hibernate.c3p0.max_size", ConfigUtil.combined().getString("db.pool.size"));
         properties.put("hibernate.c3p0.acquire_increment", ConfigUtil.combined().getString("db.pool.growth"));
-        properties.put("hibernate.c3p0.idle_test_period", ConfigUtil.combined().getString("db.idle.test.period"));
-        properties.put("hibernate.c3p0.max_statements", "0");
-        properties.put("hibernate.c3p0.timeout", "0");
+
+        //   properties.put("hibernate.c3p0.debugUnreturnedConnectionStackTraces", "true");
+        // properties.put("hibernate.c3p0.unreturnedConnectionTimeout", "120");
+        //    properties.put("hibernate.c3p0.idle_test_period", ConfigUtil.combined().getString("db.idle.test.period"));
+        //  properties.put("hibernate.c3p0.max_statements", "0");
+        // properties.put("hibernate.c3p0.maxIdleTimeExcessConnections", "2");
+        //  properties.put("hibernate.c3p0.timeout", "300");
+        //properties.put("hibernate.c3p0.checkoutTimeout", "500");
         properties.put("hibernate.c3p0.preferredTestQuery", "SELECT 1 from exchange");
-        properties.put("hibernate.c3p0.maxConnectionAge", ConfigUtil.combined().getString("db.max.connection.age"));
+        //  properties.put("hibernate.c3p0.maxConnectionAge", ConfigUtil.combined().getString("db.max.connection.age"));
         final String testConnection = resetDatabase ? "false" : ConfigUtil.combined().getString("db.test.connection");
-        properties.put("hibernate.c3p0.testConnectionOnCheckout", testConnection);
+        properties.put("hibernate.c3p0.testConnectionOnCheckin", testConnection);
         properties.put("hibernate.c3p0.acquireRetryDelay", "1000");
         properties.put("hibernate.c3p0.acquireRetryAttempts", "0");
         properties.put("hibernate.c3p0.breakAfterAcquireFailure", "false");
         properties.put("javax.persistence.sharedCache.mode", "ALL");
-
         try {
             PersistUtilHelper emh = new PersistUtilHelper(properties);
             ensureSingletonsExist();
@@ -439,7 +569,14 @@ public class PersistUtil {
         Currencies.BTC.getSymbol(); // this should load all the singletons in Currencies
         Exchanges.BITFINEX.getSymbol(); // this should load all the singletons in Exchanges
         Prompts.THIS_WEEK.getSymbol();
+        queryList(Currency.class, "select c from Currency c");
+        queryList(Prompt.class, "select p from Prompt p");
+        queryList(Listing.class, "select l from Listing l");
+        queryList(Exchange.class, "select e from Exchange e");
+        queryList(Market.class, "select m from Market m");
+
     }
 
     private static final int defaultBatchSize = 20;
+    private static int retryCount = 2;
 }

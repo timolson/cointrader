@@ -27,11 +27,12 @@ public class BaseStrategy implements Strategy {
         //    this.portfolio = portfolio;
         this.portfolio = portfolio;
         SubscribePortfolio portfolioSubcribeEvent = new SubscribePortfolio(portfolio);
-        context.publish(portfolioSubcribeEvent);
-        Asset baseAsset = Asset.forSymbol(context.getConfig().getString("base.symbol", "USD"));
+        portfolio.getContext().publish(portfolioSubcribeEvent);
+        Asset baseAsset = Asset.forSymbol(portfolio.getContext().getConfig().getString("base.symbol", "USD"));
         portfolio.setBaseAsset(baseAsset);
         PersistUtil.merge(portfolio);
         order = new OrderBuilder(portfolio, orderService);
+        log = portfolio.getLogger();
     }
 
     // @Inject
@@ -74,7 +75,7 @@ public class BaseStrategy implements Strategy {
      * order.create(Listing.BTC_USD,1.00).withLimit(651.538).place();
      * </pre>
      */
-    protected OrderBuilder order;
+    protected static OrderBuilder order;
 
     /** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
     @Inject
@@ -87,9 +88,8 @@ public class BaseStrategy implements Strategy {
     protected transient OrderService orderService;
     @Inject
     protected transient PortfolioService portfolioService;
-
-    @Inject
-    protected Logger log;
+    // @Inject
+    protected static Logger log;
 
     @Override
     public void init() {

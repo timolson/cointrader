@@ -2,6 +2,9 @@ package org.cryptocoinpartners.schema;
 
 // import java.util.logging.Logger;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.persistence.Cacheable;
@@ -112,8 +115,55 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
     }
 
-    @When("@Priority(7) select * from Transaction")
+    private class handleTransactionRunnable implements Runnable {
+        private final Transaction transaction;
+
+        // protected Logger log;
+
+        public handleTransactionRunnable(Transaction transaction) {
+            this.transaction = transaction;
+
+        }
+
+        @Override
+        public void run() {
+            updatePortfolio(transaction);
+
+        }
+    }
+
+    private class handleFillRunnable implements Runnable {
+        private final Fill fill;
+
+        // protected Logger log;
+
+        public handleFillRunnable(Fill fill) {
+            this.fill = fill;
+
+        }
+
+        @Override
+        public void run() {
+            fill.persit();
+            portfolio.modifyPosition(fill, new Authorization("Fill for " + fill.toString()));
+
+        }
+    }
+
+    //  @When("@Priority(9) select * from Fill")
+    // public void handleFill(Fill fill) {
+    //    service.submit(new handleFillRunnable(fill));
+
+    // }
+
+    //  @When("@Priority(8) select * from Transaction where NOT (Transaction.type=TransactionType.BUY and Transaction.type=TransactionType.SELL)")
+    @When("@Priority(8) select * from Transaction")
     public void handleTransaction(Transaction transaction) {
+        service.submit(new handleTransactionRunnable(transaction));
+
+    }
+
+    public void updatePortfolio(Transaction transaction) {
         //  PersistUtil.insert(transaction);
         //	Transaction tans = new Transaction(this, position.getExchange(), position.getAsset(), TransactionType.CREDIT, position.getVolume(),
         //		position.getAvgPrice());
@@ -151,11 +201,11 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
                     Transaction initialDedit = new Transaction(transaction.getPortfolio(), transaction.getExchange(), transaction.getCurrency(),
                             TransactionType.DEBIT, transaction.getAmount().negate());
-                    context.route(initialDedit);
+                    context.publish(initialDedit);
                     PersistUtil.insert(initialDedit);
                     Transaction initialCredit = new Transaction(transaction.getPortfolio(), transaction.getExchange(), transaction.getPortfolio()
                             .getBaseAsset(), TransactionType.CREDIT, transaction.getAmount().times(tradedRate.getPrice(), Remainder.ROUND_EVEN));
-                    context.route(initialCredit);
+                    context.publish(initialCredit);
                     PersistUtil.insert(initialCredit);
 
                 }
@@ -184,7 +234,6 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
     public static class DataSubscriber {
 
-        private static Logger logger = LoggerFactory.getLogger(DataSubscriber.class.getName());
         private static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
 
         @SuppressWarnings("rawtypes")
@@ -193,15 +242,15 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
             PortfolioService portfolioService = portfolio.context.getInjector().getInstance(PortfolioService.class);
             //      ..getManager().getPortfolioService();
             //portfolio.getPositions();
-            logger.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Portfolio: " + portfolio + " Total Value ("
-                    + portfolio.getBaseAsset() + "):"
+            log.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Portfolio: " + portfolio + " Total Value (" + portfolio.getBaseAsset()
+                    + "):"
                     + portfolioService.getBaseCashBalance(portfolio.getBaseAsset()).plus(portfolioService.getBaseUnrealisedPnL(portfolio.getBaseAsset()))
                     + " (Cash Balance:" + portfolioService.getBaseCashBalance(portfolio.getBaseAsset()) + " Realised PnL (M2M):"
                     + portfolioService.getBaseRealisedPnL(portfolio.getBaseAsset()) + " Open Trade Equity:"
                     + portfolioService.getBaseUnrealisedPnL(portfolio.getBaseAsset()) + " MarketValue:"
                     + portfolioService.getBaseMarketValue(portfolio.getBaseAsset()) + ")");
-            logger.info(portfolio.getNetPositions().toString());
-            logger.info(portfolio.getDetailedPositions().toString());
+            log.info(portfolio.getNetPositions().toString());
+            log.info(portfolio.getDetailedPositions().toString());
             //			Object itt = portfolio.getPositions().iterator();
             //			while (itt.hasNext()) {
             //				Position postion = itt.next();
@@ -230,8 +279,8 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         this.portfolio = portfolio;
     }
 
-    @Inject
-    private static Logger log;
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.portfolioManager");
+
     @Inject
     protected transient Context context;
     @Inject
@@ -240,5 +289,6 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     private PortfolioService portfolioService;
     // @Inject
     private Portfolio portfolio;
+    private static ExecutorService service = Executors.newFixedThreadPool(1);
 
 }

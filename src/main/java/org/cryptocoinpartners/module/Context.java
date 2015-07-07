@@ -339,6 +339,8 @@ public class Context {
                         processAnnotations(statement);
                     } catch (Exception e) {
                         // TODO Auto-generated catch block
+                        log.error("Threw a Execption, full stack trace follows:", e);
+
                         e.printStackTrace();
                     }
                 }
@@ -568,7 +570,7 @@ public class Context {
         private final String statement;
     }
 
-    private static Logger log = LoggerFactory.getLogger(Context.class);
+    protected static Logger log = LoggerFactory.getLogger(Context.class);
 
     private Configuration config;
     private Injector injector;

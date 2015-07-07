@@ -19,6 +19,8 @@ import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.ListingsMatrix;
 import org.joda.time.Instant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This service listens to the Context and caches the most recent Trades and Books
@@ -163,7 +165,7 @@ public class BasicQuoteService implements QuoteService {
     }
 
     //@Priority(10)
-    @When("@Priority(5) select * from Book")
+    @When("@Priority(5) select * from Book.std:lastevent()")
     private void recordBook(Book b) {
         Market market = b.getMarket();
         handleMarket(market);
@@ -210,6 +212,8 @@ public class BasicQuoteService implements QuoteService {
             try {
                 impliedAskMatrix.addAsset(market.getBase(), market.getQuote(), b.getAskPrice().getCount());
             } catch (java.lang.IllegalArgumentException e2) {
+                log.error("Threw a Execption, full stack trace follows:", e2);
+
                 e2.printStackTrace();
                 //we not recived enouhg trades to create a link to other currecny
                 //we not recived enouhg trades to create a link to other currecny
@@ -225,7 +229,7 @@ public class BasicQuoteService implements QuoteService {
 
     }
 
-    @When("@Priority(5) select * from Trade")
+    @When("@Priority(5) select * from Trade.std:lastevent()")
     private void recordTrade(Trade t) {
         Market market = t.getMarket();
         handleMarket(market);
@@ -255,6 +259,7 @@ public class BasicQuoteService implements QuoteService {
 
     private final ListingsMatrix impliedBidMatrix = new ListingsMatrix();
     private final ListingsMatrix impliedAskMatrix = new ListingsMatrix();
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.quoteService");
 
     private final Map<String, Trade> lastTradeByListing = new HashMap<>();
     private final Map<String, Book> lastBookByListing = new HashMap<>();

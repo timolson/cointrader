@@ -5,7 +5,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.persistence.CacheRetrieveMode;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.FlushModeType;
@@ -14,12 +13,15 @@ import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
 import org.cryptocoinpartners.schema.EntityBase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class PersistUtilHelper {
 
     private static EntityManagerFactory emf;
     private static final ThreadLocal<EntityManager> threadLocal = new ThreadLocal<EntityManager>();
     private static ConcurrentHashMap<String, EntityManager> entityManagers = new ConcurrentHashMap<String, EntityManager>();
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persistUtilHelper");
 
     PersistUtilHelper(Map<String, String> properties) {
         emf = Persistence.createEntityManagerFactory("org.cryptocoinpartners.schema", properties);
@@ -43,10 +45,10 @@ public class PersistUtilHelper {
         //getEntityManager().clear();
         Map<String, Object> myproperties = getEntityManager().getProperties();
         Map<String, Object> props = new HashMap<String, Object>();
-        props.put("javax.persistence.cache.retrieveMode", "BYPASS");
+        // props.put("javax.persistence.cache.retrieveMode", "BYPASS");
 
         //getEntityManager().setProperty("javax.persistence.cache.storeMode", "BYPASS");
-        getEntityManager().setProperty("javax.persistence.cache.retrieveMode", CacheRetrieveMode.BYPASS);
+        // getEntityManager().setProperty("javax.persistence.cache.retrieveMode", CacheRetrieveMode.BYPASS);
 
         return getEntityManager().createQuery(qlString, resultClass);
     }
@@ -62,6 +64,8 @@ public class PersistUtilHelper {
             try {
                 em.close();
             } catch (Exception | Error e) {
+                log.error("Threw a Execpton or Error, full stack trace follows:", e);
+
                 e.printStackTrace();
 
             }
@@ -135,7 +139,6 @@ public class PersistUtilHelper {
             Object mergedEntity = null;
             Object rootEntity = null;
             Map<String, Object> props = new HashMap<String, Object>();
-            props.put("javax.persistence.cache.retrieveMode", CacheRetrieveMode.BYPASS);
 
             if (em != null || em.isOpen())
                 em.refresh(entity);
@@ -163,7 +166,6 @@ public class PersistUtilHelper {
             FlushModeType flushMode;
             Object rootEntity = null;
             Map<String, Object> props = new HashMap<String, Object>();
-            props.put("javax.persistence.cache.retrieveMode", "BYPASS");
             Object parent;
             //Object Object;
             if (em != null || em.isOpen())

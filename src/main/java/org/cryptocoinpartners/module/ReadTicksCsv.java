@@ -21,6 +21,7 @@ import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Trade;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.bean.ColumnPositionMappingStrategy;
@@ -248,6 +249,6 @@ public class ReadTicksCsv {
 
     }
 
-    @Inject
-    public Logger log;
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.csvReader");
+
 }

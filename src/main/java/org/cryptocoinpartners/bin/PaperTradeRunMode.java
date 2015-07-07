@@ -40,7 +40,7 @@ public class PaperTradeRunMode extends RunMode {
     final ExecutorService service = Executors.newSingleThreadExecutor();
     private final Instant end = new DateTime(DateTime.now()).toInstant();
     Semaphore paperSemaphore = new Semaphore(0);
-    private final Instant start = end.minus(Duration.standardHours(5)).toInstant();
+    private final Instant start = end.minus(Duration.standardDays(10)).toInstant();
 
     // new DateTime(2013, 12, 20, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 

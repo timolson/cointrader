@@ -1,14 +1,15 @@
 package org.cryptocoinpartners.schema;
 
-import java.util.Collection;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.Nullable;
-import javax.persistence.CascadeType;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
-import javax.persistence.FetchType;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
+import javax.persistence.OrderBy;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.util.PersistUtil;
@@ -23,6 +24,7 @@ import org.joda.time.format.DateTimeFormatter;
  * @author Tim Olson
  */
 @Entity
+@Cacheable
 public class Position extends Holding {
 
     private Portfolio portfolio;
@@ -48,47 +50,56 @@ public class Position extends Holding {
     //    }
 
     public Position(Fill fill) {
+
         this.addFill(fill);
         fill.setPosition(this);
+
         this.exchange = fill.getMarket().getExchange();
         this.market = fill.getMarket();
-        this.volume = fill.getVolume();
-        this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount();
-        this.longVolume = volume.isPositive() ? volume : this.longVolume;
-        this.longVolumeCount = volume.isPositive() ? volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount() : this.longVolumeCount;
-        this.shortVolume = volume.isNegative() ? volume : this.shortVolume;
-        this.shortVolumeCount = volume.isNegative() ? volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount() : this.shortVolumeCount;
-        this.longAvgPrice = volume.isPositive() ? fill.getPrice() : this.longAvgPrice;
-        this.shortAvgPrice = volume.isNegative() ? fill.getPrice() : this.shortAvgPrice;
-        this.shortAvgStopPrice = fill.getStopPrice() != null && fill.isShort() ? fill.getStopPrice() : DecimalAmount.ZERO;
-        this.longAvgStopPrice = fill.getStopPrice() != null && fill.isLong() ? fill.getStopPrice() : DecimalAmount.ZERO;
+        // this.volume = fill.getVolume();
+        //this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount();
+        //this.longVolume = volume.isPositive() ? volume : this.longVolume;
+        //this.longVolumeCount = volume.isPositive() ? volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount() : this.longVolumeCount;
+        //this.shortVolume = volume.isNegative() ? volume : this.shortVolume;
+        //this.shortVolumeCount = volume.isNegative() ? volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount() : this.shortVolumeCount;
+        //this.longAvgPrice = volume.isPositive() ? fill.getPrice() : this.longAvgPrice;
+        //this.shortAvgPrice = volume.isNegative() ? fill.getPrice() : this.shortAvgPrice;
+        //this.shortAvgStopPrice = fill.getStopPrice() != null && fill.isShort() ? fill.getStopPrice() : DecimalAmount.ZERO;
+        //this.longAvgStopPrice = fill.getStopPrice() != null && fill.isLong() ? fill.getStopPrice() : DecimalAmount.ZERO;
         this.asset = fill.getMarket().getListing().getBase();
-        fill.getPortfolio().addPosition(this);
+        this.id = getId();
         this.portfolio = fill.getPortfolio();
+        //   
+        fill.getPortfolio().addPosition(this);
 
     }
 
-    public Position(Collection<Fill> fills) {
-        for (Fill fill : fills) {
-
+    public Position(List<Fill> fills) {
+        Iterator<Fill> itf = fills.iterator();
+        while (itf.hasNext()) {
+            //  for (Fill pos : getFills()) {
+            Fill fill = itf.next();
+            this.addFill(fill);
             this.exchange = fill.getMarket().getExchange();
             this.market = fill.getMarket();
-            this.volume = fill.getVolume();
-            this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount();
-            this.longVolume = volume.isPositive() ? volume : this.longVolume;
-            this.longVolumeCount = volume.isPositive() ? volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount() : this.longVolumeCount;
-            this.shortVolume = volume.isNegative() ? volume : this.shortVolume;
-            this.shortVolumeCount = volume.isNegative() ? volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount() : this.shortVolumeCount;
-            this.longAvgPrice = volume.isPositive() ? fill.getPrice() : this.longAvgPrice;
-            this.shortAvgPrice = volume.isNegative() ? fill.getPrice() : this.shortAvgPrice;
-            this.shortAvgStopPrice = fill.getStopPrice() != null && fill.isShort() ? fill.getStopPrice() : DecimalAmount.ZERO;
-            this.longAvgStopPrice = fill.getStopPrice() != null && fill.isLong() ? fill.getStopPrice() : DecimalAmount.ZERO;
+            // this.volume = fill.getVolume();
+            //this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount();
+            //this.longVolume = volume.isPositive() ? volume : this.longVolume;
+            //this.longVolumeCount = volume.isPositive() ? volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount() : this.longVolumeCount;
+            //this.shortVolume = volume.isNegative() ? volume : this.shortVolume;
+            //this.shortVolumeCount = volume.isNegative() ? volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount() : this.shortVolumeCount;
+            //this.longAvgPrice = volume.isPositive() ? fill.getPrice() : this.longAvgPrice;
+            //this.shortAvgPrice = volume.isNegative() ? fill.getPrice() : this.shortAvgPrice;
+            //this.shortAvgStopPrice = fill.getStopPrice() != null && fill.isShort() ? fill.getStopPrice() : DecimalAmount.ZERO;
+            //this.longAvgStopPrice = fill.getStopPrice() != null && fill.isLong() ? fill.getStopPrice() : DecimalAmount.ZERO;
             this.asset = fill.getMarket().getListing().getBase();
-            fill.getPortfolio().addPosition(this);
             this.portfolio = fill.getPortfolio();
+            this.id = getId();
             //       this.fills.add(fill);
-            this.addFill(fill);
-            fill.setPosition(this);
+
+            // fill.setPosition(this);
+            //fill.getPortfolio().addPosition(this);
+
         }
     }
 
@@ -134,6 +145,7 @@ public class Position extends Holding {
     @Transient
     public Amount getMarginAmount() {
 
+        Amount marginAmount = DecimalAmount.ZERO;
         if (isOpen() && marginAmount != null) {
             return marginAmount;
         } else {
@@ -189,8 +201,8 @@ public class Position extends Holding {
     public Amount getLongVolume() {
         if (market == null)
             return null;
-        if (longVolume == null)
-            longVolume = new DiscreteAmount(getLongVolumeCount(), market.getVolumeBasis());
+        // if (longVolume == null)
+        Amount longVolume = new DiscreteAmount(getLongVolumeCount(), market.getVolumeBasis());
         return longVolume;
 
     }
@@ -199,8 +211,8 @@ public class Position extends Holding {
     public Amount getShortVolume() {
         if (market == null)
             return null;
-        if (shortVolume == null)
-            shortVolume = new DiscreteAmount(getShortVolumeCount(), market.getVolumeBasis());
+        //  if (shortVolume == null)
+        Amount shortVolume = new DiscreteAmount(getShortVolumeCount(), market.getVolumeBasis());
         return shortVolume;
     }
 
@@ -208,13 +220,14 @@ public class Position extends Holding {
     public Amount getLongAvgPrice() {
         // if (longAvgPrice == null) {
         Amount longCumVolume = DecimalAmount.ZERO;
-        longAvgPrice = DecimalAmount.ZERO;
-
-        for (Fill pos : getFills()) {
-
+        Amount longAvgPrice = DecimalAmount.ZERO;
+        Iterator<Fill> itf = getFills().iterator();
+        while (itf.hasNext()) {
+            //  for (Fill pos : getFills()) {
+            Fill pos = itf.next();
             if (pos.isLong()) {
-                longAvgPrice = ((longAvgPrice.times(longCumVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getPrice(), Remainder.ROUND_EVEN)))
-                        .dividedBy(longCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+                longAvgPrice = longAvgPrice == null ? DecimalAmount.ZERO : ((longAvgPrice.times(longCumVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume()
+                        .times(pos.getPrice(), Remainder.ROUND_EVEN))).dividedBy(longCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
                 longCumVolume = longCumVolume.plus(pos.getOpenVolume());
 
             }
@@ -228,13 +241,17 @@ public class Position extends Holding {
     public Amount getShortAvgPrice() {
         //   if (shortAvgPrice == null) {
         Amount shortCumVolume = DecimalAmount.ZERO;
-        shortAvgPrice = DecimalAmount.ZERO;
+        Amount shortAvgPrice = DecimalAmount.ZERO;
 
-        for (Fill pos : getFills()) {
+        Iterator<Fill> itf = getFills().iterator();
+        while (itf.hasNext()) {
+            //  for (Fill pos : getFills()) {
+            Fill pos = itf.next();
 
             if (pos.isShort()) {
-                shortAvgPrice = ((shortAvgPrice.times(shortCumVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getPrice(),
-                        Remainder.ROUND_EVEN))).dividedBy(shortCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+                shortAvgPrice = shortAvgPrice == null ? DecimalAmount.ZERO : ((shortAvgPrice.times(shortCumVolume, Remainder.ROUND_EVEN)).plus(pos
+                        .getOpenVolume().times(pos.getPrice(), Remainder.ROUND_EVEN)))
+                        .dividedBy(shortCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
                 shortCumVolume = shortCumVolume.plus(pos.getOpenVolume());
 
             }
@@ -242,16 +259,19 @@ public class Position extends Holding {
         // }
 
         return shortAvgPrice;
+
     }
 
     @Transient
     public Amount getLongAvgStopPrice() {
         //  if (longAvgStopPrice == null) {
         Amount longCumVolume = DecimalAmount.ZERO;
-        longAvgStopPrice = DecimalAmount.ZERO;
+        Amount longAvgStopPrice = DecimalAmount.ZERO;
 
-        for (Fill pos : getFills()) {
-
+        Iterator<Fill> itf = getFills().iterator();
+        while (itf.hasNext()) {
+            //  for (Fill pos : getFills()) {
+            Fill pos = itf.next();
             if (pos.isLong()) {
 
                 if (pos.getStopPrice() != null)
@@ -274,10 +294,13 @@ public class Position extends Holding {
     @Transient
     public Amount getShortAvgStopPrice() {
         //   if (shortAvgStopPrice == null) {
-        shortAvgStopPrice = DecimalAmount.ZERO;
+        Amount shortAvgStopPrice = DecimalAmount.ZERO;
         Amount shortCumVolume = DecimalAmount.ZERO;
         // if (shortAvgStopPrice == null)
-        for (Fill pos : getFills()) {
+        Iterator<Fill> itf = getFills().iterator();
+        while (itf.hasNext()) {
+            //  for (Fill pos : getFills()) {
+            Fill pos = itf.next();
 
             if (pos.isShort()) {
 
@@ -296,30 +319,12 @@ public class Position extends Holding {
 
     /** If the SpecificOrder is not null, then this Position is being held in reserve as payment for that Order */
 
-    @Transient
-    protected boolean isReserved() {
-        return order != null;
-    }
-
     /**
      * Modifies this Position in-place by the amount of the position argument.
      * @param position a Position to add to this one.
      * @return true iff the positions both have the same Asset and the same Exchange, in which case this Position
      * has modified its volume by the amount in the position argument.
      */
-    public boolean merge(Position position) {
-        if (exchange == null && position.exchange == null)
-            return false;
-        if (asset == null && position.asset == null)
-            return false;
-        if (!exchange.equals(position.exchange) || !asset.equals(position.asset))
-            return false;
-        // longVolumeCount += position.longVolumeCount;
-        //shortVolumeCount += position.shortVolumeCount;
-        setLongVolumeCount(position.getLongVolumeCount() + getLongVolumeCount());
-        setShortVolumeCount(position.getShortVolumeCount() + getShortVolumeCount());
-        return true;
-    }
 
     @Override
     public String toString() {
@@ -339,11 +344,17 @@ public class Position extends Holding {
     @Nullable
     @Transient
     protected long getVolumeCount() {
-        reset();
-        if (hasFills())
-            for (Fill fill : getFills()) {
+        long volumeCount = 0;
+        //    reset();
+        if (hasFills()) {
+            Iterator<Fill> itf = getFills().iterator();
+            while (itf.hasNext()) {
+                //  for (Fill pos : getFills()) {
+                Fill fill = itf.next();
+
                 volumeCount += fill.getOpenVolumeCount();
             }
+        }
 
         return volumeCount;
     }
@@ -351,12 +362,16 @@ public class Position extends Holding {
     @Nullable
     @Transient
     protected long getLongVolumeCount() {
-        reset();
-        if (hasFills())
-            for (Fill fill : getFills()) {
-                if (fill.isLong())
-                    longVolumeCount += fill.getOpenVolumeCount();
-            }
+        //  reset();
+        Iterator<Fill> itf = getFills().iterator();
+        long longVolumeCount = 0;
+        while (itf.hasNext()) {
+            //  for (Fill pos : getFills()) {
+            Fill fill = itf.next();
+
+            if (fill.isLong())
+                longVolumeCount += fill.getOpenVolumeCount();
+        }
 
         return longVolumeCount;
     }
@@ -364,105 +379,113 @@ public class Position extends Holding {
     @Nullable
     @Transient
     protected long getShortVolumeCount() {
-        reset();
-        if (hasFills())
-            for (Fill fill : getFills()) {
+        long shortVolumeCount = 0;
+        //  reset();
+        if (hasFills()) {
+            Iterator<Fill> itf = getFills().iterator();
+            while (itf.hasNext()) {
+                //  for (Fill pos : getFills()) {
+                Fill fill = itf.next();
+
                 if (fill.isShort())
                     shortVolumeCount += fill.getOpenVolumeCount();
             }
-
+        }
         return shortVolumeCount;
-    }
-
-    protected void setLongVolumeCount(long longVolumeCount) {
-        reset();
-        this.longVolumeCount = longVolumeCount;
-
-    }
-
-    protected void setShortVolumeCount(long shortVolumeCount) {
-        reset();
-        this.shortVolumeCount = shortVolumeCount;
-
-    }
-
-    protected void setVolumeCount(long volumeCount) {
-        reset();
-        this.volumeCount = volumeCount;
-        this.volume = null;
-        if (volumeCount > 0)
-            setLongVolumeCount(volumeCount);
-        if (volumeCount < 0)
-            setShortVolumeCount(volumeCount);
-
     }
 
     //  fetch = FetchType.EAGER,
 
-    @OneToMany(mappedBy = "position", fetch = FetchType.EAGER, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
-    public Collection<Fill> getFills() {
+    @OneToMany(mappedBy = "position")
+    @OrderBy
+    //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
+    public List<Fill> getFills() {
         if (fills == null)
-            fills = new ConcurrentLinkedQueue<Fill>();
+            fills = new CopyOnWriteArrayList<Fill>();
         return fills;
 
     }
 
     protected void Persit() {
+        //   synchronized (persistanceLock) {
+        List<Position> duplicate = PersistUtil.queryList(Position.class, "select p from Position p where p=?1", this);
 
-        //  if (this.hasFills()) {
-        //     for (Fill fill : this.getFills())
-        //        PersistUtil.merge(fill);
+        if (this.hasFills()) {
+            for (Fill fill : this.getFills())
+
+                PersistUtil.merge(fill);
+        }
+
+        if (duplicate == null || duplicate.isEmpty())
+            PersistUtil.insert(this);
+        else
+            PersistUtil.merge(this);
+        //  }
+        // if (hasFills()) {
+        //   Iterator<Fill> itf = getFills().iterator();
+        //  while (itf.hasNext()) {
+        //  for (Fill pos : getFills()) {
+        //    Fill fill = itf.next();
+
+        //if (fill.getPosition() == this)
+        //  fill.persit();
+        //PersistUtil.merge(fill);
         // }
-        // PersistUtil.insert(this);
+        // }
 
     }
 
-    protected void Merge() {
+    //protected void Merge() {
+    //     synchronized (persistanceLock) {
+    // if (this.hasFills()) {
+    //   for (Fill fill : this.getFills())
+    //     PersistUtil.merge(fill);
+    // }
+    // ..  PersistUtil.merge(this);
+    //    }
 
-        //  if (this.hasFills()) {
-        //     for (Fill fill : this.getFills())
-        //        PersistUtil.merge(fill);
-        // }
-        PersistUtil.merge(this);
-
-    }
+    // }
 
     public void addFill(Fill fill) {
-        synchronized (lock) {
-            getFills().add(fill);
-        }
-        this.exchange = fill.getMarket().getExchange();
-        this.market = fill.getMarket();
-        this.asset = fill.getMarket().getListing().getBase();
-        this.portfolio = fill.getPortfolio();
+        //   synchronized (lock) {
+        getFills().add(fill);
+        //TODO We should do a check to make sure the fill is the samme attributes as position
+        //}
+        //this.exchange = fill.getMarket().getExchange();
+        //this.market = fill.getMarket();
+        //this.asset = fill.getMarket().getListing().getBase();
+        //this.portfolio = fill.getPortfolio();
 
-        reset();
+        // reset();
 
     }
 
-    public void reset() {
-        this.volume = null;
-        this.longVolume = null;
-        this.shortVolume = null;
-        this.volumeCount = 0;
-        this.longVolumeCount = 0;
-        this.shortVolumeCount = 0;
-        this.longAvgPrice = null;
-        this.shortAvgPrice = null;
-
-        this.longAvgStopPrice = null;
-        this.shortAvgStopPrice = null;
-    }
+    //    public void reset() {
+    //        this.volume = null;
+    //        this.longVolume = null;
+    //        this.shortVolume = null;
+    //        this.volumeCount = 0;
+    //        this.longVolumeCount = 0;
+    //        this.shortVolumeCount = 0;
+    //        this.longAvgPrice = null;
+    //        this.shortAvgPrice = null;
+    //
+    //        this.longAvgStopPrice = null;
+    //        this.shortAvgStopPrice = null;
+    //    }
 
     public void removeFill(Fill fill) {
-        synchronized (lock) {
-            getFills().remove(fill);
-        }
-        PersistUtil.merge(fill);
-        this.exchange = fill.getMarket().getExchange();
-        this.market = fill.getMarket();
-        this.portfolio = fill.getPortfolio();
-        reset();
+        //  synchronized (lock) {
+        fill.setPosition(null);
+        getFills().remove(fill);
+
+        //}
+        //  fill.persit();
+        //PersistUtil.merge(fill);
+        //        this.exchange = fill.getMarket().getExchange();
+        //        this.market = fill.getMarket();
+        //        this.portfolio = fill.getPortfolio();
+        //reset();
 
     }
 
@@ -471,50 +494,27 @@ public class Position extends Holding {
         return !getFills().isEmpty();
     }
 
-    protected void setFills(Collection<Fill> fills) {
-        reset();
+    protected void setFills(List<Fill> fills) {
+        // reset();
         this.fills = fills;
 
     }
 
-    public void setLongAvgPrice(Amount longAvgPrice) {
-        reset();
-        this.longAvgPrice = longAvgPrice;
-
-    }
-
-    public void setShortAvgPrice(Amount shortAvgPrice) {
-        reset();
-        this.shortAvgPrice = shortAvgPrice;
-
-    }
-
-    public void setLongAvgStopPrice(Amount longAvgStopPrice) {
-        reset();
-        this.longAvgStopPrice = longAvgStopPrice;
-
-    }
-
-    public void setShortAvgStopPrice(Amount shortAvgStopPrice) {
-        reset();
-        this.shortAvgStopPrice = shortAvgStopPrice;
-
-    }
-
-    private Amount longVolume;
-    private Amount shortVolume;
-    private Amount volume;
+    // private Amount longVolume = DecimalAmount.ZERO;
+    //private Amount shortVolume = DecimalAmount.ZERO;
+    //private Amount volume = DecimalAmount.ZERO;
     private Market market;
-    private Amount longAvgPrice;
-    private Amount shortAvgPrice;
-    private Amount longAvgStopPrice;
-    private Amount shortAvgStopPrice;
-    private Amount marginAmount;
-    private long longVolumeCount;
-    private long shortVolumeCount;
-    private long volumeCount;
-    private SpecificOrder order;
-    private Collection<Fill> fills = new ConcurrentLinkedQueue<Fill>();
+    //private Amount longAvgPrice = DecimalAmount.ZERO;
+    //private Amount shortAvgPrice = DecimalAmount.ZERO;
+    //private Amount longAvgStopPrice = DecimalAmount.ZERO;
+    //private Amount shortAvgStopPrice = DecimalAmount.ZERO;
+    //private final Amount marginAmount = DecimalAmount.ZERO;
+    //private long longVolumeCount;
+    //private long shortVolumeCount;
+    //private long volumeCount;
+    //private SpecificOrder order;
+    private List<Fill> fills = new CopyOnWriteArrayList<Fill>();
     private static Object lock = new Object();
+    private static Object persistanceLock = new Object();
 
 }

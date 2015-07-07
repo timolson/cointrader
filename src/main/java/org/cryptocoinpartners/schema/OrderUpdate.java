@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.schema;
 
+import java.util.List;
 import java.util.UUID;
 
 import javax.persistence.Column;
@@ -10,6 +11,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 import org.cryptocoinpartners.enumeration.OrderState;
+import org.cryptocoinpartners.util.PersistUtil;
 
 /**
  * When Orders change OrderState, this Event is published
@@ -96,6 +98,25 @@ public class OrderUpdate extends Event {
         this.order = order;
         this.lastState = lastState;
         this.state = state;
+    }
+
+    public void persit() {
+
+        if (getOrder() != null)
+            getOrder().persit();
+
+        // final Trade duplicate = PersistUtil.queryZeroOne(Trade.class, "select t from Trade t where market=?1 and remoteKey=?2 and time=?3",
+        //       trade.getMarket(), trade.getRemoteKey(), trade.getTime());
+        List<OrderUpdate> duplicate = PersistUtil.queryList(OrderUpdate.class, "select ou from OrderUpdate ou where id=?1 and sequence=?2", this.getId(),
+                this.getSequence());
+
+        // OrderUpdate duplicate = PersistUtil.queryZeroOne(OrderUpdate.class, "select ou from OrderUpdate ou where ou=?1 and sequence=?2", this,
+        //         this.getSequence());
+        if (duplicate == null || duplicate.isEmpty())
+            PersistUtil.insert(this);
+        // else
+        //   PersistUtil.merge(this);
+
     }
 
     // JPA
