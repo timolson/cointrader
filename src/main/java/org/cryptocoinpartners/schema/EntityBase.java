@@ -2,12 +2,15 @@ package org.cryptocoinpartners.schema;
 
 import java.io.Serializable;
 import java.util.UUID;
+import java.util.concurrent.Delayed;
+import java.util.concurrent.TimeUnit;
 
 import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.PostPersist;
 import javax.persistence.Transient;
 import javax.persistence.Version;
 
@@ -16,12 +19,33 @@ import javax.persistence.Version;
  */
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @MappedSuperclass
-public abstract class EntityBase implements Serializable {
+public abstract class EntityBase implements Serializable, Delayed {
 
     /**
      * 
      */
     private static final long serialVersionUID = -7893439827939854533L;
+    private static long delay = 1000;
+    private String data;
+    private long startTime;
+
+    @Override
+    @Transient
+    public long getDelay(TimeUnit unit) {
+        long diff = startTime - System.currentTimeMillis();
+        return unit.convert(diff, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public int compareTo(Delayed o) {
+        if (this.startTime < ((EntityBase) o).startTime) {
+            return -1;
+        }
+        if (this.startTime > ((EntityBase) o).startTime) {
+            return 1;
+        }
+        return 0;
+    }
 
     @Id
     @Column(columnDefinition = "BINARY(16)", length = 16, updatable = true, nullable = false)
@@ -31,6 +55,7 @@ public abstract class EntityBase implements Serializable {
     }
 
     @Version
+    @Column(name = "version", columnDefinition = "integer DEFAULT 0", nullable = false)
     public Integer getVersion() {
         if (version == null)
             return 0;
@@ -39,6 +64,11 @@ public abstract class EntityBase implements Serializable {
 
     public void setVersion(Integer version) {
         this.version = version;
+    }
+
+    @Override
+    public String toString() {
+        return "DelayedRunnable [delayMS=" + delay + ", getDelay(ms)=" + getDelay(TimeUnit.MILLISECONDS) + "]";
     }
 
     @Transient
@@ -81,9 +111,16 @@ public abstract class EntityBase implements Serializable {
         this.id = id;
     }
 
+    @PostPersist
+    private void postPersist() {
+        //  setVersion(getVersion() + 1);
+    }
+
     private void ensureId() {
         if (id == null)
             id = UUID.randomUUID();
+        if (startTime == 0)
+            startTime = System.currentTimeMillis() + delay;
     }
 
     protected UUID id;

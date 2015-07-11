@@ -3,6 +3,8 @@ package org.cryptocoinpartners.schema;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+import javax.persistence.Transient;
+
 import org.cryptocoinpartners.util.RemainderHandler;
 
 /**
@@ -57,8 +59,13 @@ public class DiscreteAmount extends Amount {
         this(count, invertBasis(basis));
     }
 
+    @Transient
     public long getCount() {
         return count;
+    }
+
+    protected void setCount(long count) {
+        this.count = count;
     }
 
     /** adds one basis to the value by incrementing the count */
@@ -173,12 +180,14 @@ public class DiscreteAmount extends Amount {
     }
 
     @Override
+    @Transient
     public int getScale() {
 
         int length = (int) (Math.log10(iBasis));
         return length;
     }
 
+    @Transient
     public double getBasis() {
 
         BigDecimal bd = new BigDecimal(iBasis);
@@ -203,16 +212,19 @@ public class DiscreteAmount extends Amount {
     }
 
     @Override
+    @Transient
     public boolean isPositive() {
         return count > 0;
     }
 
     @Override
+    @Transient
     public boolean isZero() {
         return count == 0;
     }
 
     @Override
+    @Transient
     public boolean isNegative() {
         return count < 0;
     }
@@ -239,12 +251,17 @@ public class DiscreteAmount extends Amount {
         return hash;
     }
 
+    // JPA
+    protected DiscreteAmount() {
+
+    }
+
     /**
      * The invertedBasis is 1/basis.  This is done because we can then use a long integer instead of double, knowing
      * that all bases must be integral factors of 1.<br/>
      * Example inverted bases: quarters=4, dimes=10, nickels=20, pennies=100, satoshis=1e8
      */
-    private final long iBasis;
+    private long iBasis = 0;
     protected long count;
     private BigDecimal bd;
 

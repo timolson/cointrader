@@ -80,8 +80,8 @@ public class Fill extends RemoteEvent {
         //}
 
         List<Fill> duplicate = PersistUtil.queryList(Fill.class, "select f from Fill f where f=?1", this);
-        if (getPosition() != null)
-            getPosition().Persit();
+        // if (getPosition() != null)
+        //   getPosition().Persit();
 
         if (duplicate == null || duplicate.isEmpty())
             PersistUtil.insert(this);
@@ -183,14 +183,13 @@ public class Fill extends RemoteEvent {
         return getOpenVolume().isNegative();
     }
 
-    // @Nullable
-    // @OneToMany(mappedBy = "fill")
+    @Nullable
+    @OneToMany(mappedBy = "fill")
     // , fetch = FetchType.EAGER)
     // , cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     //, mappedBy = "fill")
     //(fetch = FetchType.EAGER)
-
-    @Transient
+    //  @Transient
     public List<Transaction> getTransactions() {
         if (transactions == null)
             transactions = new CopyOnWriteArrayList<Transaction>();

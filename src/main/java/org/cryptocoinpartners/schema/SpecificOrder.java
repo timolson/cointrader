@@ -6,6 +6,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 import javax.persistence.Basic;
 import javax.persistence.Cacheable;
+import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
@@ -119,6 +120,22 @@ public class SpecificOrder extends Order {
         this(time, portfolio, market, new DecimalAmount(volume), comment);
     }
 
+    public SpecificOrder(SpecificOrder specficOrder) {
+        super(specficOrder.getTime());
+        this.market = specficOrder.getMarket();
+        this.remoteKey = getId().toString();
+        this.volumeCount = specficOrder.getVolumeCount();
+        super.setComment(specficOrder.getComment());
+        specficOrder.getParentOrder().addChild(this);
+        this.setParentOrder(specficOrder.getParentOrder());
+        super.setPortfolio(specficOrder.getPortfolio());
+        this.placementCount = specficOrder.getPlacementCount();
+        this.positionEffect = specficOrder.getPositionEffect();
+        this.limitPriceCount = specficOrder.getLimitPriceCount();
+        this.fillType = specficOrder.getFillType();
+
+    }
+
     public SpecificOrder(Instant time, Portfolio portfolio, Market market, double volume, String comment) {
         this(time, portfolio, market, new DecimalAmount(new BigDecimal(volume)), comment);
     }
@@ -159,22 +176,30 @@ public class SpecificOrder extends Order {
     }
 
     @Override
-    @Transient
+    @Embedded
     public DiscreteAmount getVolume() {
         if (volume == null)
             volume = amount().fromVolumeCount(volumeCount);
         return volume;
     }
 
+    protected void setVolume(DiscreteAmount volume) {
+        this.volume = volume;
+    }
+
     @Override
-    @Transient
     @Nullable
+    @Embedded
     public DiscreteAmount getLimitPrice() {
         if (limitPriceCount == 0)
             return null;
         if (limitPrice == null)
             limitPrice = amount().fromPriceCount(limitPriceCount);
         return limitPrice;
+    }
+
+    protected void setLimitPrice(DiscreteAmount limitPrice) {
+        this.limitPrice = limitPrice;
     }
 
     @Override

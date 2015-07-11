@@ -404,6 +404,9 @@ public class Portfolio extends EntityBase {
     public void removeTransaction(Transaction reservation) {
         if (transactions == null || transactions.isEmpty())
             return;
+        if (reservation == null || reservation.getCurrency() == null)
+            return;
+
         if (transactions.get(reservation.getCurrency()) == null)
             return;
         if (transactions.get(reservation.getCurrency()).get(reservation.getExchange()) == null)
@@ -1087,9 +1090,9 @@ public class Portfolio extends EntityBase {
         assert authorization != null;
         assert fill != null;
         merge(fill);
-        fill.persit();
+        //  fill.persit();
         persistPositions(fill.getMarket().getBase(), fill.getMarket().getExchange(), fill.getMarket().getListing());
-
+        fill.persit();
         // if 
 
         //		for (Position curPosition : positions) {

@@ -2,8 +2,6 @@ package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
 
-import javax.persistence.Basic;
-import javax.persistence.Column;
 import javax.persistence.Embeddable;
 import javax.persistence.Transient;
 
@@ -133,8 +131,9 @@ public class DecimalAmount extends Amount {
     protected DecimalAmount() {
     }
 
-    @Column(name = "bd", columnDefinition = "varchar(255)")
-    @Basic(optional = false)
+    // @Column(name = "bd", columnDefinition = "varchar(255)")
+    // @Basic(optional = false)
+    @Transient
     protected BigDecimal getBd() {
         return bd;
     }

@@ -267,11 +267,11 @@ public class Transaction extends Event {
     public void persit() {
         List<Transaction> duplicate = PersistUtil.queryList(Transaction.class, "select t from  Transaction t where t=?1", this);
 
-        if (getOrder() != null)
-            getOrder().persit();
+        //   if (getOrder() != null)
+        //     getOrder().persit();
 
-        if (getFill() != null)
-            getFill().persit();
+        //if (getFill() != null)
+        ///    getFill().persit();
         if (duplicate == null || duplicate.isEmpty())
             PersistUtil.insert(this);
         else

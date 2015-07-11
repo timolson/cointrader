@@ -2,6 +2,7 @@ package org.cryptocoinpartners.module;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -109,7 +110,8 @@ public abstract class BaseOrderService implements OrderService {
 
         String queryStr = "SELECT  order FROM OrderUpdate INNER JOIN (SELECT  order as latestorder, MAX(sequence) as sequence FROM OrderUpdate GROUP BY latestorder) where OrderUpdate.state==?1";
 
-        List<GeneralOrder> orders = PersistUtil.queryNativeList(GeneralOrder.class, queryNativeStr, portfolio);
+        List<GeneralOrder> orders = new ArrayList<GeneralOrder>();
+        // = PersistUtil.queryNativeList(GeneralOrder.class, queryNativeStr, portfolio);
 
         //  "select ou from OrderUpdate ou INNER JOIN (SELECT oum.order latestorder, MAX(sequence)  sequence FROM OrderUpdate oum GROUP BY oum.order ) MaxP ON MaxP.latestorder = order_update.order AND MaxP.sequence = order_update.sequence where  ou.state=?1",
 
@@ -280,7 +282,7 @@ public abstract class BaseOrderService implements OrderService {
         this.enableTrading = enableTrading;
     }
 
-    @When("@Priority(9) select * from OrderUpdate.std:lastevent()")
+    @When("@Priority(8) select * from OrderUpdate.std:lastevent()")
     public void handleOrderUpdate(OrderUpdate orderUpdate) {
 
         OrderState orderState = orderUpdate.getState();
@@ -351,11 +353,12 @@ public abstract class BaseOrderService implements OrderService {
 
     }
 
-    @When("@Priority(6) select * from Fill")
+    @When("@Priority(9) select * from Fill")
     public void handleFill(Fill fill) {
         Order order = fill.getOrder();
         //should have already been persisted by position handler
-        persitOrderFill(fill);
+        // persitOrderFill(fill);
+        fill.persit();
         CreateTransaction(fill, false);
 
         //PersitOrderFill(order);
@@ -482,6 +485,7 @@ public abstract class BaseOrderService implements OrderService {
                 specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
                 log.info("Routing Limit order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
                 log.info("Order State" + orderStateMap.get(generalOrder).toString());
+                specificOrder.persit();
                 // persitOrderFill(specificOrder);
                 updateOrderState(generalOrder, OrderState.ROUTED, false);
                 placeOrder(specificOrder);
@@ -501,6 +505,7 @@ public abstract class BaseOrderService implements OrderService {
                 break;
             case STOP_LOSS:
                 specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
+                specificOrder.persit();
 
                 //persitOrderFill(specificOrder);
                 updateOrderState(generalOrder, OrderState.ROUTED, false);
@@ -518,7 +523,7 @@ public abstract class BaseOrderService implements OrderService {
     //
     //    }
 
-    @When("@Priority(8) select * from Book.std:lastevent()")
+    @When("@Priority(6) select * from Book.std:lastevent()")
     private void handleBook(Book b) {
         service.submit(new handleBookRunnable(b));
     }
@@ -557,14 +562,23 @@ public abstract class BaseOrderService implements OrderService {
                         (long) (Math.pow(pendingOrder.getPlacementCount(), 2))) : offer.getPrice().increment(
                         (long) (Math.pow(pendingOrder.getPlacementCount(), 2)));
 
-                pendingOrder.setLimitPriceCount(limitPrice.getCount());
+                // we neeed to cancle order
+                //TODO surround with try catch so we only insert if we cancel
+                log.debug("canceling existing order :" + pendingOrder);
 
-                pendingOrder.setPlacementCount(pendingOrder.getPlacementCount() + 1);
-                if (pendingOrder.getMarket().getListing() == null)
-                    log.debug("null listing");
+                handleCancelSpecificOrder(pendingOrder);
+
+                OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(pendingOrder.getPortfolio()).create(pendingOrder);
+
+                SpecificOrder order = builder.getOrder();
+                order.setLimitPriceCount(limitPrice.getCount());
+                order.setPlacementCount(pendingOrder.getPlacementCount() + 1);
+                placeOrder(order);
+                log.debug("submitted new order :" + order);
+
                 //PersistUtil.merge(pendingOrder);
-                log.debug("persiting Order:" + pendingOrder);
-                PersistUtil.merge(pendingOrder);
+                //  order.persit();
+                //  PersistUtil.merge(pendingOrder);
                 // pendingOrder.persit();
 
             }
@@ -677,7 +691,7 @@ public abstract class BaseOrderService implements OrderService {
             case STOP_LIMIT:
                 //we will put the stop order in at best bid or best ask
                 SpecificOrder stopOrder = builder.getOrder();
-                stopOrder.persit();
+                //  stopOrder.persit();
                 Offer offer = stopOrder.isBid() ? quotes.getLastBidForMarket(stopOrder.getMarket()) : quotes.getLastAskForMarket(stopOrder.getMarket());
                 if (offer == null)
                     break;
@@ -835,7 +849,9 @@ public abstract class BaseOrderService implements OrderService {
 
         else if (event instanceof Fill) {
             Fill fill = (Fill) event;
-            fill.persit();
+            //
+
+            //   fill.persit();
             //            Fill duplicate = PersistUtil.queryZeroOne(Fill.class, "select f from Fill f where f=?1", fill);
             //            if (duplicate == null)
             //                fi
@@ -890,7 +906,8 @@ public abstract class BaseOrderService implements OrderService {
                 order = (Order) entity;
                 try {
                     transaction = new Transaction(order, context.getTime());
-                    PersistUtil.insert(transaction);
+                    transaction.persit();
+                    // PersistUtil.insert(transaction);
                     log.info("Created new transaction " + transaction);
                     if (route)
                         context.route(transaction);

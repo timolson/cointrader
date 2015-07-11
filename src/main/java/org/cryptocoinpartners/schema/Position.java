@@ -410,11 +410,11 @@ public class Position extends Holding {
         //   synchronized (persistanceLock) {
         List<Position> duplicate = PersistUtil.queryList(Position.class, "select p from Position p where p=?1", this);
 
-        if (this.hasFills()) {
-            for (Fill fill : this.getFills())
+        // if (this.hasFills()) {
+        //   for (Fill fill : this.getFills())
 
-                PersistUtil.merge(fill);
-        }
+        //     PersistUtil.merge(fill);
+        // }
 
         if (duplicate == null || duplicate.isEmpty())
             PersistUtil.insert(this);

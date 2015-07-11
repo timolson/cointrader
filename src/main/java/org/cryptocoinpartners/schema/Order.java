@@ -38,6 +38,7 @@ import org.joda.time.format.DateTimeFormatter;
 
 @Entity
 @Table(name = "\"Order\"", indexes = { @Index(columnList = "fillType"), @Index(columnList = "portfolio"), @Index(columnList = "market") })
+//, @Index(columnList = "portfolio") })
 // This is required because ORDER is a SQL keyword and must be escaped
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @SuppressWarnings({ "JpaDataSourceORMInspection", "UnusedDeclaration" })
@@ -48,7 +49,7 @@ public abstract class Order extends Event {
     protected static final String SEPARATOR = ",";
 
     @ManyToOne(optional = true)
-    //@JoinColumn(name = "parentOrder")
+    // @JoinColumn(name = "parentOrder")
     //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     //@Transient
     public Order getParentOrder() {
@@ -57,7 +58,6 @@ public abstract class Order extends Event {
 
     // @ManyToOne(optional = true)
     @ManyToOne(optional = true)
-    //@Transient
     public Fill getParentFill() {
         return parentFill;
     }
@@ -71,6 +71,7 @@ public abstract class Order extends Event {
     }
 
     @ManyToOne(optional = false)
+    //@Transient
     public Portfolio getPortfolio() {
         return portfolio;
     }
@@ -92,8 +93,8 @@ public abstract class Order extends Event {
     }
 
     @Nullable
-    @Transient
     @Column(insertable = false, updatable = false)
+    @Transient
     public abstract Amount getLimitPrice();
 
     @ManyToOne(optional = true)
@@ -101,32 +102,32 @@ public abstract class Order extends Event {
     public abstract Market getMarket();
 
     @Nullable
-    @Transient
     @Column(insertable = false, updatable = false)
+    @Transient
     public abstract Amount getStopAmount();
 
     @Nullable
-    @Transient
     @Column(insertable = false, updatable = false)
+    @Transient
     public abstract Amount getTargetAmount();
 
     @Nullable
-    @Transient
     @Column(insertable = false, updatable = false)
+    @Transient
     public abstract Amount getStopPrice();
 
     @Nullable
-    @Transient
     @Column(insertable = false, updatable = false)
+    @Transient
     public abstract Amount getTargetPrice();
 
     @Nullable
-    @Transient
     @Column(insertable = false, updatable = false)
+    @Transient
     public abstract Amount getTrailingStopPrice();
 
-    @Transient
     @Column(insertable = false, updatable = false)
+    @Transient
     public abstract Amount getVolume();
 
     @Transient
@@ -195,6 +196,7 @@ public abstract class Order extends Event {
         return emulation;
     }
 
+    // @Transient
     @Nullable
     @OneToMany(mappedBy = "order")
     //, fetch = FetchType.LAZY)
@@ -216,6 +218,7 @@ public abstract class Order extends Event {
     @OrderBy
     // @OrderColumn(name = "id")
     //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
+    //@Transient
     public List<Transaction> getTransactions() {
         if (transactions == null)
             transactions = new CopyOnWriteArrayList<Transaction>();
@@ -239,9 +242,11 @@ public abstract class Order extends Event {
 
         //  PersistUtil.find(this);
         List<Order> duplicate = PersistUtil.queryList(Order.class, "select o from Order o where o=?1", this);
+        //List<Order> duplicate = null;
+        //  EntityBase entity = PersistUtil.find(this);
 
-        if (this.parentOrder != null)
-            parentOrder.persit();
+        //  if (this.parentOrder != null)
+        //    parentOrder.persit();
 
         if (duplicate == null || duplicate.isEmpty())
             PersistUtil.insert(this);
@@ -288,6 +293,7 @@ public abstract class Order extends Event {
     //(mappedBy = "parentOrder")
     @OrderBy
     //  @OrderColumn(name = "id")
+    //  @Transient
     public List<Order> getChildren() {
         if (children == null)
             children = new CopyOnWriteArrayList<Order>();

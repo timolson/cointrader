@@ -141,43 +141,36 @@ public class GeneralOrder extends Order {
     }
 
     @Override
-    @Transient
     public DecimalAmount getVolume() {
         return volume;
     }
 
     @Override
-    @Transient
     public DecimalAmount getLimitPrice() {
         return limitPrice;
     }
 
     @Override
-    @Transient
     public DecimalAmount getStopAmount() {
         return stopAmount;
     }
 
     @Override
-    @Transient
     public DecimalAmount getTargetAmount() {
         return targetAmount;
     }
 
     @Override
-    @Transient
     public DecimalAmount getStopPrice() {
         return stopPrice;
     }
 
     @Override
-    @Transient
     public DecimalAmount getTargetPrice() {
         return targetPrice;
     }
 
     @Override
-    @Transient
     public DecimalAmount getTrailingStopPrice() {
         return trailingStopPrice;
     }
@@ -261,9 +254,10 @@ public class GeneralOrder extends Order {
 
     @Override
     public void setTargetPrice(DecimalAmount targetPrice) {
-        if (this.parentFill != null)
-            parentFill.setTargetPriceCount(targetPrice.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
         this.targetPrice = targetPrice;
+        if (getParentFill() != null && targetPrice != null)
+            getParentFill().setTargetPriceCount(targetPrice.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+
     }
 
     public void setTargetPriceDecimal(BigDecimal targetPrice) {
@@ -274,23 +268,26 @@ public class GeneralOrder extends Order {
 
     @Override
     public void setStopAmount(DecimalAmount stopAmount) {
-        if (this.parentFill != null)
-            parentFill.setStopAmountCount(stopAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
         this.stopAmount = stopAmount;
+        if (getParentFill() != null && stopAmount != null)
+            getParentFill().setStopAmountCount(stopAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+
     }
 
     @Override
     public void setTargetAmount(DecimalAmount targetAmount) {
-        if (this.parentFill != null)
-            parentFill.setTargetAmountCount(targetAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
         this.targetAmount = targetAmount;
+        if (getParentFill() != null && targetAmount != null)
+            getParentFill().setTargetAmountCount(targetAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+
     }
 
     @Override
     public void setStopPrice(DecimalAmount stopPrice) {
-        if (this.parentFill != null)
-            parentFill.setStopPriceCount(stopPrice.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
         this.stopPrice = stopPrice;
+        if (getParentFill() != null && stopPrice != null)
+            getParentFill().setStopPriceCount(stopPrice.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+
     }
 
     public void setStopAmountDecimal(BigDecimal stopAmount) {

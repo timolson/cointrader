@@ -50,6 +50,10 @@ public class OrderBuilder {
         return new SpecificOrderBuilder(time, market, volume, comment);
     }
 
+    public SpecificOrderBuilder create(SpecificOrder specificOrder) {
+        return new SpecificOrderBuilder(specificOrder);
+    }
+
     /** @param volumeCount to create a sell order, use a negative volumeCount */
     public SpecificOrderBuilder create(Instant time, Market market, long volumeCount) {
         return new SpecificOrderBuilder(time, market, volumeCount);
@@ -242,6 +246,10 @@ public class OrderBuilder {
 
         public SpecificOrderBuilder(Instant time, Market market, BigDecimal volume, String comment) {
             order = new SpecificOrder(time, portfolio, market, volume, comment);
+        }
+
+        public SpecificOrderBuilder(SpecificOrder specificOrder) {
+            order = new SpecificOrder(specificOrder);
         }
 
         public SpecificOrderBuilder(Instant time, Market market, Amount volume, String comment) {

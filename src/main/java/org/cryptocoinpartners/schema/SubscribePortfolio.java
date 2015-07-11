@@ -7,7 +7,7 @@ import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
 
-public class SubscribePortfolio extends Event implements Comparable<SubscribePortfolio> {
+public class SubscribePortfolio extends Event {
 
     protected Portfolio portfolio;
 
@@ -44,7 +44,6 @@ public class SubscribePortfolio extends Event implements Comparable<SubscribePor
         return new EqualsBuilder().append(this.getPortfolio(), rhs.getPortfolio()).isEquals();
     }
 
-    @Override
     public int compareTo(final SubscribePortfolio object) {
         if (object == null) {
             return -1;

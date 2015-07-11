@@ -102,8 +102,8 @@ public class OrderUpdate extends Event {
 
     public void persit() {
 
-        if (getOrder() != null)
-            getOrder().persit();
+        //  if (getOrder() != null)
+        //    getOrder().persit();
 
         // final Trade duplicate = PersistUtil.queryZeroOne(Trade.class, "select t from Trade t where market=?1 and remoteKey=?2 and time=?3",
         //       trade.getMarket(), trade.getRemoteKey(), trade.getTime());
