@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.schema;
 
 import javax.annotation.Nullable;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 
@@ -10,6 +11,7 @@ import org.joda.time.Instant;
  * @author Tim Olson
  */
 @Entity
+@Cacheable(false)
 public abstract class MarketData extends RemoteEvent {
 
     protected MarketData(Instant time, @Nullable String remoteKey, Market market) {

@@ -12,6 +12,7 @@ import java.util.concurrent.Semaphore;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.Event;
+import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.RemoteEvent;
 import org.cryptocoinpartners.schema.Trade;
 import org.joda.time.Duration;
@@ -148,6 +149,9 @@ public class Replay implements Runnable {
                 // Log.debug(context.getInjector().toString());
                 //PortfolioService port = context.getInjector().getInstance(PortfolioService.class);
                 Iterator<RemoteEvent> ite = queryEvents(start, stop).iterator();
+                // thread 1 starts, thread 2 finishes, want to wait till thread 1 is complete before processing 
+
+                // we need to wait for current thread to finish.
                 while (ite.hasNext()) {
                     RemoteEvent event = ite.next();
                     //runtime.sendEvent(event);
@@ -174,13 +178,13 @@ public class Replay implements Runnable {
     }
 
     private List<RemoteEvent> queryEvents(Instant start, Instant stop) {
-
+        final Market market = Market.forSymbol("OKCOIN_THISWEEK:BTC.USD.THISWEEK");
         final String timeField = timeFieldForOrdering(orderByTimeReceived);
-        final String tradeQuery = "select t from Trade t where " + timeField + " >= ?1 and " + timeField + " <= ?2";
-        final String bookQuery = "select b from Book b where " + timeField + " >= ?1 and " + timeField + " <= ?2";
+        final String tradeQuery = "select t from Trade t where market=?1 and " + timeField + " >= ?2 and " + timeField + " <= ?3";
+        final String bookQuery = "select b from Book b where market=?1 and " + timeField + " >= ?2 and " + timeField + " <= ?3";
         final List<RemoteEvent> events = new ArrayList<>();
-        events.addAll(PersistUtil.queryList(Trade.class, tradeQuery, start, stop));
-        events.addAll(PersistUtil.queryList(Book.class, bookQuery, start, stop));
+        events.addAll(PersistUtil.queryList(Trade.class, tradeQuery, market, start, stop));
+        events.addAll(PersistUtil.queryList(Book.class, bookQuery, market, start, stop));
         Collections.sort(events, orderByTimeReceived ? timeReceivedComparator : timeHappenedComparator);
         return events;
     }

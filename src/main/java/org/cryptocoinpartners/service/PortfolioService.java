@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 import javax.persistence.Transient;
 
-import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Asset;
 import org.cryptocoinpartners.schema.DiscreteAmount;
@@ -29,7 +28,7 @@ public interface PortfolioService {
     @Nullable
     public Collection<Position> getPositions();
 
-    public void CreateTransaction(Portfolio portfolio, Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price);
+    // public void CreateTransaction(Portfolio portfolio, Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price);
 
     /** returns all Postions for the given Exchange.  NOTE: if you have open orders, you will not be able to trade
      * all the Positions returned by this method.  Use getTradeablePositions() instead. */

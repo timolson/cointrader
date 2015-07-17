@@ -17,6 +17,10 @@ import org.cryptocoinpartners.util.PersistUtil;
 @Cacheable
 public class Exchange extends EntityBase {
 
+    /**
+     * 
+     */
+
     public static Exchange forSymbolOrCreate(String symbol) {
         PersistUtil persistUtil = new PersistUtil();
         Exchange found = forSymbol(symbol);

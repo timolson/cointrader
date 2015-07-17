@@ -7,6 +7,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.Nullable;
 import javax.persistence.Basic;
+import javax.persistence.Cacheable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Index;
@@ -19,6 +20,7 @@ import javax.persistence.OrderBy;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.TransactionType;
@@ -37,6 +39,7 @@ import org.joda.time.format.DateTimeFormatter;
  */
 
 @Entity
+@Cacheable
 @Table(name = "\"Order\"", indexes = { @Index(columnList = "fillType"), @Index(columnList = "portfolio"), @Index(columnList = "market") })
 //, @Index(columnList = "portfolio") })
 // This is required because ORDER is a SQL keyword and must be escaped
@@ -56,8 +59,9 @@ public abstract class Order extends Event {
         return parentOrder;
     }
 
-    // @ManyToOne(optional = true)
-    @ManyToOne(optional = true)
+    //@ManyToOne(optional = true)
+    //  @JoinColumn(name = "parentFill")
+    @Transient
     public Fill getParentFill() {
         return parentFill;
     }
@@ -149,6 +153,10 @@ public abstract class Order extends Event {
         this.positionEffect = positionEffect;
     }
 
+    protected void setExecutionInstruction(ExecutionInstruction executionInstruction) {
+        this.executionInstruction = executionInstruction;
+    }
+
     protected void setParentOrder(Order order) {
         this.parentOrder = order;
     }
@@ -164,6 +172,12 @@ public abstract class Order extends Event {
     public PositionEffect getPositionEffect() {
 
         return positionEffect;
+
+    }
+
+    public ExecutionInstruction getExecutionInstruction() {
+
+        return executionInstruction;
 
     }
 
@@ -241,17 +255,17 @@ public abstract class Order extends Event {
         //   PersistUtil.insert(this);
 
         //  PersistUtil.find(this);
-        List<Order> duplicate = PersistUtil.queryList(Order.class, "select o from Order o where o=?1", this);
+        //  List<Order> duplicate = PersistUtil.queryList(Order.class, "select o from Order o where o=?1", this);
         //List<Order> duplicate = null;
         //  EntityBase entity = PersistUtil.find(this);
 
         //  if (this.parentOrder != null)
         //    parentOrder.persit();
 
-        if (duplicate == null || duplicate.isEmpty())
-            PersistUtil.insert(this);
-        else
-            PersistUtil.merge(this);
+        // if (duplicate == null || duplicate.isEmpty())
+        PersistUtil.insert(this);
+        // else
+        //   PersistUtil.merge(this);
         //  }
         Iterator<Fill> itf = getFills().iterator();
         while (itf.hasNext()) {
@@ -424,7 +438,7 @@ public abstract class Order extends Event {
     protected String comment;
     protected PositionEffect positionEffect;
     private Instant expiration;
-
+    protected ExecutionInstruction executionInstruction;
     private boolean force; // allow this order to override various types of panic
     private boolean emulation; // ("allow order type emulation" [default, true] or "only use exchange's native functionality")
     protected Order parentOrder;

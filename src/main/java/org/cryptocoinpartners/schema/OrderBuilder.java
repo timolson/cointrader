@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema;
 import java.math.BigDecimal;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.service.OrderService;
@@ -234,6 +235,11 @@ public class OrderBuilder {
             return this;
         }
 
+        public GeneralOrderBuilder withExecutionInstruction(ExecutionInstruction executionInstruction) {
+            order.setExecutionInstruction(executionInstruction);
+            return this;
+        }
+
         @Override
         public GeneralOrder getOrder() {
             return order;
@@ -285,6 +291,11 @@ public class OrderBuilder {
 
         public SpecificOrderBuilder withPositionEffect(PositionEffect positionEffect) {
             order.setPositionEffect(positionEffect);
+            return this;
+        }
+
+        public SpecificOrderBuilder withExecutionInstruction(ExecutionInstruction execIns) {
+            order.setExecutionInstruction(execIns);
             return this;
         }
 

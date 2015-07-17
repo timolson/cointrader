@@ -9,7 +9,6 @@ import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
-import javax.persistence.OrderBy;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
@@ -34,7 +33,7 @@ public class Fill extends RemoteEvent {
     private static final String SEPARATOR = ",";
 
     public Fill(SpecificOrder order, Instant time, Instant timeReceived, Market market, long priceCount, long volumeCount, String remoteKey) {
-        //   super(time, timeReceived, remoteKey);
+        super(time, timeReceived, remoteKey);
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
         this.openVolumeCount = volumeCount;
@@ -44,13 +43,13 @@ public class Fill extends RemoteEvent {
             this.priceCount = priceCount;
         this.portfolio = order.getPortfolio();
         this.stopAmountCount = (order.getStopAmount() != null) ? order.getStopAmount().getCount() : 0;
-        this.id = getId();
+        //  this.id = getId();
         this.version = getVersion();
 
     }
 
     public Fill(SpecificOrder order, Instant time, Instant timeReceived, Market market, long priceCount, long volumeCount, Amount commission, String remoteKey) {
-        // super(time, timeReceived, remoteKey);
+        super(time, timeReceived, remoteKey);
         this.order = order;
         this.market = market;
         if (priceCount == 0)
@@ -79,14 +78,14 @@ public class Fill extends RemoteEvent {
         //PersistUtil.merge(fill);
         //}
 
-        List<Fill> duplicate = PersistUtil.queryList(Fill.class, "select f from Fill f where f=?1", this);
+        //  List<Fill> duplicate = PersistUtil.queryList(Fill.class, "select f from Fill f where f=?1", this);
         // if (getPosition() != null)
         //   getPosition().Persit();
 
-        if (duplicate == null || duplicate.isEmpty())
-            PersistUtil.insert(this);
-        else
-            PersistUtil.merge(this);
+        //if (duplicate == null || duplicate.isEmpty())
+        PersistUtil.insert(this);
+        //else
+        //  PersistUtil.merge(this);
         //  }
         //Iterator<Order> itc = getChildren().iterator();
         //while (itc.hasNext()) {
@@ -113,12 +112,12 @@ public class Fill extends RemoteEvent {
 
     }
 
-    //@Nullable
-    public @ManyToOne(optional = true)
+    @Nullable
+    @ManyToOne(optional = true)
     //, fetch = FetchType.EAGER)
     //cascade = CascadeType.ALL)
     @JoinColumn(name = "position")
-    Position getPosition() {
+    public Position getPosition() {
         if (openVolumeCount == 0)
             return null;
         return position;
@@ -151,10 +150,11 @@ public class Fill extends RemoteEvent {
         }
     }
 
-    @Nullable
-    @OneToMany
-    //(mappedBy = "parentFill", fetch = FetchType.LAZY)
-    @OrderBy
+    //@Nullable
+    //@OneToMany(cascade = CascadeType.MERGE)
+    //(mappedBy = "parentFill")
+    //@OrderBy
+    @Transient
     public List<Order> getChildren() {
         if (children == null)
             children = new CopyOnWriteArrayList<Order>();

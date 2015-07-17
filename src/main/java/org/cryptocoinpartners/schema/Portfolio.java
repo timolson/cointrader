@@ -78,8 +78,10 @@ public class Portfolio extends EntityBase {
     }
 
     //  fetch = FetchType.EAGER,
+
     @Nullable
-    @OneToMany(fetch = FetchType.LAZY)
+    @OneToMany
+    // (mappedBy = "portfolio")
     @OrderBy
     //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     public List<Position> getPositions() {
@@ -250,14 +252,14 @@ public class Portfolio extends EntityBase {
 
         ConcurrentHashMap<Asset, Amount> allPnLs = new ConcurrentHashMap<Asset, Amount>();
         //  synchronized (lock) {
-        for (Iterator<Asset> it = realisedProfits.keySet().iterator(); it.hasNext();) {
+        for (Iterator<Asset> it = getRealisedPnL().keySet().iterator(); it.hasNext();) {
 
             Asset asset = it.next();
-            for (Iterator<Exchange> ite = realisedProfits.get(asset).keySet().iterator(); ite.hasNext();) {
+            for (Iterator<Exchange> ite = getRealisedPnL().get(asset).keySet().iterator(); ite.hasNext();) {
                 Exchange exchange = ite.next();
-                for (Iterator<Listing> itl = realisedProfits.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+                for (Iterator<Listing> itl = getRealisedPnL().get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
                     Listing listing = itl.next();
-                    Amount realisedPnL = realisedProfits.get(asset).get(exchange).get(listing);
+                    Amount realisedPnL = getRealisedPnL().get(asset).get(exchange).get(listing);
 
                     if (allPnLs.get(asset) == null) {
                         allPnLs.put(asset, realisedPnL);
@@ -278,11 +280,11 @@ public class Portfolio extends EntityBase {
     Amount getRealisedPnL(Asset asset) {
 
         Amount realisedPnL = DecimalAmount.ZERO;
-        for (Iterator<Exchange> ite = realisedProfits.get(asset).keySet().iterator(); ite.hasNext();) {
+        for (Iterator<Exchange> ite = getRealisedPnL().get(asset).keySet().iterator(); ite.hasNext();) {
             Exchange exchange = ite.next();
-            for (Iterator<Listing> itl = realisedProfits.get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+            for (Iterator<Listing> itl = getRealisedPnL().get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
                 Listing listing = itl.next();
-                realisedPnL = realisedPnL.plus(realisedProfits.get(asset).get(exchange).get(listing));
+                realisedPnL = realisedPnL.plus(getRealisedPnL().get(asset).get(exchange).get(listing));
 
             }
         }
@@ -402,6 +404,7 @@ public class Portfolio extends EntityBase {
 
     @Transient
     public void removeTransaction(Transaction reservation) {
+
         if (transactions == null || transactions.isEmpty())
             return;
         if (reservation == null || reservation.getCurrency() == null)
@@ -416,14 +419,15 @@ public class Portfolio extends EntityBase {
         // synchronized (lock) {
         transactions.get(reservation.getCurrency()).get(reservation.getExchange()).get(reservation.getType()).remove(reservation);
 
-        //            Iterator<Transaction> it = transactions.get(reservation.getCurrency()).get(reservation.getExchange()).get(reservation.getType()).iterator();
-        //            while (it.hasNext()) {
-        //                Transaction transaction = it.next();
-        //                if (transaction != null && reservation != null && transaction.equals(reservation))
-        //                    it.remove();
-        // }
-        //   }
     }
+
+    //            Iterator<Transaction> it = transactions.get(reservation.getCurrency()).get(reservation.getExchange()).get(reservation.getType()).iterator();
+    //            while (it.hasNext()) {
+    //                Transaction transaction = it.next();
+    //                if (transaction != null && reservation != null && transaction.equals(reservation))
+    //                    it.remove();
+    // }
+    //   }
 
     /**
      * This is the main way for a Strategy to determine what assets it has available for trading
@@ -464,8 +468,17 @@ public class Portfolio extends EntityBase {
     }
 
     @Transient
+    public void addRealisedPnL(Transaction transaction) {
+        Amount TotalRealisedPnL = transaction.getAmount().plus(
+                getRealisedPnL().get(transaction.getCurrency()).get(transaction.getExchange()).get(transaction.getFill().getMarket().getListing()));
+
+        getRealisedPnL().get(transaction.getCurrency()).get(transaction.getExchange()).put(transaction.getFill().getMarket().getListing(), TotalRealisedPnL);
+
+    }
+
+    @Transient
     public boolean addTransaction(Transaction transaction) {
-        portfolioService.resetBalances();
+
         ConcurrentHashMap<Exchange, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Transaction>>> assetTransactions = transactions.get(transaction
                 .getCurrency());
 
@@ -477,6 +490,9 @@ public class Portfolio extends EntityBase {
             transactionGroup.put(transaction.getType(), transactionList);
             assetTransactions.put(transaction.getExchange(), transactionGroup);
             transactions.put(transaction.getCurrency(), assetTransactions);
+            if (transaction.getType() == TransactionType.REALISED_PROFIT_LOSS)
+                addRealisedPnL(transaction);
+            portfolioService.resetBalances();
             return true;
         } else {
             //asset is present, so check the market
@@ -488,7 +504,9 @@ public class Portfolio extends EntityBase {
                 ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Transaction>> transactionGroup = new ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Transaction>>();
                 transactionGroup.put(transaction.getType(), transactionList);
                 assetTransactions.put(transaction.getExchange(), transactionGroup);
-
+                if (transaction.getType() == TransactionType.REALISED_PROFIT_LOSS)
+                    addRealisedPnL(transaction);
+                portfolioService.resetBalances();
                 return true;
             } else {
                 ConcurrentLinkedQueue<Transaction> transactionList = exchangeTransactions.get(transaction.getType());
@@ -496,11 +514,18 @@ public class Portfolio extends EntityBase {
                 if (transactionList == null) {
                     transactionList = new ConcurrentLinkedQueue<Transaction>();
                     transactionList.add(transaction);
+                    Amount TotalRealisedPnL = null;
+                    if (transaction.getType() == TransactionType.REALISED_PROFIT_LOSS)
+                        addRealisedPnL(transaction);
                     exchangeTransactions.put(transaction.getType(), transactionList);
+                    portfolioService.resetBalances();
                     return true;
                 } else {
                     transactionList.add(transaction);
                     exchangeTransactions.put(transaction.getType(), transactionList);
+                    if (transaction.getType() == TransactionType.REALISED_PROFIT_LOSS)
+                        addRealisedPnL(transaction);
+                    portfolioService.resetBalances();
                     return true;
                 }
 
@@ -521,7 +546,7 @@ public class Portfolio extends EntityBase {
 
         PositionType mergedType = (position.isShort()) ? PositionType.SHORT : (position.isLong()) ? PositionType.LONG : PositionType.FLAT;
 
-        context.publish(new PositionUpdate(position, market, lastType, mergedType));
+        context.route(new PositionUpdate(position, market, lastType, mergedType));
     }
 
     public void addPosition(Position position) {
@@ -614,7 +639,7 @@ public class Portfolio extends EntityBase {
         //ConcurrentHashMap<Listing, ArrayList<Position>> listingPosition = new ConcurrentHashMap<Listing, ArrayList<Position>>();
 
         ConcurrentHashMap<Listing, Amount> marketRealisedProfits;
-        ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>> assetRealisedProfits = realisedProfits.get(fill.getMarket().getTradedCurrency());
+        ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>> assetRealisedProfits = getRealisedPnL().get(fill.getMarket().getTradedCurrency());
         if (assetRealisedProfits != null) {
             marketRealisedProfits = assetRealisedProfits.get(fill.getMarket().getListing());
         }
@@ -622,7 +647,9 @@ public class Portfolio extends EntityBase {
         if (assetPositions == null) {
             ConcurrentLinkedQueue<Position> detailPosition = new ConcurrentLinkedQueue<Position>();
             Position detPosition = new Position(fill);
-            PersistUtil.insert(detPosition);
+            detPosition.Persit();
+            //  PersistUtil.persist(detPosition);
+
             detailPosition.add(detPosition);
             ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>> positionType = new ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>();
             positionType.put(transactionType, detailPosition);
@@ -638,7 +665,7 @@ public class Portfolio extends EntityBase {
                 marketRealisedProfits = new ConcurrentHashMap<Listing, Amount>();
                 marketRealisedProfits.put(fill.getMarket().getListing(), profits);
                 assetRealisedProfits.put(fill.getMarket().getExchange(), marketRealisedProfits);
-                realisedProfits.put(fill.getMarket().getTradedCurrency(), assetRealisedProfits);
+                getRealisedPnL().put(fill.getMarket().getTradedCurrency(), assetRealisedProfits);
             }
             publishPositionUpdate(getNetPosition(fill.getMarket().getBase(), fill.getMarket()), PositionType.FLAT, fill.getMarket());
             return true;
@@ -653,7 +680,8 @@ public class Portfolio extends EntityBase {
                 ConcurrentLinkedQueue<Position> detailPosition = new ConcurrentLinkedQueue<Position>();
                 ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>> positionType = new ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>();
                 Position detPosition = new Position(fill);
-                PersistUtil.insert(detPosition);
+                detPosition.Persit();
+                //   PersistUtil.persist(detPosition);
 
                 detailPosition.add(detPosition);
                 positionType.put(transactionType, detailPosition);
@@ -662,10 +690,10 @@ public class Portfolio extends EntityBase {
 
                 assetPositions.put(fill.getMarket().getExchange(), listingPosition);
                 Amount profits = DecimalAmount.ZERO;
-                if (realisedProfits.get(fill.getMarket().getTradedCurrency()).get(fill.getMarket().getExchange()).get(fill.getMarket().getListing()) == null) {
+                if (getRealisedPnL().get(fill.getMarket().getTradedCurrency()).get(fill.getMarket().getExchange()).get(fill.getMarket().getListing()) == null) {
                     marketRealisedProfits = new ConcurrentHashMap<Listing, Amount>();
                     marketRealisedProfits.put(fill.getMarket().getListing(), profits);
-                    realisedProfits.get(fill.getMarket().getTradedCurrency()).put(fill.getMarket().getExchange(), marketRealisedProfits);
+                    getRealisedPnL().get(fill.getMarket().getTradedCurrency()).put(fill.getMarket().getExchange(), marketRealisedProfits);
                 }
                 publishPositionUpdate(getNetPosition(fill.getMarket().getBase(), fill.getMarket()), PositionType.FLAT, fill.getMarket());
 
@@ -682,17 +710,20 @@ public class Portfolio extends EntityBase {
                 if (listingPositions == null) {
                     ConcurrentLinkedQueue<Position> listingsDetailPosition = new ConcurrentLinkedQueue<Position>();
                     Position detPosition = new Position(fill);
-                    PersistUtil.insert(detPosition);
+                    detPosition.Persit();
+                    // PersistUtil.persist(detPosition);
+
                     listingsDetailPosition.add(detPosition);
                     exchangePositions.get(fill.getMarket().getListing()).put(transactionType, listingsDetailPosition);
                     listingPositions = exchangePositions.get(fill.getMarket().getListing()).get(transactionType);
                     Amount listingProfits = DecimalAmount.ZERO;
-                    if (realisedProfits.get(fill.getMarket().getTradedCurrency()) == null
-                            || realisedProfits.get(fill.getMarket().getTradedCurrency()).get(fill.getMarket().getExchange()) == null
-                            || realisedProfits.get(fill.getMarket().getTradedCurrency()).get(fill.getMarket().getExchange()).get(fill.getMarket().getListing()) == null) {
+                    if (getRealisedPnL().get(fill.getMarket().getTradedCurrency()) == null
+                            || getRealisedPnL().get(fill.getMarket().getTradedCurrency()).get(fill.getMarket().getExchange()) == null
+                            || getRealisedPnL().get(fill.getMarket().getTradedCurrency()).get(fill.getMarket().getExchange())
+                                    .get(fill.getMarket().getListing()) == null) {
                         marketRealisedProfits = new ConcurrentHashMap<Listing, Amount>();
                         marketRealisedProfits.put(fill.getMarket().getListing(), listingProfits);
-                        realisedProfits.get(fill.getMarket().getTradedCurrency()).put(fill.getMarket().getExchange(), marketRealisedProfits);
+                        getRealisedPnL().get(fill.getMarket().getTradedCurrency()).put(fill.getMarket().getExchange(), marketRealisedProfits);
                     }
                 } else {
 
@@ -705,8 +736,9 @@ public class Portfolio extends EntityBase {
 
                     } else {
                         Position detPosition = new Position(fill);
-                        PersistUtil.insert(detPosition);
-                        //   detPosition.addFill(fill);
+                        detPosition.Persit();
+                        //  PersistUtil.persist(detPosition);
+                        // //   detPosition.addFill(fill);
                         listingPositions.add(detPosition);
 
                         //           PersistUtil.insert(detPosition);
@@ -756,11 +788,12 @@ public class Portfolio extends EntityBase {
                                     if (Math.abs(p.getOpenVolumeCount()) > 0) {
 
                                         if ((Long.signum(openPosition.getOpenVolumeCount()) + Long.signum(p.getOpenVolumeCount())) != 0) {
-                                            if (Math.abs(p.getOpenVolumeCount()) == 0 || Math.abs(openPosition.getOpenVolumeCount()) == 0)
+                                            if (Math.abs(p.getOpenVolumeCount()) == 0 || Math.abs(openPosition.getOpenVolumeCount()) == 0) {
                                                 // openingListingPositions.(openPosition);
                                                 // itOp.remove();
                                                 openPos.removeFill(openPosition);
-
+                                                openPosition.persit();
+                                            }
                                             if (!openPos.hasFills())
                                                 itOlp.remove();
                                             //openingListingPositions.remove(openPos);
@@ -828,7 +861,7 @@ public class Portfolio extends EntityBase {
                                             //itPos.remove();
                                             //     itP.remove();
                                             pos.removeFill(p);
-
+                                            p.persit();
                                             //pos.Merge();
                                             if (!pos.hasFills())
                                                 itPos.remove();
@@ -849,6 +882,7 @@ public class Portfolio extends EntityBase {
                                         //
 
                                         openPos.removeFill(openPosition);
+                                        openPosition.persit();
 
                                         //openPos.Merge();
                                         //openPos.removeFill(openPosition)
@@ -871,7 +905,7 @@ public class Portfolio extends EntityBase {
                                         if (Math.abs(updatedVolumeCount) == 0) {
                                             // itOp.remove();
                                             openPos.removeFill(openPosition);
-
+                                            openPosition.persit();
                                             if (!openPos.hasFills())
                                                 itOlp.remove();
                                             // openingListingPositions.remove(openPos);
@@ -891,6 +925,7 @@ public class Portfolio extends EntityBase {
                                         p.setOpenVolumeCount(0);
 
                                         pos.removeFill(p);
+                                        p.persit();
                                         //   PersistUtil.merge(p);
                                         if (!pos.hasFills())
                                             itPos.remove();
@@ -932,22 +967,22 @@ public class Portfolio extends EntityBase {
                             }
 
                             Amount RealisedPnL = realisedPnL.toBasis(p.getMarket().getTradedCurrency().getBasis(), Remainder.ROUND_EVEN);
-                            Amount PreviousPnL = (realisedProfits.get(p.getMarket().getTradedCurrency()) == null
-                                    || realisedProfits.get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange()) == null || realisedProfits
-                                    .get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange()).get(p.getMarket().getListing()) == null) ? DecimalAmount.ZERO
-                                    : realisedProfits.get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange()).get(p.getMarket().getListing());
+                            //                            Amount PreviousPnL = (realisedProfits.get(p.getMarket().getTradedCurrency()) == null
+                            //                                    || realisedProfits.get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange()) == null || realisedProfits
+                            //                                    .get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange()).get(p.getMarket().getListing()) == null) ? DecimalAmount.ZERO
+                            //                                    : realisedProfits.get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange()).get(p.getMarket().getListing());
                             if (!RealisedPnL.isZero()) {
 
-                                Amount TotalRealisedPnL = RealisedPnL.plus(realisedProfits.get(p.getMarket().getTradedCurrency())
+                                Amount TotalRealisedPnL = RealisedPnL.plus(getRealisedPnL().get(p.getMarket().getTradedCurrency())
                                         .get(p.getMarket().getExchange()).get(p.getMarket().getListing()));
 
-                                realisedProfits.get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange())
-                                        .put(p.getMarket().getListing(), TotalRealisedPnL);
-                                Transaction trans = new Transaction(this, p.getMarket().getExchange(), p.getMarket().getTradedCurrency(),
+                                //   realisedProfits.get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange())
+                                //         .put(p.getMarket().getListing(), TotalRealisedPnL);
+                                Transaction trans = new Transaction(p, this, p.getMarket().getExchange(), p.getMarket().getTradedCurrency(),
                                         TransactionType.REALISED_PROFIT_LOSS, RealisedPnL, new DiscreteAmount(0, p.getMarket().getTradedCurrency().getBasis()));
 
-                                context.publish(trans);
-                                PersistUtil.insert(trans);
+                                context.route(trans);
+                                trans.persit();
                                 //		manager.getPortfolioService().CreateTransaction(position.getExchange(), position.getMarket().getQuote(),
                                 //			TransactionType.REALISED_PROFIT_LOSS, TotalRealisedPnL.minus(PreviousPnL), DecimalAmount.ZERO);
 
@@ -1010,7 +1045,8 @@ public class Portfolio extends EntityBase {
                     //// true;
                     if (getNetPosition(fill.getMarket().getBase(), fill.getMarket()) == null) {
                         Position detPosition = new Position(fill);
-                        PersistUtil.insert(detPosition);
+                        detPosition.Persit();
+                        // PersistUtil.persist(detPosition);
 
                         publishPositionUpdate(detPosition, PositionType.FLAT, fill.getMarket());
                     } else {
@@ -1091,7 +1127,7 @@ public class Portfolio extends EntityBase {
         assert fill != null;
         merge(fill);
         //  fill.persit();
-        persistPositions(fill.getMarket().getBase(), fill.getMarket().getExchange(), fill.getMarket().getListing());
+        //persistPositions(fill.getMarket().getBase(), fill.getMarket().getExchange(), fill.getMarket().getListing());
         fill.persit();
         // if 
 

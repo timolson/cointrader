@@ -30,7 +30,7 @@ public class BaseStrategy implements Strategy {
         portfolio.getContext().publish(portfolioSubcribeEvent);
         Asset baseAsset = Asset.forSymbol(portfolio.getContext().getConfig().getString("base.symbol", "USD"));
         portfolio.setBaseAsset(baseAsset);
-        PersistUtil.merge(portfolio);
+        PersistUtil.insert(portfolio);
         order = new OrderBuilder(portfolio, orderService);
         log = portfolio.getLogger();
     }

@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.List;
 
 import javax.annotation.Nullable;
@@ -83,8 +84,8 @@ public class SpecificOrder extends Order {
 
     }
 
-    public SpecificOrder(LimitOrder limitOrder, com.xeiam.xchange.Exchange xchangeExchange, Portfolio portfolio) {
-        super(new Instant(limitOrder.getTimestamp().getTime()));
+    public SpecificOrder(LimitOrder limitOrder, com.xeiam.xchange.Exchange xchangeExchange, Portfolio portfolio, Date date) {
+        super(new Instant(date.getTime()));
         Asset baseCCY = Asset.forSymbol(limitOrder.getCurrencyPair().baseSymbol.toUpperCase());
         Asset quoteCCY = Asset.forSymbol(limitOrder.getCurrencyPair().counterSymbol.toUpperCase());
         Listing listing = Listing.forPair(baseCCY, quoteCCY);
@@ -121,19 +122,23 @@ public class SpecificOrder extends Order {
     }
 
     public SpecificOrder(SpecificOrder specficOrder) {
+
         super(specficOrder.getTime());
         this.market = specficOrder.getMarket();
         this.remoteKey = getId().toString();
-        this.volumeCount = specficOrder.getVolumeCount();
-        super.setComment(specficOrder.getComment());
-        specficOrder.getParentOrder().addChild(this);
-        this.setParentOrder(specficOrder.getParentOrder());
+        this.volumeCount = specficOrder.getUnfilledVolumeCount();
+        if (specficOrder.getComment() != null)
+            super.setComment(specficOrder.getComment());
+        if (specficOrder.getParentOrder() != null) {
+            specficOrder.getParentOrder().addChild(this);
+            this.setParentOrder(specficOrder.getParentOrder());
+        }
         super.setPortfolio(specficOrder.getPortfolio());
-        this.placementCount = specficOrder.getPlacementCount();
+        this.placementCount = 1;
         this.positionEffect = specficOrder.getPositionEffect();
         this.limitPriceCount = specficOrder.getLimitPriceCount();
         this.fillType = specficOrder.getFillType();
-
+        this.executionInstruction = specficOrder.getExecutionInstruction();
     }
 
     public SpecificOrder(Instant time, Portfolio portfolio, Market market, double volume, String comment) {

@@ -1,7 +1,5 @@
 package org.cryptocoinpartners.schema;
 
-import java.util.List;
-
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.persistence.Cacheable;
@@ -40,7 +38,7 @@ public class Transaction extends Event {
     private static final String SEPARATOR = ",";
 
     public Transaction(Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount, Amount price) {
-        this.id = getId();
+        // this.id = getId();
         this.version = getVersion();
         this.setAmount(amount);
         this.amountCount = amount.toBasis(currency.getBasis(), Remainder.ROUND_EVEN).getCount();
@@ -53,8 +51,24 @@ public class Transaction extends Event {
         this.setPortfolioName(portfolio);
     }
 
+    public Transaction(Fill fill, Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount, Amount price) {
+        // this.id = getId();
+        this.version = getVersion();
+        fill.addTransaction(this);
+        this.setAmount(amount);
+        this.amountCount = amount.toBasis(currency.getBasis(), Remainder.ROUND_EVEN).getCount();
+        this.setCurrency(currency);
+        this.setPrice(price);
+        this.priceCount = price.toBasis(currency.getBasis(), Remainder.ROUND_EVEN).getCount();
+        this.setType(type);
+        this.setPortfolio(portfolio);
+        this.setExchange(exchange);
+        this.setPortfolioName(portfolio);
+        this.fill = fill;
+    }
+
     public Transaction(Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount) {
-        this.id = getId();
+        //   this.id = getId();
         this.version = getVersion();
         this.setAmount(amount);
         this.amountCount = amount.toBasis(currency.getBasis(), Remainder.ROUND_EVEN).getCount();
@@ -66,7 +80,7 @@ public class Transaction extends Event {
     }
 
     public Transaction(Fill fill, Instant creationTime) throws Exception {
-        this.id = getId();
+        //  this.id = getId();
         this.version = getVersion();
         Portfolio portfolio = fill.getOrder().getPortfolio();
         TransactionType transactionType = null;
@@ -102,7 +116,7 @@ public class Transaction extends Event {
     }
 
     public Transaction(Order order, Instant creationTime) throws Exception {
-        this.id = getId();
+        // this.id = getId();
         this.version = getVersion();
         Portfolio portfolio = order.getPortfolio();
 
@@ -265,17 +279,17 @@ public class Transaction extends Event {
     }
 
     public void persit() {
-        List<Transaction> duplicate = PersistUtil.queryList(Transaction.class, "select t from  Transaction t where t=?1", this);
+        //  List<Transaction> duplicate = PersistUtil.queryList(Transaction.class, "select t from  Transaction t where t=?1", this);
 
         //   if (getOrder() != null)
         //     getOrder().persit();
 
         //if (getFill() != null)
         ///    getFill().persit();
-        if (duplicate == null || duplicate.isEmpty())
-            PersistUtil.insert(this);
-        else
-            PersistUtil.merge(this);
+        // if (duplicate == null || duplicate.isEmpty())
+        PersistUtil.insert(this);
+        //else
+        //  PersistUtil.merge(this);
         //  }
         // if (this.parentOrder != null)
         //    parentOrder.persit();
@@ -325,8 +339,8 @@ public class Transaction extends Event {
 
         return "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Portfolio=" + getPortfolio() + SEPARATOR + "Exchange="
                 + getExchange() + SEPARATOR + "type=" + getType() + SEPARATOR + "volume=" + getAmount()
-                + (getAsset() != null ? (SEPARATOR + "currency=" + getCurrency()) : "") + SEPARATOR + "price="
-                + (getPrice() != DecimalAmount.ZERO ? getPrice() : "");
+                + (getAsset() != null ? (SEPARATOR + "currency=" + getAsset()) : "") + SEPARATOR + "price="
+                + (getPrice() != DecimalAmount.ZERO ? getPrice() : "") + (getCurrency() != null ? (SEPARATOR + "currency=" + getCurrency()) : "");
     }
 
     protected void setAmount(Amount amount) {

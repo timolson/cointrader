@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.schema;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.MathContext;
 
@@ -23,8 +24,12 @@ import org.slf4j.LoggerFactory;
  * @author Tim Olson
  */
 @MappedSuperclass
-public abstract class Amount implements Comparable<Amount> {
+public abstract class Amount implements Comparable<Amount>, Serializable {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 6644052682251199772L;
     public static final MathContext mc = MathContext.DECIMAL128; //  IEEE 128-bit decimal, scale 34
 
     /**

@@ -35,7 +35,7 @@ public class TickWindow {
     public void publishTick(long now) {
         for (AccumulatingTick accumulatingTick : accumulatingTickMap.values()) {
             Tick tick = accumulatingTick.flushTick(now);
-            context.publish(tick);
+            context.route(tick);
             log.trace("published tick " + tick);
         }
     }
@@ -90,7 +90,7 @@ public class TickWindow {
     }
 
     @Inject
-    private Context context;
+    private final Context context;
     @Inject
     private Logger log;
     private final Map<UUID, AccumulatingTick> accumulatingTickMap;

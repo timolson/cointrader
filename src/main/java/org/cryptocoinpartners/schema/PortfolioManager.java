@@ -20,7 +20,6 @@ import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.QuoteService;
-import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -159,7 +158,8 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     //  @When("@Priority(8) select * from Transaction where NOT (Transaction.type=TransactionType.BUY and Transaction.type=TransactionType.SELL)")
     @When("@Priority(8) select * from Transaction")
     public void handleTransaction(Transaction transaction) {
-        service.submit(new handleTransactionRunnable(transaction));
+        updatePortfolio(transaction);
+        // service.submit(new handleTransactionRunnable(transaction));
 
     }
 
@@ -168,6 +168,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         //	Transaction tans = new Transaction(this, position.getExchange(), position.getAsset(), TransactionType.CREDIT, position.getVolume(),
         //		position.getAvgPrice());
         //context.route(transaction);
+        log.debug("transaction: " + transaction + " Recieved.");
         if (transaction.getPortfolio() == (portfolio)) {
 
             Portfolio portfolio = transaction.getPortfolio();
@@ -194,22 +195,22 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
             } else if (type == TransactionType.REALISED_PROFIT_LOSS) {
                 //Transfer ammount to base currency
                 // neeed to be able to implment this on the exchange via orders
-                if (!transaction.getCurrency().equals(transaction.getPortfolio().getBaseAsset())) {
-                    Listing tradedListing = Listing.forPair(transaction.getCurrency(), transaction.getPortfolio().getBaseAsset());
-                    //we will be selling transaction currency and buying base currency i.e. sell BTC, buy USD
-                    Offer tradedRate = quotes.getImpliedBestAskForListing(tradedListing);
+                //                if (!transaction.getCurrency().equals(transaction.getPortfolio().getBaseAsset())) {
+                //                    Listing tradedListing = Listing.forPair(transaction.getCurrency(), transaction.getPortfolio().getBaseAsset());
+                //                    //we will be selling transaction currency and buying base currency i.e. sell BTC, buy USD
+                //                    Offer tradedRate = quotes.getImpliedBestAskForListing(tradedListing);
+                //
+                //                   TransactionType type=(transaction.getAmount().isPositive()) ? TransactionType.CREDIT:TransactionType.DEBIT;
+                //                    
+                //                    Transaction initialDedit = new Transaction(transaction.getPortfolio(), transaction.getExchange(), transaction.getCurrency(),
+                //                            type, transaction.getAmount());
+                //                    context.route(initialDedit);
+                //                    initialDedit.persit();
 
-                    Transaction initialDedit = new Transaction(transaction.getPortfolio(), transaction.getExchange(), transaction.getCurrency(),
-                            TransactionType.DEBIT, transaction.getAmount().negate());
-                    context.publish(initialDedit);
-                    PersistUtil.insert(initialDedit);
-                    Transaction initialCredit = new Transaction(transaction.getPortfolio(), transaction.getExchange(), transaction.getPortfolio()
-                            .getBaseAsset(), TransactionType.CREDIT, transaction.getAmount().times(tradedRate.getPrice(), Remainder.ROUND_EVEN));
-                    context.publish(initialCredit);
-                    PersistUtil.insert(initialCredit);
-
-                }
+                //}
             }
+            log.debug("transaction: " + transaction + " Proccessed.");
+
         } else {
             return;
         }

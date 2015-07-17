@@ -94,7 +94,11 @@ public abstract class EntityBase implements Serializable, Delayed {
         if (!(o instanceof EntityBase))
             return false;
         EntityBase that = (EntityBase) o;
+        // Need to check these are not null as assinged when persisted so might not yet be present when objects are compared
+        if (id == null || that.id == null)
+            return false;
         return id.equals(that.id);
+
     }
 
     @Override

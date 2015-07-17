@@ -17,7 +17,6 @@ import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.StrategyInstance;
 import org.cryptocoinpartners.schema.Transaction;
 import org.cryptocoinpartners.service.OrderService;
-import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Replay;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -41,10 +40,10 @@ public class BacktestRunMode extends RunMode {
 
     private final Instant start = new DateTime(2015, 02, 15, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
     //private final Instant start = new DateTime(2015, 2, , 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
-    //private final Instant start = new DateTime(2014, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    // private final Instant start = new DateTime(2014, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
-    private final Instant end = new DateTime(2015, 02, 23, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
-    //private final Instant end = new DateTime(2015, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    //private final Instant end = new DateTime(2015, 02, 23, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    private final Instant end = new DateTime(2015, 02, 27, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
     //private final Instant start = new DateTime(2014, 9, 9, 23, 0, 0, 0, DateTimeZone.UTC).toInstant();
     //private final Instant end = new DateTime(2014, 9, 10, 6, 0, 0, 0, DateTimeZone.UTC).toInstant();
@@ -106,7 +105,7 @@ public class BacktestRunMode extends RunMode {
             DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
             Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
             context.publish(initialCredit);
-            PersistUtil.insert(initialCredit);
+            initialCredit.persit();
 
             strategyInstance.getStrategy().init();
 

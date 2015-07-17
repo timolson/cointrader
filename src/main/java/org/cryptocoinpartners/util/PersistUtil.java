@@ -5,14 +5,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.DelayQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import javax.persistence.Cache;
-import javax.persistence.CacheStoreMode;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityNotFoundException;
 import javax.persistence.NoResultException;
@@ -43,10 +42,10 @@ public class PersistUtil {
     private static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
     private static Object lock = new Object();
 
-    private static final BlockingQueue<EntityBase> insertQueue = new DelayQueue();
-    private static final BlockingQueue<EntityBase> mergeQueue = new DelayQueue();
-    // private static final BlockingQueue<EntityBase[]> insertQueue = new ArrayBlockingQueue<EntityBase[]>(10000);
-    //  private static final BlockingQueue<EntityBase[]> mergeQueue = new ArrayBlockingQueue<EntityBase[]>(10000);
+    // private static final BlockingQueue<EntityBase> insertQueue = new DelayQueue();
+    // private static final BlockingQueue<EntityBase> mergeQueue = new DelayQueue();
+    private static final BlockingQueue<EntityBase[]> insertQueue = new LinkedBlockingQueue<EntityBase[]>();
+    private static final BlockingQueue<EntityBase[]> mergeQueue = new LinkedBlockingQueue<EntityBase[]>();
 
     private static boolean running = false;
     private static boolean shutdown = false;
@@ -54,28 +53,87 @@ public class PersistUtil {
     private static ExecutorService service;
 
     public static void insert(EntityBase... entities) {
+
+        try {
+            insertQueue.put(entities);
+        } catch (InterruptedException e) {
+            log.error("Unable to resubmit insert request in org.cryptocoinpartners.util.persistUtil::insert, full stack trace follows:", e);
+            e.printStackTrace();
+
+        } finally {
+
+        }
+
+    }
+
+    private static void merge(EntityBase... entities) {
+
+        try {
+            mergeQueue.put(entities);
+        } catch (InterruptedException e) {
+            log.error("Unable to resubmit insert request in org.cryptocoinpartners.util.persistUtil::insert, full stack trace follows:", e);
+            e.printStackTrace();
+
+        } finally {
+
+        }
+
+    }
+
+    public static void persist(EntityBase... entities) {
         EntityManager em = null;
         boolean persited = true;
-        synchronized (lock) {
+        try {
+            em = createEntityManager();
+            //    em.setProperty("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH);
+
+            PersistUtilHelper.beginTransaction();
+
             try {
-                em = createEntityManager();
-                em.setProperty("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH);
+                for (EntityBase entity : entities) {
+                    // em.lock(entity, LockModeType.PESSIMISTIC_WRITE);
+                    // em.refresh(entity);
+                    //  if (em.contains(entity))
+                    //em.merge(entity);
+                    // else
+                    em.persist(entity);
+                    PersistUtilHelper.commit();
 
-                PersistUtilHelper.beginTransaction();
+                }
 
-                try {
-                    for (EntityBase entity : entities) {
-                        // em.lock(entity, LockModeType.PESSIMISTIC_WRITE);
-                        // em.refresh(entity);
-                        // if (em.contains(entity))
-                        ///    em.merge(entity);
-                        // else
-                        em.persist(entity);
-                        em.flush();
+            } catch (OptimisticLockException ole) {
+                persited = false;
+                if (PersistUtilHelper.isActive())
+                    PersistUtilHelper.rollback();
+                if (em != null) {
+                    PersistUtilHelper.closeEntityManager();
+                    em = null;
+                }
+
+                for (EntityBase entity : entities) {
+                    if (entity.getRetryCount() <= retryCount) {
+                        entity.incermentRetryCount();
+                        try {
+                            mergeQueue.put(entities);
+                        } catch (InterruptedException e) {
+                            log.error("Unable to resubmit insert request in org.cryptocoinpartners.util.persistUtil::insert, full stack trace follows:", e);
+                            e.printStackTrace();
+
+                        } finally {
+                            log.error(entity.getClass().getSimpleName() + ": Later verion of " + entity.getId().toString()
+                                    + " already persisted to database, entity was not inserted to database after " + entity.getRetryCount() + " attempts.");
+                        }
+                    } else {
+                        log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " after " + entity.getRetryCount()
+                                + " attempts.", ole);
 
                     }
+                }
 
-                } catch (OptimisticLockException ole) {
+            } catch (IllegalStateException ise) {
+                if (TransientPropertyValueException.class.isInstance(ise.getCause()))
+
+                {
                     persited = false;
                     if (PersistUtilHelper.isActive())
                         PersistUtilHelper.rollback();
@@ -88,102 +146,85 @@ public class PersistUtil {
                         if (entity.getRetryCount() <= retryCount) {
                             entity.incermentRetryCount();
                             try {
-                                mergeQueue.put(entity);
+                                insertQueue.put(entities);
                             } catch (InterruptedException e) {
                                 log.error("Unable to resubmit insert request in org.cryptocoinpartners.util.persistUtil::insert, full stack trace follows:", e);
                                 e.printStackTrace();
 
                             } finally {
-                                log.error(entity.getClass().getSimpleName() + ": Later verion of " + entity.getId().toString()
-                                        + " already persisted to database, entity was not inserted to database after " + entity.getRetryCount() + " attempts.",
-                                        ole);
+                                log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString()
+                                        + " had unsaved transient values. Resubmitting insert request.", ise);
                             }
+                        } else {
+                            log.error(
+                                    "Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " after "
+                                            + entity.getRetryCount() + " attempts.", ise);
                         }
                     }
-
-                } catch (IllegalStateException ise) {
-                    if (TransientPropertyValueException.class.isInstance(ise.getCause()))
-
-                    {
-                        persited = false;
-                        if (PersistUtilHelper.isActive())
-                            PersistUtilHelper.rollback();
-                        if (em != null) {
-                            PersistUtilHelper.closeEntityManager();
-                            em = null;
-                        }
-
-                        for (EntityBase entity : entities) {
-                            if (entity.getRetryCount() <= retryCount) {
-                                entity.incermentRetryCount();
-                                try {
-                                    insertQueue.put(entity);
-                                } catch (InterruptedException e) {
-                                    log.error(
-                                            "Unable to resubmit insert request in org.cryptocoinpartners.util.persistUtil::insert, full stack trace follows:",
-                                            e);
-                                    e.printStackTrace();
-
-                                } finally {
-                                    log.error(entity.getClass().getSimpleName() + ": had unsaved transient values. Resubmitting insert request."
-                                            + entity.getClass().getSimpleName() + " was not inserted to database", ise);
-                                }
-                            }
-                        }
-                    }
-
-                } catch (PersistenceException pe) {
-                    //persited = false;
-
-                    //  for (EntityBase entity : entities)
-                    if (PersistUtilHelper.isActive())
-                        PersistUtilHelper.rollback();
-                    if (em != null) {
-                        PersistUtilHelper.closeEntityManager();
-                        em = null;
-                    }
-
-                    PersistUtilHelper.beginTransaction();
-                    for (EntityBase entity : entities) {
-                        log.error(entity.getClass().getSimpleName() + ": entity already exists, we need to merge records. " + entity.getClass().getSimpleName()
-                                + " was not inserted to database", pe);
-
-                        em.merge(entity);
-
-                        PersistUtilHelper.commit();
-                    }
-
-                } catch (Exception | Error e) {
-                    persited = false;
-
-                    log.error("Threw a Execpton or Error in  org.cryptocoinpartners.util.persistUtil::insert, full stack trace follows:", e);
-                    e.printStackTrace();
-                    //log.error(e.getCause().toString());
-                    if (PersistUtilHelper.isActive())
-                        PersistUtilHelper.rollback();
-                    if (em != null) {
-                        PersistUtilHelper.closeEntityManager();
-                        em = null;
-                    }
-
                 }
 
-            } finally {
+            } catch (PersistenceException pe) {
+                persited = false;
+
+                //  for (EntityBase entity : entities)
                 if (PersistUtilHelper.isActive())
-                    PersistUtilHelper.commit();
-
-                if (em != null)
+                    PersistUtilHelper.rollback();
+                if (em != null) {
                     PersistUtilHelper.closeEntityManager();
+                    em = null;
+                }
 
-                if (persited)
-                    for (EntityBase entity : entities)
-                        log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " inserted to database");
-                //  else
-                //    for (EntityBase entity : entities)
-                //      log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
+                for (EntityBase entity : entities) {
+
+                    if (entity.getRetryCount() <= retryCount) {
+                        entity.incermentRetryCount();
+
+                        try {
+                            mergeQueue.put(entities);
+                        } catch (InterruptedException e) {
+                            log.error("Unable to resubmit insert request in org.cryptocoinpartners.util.persistUtil::insert, full stack trace follows:", e);
+                            e.printStackTrace();
+
+                        } finally {
+                            log.error(entity.getClass().getSimpleName() + ":" + entity.getId().toString() + " already exists, we need to merge records.");
+
+                        }
+                    } else {
+                        log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " after " + entity.getRetryCount()
+                                + " attempts.", pe);
+                    }
+                }
+
+            } catch (Exception | Error e) {
+                persited = false;
+
+                log.error("Threw a Execpton or Error in  org.cryptocoinpartners.util.persistUtil::insert, full stack trace follows:", e);
+                e.printStackTrace();
+                //log.error(e.getCause().toString());
+                if (PersistUtilHelper.isActive())
+                    PersistUtilHelper.rollback();
+                if (em != null) {
+                    PersistUtilHelper.closeEntityManager();
+                    em = null;
+                }
 
             }
+
+        } finally {
+            if (PersistUtilHelper.isActive())
+                PersistUtilHelper.rollback();
+            if (em != null)
+                PersistUtilHelper.closeEntityManager();
+
+            if (persited)
+                for (EntityBase entity : entities)
+                    log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " inserted to database");
+            else
+                for (EntityBase entity : entities)
+                    log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not inserted to database");
+
         }
+
     }
 
     public static boolean cached(EntityBase... entities) {
@@ -204,130 +245,137 @@ public class PersistUtil {
 
     }
 
-    public static void merge(EntityBase... entities) {
+    public static void update(EntityBase... entities) {
         EntityManager em = null;
         boolean persited = true;
-        synchronized (lock) {
+        try {
+            em = createEntityManager();
+            //  em.setProperty("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH);
+            //   em.setProperty("javax.persistence.cache.storeMode", CacheStoreMode.USE);
+
+            PersistUtilHelper.beginTransaction();
+
             try {
-                em = createEntityManager();
-                //   em.setProperty("javax.persistence.cache.storeMode", CacheStoreMode.USE);
+                for (EntityBase entity : entities) {
+                    // em.lock(entity, LockModeType.PESSIMISTIC_WRITE);
+                    //  em.find(entity.getClass(), entity.getId());
+                    //  em.refresh(entity.getId());
 
-                PersistUtilHelper.beginTransaction();
-
-                try {
-                    for (EntityBase entity : entities) {
-                        // em.lock(entity, LockModeType.PESSIMISTIC_WRITE);
-                        em.setProperty("javax.persistence.cache.storeMode", CacheStoreMode.REFRESH);
-                        //em.find(entity.getClass(), entity.getId());
-                        //  em.refresh(entity.getId());
-
-                        em.merge(entity);
-                        em.flush();
-
-                    }
-
-                } catch (EntityNotFoundException enf) {
-                    persited = false;
-                    if (PersistUtilHelper.isActive())
-                        PersistUtilHelper.rollback();
-                    if (em != null) {
-                        PersistUtilHelper.closeEntityManager();
-                        em = null;
-                    }
-
-                    for (EntityBase entity : entities) {
-                        if (entity.getRetryCount() <= retryCount) {
-                            entity.incermentRetryCount();
-                            try {
-                                mergeQueue.put(entity);
-                            } catch (InterruptedException e) {
-                                log.error("Unable to resubmit merge request in org.cryptocoinpartners.util.persistUtil::merge, full stack trace follows:", e);
-                                e.printStackTrace();
-
-                            } finally {
-                                log.error(entity.getClass().getSimpleName() + ": Entity " + entity.getId().toString()
-                                        + " was not already persisted to database, entity was not merged to database after " + entity.getRetryCount()
-                                        + " attempts.", enf);
-                            }
-                        }
-                    }
-
-                } catch (OptimisticLockException ole) {
-
-                    persited = false;
-                    if (PersistUtilHelper.isActive())
-                        PersistUtilHelper.rollback();
-                    if (em != null) {
-                        PersistUtilHelper.closeEntityManager();
-                        em = null;
-                    }
-                    //
-                    for (EntityBase entity : entities) {
-                        //                        if (entity.getRetryCount() <= retryCount) {
-                        //                            entity.incermentRetryCount();
-                        //                            try {
-                        //                               // mergeQueue.put(entity);
-                        //                            } catch (Exception | Error e) {
-                        //                                log.error("Unable to resubmit merge request in org.cryptocoinpartners.util.persistUtil::merge, full stack trace follows:", e);
-                        //                                e.printStackTrace();
-                        //
-                        //                            } finally {
-                        log.error(entity.getClass().getSimpleName() + ": Later verion of " + entity.getId().toString()
-                                + " already persisted to database, entity was not merged to database after " + entity.getRetryCount() + " attempts.", ole);
-                        // }
-                    }
-                }
-
-                //                  PersistUtilHelper.beginTransaction();
-
-                //                        if (entity.getRetryCount() <= retryCount) {
-                //                            em.persist(entity);
-                //                            em.flush();
-                //                        } else {
-                //                            log.error(entity.getClass().getSimpleName() + ": Later verion of " + entity.getId().toString()
-                //                                    + " already persisted to database, entity was not saved to database");
-                //                        }
-                //
-                //                    }
-
-                //            } catch (OptimisticLockException ole) {
-                //                log.error("Optimistic Lock");
-                //                persited = false;
-                //                if (PersistUtilHelper.isActive())
-                //                    PersistUtilHelper.rollback();
-                //
-                //            }
-
-                catch (Exception | Error e) {
-                    persited = false;
-                    log.error("Threw a Execpton or Error in  org.cryptocoinpartners.util.persistUtil::insert, full stack trace follows:", e);
-
-                    e.printStackTrace();
-                    if (PersistUtilHelper.isActive())
-                        PersistUtilHelper.rollback();
-                    if (em != null) {
-                        PersistUtilHelper.closeEntityManager();
-                        em = null;
-                    }
-
-                }
-            } finally {
-                if (PersistUtilHelper.isActive())
+                    em.merge(entity);
                     PersistUtilHelper.commit();
 
-                if (em != null)
-                    PersistUtilHelper.closeEntityManager();
+                }
 
-                if (persited)
-                    for (EntityBase entity : entities)
-                        log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " merged to database");
-                //  else
-                //    for (EntityBase entity : entities)
-                //      log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not saved to database");
+            } catch (EntityNotFoundException enf) {
+                persited = false;
+                if (PersistUtilHelper.isActive())
+                    PersistUtilHelper.rollback();
+                if (em != null) {
+                    PersistUtilHelper.closeEntityManager();
+                    em = null;
+                }
+
+                for (EntityBase entity : entities) {
+                    if (entity.getRetryCount() <= retryCount) {
+                        entity.incermentRetryCount();
+                        try {
+                            insertQueue.put(entities);
+                        } catch (InterruptedException e) {
+                            log.error("Unable to resubmit merge request in org.cryptocoinpartners.util.persistUtil::merge, full stack trace follows:", e);
+                            e.printStackTrace();
+
+                        } finally {
+                            log.error(entity.getClass().getSimpleName() + ": Entity " + entity.getId().toString()
+                                    + " was not already persisted to database, entity was not merged to database after " + entity.getRetryCount()
+                                    + " attempts.");
+                        }
+                    } else {
+                        log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " after " + entity.getRetryCount()
+                                + " attempts.", enf);
+                    }
+                }
+
+            } catch (OptimisticLockException ole) {
+
+                persited = false;
+                if (PersistUtilHelper.isActive())
+                    PersistUtilHelper.rollback();
+                if (em != null) {
+                    PersistUtilHelper.closeEntityManager();
+                    em = null;
+                }
+                //
+                for (EntityBase entity : entities) {
+                    if (entity.getRetryCount() <= retryCount) {
+                        entity.incermentRetryCount();
+                        entity.setVersion(entity.getVersion() + 1);
+                        try {
+                            mergeQueue.put(entities);
+                        } catch (Exception | Error e) {
+                            log.error("Unable to resubmit merge request in org.cryptocoinpartners.util.persistUtil::merge, full stack trace follows:", e);
+                            e.printStackTrace();
+
+                        } finally {
+                            log.error(entity.getClass().getSimpleName() + ": Later verion of " + entity.getId().toString()
+                                    + " already persisted to database, entity was not merged to database after " + entity.getRetryCount() + " attempts.");
+                        }
+                    } else {
+                        log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " after " + entity.getRetryCount()
+                                + " attempts. stack trade", ole);
+                    }
+                }
+            }
+
+            //                  PersistUtilHelper.beginTransaction();
+
+            //                        if (entity.getRetryCount() <= retryCount) {
+            //                            em.persist(entity);
+            //                            em.flush();
+            //                        } else {
+            //                            log.error(entity.getClass().getSimpleName() + ": Later verion of " + entity.getId().toString()
+            //                                    + " already persisted to database, entity was not saved to database");
+            //                        }
+            //
+            //                    }
+
+            //            } catch (OptimisticLockException ole) {
+            //                log.error("Optimistic Lock");
+            //                persited = false;
+            //                if (PersistUtilHelper.isActive())
+            //                    PersistUtilHelper.rollback();
+            //
+            //            }
+
+            catch (Exception | Error e) {
+                persited = false;
+                log.error("Threw a Execpton or Error in  org.cryptocoinpartners.util.persistUtil::insert, full stack trace follows:", e);
+
+                e.printStackTrace();
+                if (PersistUtilHelper.isActive())
+                    PersistUtilHelper.rollback();
+                if (em != null) {
+                    PersistUtilHelper.closeEntityManager();
+                    em = null;
+                }
 
             }
-            // }
+        } finally {
+            if (PersistUtilHelper.isActive())
+                PersistUtilHelper.rollback();
+
+            if (em != null)
+                PersistUtilHelper.closeEntityManager();
+
+            if (persited)
+                for (EntityBase entity : entities)
+                    log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " merged to database");
+            else
+                for (EntityBase entity : entities)
+                    log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not merged to database");
+
         }
+        // }
+
     }
 
     private static class insertRunnable implements Runnable {
@@ -345,8 +393,8 @@ public class PersistUtil {
             while (!shutdown) {
 
                 try {
-                    EntityBase entity = insertQueue.take();
-                    PersistUtil.insert(entity);
+                    EntityBase[] entities = insertQueue.take();
+                    PersistUtil.persist(entities);
                 } catch (Exception e) {
                     e.printStackTrace();
 
@@ -379,8 +427,8 @@ public class PersistUtil {
             while (!shutdown) {
 
                 try {
-                    EntityBase entity = mergeQueue.take();
-                    PersistUtil.merge(entity);
+                    EntityBase[] entities = mergeQueue.take();
+                    PersistUtil.update(entities);
                 } catch (Exception e) {
                     e.printStackTrace();
 
@@ -693,6 +741,7 @@ public class PersistUtil {
         else
             createMode = "update";
         retryCount = ConfigUtil.combined().getInt("db.persist.retry");
+
         properties.put("hibernate.hbm2ddl.auto", createMode);
         properties.put("hibernate.connection.driver_class", ConfigUtil.combined().getString("db.driver"));
         properties.put("hibernate.dialect", ConfigUtil.combined().getString("db.dialect"));
@@ -710,7 +759,9 @@ public class PersistUtil {
         properties.put("hibernate.c3p0.min_size", "10");
         properties.put("hibernate.c3p0.max_size", ConfigUtil.combined().getString("db.pool.size"));
         properties.put("hibernate.c3p0.acquire_increment", ConfigUtil.combined().getString("db.pool.growth"));
-
+        properties.put("show_sql", "true");
+        properties.put("format_sql", "true");
+        properties.put("use_sql_comments", "true");
         //   properties.put("hibernate.c3p0.debugUnreturnedConnectionStackTraces", "true");
         // properties.put("hibernate.c3p0.unreturnedConnectionTimeout", "120");
         //    properties.put("hibernate.c3p0.idle_test_period", ConfigUtil.combined().getString("db.idle.test.period"));
@@ -725,7 +776,7 @@ public class PersistUtil {
         properties.put("hibernate.c3p0.acquireRetryDelay", "1000");
         properties.put("hibernate.c3p0.acquireRetryAttempts", "0");
         properties.put("hibernate.c3p0.breakAfterAcquireFailure", "false");
-        properties.put("javax.persistence.sharedCache.mode", "ALL");
+        properties.put("javax.persistence.sharedCache.mode", "ENABLE_SELECTIVE");
         try {
             PersistUtilHelper emh = new PersistUtilHelper(properties);
             ensureSingletonsExist();

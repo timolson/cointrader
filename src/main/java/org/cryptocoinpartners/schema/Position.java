@@ -67,7 +67,7 @@ public class Position extends Holding {
         //this.shortAvgStopPrice = fill.getStopPrice() != null && fill.isShort() ? fill.getStopPrice() : DecimalAmount.ZERO;
         //this.longAvgStopPrice = fill.getStopPrice() != null && fill.isLong() ? fill.getStopPrice() : DecimalAmount.ZERO;
         this.asset = fill.getMarket().getListing().getBase();
-        this.id = getId();
+        // this.id = getId();
         this.portfolio = fill.getPortfolio();
         //   
         fill.getPortfolio().addPosition(this);
@@ -75,32 +75,15 @@ public class Position extends Holding {
     }
 
     public Position(List<Fill> fills) {
-        Iterator<Fill> itf = fills.iterator();
-        while (itf.hasNext()) {
-            //  for (Fill pos : getFills()) {
-            Fill fill = itf.next();
-            this.addFill(fill);
-            this.exchange = fill.getMarket().getExchange();
-            this.market = fill.getMarket();
-            // this.volume = fill.getVolume();
-            //this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount();
-            //this.longVolume = volume.isPositive() ? volume : this.longVolume;
-            //this.longVolumeCount = volume.isPositive() ? volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount() : this.longVolumeCount;
-            //this.shortVolume = volume.isNegative() ? volume : this.shortVolume;
-            //this.shortVolumeCount = volume.isNegative() ? volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount() : this.shortVolumeCount;
-            //this.longAvgPrice = volume.isPositive() ? fill.getPrice() : this.longAvgPrice;
-            //this.shortAvgPrice = volume.isNegative() ? fill.getPrice() : this.shortAvgPrice;
-            //this.shortAvgStopPrice = fill.getStopPrice() != null && fill.isShort() ? fill.getStopPrice() : DecimalAmount.ZERO;
-            //this.longAvgStopPrice = fill.getStopPrice() != null && fill.isLong() ? fill.getStopPrice() : DecimalAmount.ZERO;
-            this.asset = fill.getMarket().getListing().getBase();
-            this.portfolio = fill.getPortfolio();
-            this.id = getId();
-            //       this.fills.add(fill);
-
-            // fill.setPosition(this);
-            //fill.getPortfolio().addPosition(this);
-
+        if (!fills.isEmpty()) {
+            this.exchange = fills.get(0).getMarket().getExchange();
+            this.market = fills.get(0).getMarket();
+            this.asset = fills.get(0).getMarket().getListing().getBase();
+            this.portfolio = fills.get(0).getPortfolio();
+            // this.id = getId();
+            this.setFills(fills);
         }
+
     }
 
     @Transient
@@ -132,8 +115,9 @@ public class Position extends Holding {
         return market;
     }
 
-    @ManyToOne(optional = false)
-    public Portfolio getPortfolio() {
+    public @ManyToOne
+    // @JoinColumn(name = "portfolio")
+    Portfolio getPortfolio() {
 
         return portfolio;
     }
@@ -408,7 +392,7 @@ public class Position extends Holding {
 
     protected void Persit() {
         //   synchronized (persistanceLock) {
-        List<Position> duplicate = PersistUtil.queryList(Position.class, "select p from Position p where p=?1", this);
+        //   List<Position> duplicate = PersistUtil.queryList(Position.class, "select p from Position p where p=?1", this);
 
         // if (this.hasFills()) {
         //   for (Fill fill : this.getFills())
@@ -416,10 +400,10 @@ public class Position extends Holding {
         //     PersistUtil.merge(fill);
         // }
 
-        if (duplicate == null || duplicate.isEmpty())
-            PersistUtil.insert(this);
-        else
-            PersistUtil.merge(this);
+        //   if (duplicate == null || duplicate.isEmpty())
+        PersistUtil.insert(this);
+        // else
+        //   PersistUtil.merge(this);
         //  }
         // if (hasFills()) {
         //   Iterator<Fill> itf = getFills().iterator();

@@ -20,7 +20,6 @@ import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.StrategyInstance;
 import org.cryptocoinpartners.schema.Transaction;
 import org.cryptocoinpartners.service.OrderService;
-import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Replay;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -40,7 +39,7 @@ public class PaperTradeRunMode extends RunMode {
     final ExecutorService service = Executors.newSingleThreadExecutor();
     private final Instant end = new DateTime(DateTime.now()).toInstant();
     Semaphore paperSemaphore = new Semaphore(0);
-    private final Instant start = end.minus(Duration.standardDays(10)).toInstant();
+    private final Instant start = end.minus(Duration.standardHours(30)).toInstant();
 
     // new DateTime(2013, 12, 20, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
@@ -73,12 +72,12 @@ public class PaperTradeRunMode extends RunMode {
         context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
         context.setTimeProvider(null);
         OrderService orderService = context.getInjector().getInstance(OrderService.class);
-        orderService.setTradingEnabled(true); //  context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
         // context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
 
         //  context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
         context.attach(SaveMarketData.class);
         context.attach(XchangeData.class);
+        orderService.setTradingEnabled(true); //  context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
 
         //  if (semaphore != null)
         //    semaphore.release();
@@ -100,7 +99,7 @@ public class PaperTradeRunMode extends RunMode {
             DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
             Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
             context.publish(initialCredit);
-            PersistUtil.insert(initialCredit);
+            initialCredit.persit();
 
             strategyInstance.getStrategy().init();
 

@@ -15,6 +15,11 @@ import org.cryptocoinpartners.util.PersistUtil;
 @Cacheable
 public class Currency extends Asset {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 5360515183621144962L;
+
     public boolean isFiat() {
         return fiat;
     }

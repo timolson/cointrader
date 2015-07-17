@@ -24,6 +24,7 @@ import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.MockOrderService;
+import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.module.xchange.XchangeData;
 import org.cryptocoinpartners.module.xchange.XchangeOrderService;
 import org.cryptocoinpartners.schema.DiscreteAmount;
@@ -32,7 +33,6 @@ import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.StrategyInstance;
 import org.cryptocoinpartners.schema.Transaction;
 import org.cryptocoinpartners.service.OrderService;
-import org.cryptocoinpartners.util.PersistUtil;
 
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
@@ -114,7 +114,7 @@ public class ConsoleRunMode extends RunMode {
 
     private void init() throws IOException {
         context = Context.create();
-        context.attach(XchangeData.class);
+        context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
         context.attach(BasicPortfolioService.class);
 
@@ -123,19 +123,15 @@ public class ConsoleRunMode extends RunMode {
         else
             context.attach(MockOrderService.class);
 
-        OrderService orderService = context.getInjector().getInstance(OrderService.class);
-        orderService.setTradingEnabled(true);
-
         StrategyInstance strategyInstance = new StrategyInstance("ConsoleStrategy");
         context.attachInstance(strategyInstance);
         setUpInitialPortfolio(strategyInstance);
+        // context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
 
-        //    (context.getInjector().getInstance(Portfolio.class)).setName("ConsolePortfolio");
-
-        // setUpInitialPortfolio(strategyInstance);
-
-        // (context.getInjector().getInstance(Portfolio.class)).setManager(new PortfolioManager());
-
+        //  context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
+        OrderService orderService = context.getInjector().getInstance(OrderService.class);
+        context.attach(XchangeData.class);
+        orderService.setTradingEnabled(true);
         Terminal terminal = TerminalFactory.get();
         try {
             terminal.init();
@@ -163,9 +159,10 @@ public class ConsoleRunMode extends RunMode {
     }
 
     private void setUpInitialPortfolio(StrategyInstance strategyInstance) {
+        // @Inject
+        // Portfolio portfolio;
+        // ;= context.getInjector().getInstance(Portfolio.class);
         Portfolio portfolio = strategyInstance.getPortfolio();
-
-        //Portfolio portfolio = strategyInstance.getPortfolio();
         if (positions.size() % 2 != 0) {
             System.err.println("You must supply an even number of arguments to the position switch. " + positions);
         }
@@ -176,11 +173,11 @@ public class ConsoleRunMode extends RunMode {
             DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
             Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
             context.publish(initialCredit);
-            PersistUtil.insert(initialCredit);
+            initialCredit.persit();
+
+            strategyInstance.getStrategy().init();
 
         }
-        strategyInstance.getStrategy().init();
-        //   strategyInstance.init;
     }
 
     public List<String> positions = Arrays.asList("OKCOIN:USD", "1000000");

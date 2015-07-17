@@ -68,7 +68,7 @@ public class SaveMarketData {
                 final Trade duplicate = PersistUtil.queryZeroOne(Trade.class, "select t from Trade t where market=?1 and remoteKey=?2 and time=?3",
                         trade.getMarket(), trade.getRemoteKey(), trade.getTime());
                 if (duplicate == null)
-                    PersistUtil.insert(trade);
+                    PersistUtil.persist(trade);
                 //else
                 //log.warn("dropped duplicate Trade " + trade);
                 //  } else if (m instanceof Book) {
@@ -80,7 +80,7 @@ public class SaveMarketData {
 
                 final Book duplicate = PersistUtil.queryZeroOne(Book.class, "select b from Book b where b=?1", book);
                 if (duplicate == null)
-                    PersistUtil.insert(book);
+                    PersistUtil.persist(book);
 
                 //if (book.getParent() != null)
                 //  PersistUtil.merge(book.getParent());
@@ -89,7 +89,7 @@ public class SaveMarketData {
 
             } else { // if not a Trade, persist unconditionally
                 try {
-                    PersistUtil.insert(m);
+                    PersistUtil.persist(m);
                 } catch (Throwable e) {
                     throw new Error("Could not insert " + m, e);
                 }

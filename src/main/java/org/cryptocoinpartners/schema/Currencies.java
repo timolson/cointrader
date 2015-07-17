@@ -1,6 +1,10 @@
 package org.cryptocoinpartners.schema;
 
+
 public class Currencies {
+    /**
+     * 
+     */
     // Fiat
     public static final Currency AUD = fiat("AUD", 0.01);
     public static final Currency CAD = fiat("CAD", 0.01);

@@ -7,7 +7,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import javax.inject.Inject;
 import javax.inject.Singleton;
 import javax.persistence.Transient;
 
@@ -17,7 +16,6 @@ import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.util.XchangeUtil;
-import org.slf4j.Logger;
 
 import com.google.common.collect.HashBiMap;
 import com.xeiam.xchange.Exchange;
@@ -35,6 +33,7 @@ import com.xeiam.xchange.service.polling.trade.PollingTradeService;
  * @author Tim Olson
  */
 @Singleton
+@SuppressWarnings("UnusedDeclaration")
 public class XchangeOrderService extends BaseOrderService {
 
     @Override
@@ -77,11 +76,6 @@ public class XchangeOrderService extends BaseOrderService {
 
     }
 
-    @Inject
-    Logger log;
-    @Inject
-    private Portfolio portfolio;
-
     @Override
     @Transient
     public Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio) {
@@ -101,7 +95,8 @@ public class XchangeOrderService extends BaseOrderService {
                             pendingOrders.add(specificOrder);
                             break;
                         } else {
-                            specificOrder = new SpecificOrder(xchangeOrder, exchange, portfolio);
+                            Date time = (xchangeOrder.getTimestamp() != null) ? xchangeOrder.getTimestamp() : new Date();
+                            specificOrder = new SpecificOrder(xchangeOrder, exchange, portfolio, time);
                             updateOrderState(specificOrder, OrderState.PLACED, false);
                             pendingOrders.add(specificOrder);
                             break;
@@ -109,7 +104,9 @@ public class XchangeOrderService extends BaseOrderService {
                         }
                     }
                 }
-                specificOrder = new SpecificOrder(xchangeOrder, exchange, portfolio);
+                Date time = (xchangeOrder.getTimestamp() != null) ? xchangeOrder.getTimestamp() : new Date();
+
+                specificOrder = new SpecificOrder(xchangeOrder, exchange, portfolio, time);
                 updateOrderState(specificOrder, OrderState.PLACED, false);
                 pendingOrders.add(specificOrder);
 
@@ -169,6 +166,18 @@ public class XchangeOrderService extends BaseOrderService {
     public void init() {
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    public Collection<SpecificOrder> getPendingOpenOrders(Market market, Portfolio portfolio) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Collection<SpecificOrder> getPendingOpenOrders(Portfolio portfolio) {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }

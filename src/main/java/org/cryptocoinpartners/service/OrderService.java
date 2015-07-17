@@ -18,7 +18,11 @@ public interface OrderService {
 
     void init();
 
+    public Collection<SpecificOrder> getPendingOpenOrders(Portfolio portfolio);
+
     public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio);
+
+    public Collection<Order> getPendingStopOrders(Portfolio portfolio);
 
     public void handleCancelSpecificOrder(SpecificOrder specificOrder);
 
@@ -66,5 +70,7 @@ public interface OrderService {
     void setTradingEnabled(Boolean enableTrading);
 
     boolean getTradingEnabled();
+
+    Collection<SpecificOrder> getPendingOpenOrders(Market market, Portfolio portfolio);
 
 }

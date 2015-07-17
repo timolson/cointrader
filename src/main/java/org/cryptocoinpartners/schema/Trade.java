@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema;
 import java.math.BigDecimal;
 
 import javax.annotation.Nullable;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.Table;
@@ -20,6 +21,7 @@ import org.joda.time.format.DateTimeFormatter;
  * @author Tim Olson
  */
 @Entity
+@Cacheable(false)
 @Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived"), @Index(columnList = "market"), @Index(columnList = "market,time"),
         @Index(columnList = "market,remoteKey") })
 public class Trade extends PriceData {
