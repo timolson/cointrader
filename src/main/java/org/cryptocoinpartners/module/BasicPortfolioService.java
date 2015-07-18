@@ -77,7 +77,7 @@ public class BasicPortfolioService implements PortfolioService {
         // List<Portfolio> portfolios = PersistUtil.queryList(Portfolio.class, queryPortfolioStr, null);
         for (Portfolio portfolio : portfolios) {
 
-            String queryStr = "select p from Position p  join p.fills f where f.openVolumeCount!=0 and p.portfolio = ?1 group by p";
+            String queryStr = "select p from Position p  join fetch p.fills f join fetch p.portfolio po where f.openVolumeCount!=0 and po = ?1 group by p";
             // String queryStr = "select p from Position p  where p.portfolio = ?1 group by p";
             List<Position> positions = PersistUtil.queryList(Position.class, queryStr, portfolio);
             for (Position position : positions) {

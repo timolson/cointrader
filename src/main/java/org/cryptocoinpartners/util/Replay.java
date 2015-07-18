@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -99,8 +100,10 @@ public class Replay implements Runnable {
         final Instant end = replayTimeInterval.getEnd().toInstant();
         int threadCount = 0;
 
-        service = Executors.newFixedThreadPool(1);
+        service = Executors.newFixedThreadPool(2);
         if (replayTimeInterval.toDuration().isLongerThan(timeStep)) {
+            // Start two threads, but ensure the first thread publish first, then reuse it
+
             for (Instant now = start; !now.isAfter(end);) {
                 final Instant stepEnd = now.plus(timeStep);
                 ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime(), semaphore);
@@ -130,8 +133,6 @@ public class Replay implements Runnable {
         private final EPRuntime runtime;
         private final Semaphore semaphore;
 
-        //  private final CountDownLatch stopLatch;
-
         public ReplayStepRunnable(Instant start, Instant stop, EPRuntime runtime, Semaphore semaphore) {
             this.semaphore = semaphore;
             this.start = start;
@@ -143,6 +144,13 @@ public class Replay implements Runnable {
         @Override
         // @Inject
         public void run() {
+            boolean firstThread = false;
+            if (startLatch == null) {
+                //First thread to have started, so I will set the latch and count it donw once complete
+                startLatch = new CountDownLatch(1);
+                firstThread = true;
+            }
+
             try {
                 // perform interesting task
 
@@ -152,10 +160,20 @@ public class Replay implements Runnable {
                 // thread 1 starts, thread 2 finishes, want to wait till thread 1 is complete before processing 
 
                 // we need to wait for current thread to finish.
-                while (ite.hasNext()) {
-                    RemoteEvent event = ite.next();
-                    //runtime.sendEvent(event);
-                    context.publish(event);
+                try {
+                    if (!firstThread) {
+                        startLatch.await();
+
+                    }
+                    while (ite.hasNext()) {
+                        RemoteEvent event = ite.next();
+                        //runtime.sendEvent(event);
+                        context.publish(event);
+                    }
+
+                } catch (InterruptedException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
                 }
 
                 // context.advanceTime(stop);
@@ -163,6 +181,11 @@ public class Replay implements Runnable {
             } finally {
                 if (semaphore != null)
                     semaphore.release();
+                if (firstThread) {
+                    startLatch.countDown();
+                    startLatch = null;
+                }
+
             }
         }
 
@@ -258,4 +281,6 @@ public class Replay implements Runnable {
     private final Context context;
     private static final Duration timeStep = Duration.standardDays(1); // how many rows from the DB to gather in one batch
     private final boolean orderByTimeReceived;
+    private static CountDownLatch startLatch;
+
 }

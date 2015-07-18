@@ -224,8 +224,17 @@ public abstract class BaseOrderService implements OrderService {
     @Override
     public void adjustStopLoss(Amount price, Amount amount) {
         // synchronized (lock) {
-        for (Event parentKey : triggerOrders.keySet()) {
-            for (Order triggerOrder : triggerOrders.get(parentKey)) {
+
+        for (Iterator<Event> ite = triggerOrders.keySet().iterator(); ite.hasNext();) {
+            Event parentKey = ite.next();
+            for (Iterator<Order> it = triggerOrders.get(parentKey).iterator(); it.hasNext();) {
+                Order triggerOrder = it.next();
+
+                //        for (Iterator<Event> ite = triggerOrders.keySet().iterator(); ite.hasNext();) {
+                //            
+                //        for (Event parentKey : triggerOrders.keySet()) {
+                //          //  if (triggerOrders.get(parentKey) != null)
+                //                for (Order triggerOrder : triggerOrders.get(parentKey)) {
                 //			    if(myList.get(i).equals("3")){
                 //			        myList.remove(i);
                 //			        i--;
@@ -523,11 +532,11 @@ public abstract class BaseOrderService implements OrderService {
 
     @When("@Priority(2) select * from Book")
     private void handleBook(Book b) {
-        updateRestingOrders(b);
+        // updateRestingOrders(b);
 
         //
 
-        //service.submit(new handleBookRunnable(b));
+        service.submit(new handleBookRunnable(b));
     }
 
     private class handleBookRunnable implements Runnable {
