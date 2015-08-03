@@ -398,7 +398,7 @@ public class XchangeData {
 
         private final Book.Builder bookBuilder = new Book.Builder();
         private final boolean getTradesNext = true;
-        private StreamingExchangeService dataService = null;;
+        private StreamingExchangeService dataService = null;
         private final Context context;
         private final Market market;
         private final RateLimiter rateLimiter;

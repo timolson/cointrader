@@ -54,7 +54,7 @@ public class Book extends MarketData implements Spread {
         PersistUtil.queryEach(Book.class, visitor, "select b from Book b");
     }
 
-    private static Object lock = new Object();
+    private static final Object lock = new Object();
 
     @Transient
     public List<Offer> getBids() {
