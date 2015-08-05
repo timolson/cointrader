@@ -2,6 +2,7 @@ package org.cryptocoinpartners.module.xchange;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -41,6 +42,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.xeiam.xchange.currency.CurrencyPair;
+import com.xeiam.xchange.dto.Order.OrderType;
 import com.xeiam.xchange.dto.marketdata.OrderBook;
 import com.xeiam.xchange.dto.marketdata.Trade;
 import com.xeiam.xchange.dto.marketdata.Trades;
@@ -346,8 +348,9 @@ public class XchangeData {
                             if (remoteId > lastTradeId) {
 
                                 Instant tradeInstant = new Instant(trade.getTimestamp());
+                                BigDecimal volume = (trade.getType() == OrderType.ASK) ? trade.getTradableAmount().negate() : trade.getTradableAmount();
                                 org.cryptocoinpartners.schema.Trade ourTrade = new org.cryptocoinpartners.schema.Trade(market, tradeInstant, trade.getId(),
-                                        trade.getPrice(), trade.getTradableAmount());
+                                        trade.getPrice(), volume);
                                 context.publish(ourTrade);
                                 lastTradeTime = tradeInstant.getMillis();
                                 lastTradeId = remoteId;
@@ -486,8 +489,10 @@ public class XchangeData {
                     long remoteId = Long.valueOf(String.valueOf(dateFormat.format(trade.getTimestamp()).concat(trade.getId()))).longValue();
                     if (remoteId > lastTradeId) {
                         Instant tradeInstant = new Instant(trade.getTimestamp());
+                        BigDecimal volume = (trade.getType() == OrderType.ASK) ? trade.getTradableAmount().negate() : trade.getTradableAmount();
+
                         org.cryptocoinpartners.schema.Trade ourTrade = new org.cryptocoinpartners.schema.Trade(market, tradeInstant, trade.getId(),
-                                trade.getPrice(), trade.getTradableAmount());
+                                trade.getPrice(), volume);
                         context.publish(ourTrade);
                         lastTradeTime = tradeInstant.getMillis();
                         lastTradeId = remoteId;
