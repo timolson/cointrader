@@ -153,11 +153,11 @@ public abstract class Order extends Event {
         this.positionEffect = positionEffect;
     }
 
-    protected void setExecutionInstruction(ExecutionInstruction executionInstruction) {
+    public void setExecutionInstruction(ExecutionInstruction executionInstruction) {
         this.executionInstruction = executionInstruction;
     }
 
-    protected void setParentOrder(Order order) {
+    public void setParentOrder(Order order) {
         this.parentOrder = order;
     }
 
@@ -222,7 +222,6 @@ public abstract class Order extends Event {
         if (fills == null)
             fills = new CopyOnWriteArrayList<Fill>();
 
-        // synchronized (lock) {
         return fills;
         // }
     }
@@ -250,6 +249,10 @@ public abstract class Order extends Event {
         //}
         //if (this.hasFills()) {
         // for (Fill fill : getFills()) {
+
+        // if (this.parentOrder != null)
+        //   parentOrder.persit();
+
         // if (this.parentFill != null)
         //   parentFill.persit();
         //   PersistUtil.insert(this);
@@ -258,9 +261,6 @@ public abstract class Order extends Event {
         //  List<Order> duplicate = PersistUtil.queryList(Order.class, "select o from Order o where o=?1", this);
         //List<Order> duplicate = null;
         //  EntityBase entity = PersistUtil.find(this);
-
-        //  if (this.parentOrder != null)
-        //    parentOrder.persit();
 
         // if (duplicate == null || duplicate.isEmpty())
         PersistUtil.insert(this);
@@ -299,6 +299,30 @@ public abstract class Order extends Event {
 
             }
         }
+
+    }
+
+    @Transient
+    public void removeChild(Order child) {
+        Iterator<Order> it = getChildren().iterator();
+        while (it.hasNext()) {
+            if (it.next().equals(child)) {
+                it.remove();
+
+            }
+        }
+
+    }
+
+    @Transient
+    public void removeChildren() {
+        getChildren().clear();
+
+    }
+
+    @Transient
+    public void removeTransactions() {
+        getTransactions().clear();
 
     }
 
@@ -373,11 +397,11 @@ public abstract class Order extends Event {
         this.transactions = transactions;
     }
 
-    protected void setFillType(FillType fillType) {
+    public void setFillType(FillType fillType) {
         this.fillType = fillType;
     }
 
-    protected void setComment(String comment) {
+    public void setComment(String comment) {
         this.comment = comment;
     }
 

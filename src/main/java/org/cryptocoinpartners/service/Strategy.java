@@ -15,4 +15,6 @@ public interface Strategy {
 
     void setPortfolio(Portfolio portfolio);
 
+    Portfolio getPortfolio();
+
 }

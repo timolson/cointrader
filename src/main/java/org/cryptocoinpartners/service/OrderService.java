@@ -20,6 +20,12 @@ public interface OrderService {
 
     public Collection<SpecificOrder> getPendingOpenOrders(Portfolio portfolio);
 
+    public Collection<SpecificOrder> getPendingCloseOrders(Portfolio portfolio);
+
+    public Collection<SpecificOrder> getPendingShortCloseOrders(Portfolio portfolio);
+
+    public Collection<SpecificOrder> getPendingLongCloseOrders(Portfolio portfolio);
+
     public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio);
 
     public Collection<Order> getPendingStopOrders(Portfolio portfolio);
@@ -28,11 +34,19 @@ public interface OrderService {
 
     public void handleCancelGeneralOrder(GeneralOrder generalOrder);
 
-    public void handleCancelAllStopOrders(Portfolio portfolio, Market market);
+    public void handleCancelAllShortStopOrders(Portfolio portfolio, Market market);
+
+    public void handleCancelAllLongStopOrders(Portfolio portfolio, Market market);
 
     public void handleCancelAllSpecificOrders(Portfolio portfolio, Market market);
 
-    public void adjustStopLoss(Amount price, Amount stopAdjustment);
+    public void adjustShortStopLoss(Amount price, Amount stopAdjustment);
+
+    public void adjustLongStopLoss(Amount price, Amount stopAdjustment);
+
+    public void adjustShortTargetPrices(Amount price, Amount targetAdjustment);
+
+    public void adjustLongTargetPrices(Amount price, Amount targetAdjustment);
 
     // DO PLENTY OF LOGGING IN THIS METHOD
     // initialize data interface with Xchange
@@ -64,6 +78,10 @@ public interface OrderService {
     void handleCancelAllOpeningSpecificOrders(Portfolio portfolio, Market market);
 
     void handleCancelAllClosingSpecificOrders(Portfolio portfolio, Market market);
+
+    void handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market);
+
+    void handleCancelAllShortClosingSpecificOrders(Portfolio portfolio, Market market);
 
     Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio);
 

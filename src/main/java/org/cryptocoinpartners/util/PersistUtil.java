@@ -178,6 +178,7 @@ public class PersistUtil {
 
                     if (entity.getRetryCount() <= retryCount) {
                         entity.incermentRetryCount();
+                        //  em.refresh(entity);
 
                         try {
                             mergeQueue.put(entities);
@@ -278,6 +279,7 @@ public class PersistUtil {
                 for (EntityBase entity : entities) {
                     if (entity.getRetryCount() <= retryCount) {
                         entity.incermentRetryCount();
+
                         try {
                             insertQueue.put(entities);
                         } catch (InterruptedException e) {
@@ -776,6 +778,9 @@ public class PersistUtil {
         properties.put("hibernate.c3p0.acquireRetryDelay", "1000");
         properties.put("hibernate.c3p0.acquireRetryAttempts", "0");
         properties.put("hibernate.c3p0.breakAfterAcquireFailure", "false");
+        properties.put("hibernate.c3p0.checkoutTimeout", "10000");
+        properties.put("hibernate.c3p0.idleConnectionTestPeriod", "100");
+
         properties.put("javax.persistence.sharedCache.mode", "ENABLE_SELECTIVE");
         try {
             PersistUtilHelper emh = new PersistUtilHelper(properties);

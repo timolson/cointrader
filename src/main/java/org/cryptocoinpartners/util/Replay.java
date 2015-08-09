@@ -5,9 +5,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 
 import org.cryptocoinpartners.module.Context;
@@ -99,15 +101,23 @@ public class Replay implements Runnable {
         final Instant start = replayTimeInterval.getStart().toInstant();
         final Instant end = replayTimeInterval.getEnd().toInstant();
         int threadCount = 0;
+        CountDownLatch startLatch = null;
+        CountDownLatch stopLatch = null;
+        service = Executors.newFixedThreadPool(dbReaderThreads);
+        //   engines = Executors.newFixedThreadPool(1);
 
-        service = Executors.newFixedThreadPool(2);
+        // engines.submit(new PublisherRunnable());
         if (replayTimeInterval.toDuration().isLongerThan(timeStep)) {
             // Start two threads, but ensure the first thread publish first, then reuse it
 
             for (Instant now = start; !now.isAfter(end);) {
                 final Instant stepEnd = now.plus(timeStep);
-                ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime(), semaphore);
+                stopLatch = new CountDownLatch(1);
+                ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime(), semaphore, startLatch, stopLatch, threadCount);
                 service.submit(replayStep);
+                startLatch = stopLatch;
+                // if (threadCount != 0)
+
                 threadCount++;
                 now = stepEnd;
 
@@ -126,30 +136,55 @@ public class Replay implements Runnable {
 
     }
 
-    private class ReplayStepRunnable implements Runnable {
+    private class PublisherRunnable implements Runnable {
 
-        private final Instant start;
-        private final Instant stop;
-        private final EPRuntime runtime;
-        private final Semaphore semaphore;
-
-        public ReplayStepRunnable(Instant start, Instant stop, EPRuntime runtime, Semaphore semaphore) {
-            this.semaphore = semaphore;
-            this.start = start;
-            this.stop = stop;
-            this.runtime = runtime;
+        public PublisherRunnable() {
 
         }
 
         @Override
         // @Inject
         public void run() {
-            boolean firstThread = false;
-            if (startLatch == null) {
-                //First thread to have started, so I will set the latch and count it donw once complete
-                startLatch = new CountDownLatch(1);
-                firstThread = true;
-            }
+            while (true)
+                try {
+
+                    RemoteEvent event = queue.take();
+                    //runtime.sendEvent(event);
+                    context.publish(event);
+
+                } catch (Exception | Error e) {
+                    e.printStackTrace();
+                }
+
+        }
+
+    }
+
+    private class ReplayStepRunnable implements Runnable {
+
+        private final Instant start;
+        private final Instant stop;
+        private final EPRuntime runtime;
+        private final Semaphore semaphore;
+        private final CountDownLatch startLatch;
+        private final CountDownLatch stopLatch;
+        private final int threadCount;
+
+        public ReplayStepRunnable(Instant start, Instant stop, EPRuntime runtime, Semaphore semaphore, CountDownLatch startLatch, CountDownLatch stopLatch,
+                int threadCount) {
+            this.semaphore = semaphore;
+            this.start = start;
+            this.stop = stop;
+            this.runtime = runtime;
+            this.startLatch = startLatch;
+            this.stopLatch = stopLatch;
+            this.threadCount = threadCount;
+
+        }
+
+        @Override
+        // @Inject
+        public void run() {
 
             try {
                 // perform interesting task
@@ -161,13 +196,13 @@ public class Replay implements Runnable {
 
                 // we need to wait for current thread to finish.
                 try {
-                    if (!firstThread) {
+                    if (startLatch != null)
                         startLatch.await();
 
-                    }
                     while (ite.hasNext()) {
                         RemoteEvent event = ite.next();
-                        //runtime.sendEvent(event);
+                        //   queue.put(event);
+
                         context.publish(event);
                     }
 
@@ -181,10 +216,8 @@ public class Replay implements Runnable {
             } finally {
                 if (semaphore != null)
                     semaphore.release();
-                if (firstThread) {
-                    startLatch.countDown();
-                    startLatch = null;
-                }
+
+                stopLatch.countDown();
 
             }
         }
@@ -274,13 +307,14 @@ public class Replay implements Runnable {
     }
 
     protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.replay");
-
+    private final BlockingQueue<RemoteEvent> queue = new LinkedBlockingQueue<RemoteEvent>();
     private final Interval replayTimeInterval;
+    private final Integer dbReaderThreads = 5;
     private final Semaphore semaphore;
     private static ExecutorService service;
+    private static ExecutorService engines;
     private final Context context;
     private static final Duration timeStep = Duration.standardDays(1); // how many rows from the DB to gather in one batch
     private final boolean orderByTimeReceived;
-    private static CountDownLatch startLatch;
 
 }

@@ -49,7 +49,7 @@ public class FeesUtil {
 
     public static Amount getMargin(Amount price, Amount ammount, double rate, FeeMethod method, Market market, PositionEffect positionEffect) {
         Amount margin;
-        rate = market.getContractSize() / rate;
+        rate = 1 / rate;
         switch (method) {
             case PercentagePerUnit:
                 return calculatePercentagePerUnit(price, ammount, rate, market);
@@ -151,7 +151,7 @@ public class FeesUtil {
     }
 
     public static Amount getCommission(Amount price, Amount ammount, Market market, PositionEffect postionEffect) {
-        double rate = market.getFeeRate() * market.getMargin();
+        double rate = market.getFeeRate();
         FeeMethod method = market.getFeeMethod();
         Amount commission;
         switch (method) {
@@ -176,6 +176,7 @@ public class FeesUtil {
     protected static Amount getMargin(Amount price, Amount amount, Market market, PositionEffect postionEffect) {
         double rate = market.getMargin();
         FeeMethod method = market.getMarginFeeMethod();
+
         Amount margin;
         switch (method) {
             case PercentagePerUnit:
@@ -203,7 +204,8 @@ public class FeesUtil {
             price = price.invert();
             //precision = BigDecimal.valueOf(market.getTradedCurrency().getBasis());
         }
-        Amount notional = ((price.times(amount, Remainder.ROUND_EVEN)).times(rate, Remainder.ROUND_EVEN).abs());
+        Amount notional = ((price.times(amount, Remainder.ROUND_EVEN)).times(rate, Remainder.ROUND_EVEN).abs()).times(market.getContractSize(),
+                Remainder.ROUND_EVEN);
 
         return notional.toBasis(market.getTradedCurrency().getBasis(), Remainder.ROUND_CEILING).negate();
 

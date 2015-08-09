@@ -42,7 +42,7 @@ public class SpecificOrder extends Order {
         this.volumeCount = volumeCount;
         super.setPortfolio(portfolio);
         this.placementCount = 1;
-        this.positionEffect = PositionEffect.OPEN;
+        //this.positionEffect = PositionEffect.OPEN;
 
     }
 
@@ -54,7 +54,7 @@ public class SpecificOrder extends Order {
         super.setComment(comment);
         super.setPortfolio(portfolio);
         this.placementCount = 1;
-        this.positionEffect = PositionEffect.OPEN;
+        //   this.positionEffect = PositionEffect.OPEN;
 
     }
 
@@ -68,7 +68,7 @@ public class SpecificOrder extends Order {
         this.setParentOrder(parentOrder);
         super.setPortfolio(portfolio);
         this.placementCount = 1;
-        this.positionEffect = PositionEffect.OPEN;
+        //  this.positionEffect = PositionEffect.OPEN;
 
     }
 
@@ -76,7 +76,9 @@ public class SpecificOrder extends Order {
         super(time);
         this.remoteKey = getId().toString();
         this.market = market;
+
         this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+
         super.setComment(comment);
         super.setPortfolio(portfolio);
         this.placementCount = 1;
@@ -91,6 +93,7 @@ public class SpecificOrder extends Order {
         Listing listing = Listing.forPair(baseCCY, quoteCCY);
         Exchange exchange = XchangeUtil.getExchangeForMarket(xchangeExchange);
         this.market = Market.findOrCreate(exchange, listing);
+
         this.setRemoteKey(limitOrder.getId());
         long vol = limitOrder.getTradableAmount().divide(BigDecimal.valueOf(market.getPriceBasis())).longValue();
         this.volume = new DiscreteAmount(vol, market.getPriceBasis());
@@ -114,7 +117,7 @@ public class SpecificOrder extends Order {
         this.setParentOrder(parentOrder);
         super.setPortfolio(portfolio);
         this.placementCount = 1;
-        this.positionEffect = PositionEffect.OPEN;
+        this.positionEffect = (parentOrder.getPositionEffect() == null) ? PositionEffect.OPEN : parentOrder.getPositionEffect();
     }
 
     public SpecificOrder(Instant time, Portfolio portfolio, Market market, BigDecimal volume, String comment) {
@@ -183,8 +186,12 @@ public class SpecificOrder extends Order {
     @Override
     @Embedded
     public DiscreteAmount getVolume() {
+
         if (volume == null)
-            volume = amount().fromVolumeCount(volumeCount);
+            synchronized (lock) {
+
+                volume = amount().fromVolumeCount(volumeCount);
+            }
         return volume;
     }
 
@@ -388,7 +395,9 @@ public class SpecificOrder extends Order {
 
     private Market.MarketAmountBuilder amount() {
         if (amountBuilder == null)
-            amountBuilder = market.buildAmount();
+            amountBuilder = getMarket().buildAmount();
+        if (amountBuilder == null)
+            Log.debug("test");
         return amountBuilder;
     }
 
@@ -401,6 +410,7 @@ public class SpecificOrder extends Order {
     private String remoteKey;
     private Instant timeReceived;
     private long timestampReceived;
+    private static Object lock = new Object();
 
     private Market.MarketAmountBuilder amountBuilder;
 

@@ -63,8 +63,9 @@ public class BaseStrategy implements Strategy {
         return this.quotes;
     }
 
+    @Override
     @Transient
-    protected Portfolio getPortfolio() {
+    public Portfolio getPortfolio() {
         return this.portfolio;
     }
 

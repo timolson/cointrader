@@ -8,6 +8,7 @@ import java.util.concurrent.Future;
 import javax.inject.Singleton;
 
 import org.cryptocoinpartners.esper.annotation.When;
+import org.cryptocoinpartners.schema.Bar;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.MarketData;
 import org.cryptocoinpartners.schema.Trade;
@@ -87,7 +88,19 @@ public class SaveMarketData {
                 //  book.setParent(null);
                 // PersistUtil.insert(book);
 
-            } else { // if not a Trade, persist unconditionally
+            } else if (m instanceof Bar) {
+                Bar bar = (Bar) m;
+
+                final Bar duplicate = PersistUtil.queryZeroOne(Bar.class, "select b from Bar b where b=?1", bar);
+                if (duplicate == null)
+                    PersistUtil.persist(bar);
+
+                //if (book.getParent() != null)
+                //  PersistUtil.merge(book.getParent());
+                //  book.setParent(null);
+                // PersistUtil.insert(book);
+
+            } else { //// if not a Trade, persist unconditionally
                 try {
                     PersistUtil.persist(m);
                 } catch (Throwable e) {

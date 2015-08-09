@@ -300,6 +300,12 @@ public class OrderBuilder {
         }
 
         @Override
+        public SpecificOrderBuilder withFillType(FillType fillType) {
+            order.setFillType(fillType);
+            return this;
+        }
+
+        @Override
         public SpecificOrder getOrder() {
             return order;
         }

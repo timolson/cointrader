@@ -19,6 +19,7 @@ import javax.persistence.OrderBy;
 import javax.persistence.Transient;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.PositionType;
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.module.Context;
@@ -80,7 +81,7 @@ public class Portfolio extends EntityBase {
     //  fetch = FetchType.EAGER,
 
     @Nullable
-    @OneToMany
+    @OneToMany(fetch = FetchType.EAGER)
     // (mappedBy = "portfolio")
     @OrderBy
     //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
@@ -785,168 +786,173 @@ public class Portfolio extends EntityBase {
                                 while (itOp.hasNext() && pos.hasFills()) {
                                     //open fill
                                     Fill openPosition = itOp.next();
-                                    if (Math.abs(p.getOpenVolumeCount()) > 0) {
+                                    if (openPosition.getPositionEffect() == null || p.getPositionEffect() == null
+                                            || (openPosition.getPositionEffect() == PositionEffect.OPEN && p.getPositionEffect() == PositionEffect.CLOSE)
+                                            || (openPosition.getPositionEffect() == PositionEffect.CLOSE && p.getPositionEffect() == PositionEffect.OPEN)) {
+                                        if (Math.abs(p.getOpenVolumeCount()) > 0) {
 
-                                        if ((Long.signum(openPosition.getOpenVolumeCount()) + Long.signum(p.getOpenVolumeCount())) != 0) {
-                                            if (Math.abs(p.getOpenVolumeCount()) == 0 || Math.abs(openPosition.getOpenVolumeCount()) == 0) {
-                                                // openingListingPositions.(openPosition);
+                                            if ((Long.signum(openPosition.getOpenVolumeCount()) + Long.signum(p.getOpenVolumeCount())) != 0) {
+                                                if (Math.abs(p.getOpenVolumeCount()) == 0 || Math.abs(openPosition.getOpenVolumeCount()) == 0) {
+                                                    // openingListingPositions.(openPosition);
+                                                    // itOp.remove();
+                                                    openPos.removeFill(openPosition);
+
+                                                    openPosition.persit();
+                                                }
+                                                if (!openPos.hasFills())
+                                                    itOlp.remove();
+                                                //openingListingPositions.remove(openPos);
+
                                                 // itOp.remove();
-                                                openPos.removeFill(openPosition);
-                                                openPosition.persit();
+                                                //  openPos.removeFill(openPosition);
+
+                                                //  if (Math.abs(openPosition.getOpenVolumeCount()) == 0)
+                                                //     openPos.removeFill(openPosition);
+                                                //  openingListingPositions.remove(openPosition);
+                                                //        PersistUtil.merge(openPos);
+
+                                                //  openingListingPositions.remove(openPos);
+                                                break;
+
                                             }
-                                            if (!openPos.hasFills())
-                                                itOlp.remove();
-                                            //openingListingPositions.remove(openPos);
-
-                                            // itOp.remove();
-                                            //  openPos.removeFill(openPosition);
-
-                                            //  if (Math.abs(openPosition.getOpenVolumeCount()) == 0)
-                                            //     openPos.removeFill(openPosition);
-                                            //  openingListingPositions.remove(openPosition);
-                                            //        PersistUtil.merge(openPos);
-
-                                            //  openingListingPositions.remove(openPos);
-                                            break;
-
                                         }
-                                    }
-                                    //Math signum();
+                                        //Math signum();
 
-                                    entryPrice = p.getPrice();
-                                    exitPrice = openPosition.getPrice();
-                                    if (p.getMarket().getTradedCurrency() == p.getMarket().getBase()) {
-                                        // need to invert and revrese the prices if the traded ccy is not the quote ccy
-                                        entryPrice = openPosition.getPrice().invert();
-                                        exitPrice = p.getPrice().invert();
+                                        entryPrice = p.getPrice();
+                                        exitPrice = openPosition.getPrice();
+                                        if (p.getMarket().getTradedCurrency() == p.getMarket().getBase()) {
+                                            // need to invert and revrese the prices if the traded ccy is not the quote ccy
+                                            entryPrice = openPosition.getPrice().invert();
+                                            exitPrice = p.getPrice().invert();
 
-                                        //shortExitPrice = position.getShortAvgPrice().invert();
-                                        //longEntryPrice = p.getLongAvgPrice().invert();
-                                        //longExitPrice = position.getLongAvgPrice().invert();
-                                        //shortEntryPrice = p.getShortAvgPrice().invert();
+                                            //shortExitPrice = position.getShortAvgPrice().invert();
+                                            //longEntryPrice = p.getLongAvgPrice().invert();
+                                            //longExitPrice = position.getLongAvgPrice().invert();
+                                            //shortEntryPrice = p.getShortAvgPrice().invert();
 
-                                    } else if (p.getMarket().getTradedCurrency() != p.getMarket().getQuote()) {
-                                        throw new NotImplementedException("Listings traded in neither base or quote currency are not supported");
-                                    }
+                                        } else if (p.getMarket().getTradedCurrency() != p.getMarket().getQuote()) {
+                                            throw new NotImplementedException("Listings traded in neither base or quote currency are not supported");
+                                        }
 
-                                    // need to calcuate teh volume here
-                                    // we have opposite postions, so if I am long, 
-                                    // tests
-                                    // long - postions =10, net =-5 -> neet ot take 5 max(), postion =10, net =-10 net to take 10 (max), psotis =10, net =-20 net to take  (Min)10
-                                    // short postion =-10, net =5 neet to take 5, Max) postions = -10, net =10 need to take 10, postion =-10, net =20 net to take  min 10
+                                        // need to calcuate teh volume here
+                                        // we have opposite postions, so if I am long, 
+                                        // tests
+                                        // long - postions =10, net =-5 -> neet ot take 5 max(), postion =10, net =-10 net to take 10 (max), psotis =10, net =-20 net to take  (Min)10
+                                        // short postion =-10, net =5 neet to take 5, Max) postions = -10, net =10 need to take 10, postion =-10, net =20 net to take  min 10
 
-                                    // need to srt out closing postions here
-                                    // as we use negative numbers not long ans short numbers
+                                        // need to srt out closing postions here
+                                        // as we use negative numbers not long ans short numbers
 
-                                    //	10,-5 () my volume is 5
-                                    //	5,-10 my voulme is 5
-                                    //	-10,5 my volume is -5
-                                    //	-5,10 my volume is -5
-                                    //	10,-10 my voulme is 10
+                                        //	10,-5 () my volume is 5
+                                        //	5,-10 my voulme is 5
+                                        //	-10,5 my volume is -5
+                                        //	-5,10 my volume is -5
+                                        //	10,-10 my voulme is 10
 
-                                    //Math.abs(a)
+                                        //Math.abs(a)
 
-                                    closingVolumeCount = (openingTransactionType.equals(TransactionType.SELL)) ? (Math.min(
-                                            Math.abs(openPosition.getOpenVolumeCount()), Math.abs(p.getOpenVolumeCount())))
-                                            * -1 : (Math.min(Math.abs(openPosition.getOpenVolumeCount()), Math.abs(p.getOpenVolumeCount())));
-                                    // need to think hwere as one if negative and one is postive, nwee to work out what is the quanity to update on currrnet and the passed position
-                                    //when p=43 and open postion =-42
-                                    if (Math.abs(p.getOpenVolumeCount()) >= Math.abs(openPosition.getOpenVolumeCount())) {
-                                        long updatedVolumeCount = p.getOpenVolumeCount() + closingVolumeCount;
-                                        //updatedVolumeCount = (p.isShort()) ? updatedVolumeCount * -1 : updatedVolumeCount;
-                                        p.setOpenVolumeCount(updatedVolumeCount);
-
-                                        // pos.Merge();
-                                        if (Math.abs(updatedVolumeCount) == 0) {
-                                            //itPos.remove();
-                                            //     itP.remove();
-                                            pos.removeFill(p);
+                                        closingVolumeCount = (openingTransactionType.equals(TransactionType.SELL)) ? (Math.min(
+                                                Math.abs(openPosition.getOpenVolumeCount()), Math.abs(p.getOpenVolumeCount())))
+                                                * -1 : (Math.min(Math.abs(openPosition.getOpenVolumeCount()), Math.abs(p.getOpenVolumeCount())));
+                                        // need to think hwere as one if negative and one is postive, nwee to work out what is the quanity to update on currrnet and the passed position
+                                        //when p=43 and open postion =-42
+                                        if (Math.abs(p.getOpenVolumeCount()) >= Math.abs(openPosition.getOpenVolumeCount())) {
+                                            long updatedVolumeCount = p.getOpenVolumeCount() + closingVolumeCount;
+                                            //updatedVolumeCount = (p.isShort()) ? updatedVolumeCount * -1 : updatedVolumeCount;
+                                            p.setOpenVolumeCount(updatedVolumeCount);
                                             p.persit();
-                                            //pos.Merge();
-                                            if (!pos.hasFills())
-                                                itPos.remove();
-                                            //listingPositions.remove(pos);
+                                            // pos.Merge();
+                                            if (Math.abs(updatedVolumeCount) == 0) {
+                                                //itPos.remove();
+                                                //     itP.remove();
+                                                pos.removeFill(p);
+                                                p.persit();
+                                                //pos.Merge();
+                                                if (!pos.hasFills())
+                                                    itPos.remove();
+                                                //listingPositions.remove(pos);
 
-                                            //  itP.remove();
-                                            //            PersistUtil.merge(pos);
+                                                //  itP.remove();
+                                                //            PersistUtil.merge(pos);
 
-                                            //listingPositions.remove(pos);
-                                        }
-                                        //    PersistUtil.merge(p);
-                                        // listingPositions.remove(p);
-                                        //  itOp.remove();
-                                        openPosition.setOpenVolumeCount(0);
-                                        //  PersistUtil.merge(openPosition);
-                                        //openPos.Merge();
-                                        //itOp.remove();
-                                        //
+                                                //listingPositions.remove(pos);
+                                            }
+                                            //    PersistUtil.merge(p);
+                                            // listingPositions.remove(p);
+                                            //  itOp.remove();
+                                            openPosition.setOpenVolumeCount(0);
+                                            //  PersistUtil.merge(openPosition);
+                                            //openPos.Merge();
+                                            //itOp.remove();
+                                            //
 
-                                        openPos.removeFill(openPosition);
-                                        openPosition.persit();
-
-                                        //openPos.Merge();
-                                        //openPos.removeFill(openPosition)
-
-                                        //    PersistUtil.merge(openPos);
-                                        if (!openPos.hasFills())
-                                            itOlp.remove();
-                                        // openingListingPositions.remove(openPos);
-                                        //  itOlp.remove();
-                                        //
-                                        //  openingListingPositions.remove(openPos);
-
-                                        //openingListingPositions.remove(openPosition);
-
-                                    } else {
-                                        long updatedVolumeCount = openPosition.getOpenVolumeCount() + p.getOpenVolumeCount();
-                                        openPosition.setOpenVolumeCount(updatedVolumeCount);
-
-                                        // openPos.Merge();
-                                        if (Math.abs(updatedVolumeCount) == 0) {
-                                            // itOp.remove();
                                             openPos.removeFill(openPosition);
                                             openPosition.persit();
+
+                                            //openPos.Merge();
+                                            //openPos.removeFill(openPosition)
+
+                                            //    PersistUtil.merge(openPos);
                                             if (!openPos.hasFills())
                                                 itOlp.remove();
                                             // openingListingPositions.remove(openPos);
+                                            //  itOlp.remove();
                                             //
-                                            //
-
-                                            //  openPos.removeFill(openPosition);
-                                            //    PersistUtil.merge(openPosition);
-
                                             //  openingListingPositions.remove(openPos);
-                                            //openPos.Merge();
+
+                                            //openingListingPositions.remove(openPosition);
+
+                                        } else {
+                                            long updatedVolumeCount = openPosition.getOpenVolumeCount() + p.getOpenVolumeCount();
+                                            openPosition.setOpenVolumeCount(updatedVolumeCount);
+                                            openPosition.persit();
+                                            // openPos.Merge();
+                                            if (Math.abs(updatedVolumeCount) == 0) {
+                                                // itOp.remove();
+                                                openPos.removeFill(openPosition);
+                                                openPosition.persit();
+                                                if (!openPos.hasFills())
+                                                    itOlp.remove();
+                                                // openingListingPositions.remove(openPos);
+                                                //
+                                                //
+
+                                                //  openPos.removeFill(openPosition);
+                                                //    PersistUtil.merge(openPosition);
+
+                                                //  openingListingPositions.remove(openPos);
+                                                //openPos.Merge();
+                                            }
+                                            // PersistUtil.merge(openPosition);
+
+                                            //  openingListingPositions.remove(openPosition);
+                                            //  itP.remove();
+                                            p.setOpenVolumeCount(0);
+
+                                            pos.removeFill(p);
+                                            p.persit();
+                                            //   PersistUtil.merge(p);
+                                            if (!pos.hasFills())
+                                                itPos.remove();
+                                            // listingPositions.remove(pos);
+                                            // pos.Merge();
+                                            //itPos.remove();
+                                            // if (itP != null)
+                                            //if (itPos.hasNext())
+                                            //   
+
+                                            // pos.Merge();
+
+                                            //pos.removeFill(p)  itP.remove();
+                                            // pos.removeFill(p);
+                                            //           PersistUtil.merge(openPosition);
+
+                                            // itPos.remove();
+                                            //listingPositions.remove(pos);
+
+                                            // listingPositions.remove(p);
+
                                         }
-                                        // PersistUtil.merge(openPosition);
-
-                                        //  openingListingPositions.remove(openPosition);
-                                        //  itP.remove();
-                                        p.setOpenVolumeCount(0);
-
-                                        pos.removeFill(p);
-                                        p.persit();
-                                        //   PersistUtil.merge(p);
-                                        if (!pos.hasFills())
-                                            itPos.remove();
-                                        // listingPositions.remove(pos);
-                                        // pos.Merge();
-                                        //itPos.remove();
-                                        // if (itP != null)
-                                        //if (itPos.hasNext())
-                                        //   
-
-                                        // pos.Merge();
-
-                                        //pos.removeFill(p)  itP.remove();
-                                        // pos.removeFill(p);
-                                        //           PersistUtil.merge(openPosition);
-
-                                        // itPos.remove();
-                                        //listingPositions.remove(pos);
-
-                                        // listingPositions.remove(p);
-
                                     }
                                     DiscreteAmount volDiscrete = new DiscreteAmount(closingVolumeCount, p.getMarket().getListing().getVolumeBasis());
 

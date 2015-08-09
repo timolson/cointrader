@@ -165,7 +165,7 @@ public class BasicQuoteService implements QuoteService {
     }
 
     //@Priority(10)
-    @When("@Priority(5) select * from Book.std:lastevent()")
+    @When("@Priority(10) select * from Book")
     private void recordBook(Book b) {
         Market market = b.getMarket();
         handleMarket(market);

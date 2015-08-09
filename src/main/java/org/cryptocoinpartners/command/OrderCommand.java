@@ -11,6 +11,7 @@ import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderBuilder;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.service.OrderService;
+import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.util.Injector;
 
 import com.google.inject.Binder;
@@ -22,6 +23,8 @@ import com.google.inject.Provider;
  */
 @SuppressWarnings("UnusedDeclaration")
 public abstract class OrderCommand extends AntlrCommandBase {
+
+    private Portfolio portfolio;
 
     @Override
     public String getUsageHelp() {
@@ -39,10 +42,14 @@ public abstract class OrderCommand extends AntlrCommandBase {
 
     @Override
     public void run() {
+        //  PortfolioManager strategy = context.getInjector().getInstance(PortfolioManager.class);
+        for (Portfolio port : portfolioService.getPortfolios())
+            portfolio = port;
         if (market != null)
             placeSpecificOrder();
         else
             placeGeneralOrder();
+
     }
 
     protected void placeSpecificOrder() {
@@ -93,14 +100,6 @@ public abstract class OrderCommand extends AntlrCommandBase {
                 });
             }
         });
-    }
-
-    public Portfolio getPortfolio() {
-        return portfolio;
-    }
-
-    public void setPortfolio(Portfolio portfolio) {
-        this.portfolio = portfolio;
     }
 
     public BigDecimal getVolume() {
@@ -156,7 +155,10 @@ public abstract class OrderCommand extends AntlrCommandBase {
     @Inject
     OrderService orderService;
     @Inject
-    private Portfolio portfolio;
+    private PortfolioService portfolioService;
+
+    // @Inject
+    // private Portfolio portfolio;
     private BigDecimal volume;
     private Market market;
     private Listing listing;

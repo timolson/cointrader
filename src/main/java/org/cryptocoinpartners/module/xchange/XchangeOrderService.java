@@ -2,7 +2,6 @@ package org.cryptocoinpartners.module.xchange;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -24,6 +23,8 @@ import com.xeiam.xchange.dto.Order;
 import com.xeiam.xchange.dto.trade.LimitOrder;
 import com.xeiam.xchange.dto.trade.MarketOrder;
 import com.xeiam.xchange.dto.trade.OpenOrders;
+import com.xeiam.xchange.exceptions.ExchangeException;
+import com.xeiam.xchange.exceptions.NotAvailableFromExchangeException;
 import com.xeiam.xchange.exceptions.NotYetImplementedForExchangeException;
 import com.xeiam.xchange.service.polling.trade.PollingTradeService;
 
@@ -52,6 +53,7 @@ public class XchangeOrderService extends BaseOrderService {
             // todo put on a queue
             try {
                 specificOrder.setRemoteKey(tradeService.placeLimitOrder(limitOrder));
+                specificOrder.persit();
                 updateOrderState(specificOrder, OrderState.PLACED, false);
             } catch (IOException e) {
                 log.error("Threw a Execption, full stack trace follows:", e);
@@ -64,6 +66,7 @@ public class XchangeOrderService extends BaseOrderService {
             // todo put on a queue
             try {
                 specificOrder.setRemoteKey(tradeService.placeMarketOrder(marketOrder));
+                specificOrder.persit();
                 updateOrderState(specificOrder, OrderState.PLACED, false);
             } catch (IOException e) {
                 // todo retry until expiration or reject as invalid
@@ -79,10 +82,18 @@ public class XchangeOrderService extends BaseOrderService {
     @Override
     @Transient
     public Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio) {
-        com.xeiam.xchange.Exchange exchange = XchangeUtil.getExchangeForMarket(market.getExchange());
-        PollingTradeService tradeService = exchange.getPollingTradeService();
         Collection<SpecificOrder> pendingOrders = new ConcurrentLinkedQueue<SpecificOrder>();
+        com.xeiam.xchange.Exchange exchange;
+        try {
+            exchange = XchangeUtil.getExchangeForMarket(market.getExchange());
+        } catch (Error err) {
+            log.info("market:" + market + " not found");
+            return pendingOrders;
+        }
+        PollingTradeService tradeService = exchange.getPollingTradeService();
         SpecificOrder specificOrder;
+        boolean exists = false;
+        //TODO: need to check prompts to ensure they have the full OKCOIN_THISWEEK:BTC.USD.THISWEEK not just OKCOIN_THISWEEK:BTC.USD
         try {
             OpenOrders openOrders = tradeService.getOpenOrders();
             for (LimitOrder xchangeOrder : openOrders.getOpenOrders()) {
@@ -91,26 +102,22 @@ public class XchangeOrderService extends BaseOrderService {
                         specificOrder = (SpecificOrder) cointraderOrder;
                         if (xchangeOrder.getId().equals(specificOrder.getRemoteKey()) && specificOrder.getMarket().equals(market)) {
                             specificOrder.update(xchangeOrder);
+                            specificOrder.persit();
                             updateOrderState(specificOrder, OrderState.PLACED, false);
                             pendingOrders.add(specificOrder);
+                            exists = true;
                             break;
-                        } else {
-                            Date time = (xchangeOrder.getTimestamp() != null) ? xchangeOrder.getTimestamp() : new Date();
-                            specificOrder = new SpecificOrder(xchangeOrder, exchange, portfolio, time);
-                            updateOrderState(specificOrder, OrderState.PLACED, false);
-                            pendingOrders.add(specificOrder);
-                            break;
-
                         }
                     }
                 }
-                Date time = (xchangeOrder.getTimestamp() != null) ? xchangeOrder.getTimestamp() : new Date();
 
-                specificOrder = new SpecificOrder(xchangeOrder, exchange, portfolio, time);
-                updateOrderState(specificOrder, OrderState.PLACED, false);
-                pendingOrders.add(specificOrder);
-
-                log.debug("completed itteration of orders");
+                if (!exists) {
+                    Date time = (xchangeOrder.getTimestamp() != null) ? xchangeOrder.getTimestamp() : new Date();
+                    specificOrder = new SpecificOrder(xchangeOrder, exchange, portfolio, time);
+                    specificOrder.persit();
+                    updateOrderState(specificOrder, OrderState.PLACED, false);
+                    pendingOrders.add(specificOrder);
+                }
             }
 
         } catch (IOException e) {
@@ -137,7 +144,27 @@ public class XchangeOrderService extends BaseOrderService {
 
     @Override
     public void handleCancelSpecificOrder(SpecificOrder specificOrder) {
-        // TODO Auto-generated method stub
+        com.xeiam.xchange.Exchange exchange;
+        try {
+            exchange = XchangeUtil.getExchangeForMarket(specificOrder.getMarket().getExchange());
+        } catch (Error err) {
+            log.info("market:" + specificOrder.getMarket() + " not found");
+            return;
+        }
+        PollingTradeService tradeService = exchange.getPollingTradeService();
+
+        try {
+            tradeService.cancelOrder(specificOrder.getRemoteKey());
+        } catch (ExchangeException e) {
+            log.error("Unable to cancel order :" + specificOrder);
+        } catch (NotAvailableFromExchangeException e) {
+            log.error("Unable to cancel order :" + specificOrder);
+        } catch (NotYetImplementedForExchangeException e) {
+            log.error("Unable to cancel order :" + specificOrder);
+        } catch (IOException e) {
+            log.error("failed to cancel order " + specificOrder + " with execption:" + e);
+            e.printStackTrace();
+        }
 
     }
 
@@ -155,7 +182,12 @@ public class XchangeOrderService extends BaseOrderService {
 
     @Override
     public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio) {
-        return new ArrayList<>();
+        Collection<SpecificOrder> pendingOrders = new ConcurrentLinkedQueue<SpecificOrder>();
+
+        for (Market market : Market.findAll())
+            pendingOrders.addAll(getPendingOrders(market, portfolio));
+
+        return pendingOrders;
 
     }
 
@@ -176,6 +208,36 @@ public class XchangeOrderService extends BaseOrderService {
 
     @Override
     public Collection<SpecificOrder> getPendingOpenOrders(Portfolio portfolio) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Collection<SpecificOrder> getPendingCloseOrders(Portfolio portfolio) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public void handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void handleCancelAllShortClosingSpecificOrders(Portfolio portfolio, Market market) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public Collection<SpecificOrder> getPendingShortCloseOrders(Portfolio portfolio) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Collection<SpecificOrder> getPendingLongCloseOrders(Portfolio portfolio) {
         // TODO Auto-generated method stub
         return null;
     }

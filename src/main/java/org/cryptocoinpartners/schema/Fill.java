@@ -12,6 +12,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
+import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.util.FeesUtil;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.joda.time.Instant;
@@ -31,6 +32,7 @@ public class Fill extends RemoteEvent {
     private static Object lock = new Object();
     // private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
     private static final String SEPARATOR = ",";
+    private PositionEffect positionEffect;
 
     public Fill(SpecificOrder order, Instant time, Instant timeReceived, Market market, long priceCount, long volumeCount, String remoteKey) {
         super(time, timeReceived, remoteKey);
@@ -43,6 +45,7 @@ public class Fill extends RemoteEvent {
             this.priceCount = priceCount;
         this.portfolio = order.getPortfolio();
         this.stopAmountCount = (order.getStopAmount() != null) ? order.getStopAmount().getCount() : 0;
+        this.positionEffect = order.getPositionEffect();
         //  this.id = getId();
         this.version = getVersion();
 
@@ -61,6 +64,8 @@ public class Fill extends RemoteEvent {
         this.commission = commission;
         this.portfolio = order.getPortfolio();
         this.stopAmountCount = (order.getStopAmount() != null) ? order.getStopAmount().getCount() : 0;
+        this.positionEffect = order.getPositionEffect();
+
     }
 
     // public @ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE, CascadeType.REFRESH })
@@ -254,7 +259,7 @@ public class Fill extends RemoteEvent {
     public Amount getVolume() {
         if (volumeCount == 0)
             return null;
-        return new DiscreteAmount(volumeCount, market.getVolumeBasis());
+        return new DiscreteAmount(getVolumeCount(), market.getVolumeBasis());
     }
 
     public long getVolumeCount() {
@@ -297,13 +302,23 @@ public class Fill extends RemoteEvent {
         return getOrder().getFillType();
     }
 
+    public PositionEffect getPositionEffect() {
+
+        return positionEffect;
+
+    }
+
+    protected void setPositionEffect(PositionEffect positionEffect) {
+        this.positionEffect = positionEffect;
+    }
+
     @Override
     public String toString() {
         // + (order.getId() != null ? order.getId() : "")
         //   + (getFillType() != null ? getFillType() : "")
-        return "FillID" + (getId() != null ? getId() : "") + SEPARATOR + "OrderID=" + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "")
-                + SEPARATOR + "Type=" + SEPARATOR + "Market=" + (market != null ? market : "") + SEPARATOR + "Price=" + (getPrice() != null ? getPrice() : "")
-                + SEPARATOR + "Volume=" + (getVolume() != null ? getVolume() : "");
+        return "FillID" + (getId() != null ? getId() : "") + SEPARATOR + "OrderID=" + (getOrder() != null ? getOrder() : "") + SEPARATOR + "time="
+                + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Type=" + SEPARATOR + "Market=" + (market != null ? market : "")
+                + SEPARATOR + "Price=" + (getPrice() != null ? getPrice() : "") + SEPARATOR + "Volume=" + (getVolume() != null ? getVolume() : "");
     }
 
     // JPA

@@ -123,6 +123,12 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
         this.moduleName = moduleName;
     }
 
+    @Override
+    @Transient
+    public Portfolio getPortfolio() {
+        return portfolio;
+    }
+
     protected void setConfig(Map<String, String> config) {
         this.config = config;
     }

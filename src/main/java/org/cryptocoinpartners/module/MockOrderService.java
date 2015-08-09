@@ -14,6 +14,7 @@ import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.exceptions.OrderNotFoundException;
 import org.cryptocoinpartners.schema.Book;
+import org.cryptocoinpartners.schema.Event;
 import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Offer;
@@ -21,6 +22,7 @@ import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderUpdate;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
+import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.service.QuoteService;
 
 /**
@@ -45,8 +47,45 @@ public class MockOrderService extends BaseOrderService {
     }
 
     @SuppressWarnings("ConstantConditions")
-    @When("@Priority(9) select * from Book")
+    @When("@Priority(7) select * from Book")
     private void handleBook(Book b) {
+        updateBook(b);
+
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    ///  @When("@Priority(8) select * from Trade")
+    private void handleTrade(Trade t) {
+        updateBook(t);
+    }
+
+    private void updateBook(Event event) {
+        Market market = null;
+        List<Offer> asks = new ArrayList<>();
+        Book b = null;
+        Trade t = null;
+        List<Offer> bids = new ArrayList<>();
+        if (event instanceof Book) {
+            b = (Book) event;
+            market = b.getMarket();
+            asks = b.getAsks();
+            bids = b.getBids();
+        }
+
+        if (event instanceof Trade) {
+            t = (Trade) event;
+            market = t.getMarket();
+            //if Trade is a sell then it must have big the ask
+            if (t.getVolume().isNegative()) {
+                Offer bestBid = new Offer(market, t.getTime(), t.getTimeReceived(), t.getPrice().getCount(), t.getVolume().negate().getCount());
+                asks.add(bestBid);
+            } else {
+                Offer bestAsk = new Offer(market, t.getTime(), t.getTimeReceived(), t.getPrice().getCount(), t.getVolume().negate().getCount());
+                bids.add(bestAsk);
+
+            }
+        }
+
         List<Fill> fills = new ArrayList<Fill>();
 
         // todo multiple Orders may be filled with the same Offer.  We should deplete the Offers as we fill
@@ -59,64 +98,74 @@ public class MockOrderService extends BaseOrderService {
                 break;
             }
 
-            if (order.getMarket().equals(b.getMarket())) {
+            if (order.getMarket().equals(market)) {
                 // buy order, so hit ask
                 if (order.isBid()) {
                     long remainingVolume = order.getUnfilledVolumeCount();
-                    for (Offer ask : b.getAsks()) {
+                    for (Offer ask : asks) {
                         if ((order.getLimitPrice() != null && order.getLimitPrice().getCount() < ask.getPriceCount()) || ask == null)
                             //  || ask.getVolumeCount() == 0 || ask.getPriceCount() == 0)
                             break;
                         //  synchronized (lock) {
-                        long fillVolume = Math.min(Math.abs(ask.getVolumeCount()), remainingVolume);
-                        if (fillVolume != 0) {
-                            remainingVolume -= fillVolume;
-                            if (remainingVolume == 0)
-                                pendingOrders.remove(order);
-                            Fill fill = new Fill(order, ask.getTime(), ask.getTime(), ask.getMarket(), ask.getPriceCount(), fillVolume, Long.toString(ask
-                                    .getTime().getMillis()));
-                            fill.getOrder().addFill(fill);
-                            context.route(fill);
-                            logFill(order, ask, fill);
-
-                            // i--;
-                            // --removeOrder(order);
-
-                            //  }
-                            //   break;
+                        if (t != null) {
+                            log.debug("filled by a trade");
 
                         }
+                        long fillVolume = Math.min(Math.abs(ask.getVolumeCount()), Math.abs(remainingVolume));
+                        Fill fill = new Fill(order, ask.getTime(), ask.getTime(), ask.getMarket(), ask.getPriceCount(), fillVolume, Long.toString(ask.getTime()
+                                .getMillis()));
+                        fills.add(fill);
+                        remainingVolume -= fillVolume;
+                        logFill(order, ask, fill);
+                        if (remainingVolume == 0) {
+                            pendingOrders.remove(order);
+                            break;
+                        }
                     }
+
                 }
+
+                // i--;
+                // --removeOrder(order);
+
+                //  }
+                //   break;
+
                 // if sell order, fill if limint<=Bid
                 if (order.isAsk()) {
                     long remainingVolume = order.getUnfilledVolumeCount(); // this will be negative
-                    for (Offer bid : b.getBids()) {
+                    for (Offer bid : bids) {
                         if ((order.getLimitPrice() != null && order.getLimitPrice().getCount() > bid.getPriceCount()) || bid == null)
 
                             //|| bid.getVolumeCount() == 0 || bid.getPriceCount() == 0)
 
                             break;
                         // synchronized (lock) {
-                        long fillVolume = -Math.min(bid.getVolumeCount(), Math.abs(remainingVolume));
-                        if (fillVolume != 0) {
-                            remainingVolume -= fillVolume;
+                        if (t != null) {
+                            log.debug("filled by a trade");
 
-                            if (remainingVolume == 0)
-                                pendingOrders.remove(order);
-                            Fill fill = new Fill(order, bid.getTime(), bid.getTime(), bid.getMarket(), bid.getPriceCount(), fillVolume, Long.toString(bid
-                                    .getTime().getMillis()));
-                            fill.getOrder().addFill(fill);
-                            context.route(fill);
+                        }
+                        long fillVolume = -Math.min(Math.abs(bid.getVolumeCount()), Math.abs(remainingVolume));
+                        Fill fill = new Fill(order, bid.getTime(), bid.getTime(), bid.getMarket(), bid.getPriceCount(), fillVolume, Long.toString(bid.getTime()
+                                .getMillis()));
+                        fills.add(fill);
+                        remainingVolume -= fillVolume;
+                        logFill(order, bid, fill);
+                        if (remainingVolume == 0) {
+                            pendingOrders.remove(order);
+                            break;
+                        }
 
-                            logFill(order, bid, fill);
+                    } //  }
+                      // break;
 
-                        } //  }
-                          // break;
-
-                    }
                 }
             }
+        }
+
+        for (Fill fill : fills) {
+            fill.getOrder().addFill(fill);
+            context.route(fill);
         }
 
     }
@@ -135,7 +184,7 @@ public class MockOrderService extends BaseOrderService {
 
     }
 
-    @When("@Priority(8) select * from OrderUpdate where state.open=false and NOT (OrderUpdate.state = OrderState.CANCELLED)")
+    @When("@Priority(7) select * from OrderUpdate where state.open=false and NOT (OrderUpdate.state = OrderState.CANCELLED)")
     private void completeOrder(OrderUpdate update) {
         OrderState orderState = update.getState();
         Order order = update.getOrder();
@@ -190,6 +239,20 @@ public class MockOrderService extends BaseOrderService {
     }
 
     @Override
+    public Collection<SpecificOrder> getPendingCloseOrders(Portfolio portfolio) {
+        Collection<SpecificOrder> portfolioPendingOrders = new ConcurrentLinkedQueue<>();
+
+        for (SpecificOrder pendingOrder : pendingOrders) {
+            if (pendingOrder.getPortfolio().equals(portfolio) && pendingOrder.getPositionEffect().equals(PositionEffect.CLOSE)) {
+
+                portfolioPendingOrders.add(pendingOrder);
+            }
+
+        }
+        return portfolioPendingOrders;
+    }
+
+    @Override
     public Collection<SpecificOrder> getPendingOrders() {
 
         return pendingOrders;
@@ -211,6 +274,7 @@ public class MockOrderService extends BaseOrderService {
                 orderFound = true;
                 pendingOrders.remove(cancelledOrder);
                 updateOrderState(specificOrder, OrderState.CANCELLED, false);
+                log.info("Cancelled Specific Order:" + specificOrder);
                 break;
 
             }
@@ -225,6 +289,38 @@ public class MockOrderService extends BaseOrderService {
     // }
 
     @Override
+    public void handleCancelAllShortClosingSpecificOrders(Portfolio portfolio, Market market) {
+        Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
+        //   synchronized (lock) {
+        for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
+            SpecificOrder specificOrder = it.next();
+            if (specificOrder.getMarket().equals(market) && specificOrder.getPositionEffect().equals(PositionEffect.CLOSE) && specificOrder.isBid())
+                //cancelledOrders.add(specificOrder);
+                try {
+                    handleCancelSpecificOrder(specificOrder);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+        }
+    }
+
+    @Override
+    public void handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market) {
+        Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
+        //   synchronized (lock) {
+        for (Iterator<SpecificOrder> it = pendingOrders.iterator(); it.hasNext();) {
+            SpecificOrder specificOrder = it.next();
+            if (specificOrder.getMarket().equals(market) && specificOrder.getPositionEffect().equals(PositionEffect.CLOSE) && specificOrder.isAsk())
+                //cancelledOrders.add(specificOrder);
+                try {
+                    handleCancelSpecificOrder(specificOrder);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+        }
+    }
+
+    @Override
     public void handleCancelAllClosingSpecificOrders(Portfolio portfolio, Market market) {
         Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
         //   synchronized (lock) {
@@ -237,16 +333,7 @@ public class MockOrderService extends BaseOrderService {
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
-
         }
-
-        //          for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
-        //              SpecificOrder specificOrder = it.next();
-        //
-        //              
-        //          }
-        //  }
-
     }
 
     @Override
@@ -264,15 +351,6 @@ public class MockOrderService extends BaseOrderService {
                 }
 
         }
-
-        // Order order = new GeneralOrder()
-        //updateOrderState(null, OrderState.CANCELLED, false);
-        //          for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
-        //              SpecificOrder specificOrder = it.next();
-        //
-        //              
-        //          }
-        //  }
 
     }
 
@@ -309,6 +387,34 @@ public class MockOrderService extends BaseOrderService {
         for (SpecificOrder pendingOrder : pendingOrders) {
             if (pendingOrder.getPortfolio().equals(portfolio)) {
                 //&& pendingOrder.getMarket().equals(market)) {
+
+                portfolioPendingOrders.add(pendingOrder);
+            }
+
+        }
+        return portfolioPendingOrders;
+    }
+
+    @Override
+    public Collection<SpecificOrder> getPendingLongCloseOrders(Portfolio portfolio) {
+        Collection<SpecificOrder> portfolioPendingOrders = new ConcurrentLinkedQueue<>();
+
+        for (SpecificOrder pendingOrder : pendingOrders) {
+            if (pendingOrder.getPortfolio().equals(portfolio) && pendingOrder.getPositionEffect().equals(PositionEffect.CLOSE) && pendingOrder.isAsk()) {
+
+                portfolioPendingOrders.add(pendingOrder);
+            }
+
+        }
+        return portfolioPendingOrders;
+    }
+
+    @Override
+    public Collection<SpecificOrder> getPendingShortCloseOrders(Portfolio portfolio) {
+        Collection<SpecificOrder> portfolioPendingOrders = new ConcurrentLinkedQueue<>();
+
+        for (SpecificOrder pendingOrder : pendingOrders) {
+            if (pendingOrder.getPortfolio().equals(portfolio) && pendingOrder.getPositionEffect().equals(PositionEffect.CLOSE) && pendingOrder.isBid()) {
 
                 portfolioPendingOrders.add(pendingOrder);
             }

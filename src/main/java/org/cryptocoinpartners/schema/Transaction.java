@@ -94,9 +94,6 @@ public class Transaction extends Event {
         }
         this.time = creationTime;
         this.asset = fill.getMarket().getTradedCurrency();
-        this.assetAmount = this.asset.equals(fill.getMarket().getQuote()) ? fill.getVolume().times(fill.getPrice(), Remainder.ROUND_EVEN).negate() : fill
-                .getVolume().negate();
-        this.amount = fill.getVolume();
         this.currency = fill.getMarket().getBase();
         fill.addTransaction(this);
         this.setPositionEffect(fill.getOrder().getPositionEffect());
@@ -109,6 +106,10 @@ public class Transaction extends Event {
         this.setCommission(fill.getCommission());
         this.setMargin(fill.getMargin());
         this.setCommissionCurrency(fill.getMarket().getTradedCurrency());
+        this.assetAmount = this.getCommission().plus(this.getMargin());
+
+        this.amount = this.getCommission().plus(this.getMargin());
+
         this.setMarket(fill.getMarket());
         this.setExchange(fill.getMarket().getExchange());
         this.fill = fill;
@@ -125,10 +126,6 @@ public class Transaction extends Event {
         this.time = creationTime;
         this.asset = order.getMarket().getTradedCurrency();
 
-        //if traded=quote, then do this, if traded== base then just volume
-        this.assetAmount = this.asset.equals(order.getMarket().getQuote()) ? order.getVolume().times(order.getLimitPrice(), Remainder.ROUND_EVEN).negate()
-                : order.getVolume().negate();
-        this.amount = order.getVolume();
         this.currency = order.getMarket().getBase();
         this.setPrice(order.getLimitPrice());
         this.setType(transactionType);
@@ -137,6 +134,9 @@ public class Transaction extends Event {
         this.setCommission(order.getForcastedCommission());
         this.setMargin(order.getForcastedMargin());
         this.setCommissionCurrency(order.getMarket().getTradedCurrency());
+        //if traded=quote, then do this, if traded== base then just volume
+        this.amount = this.getCommission().plus(this.getMargin());
+        this.assetAmount = this.getCommission().plus(this.getMargin());
         this.setMarket(order.getMarket());
         this.setPortfolioName(portfolio);
         // this.time = order.getTime();
@@ -338,7 +338,7 @@ public class Transaction extends Event {
     public String toString() {
 
         return "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Portfolio=" + getPortfolio() + SEPARATOR + "Exchange="
-                + getExchange() + SEPARATOR + "type=" + getType() + SEPARATOR + "volume=" + getAmount()
+                + getExchange() + SEPARATOR + "type=" + getType() + SEPARATOR + "amount=" + getAssetAmount()
                 + (getAsset() != null ? (SEPARATOR + "currency=" + getAsset()) : "") + SEPARATOR + "price="
                 + (getPrice() != DecimalAmount.ZERO ? getPrice() : "") + (getCurrency() != null ? (SEPARATOR + "currency=" + getCurrency()) : "");
     }

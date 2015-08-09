@@ -89,7 +89,7 @@ public class Position extends Holding {
     @Transient
     public boolean isOpen() {
 
-        return (getVolume() != null && !getVolume().isZero());
+        return ((getLongVolume() != null && !getLongVolume().isZero()) || (getShortVolume() != null && !getShortVolume().isZero()));
     }
 
     @Transient
@@ -107,7 +107,7 @@ public class Position extends Holding {
     @Transient
     public boolean isFlat() {
         //if (getVolume()!=null)
-        return (getVolume() == null || getVolume().isZero());
+        return ((getLongVolume() == null && getLongVolume() == null) || (getLongVolume().isZero() && getShortVolume().isZero()));
     }
 
     @ManyToOne(optional = false)
