@@ -782,6 +782,14 @@ public class PersistUtil {
         properties.put("hibernate.c3p0.idleConnectionTestPeriod", "100");
 
         properties.put("javax.persistence.sharedCache.mode", "ENABLE_SELECTIVE");
+        service = Executors.newFixedThreadPool(2);
+
+        //insertRunnable insertRunnableThread = new insertRunnable();
+        // persitanceTask = 
+
+        service.execute(new insertRunnable());
+        service.execute(new mergeRunnable());
+
         try {
             PersistUtilHelper emh = new PersistUtilHelper(properties);
             ensureSingletonsExist();
@@ -793,17 +801,8 @@ public class PersistUtil {
             }
             throw new Error("Could not initialize db", t);
         }
-
         //  if (!shutdown && running && persitanceTask == null && !running) {
         //EntityManager em = createEntityManager();
-
-        service = Executors.newFixedThreadPool(2);
-
-        //insertRunnable insertRunnableThread = new insertRunnable();
-        // persitanceTask = 
-
-        service.execute(new insertRunnable());
-        service.execute(new mergeRunnable());
 
         // .submit(new insertRunnable());
         running = true;
