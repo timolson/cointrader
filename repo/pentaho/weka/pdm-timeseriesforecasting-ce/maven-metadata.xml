@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>pentaho.weka</groupId>
+  <artifactId>pdm-timeseriesforecasting-ce</artifactId>
+  <versioning>
+    <release>1.0</release>
+    <versions>
+      <version>TRUNK-SNAPSHOT</version>
+      <version>1.0</version>
+    </versions>
+    <lastUpdated>20150723182751</lastUpdated>
+  </versioning>
+</metadata>
