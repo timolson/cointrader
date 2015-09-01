@@ -149,7 +149,7 @@ public abstract class Order extends Event {
 
     public abstract void setMarket(Market market);
 
-    protected void setPositionEffect(PositionEffect positionEffect) {
+    public void setPositionEffect(PositionEffect positionEffect) {
         this.positionEffect = positionEffect;
     }
 
@@ -161,7 +161,7 @@ public abstract class Order extends Event {
         this.parentOrder = order;
     }
 
-    protected void setParentFill(Fill fill) {
+    public void setParentFill(Fill fill) {
         this.parentFill = fill;
     }
 

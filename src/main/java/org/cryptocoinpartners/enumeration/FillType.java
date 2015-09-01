@@ -35,8 +35,10 @@ public enum FillType {
     STOP_LOSS("STOP_LOSS"),
     /** The other order in the pair will be cancelled when the opposit order if filled or partially filled */
     ONE_CANCELS_OTHER("ONE_CANCELS_OTHER"),
-    /** The other order in the pair will be cancelled when the opposit order if filled or partially filled */
-    MARKET("MARKET");
+    /** The other order in the pair will be cancelled when the opposit order is filled or partially filled */
+    MARKET("MARKET"),
+    /** The other order in the pair will be cancelled when the opposit order is fully filled or partially filled */
+    COMPLETED_CANCELS_OTHER("COMPLETED_CANCELS_OTHER");
 
     private final String enumValue;
 
@@ -133,6 +135,7 @@ public enum FillType {
             FillType.values.put(STOP_LOSS.enumValue, STOP_LOSS);
             FillType.values.put(ONE_CANCELS_OTHER.enumValue, ONE_CANCELS_OTHER);
             FillType.values.put(MARKET.enumValue, MARKET);
+            FillType.values.put(COMPLETED_CANCELS_OTHER.enumValue, COMPLETED_CANCELS_OTHER);
 
         }
         synchronized (FillType.valueList) {
@@ -145,6 +148,7 @@ public enum FillType {
             FillType.valueList.add(STOP_LOSS);
             FillType.valueList.add(ONE_CANCELS_OTHER);
             FillType.valueList.add(MARKET);
+            FillType.valueList.add(COMPLETED_CANCELS_OTHER);
             FillType.valueList = Collections.unmodifiableList(valueList);
         }
         synchronized (FillType.literals) {
@@ -157,6 +161,7 @@ public enum FillType {
             FillType.literals.add(STOP_LOSS.enumValue);
             FillType.literals.add(ONE_CANCELS_OTHER.enumValue);
             FillType.literals.add(MARKET.enumValue);
+            FillType.literals.add(COMPLETED_CANCELS_OTHER.enumValue);
             FillType.literals = Collections.unmodifiableList(literals);
         }
         synchronized (FillType.names) {
@@ -169,6 +174,7 @@ public enum FillType {
             FillType.names.add("STOP_LOSS");
             FillType.names.add("ONE_CANCELS_OTHER");
             FillType.names.add("MARKET");
+            FillType.names.add("COMPLETED_CANCELS_OTHER");
             FillType.names = Collections.unmodifiableList(names);
         }
     }

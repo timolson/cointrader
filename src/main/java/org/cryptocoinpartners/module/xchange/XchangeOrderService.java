@@ -9,8 +9,11 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.inject.Singleton;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.OrderState;
+import org.cryptocoinpartners.exceptions.OrderNotFoundException;
 import org.cryptocoinpartners.module.BaseOrderService;
+import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
@@ -219,27 +222,33 @@ public class XchangeOrderService extends BaseOrderService {
     }
 
     @Override
-    public void handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market) {
+    public void handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market, ExecutionInstruction execInst) {
         // TODO Auto-generated method stub
 
     }
 
     @Override
-    public void handleCancelAllShortClosingSpecificOrders(Portfolio portfolio, Market market) {
+    public void handleCancelAllShortClosingSpecificOrders(Portfolio portfolio, Market market, ExecutionInstruction execInst) {
         // TODO Auto-generated method stub
 
     }
 
     @Override
-    public Collection<SpecificOrder> getPendingShortCloseOrders(Portfolio portfolio) {
+    public Collection<SpecificOrder> getPendingShortCloseOrders(Portfolio portfolio, ExecutionInstruction execInst) {
         // TODO Auto-generated method stub
         return null;
     }
 
     @Override
-    public Collection<SpecificOrder> getPendingLongCloseOrders(Portfolio portfolio) {
+    public Collection<SpecificOrder> getPendingLongCloseOrders(Portfolio portfolio, ExecutionInstruction execInst) {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public void handleCancelSpecificOrderByParentFill(Fill parentFill) throws OrderNotFoundException {
+        // TODO Auto-generated method stub
+
     }
 
 }

@@ -2,8 +2,11 @@ package org.cryptocoinpartners.service;
 
 import java.util.Collection;
 
+import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.OrderState;
+import org.cryptocoinpartners.exceptions.OrderNotFoundException;
 import org.cryptocoinpartners.schema.Amount;
+import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.GeneralOrder;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Order;
@@ -22,9 +25,9 @@ public interface OrderService {
 
     public Collection<SpecificOrder> getPendingCloseOrders(Portfolio portfolio);
 
-    public Collection<SpecificOrder> getPendingShortCloseOrders(Portfolio portfolio);
+    public Collection<SpecificOrder> getPendingShortCloseOrders(Portfolio portfolio, ExecutionInstruction execInst);
 
-    public Collection<SpecificOrder> getPendingLongCloseOrders(Portfolio portfolio);
+    public Collection<SpecificOrder> getPendingLongCloseOrders(Portfolio portfolio, ExecutionInstruction execInst);
 
     public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio);
 
@@ -79,9 +82,9 @@ public interface OrderService {
 
     void handleCancelAllClosingSpecificOrders(Portfolio portfolio, Market market);
 
-    void handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market);
+    void handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market, ExecutionInstruction execInst);
 
-    void handleCancelAllShortClosingSpecificOrders(Portfolio portfolio, Market market);
+    void handleCancelAllShortClosingSpecificOrders(Portfolio portfolio, Market market, ExecutionInstruction execInst);
 
     Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio);
 
@@ -90,5 +93,9 @@ public interface OrderService {
     boolean getTradingEnabled();
 
     Collection<SpecificOrder> getPendingOpenOrders(Market market, Portfolio portfolio);
+
+    Order getPendingTriggerOrder(Order order);
+
+    void handleCancelSpecificOrderByParentFill(Fill parentFill) throws OrderNotFoundException;
 
 }

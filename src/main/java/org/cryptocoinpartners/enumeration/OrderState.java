@@ -37,4 +37,40 @@ public enum OrderState {
         return this == OrderState.CANCELLED;
     }
 
+    public boolean isNew() {
+        return this == OrderState.NEW;
+    }
+
+    public boolean isTrigger() {
+        return this == OrderState.TRIGGER;
+    }
+
+    public boolean isRouted() {
+        return this == OrderState.ROUTED;
+    }
+
+    public boolean isFilled() {
+        return this == OrderState.FILLED;
+    }
+
+    public boolean isExpired() {
+        return this == OrderState.EXPIRED;
+    }
+
+    public boolean isRejected() {
+        return this == OrderState.REJECTED;
+    }
+
+    public boolean isPartfilled() {
+        return this == OrderState.PARTFILLED;
+    }
+
+    public boolean isPlaced() {
+        return this == OrderState.PLACED;
+    }
+
+    public boolean isCancelling() {
+        return this == OrderState.CANCELLING;
+    }
+
 }

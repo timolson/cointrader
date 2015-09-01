@@ -207,8 +207,8 @@ public class GeneralOrder extends Order {
 
     @Override
     public String toString() {
-        String s = "GeneralOrder{" + "id=" + getId() + ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + ", listing="
-                + listing + ", volume=" + volume;
+        String s = "GeneralOrder{" + "id=" + getId() + ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + ", parentFill="
+                + (getParentFill() == null ? "null" : getParentFill().getId()) + ", listing=" + listing + ", volume=" + volume;
         if (limitPrice != null && limitPrice.asBigDecimal() != null)
             s += ", limitPrice=" + limitPrice;
         if (stopAmount != null && stopAmount.asBigDecimal() != null)
@@ -221,6 +221,12 @@ public class GeneralOrder extends Order {
             s += ", position effect=" + positionEffect;
         if (fillType != null)
             s += ", type=" + fillType;
+        if (executionInstruction != null)
+            s += ", execution instruction=" + executionInstruction;
+        if (stopPrice != null)
+            s += ", stop price=" + stopPrice;
+        if (targetPrice != null)
+            s += ", target price=" + targetPrice;
         if (hasFills())
             s += ", averageFillPrice=" + averageFillPrice();
         s += '}';

@@ -158,8 +158,9 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     //  @When("@Priority(8) select * from Transaction where NOT (Transaction.type=TransactionType.BUY and Transaction.type=TransactionType.SELL)")
     @When("@Priority(8) select * from Transaction")
     public void handleTransaction(Transaction transaction) {
-        updatePortfolio(transaction);
-        // service.submit(new handleTransactionRunnable(transaction));
+        //
+        //updatePortfolio(transaction);
+        service.submit(new handleTransactionRunnable(transaction));
 
     }
 
@@ -168,7 +169,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         //	Transaction tans = new Transaction(this, position.getExchange(), position.getAsset(), TransactionType.CREDIT, position.getVolume(),
         //		position.getAvgPrice());
         //context.route(transaction);
-        log.debug("transaction: " + transaction + " Recieved.");
+        log.info("transaction: " + transaction + " Recieved.");
         if (transaction.getPortfolio() == (portfolio)) {
 
             Portfolio portfolio = transaction.getPortfolio();
@@ -209,7 +210,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
                 //}
             }
-            log.debug("transaction: " + transaction + " Proccessed.");
+            log.info("transaction: " + transaction + " Proccessed.");
 
         } else {
             return;

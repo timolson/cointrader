@@ -338,7 +338,7 @@ public class Transaction extends Event {
     public String toString() {
 
         return "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Portfolio=" + getPortfolio() + SEPARATOR + "Exchange="
-                + getExchange() + SEPARATOR + "type=" + getType() + SEPARATOR + "amount=" + getAssetAmount()
+                + getExchange() + SEPARATOR + "type=" + getType() + SEPARATOR + "amount=" + getAmount()
                 + (getAsset() != null ? (SEPARATOR + "currency=" + getAsset()) : "") + SEPARATOR + "price="
                 + (getPrice() != DecimalAmount.ZERO ? getPrice() : "") + (getCurrency() != null ? (SEPARATOR + "currency=" + getCurrency()) : "");
     }

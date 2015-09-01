@@ -252,7 +252,7 @@ public class SpecificOrder extends Order {
     }
 
     @Transient
-    public long getUnfilledVolumeCount() {
+    public synchronized long getUnfilledVolumeCount() {
         long filled = 0;
         List<Fill> fills = getFills();
         if (fills == null)
@@ -287,11 +287,14 @@ public class SpecificOrder extends Order {
     public String toString() {
 
         return "SpecificOrder{ time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "id=" + getId() + SEPARATOR + "remote key="
-                + getRemoteKey() + SEPARATOR + "parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + SEPARATOR + "portfolio="
-                + getPortfolio() + SEPARATOR + "market=" + market + SEPARATOR + "volumeCount=" + getVolume()
+                + getRemoteKey() + SEPARATOR + "parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + SEPARATOR + "parentFill={"
+                + (getParentFill() == null ? "null}" : getParentFill() + "}") + SEPARATOR + "portfolio=" + getPortfolio() + SEPARATOR + "market=" + market
+                + SEPARATOR + "open volume=" + getUnfilledVolume() + SEPARATOR + "volumeCount=" + getVolume()
                 + (limitPriceCount != 0 ? (SEPARATOR + "limitPriceCount=" + getLimitPrice()) : "") + (SEPARATOR + "PlacementCount=" + getPlacementCount())
                 + (getComment() == null ? "" : (SEPARATOR + "Comment=" + getComment()))
                 + (getFillType() == null ? "" : (SEPARATOR + "Order Type=" + getFillType()))
+                + (getPositionEffect() == null ? "" : (SEPARATOR + "Position Effect=" + getPositionEffect()))
+                + (getExecutionInstruction() == null ? "" : (SEPARATOR + "Execution Instruction=" + getExecutionInstruction()))
                 + (hasFills() ? (SEPARATOR + "averageFillPrice=" + averageFillPrice()) : "") + "}";
     }
 
@@ -306,7 +309,10 @@ public class SpecificOrder extends Order {
     }
 
     public int getPlacementCount() {
+        if (placementCount == 0)
+            return 1;
         return placementCount;
+
     }
 
     protected SpecificOrder() {

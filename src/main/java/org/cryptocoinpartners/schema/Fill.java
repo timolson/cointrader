@@ -13,6 +13,7 @@ import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.enumeration.PositionEffect;
+import org.cryptocoinpartners.enumeration.PositionType;
 import org.cryptocoinpartners.util.FeesUtil;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.joda.time.Instant;
@@ -39,7 +40,10 @@ public class Fill extends RemoteEvent {
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
         this.openVolumeCount = volumeCount;
+        this.positionType = (openVolumeCount > 0) ? PositionType.LONG : PositionType.SHORT;
         this.order = order;
+        this.order.addFill(this);
+
         this.market = market;
         if (priceCount == 0)
             this.priceCount = priceCount;
@@ -54,6 +58,8 @@ public class Fill extends RemoteEvent {
     public Fill(SpecificOrder order, Instant time, Instant timeReceived, Market market, long priceCount, long volumeCount, Amount commission, String remoteKey) {
         super(time, timeReceived, remoteKey);
         this.order = order;
+        this.order.addFill(this);
+
         this.market = market;
         if (priceCount == 0)
             this.priceCount = priceCount;
@@ -61,6 +67,8 @@ public class Fill extends RemoteEvent {
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
         this.openVolumeCount = volumeCount;
+        this.positionType = (openVolumeCount > 0) ? PositionType.LONG : PositionType.SHORT;
+
         this.commission = commission;
         this.portfolio = order.getPortfolio();
         this.stopAmountCount = (order.getStopAmount() != null) ? order.getStopAmount().getCount() : 0;
@@ -248,7 +256,10 @@ public class Fill extends RemoteEvent {
     }
 
     public long getStopPriceCount() {
-        return stopPriceCount;
+        if (getOpenVolumeCount() != 0)
+            return stopPriceCount;
+        else
+            return 0;
     }
 
     public long getTargetPriceCount() {
@@ -292,6 +303,13 @@ public class Fill extends RemoteEvent {
         return margin;
     }
 
+    @Transient
+    public PositionType getPositionType() {
+        if (getOpenVolumeCount() != 0)
+            return positionType;
+        return PositionType.FLAT;
+    }
+
     @ManyToOne(optional = false)
     public Portfolio getPortfolio() {
         return portfolio;
@@ -316,9 +334,11 @@ public class Fill extends RemoteEvent {
     public String toString() {
         // + (order.getId() != null ? order.getId() : "")
         //   + (getFillType() != null ? getFillType() : "")
-        return "FillID" + (getId() != null ? getId() : "") + SEPARATOR + "OrderID=" + (getOrder() != null ? getOrder() : "") + SEPARATOR + "time="
-                + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Type=" + SEPARATOR + "Market=" + (market != null ? market : "")
-                + SEPARATOR + "Price=" + (getPrice() != null ? getPrice() : "") + SEPARATOR + "Volume=" + (getVolume() != null ? getVolume() : "");
+        return "Id=" + (getId() != null ? getId() : "") + SEPARATOR + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR
+                + "PositionType=" + (getPositionType() != null ? getPositionType() : "") + SEPARATOR + "Market=" + (market != null ? market : "") + SEPARATOR
+                + "Price=" + (getPrice() != null ? getPrice() : "") + SEPARATOR + "Volume=" + (getVolume() != null ? getVolume() : "") + SEPARATOR
+                + "Open Volume=" + (getOpenVolume() != null ? getOpenVolume() : "") + SEPARATOR + "Order=" + (getOrder() != null ? getOrder().getId() : "")
+                + SEPARATOR + "Parent Fill=" + ((getOrder() != null && getOrder().getParentFill() != null) ? getOrder().getParentFill().getId() : "");
     }
 
     // JPA
@@ -331,6 +351,10 @@ public class Fill extends RemoteEvent {
 
     protected void setMarket(Market market) {
         this.market = market;
+    }
+
+    public void setPositionType(PositionType positionType) {
+        this.positionType = positionType;
     }
 
     protected void setPriceCount(long priceCount) {
@@ -348,7 +372,9 @@ public class Fill extends RemoteEvent {
     }
 
     public void setStopPriceCount(long stopPriceCount) {
-        this.stopPriceCount = stopPriceCount;
+        if (stopPriceCount != 0)
+
+            this.stopPriceCount = stopPriceCount;
     }
 
     public void setTargetPriceCount(long targetPriceCount) {
@@ -392,6 +418,7 @@ public class Fill extends RemoteEvent {
     private long openVolumeCount;
     private Amount commission;
     private Amount margin;
+    private PositionType positionType;
     private List<Transaction> transactions = new CopyOnWriteArrayList<Transaction>();
     private Portfolio portfolio;
     private Position position;

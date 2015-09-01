@@ -280,7 +280,8 @@ public class OrderBuilder {
 
         public SpecificOrderBuilder withLimitPriceCount(long price /* units in basis of Market's quote fungible */) {
             order.setLimitPriceCount(price);
-            order.setFillType(FillType.LIMIT);
+            if (order.getFillType() == null)
+                order.setFillType(FillType.LIMIT);
             return this;
         }
 

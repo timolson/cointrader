@@ -19,10 +19,12 @@ import javax.persistence.OrderBy;
 import javax.persistence.Transient;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.PositionType;
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.module.Context;
+import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
@@ -225,6 +227,39 @@ public class Portfolio extends EntityBase {
     }
 
     public @Transient
+    Position getLongPosition(Asset asset, Market market) {
+        List<Fill> fills = new CopyOnWriteArrayList<Fill>();
+        if (positionsMap.get(asset) != null && positionsMap.get(asset).get(market.getExchange()) != null
+                && positionsMap.get(asset).get(market.getExchange()).get(market.getListing()) != null
+                && positionsMap.get(asset).get(market.getExchange()).get(market.getListing()).get(TransactionType.BUY) != null)
+            for (Position detailedPosition : positionsMap.get(asset).get(market.getExchange()).get(market.getListing()).get(TransactionType.BUY)) {
+
+                for (Fill pos : detailedPosition.getFills()) {
+                    fills.add(pos);
+
+                }
+            }
+        return new Position(fills);
+
+    }
+
+    public @Transient
+    Position getShortPosition(Asset asset, Market market) {
+        List<Fill> fills = new CopyOnWriteArrayList<Fill>();
+        if (positionsMap.get(asset) != null && positionsMap.get(asset).get(market.getExchange()) != null
+                && positionsMap.get(asset).get(market.getExchange()).get(market.getListing()) != null
+                && positionsMap.get(asset).get(market.getExchange()).get(market.getListing()).get(TransactionType.SELL) != null)
+            for (Position detailedPosition : positionsMap.get(asset).get(market.getExchange()).get(market.getListing()).get(TransactionType.SELL)) {
+
+                for (Fill pos : detailedPosition.getFills()) {
+                    fills.add(pos);
+
+                }
+            }
+        return new Position(fills);
+    }
+
+    public @Transient
     Collection<Position> getPositions(Asset asset, Exchange exchange) {
         Collection<Position> allPositions = new ConcurrentLinkedQueue<Position>();
 
@@ -300,7 +335,7 @@ public class Portfolio extends EntityBase {
     }
 
     public @Transient
-    DiscreteAmount getLongPosition(Asset asset, Exchange exchange) {
+    DiscreteAmount getLongPositionAmount(Asset asset, Exchange exchange) {
         long longVolumeCount = 0;
         //   synchronized (lock) {
         if (positionsMap.get(asset) != null && positionsMap.get(asset).get(exchange) != null) {
@@ -348,7 +383,7 @@ public class Portfolio extends EntityBase {
     }
 
     public @Transient
-    DiscreteAmount getShortPosition(Asset asset, Exchange exchange) {
+    DiscreteAmount getShortPositionAmount(Asset asset, Exchange exchange) {
         long shortVolumeCount = 0;
         //  synchronized (lock) {
 
@@ -401,6 +436,11 @@ public class Portfolio extends EntityBase {
         }
         return allTransactions;
 
+    }
+
+    private void logCloseOut(long updatedVolumeCount, Fill openFill, Fill closingFill) {
+        //  if (log.isDebugEnabled())
+        log.info("Closed out " + updatedVolumeCount + " of open fill: " + openFill + " with closing fill: " + closingFill);
     }
 
     @Transient
@@ -553,6 +593,19 @@ public class Portfolio extends EntityBase {
     public void addPosition(Position position) {
         // synchronized (lock) {
         getPositions().add(position);
+        // }
+    }
+
+    public void cancelStopOrders(Fill fill) {
+        for (Order order : fill.getChildren()) {
+            if (order instanceof GeneralOrder && order.getFillType() == FillType.STOP_LIMIT) {
+                // orderService.handleCancelGeneralOrder((GeneralOrder) order);
+
+            }
+        }
+
+        // synchronized (lock) {
+
         // }
     }
 
@@ -785,10 +838,17 @@ public class Portfolio extends EntityBase {
                                 Iterator<Fill> itOp = openPos.getFills().iterator();
                                 while (itOp.hasNext() && pos.hasFills()) {
                                     //open fill
+                                    realisedPnL = DecimalAmount.ZERO;
+                                    closingVolumeCount = 0;
+
                                     Fill openPosition = itOp.next();
-                                    if (openPosition.getPositionEffect() == null || p.getPositionEffect() == null
+                                    if ((openPosition.getPositionEffect() == null || p.getPositionEffect() == null)
                                             || (openPosition.getPositionEffect() == PositionEffect.OPEN && p.getPositionEffect() == PositionEffect.CLOSE)
                                             || (openPosition.getPositionEffect() == PositionEffect.CLOSE && p.getPositionEffect() == PositionEffect.OPEN)) {
+                                        if (p.getPositionEffect() == PositionEffect.OPEN)
+                                            log.info("the last fille should be a closing fill. Trying to net open position: " + openPosition
+                                                    + " with closing postion: " + p);
+
                                         if (Math.abs(p.getOpenVolumeCount()) > 0) {
 
                                             if ((Long.signum(openPosition.getOpenVolumeCount()) + Long.signum(p.getOpenVolumeCount())) != 0) {
@@ -796,6 +856,7 @@ public class Portfolio extends EntityBase {
                                                     // openingListingPositions.(openPosition);
                                                     // itOp.remove();
                                                     openPos.removeFill(openPosition);
+                                                    cancelStopOrders(openPosition);
 
                                                     openPosition.persit();
                                                 }
@@ -815,240 +876,211 @@ public class Portfolio extends EntityBase {
                                                 break;
 
                                             }
-                                        }
-                                        //Math signum();
 
-                                        entryPrice = p.getPrice();
-                                        exitPrice = openPosition.getPrice();
-                                        if (p.getMarket().getTradedCurrency() == p.getMarket().getBase()) {
-                                            // need to invert and revrese the prices if the traded ccy is not the quote ccy
-                                            entryPrice = openPosition.getPrice().invert();
-                                            exitPrice = p.getPrice().invert();
+                                            //Math signum();
 
-                                            //shortExitPrice = position.getShortAvgPrice().invert();
-                                            //longEntryPrice = p.getLongAvgPrice().invert();
-                                            //longExitPrice = position.getLongAvgPrice().invert();
-                                            //shortEntryPrice = p.getShortAvgPrice().invert();
+                                            entryPrice = p.getPrice();
+                                            exitPrice = openPosition.getPrice();
+                                            if (p.getMarket().getTradedCurrency() == p.getMarket().getBase()) {
+                                                // need to invert and revrese the prices if the traded ccy is not the quote ccy
+                                                entryPrice = openPosition.getPrice().invert();
+                                                exitPrice = p.getPrice().invert();
 
-                                        } else if (p.getMarket().getTradedCurrency() != p.getMarket().getQuote()) {
-                                            throw new NotImplementedException("Listings traded in neither base or quote currency are not supported");
-                                        }
+                                                //shortExitPrice = position.getShortAvgPrice().invert();
+                                                //longEntryPrice = p.getLongAvgPrice().invert();
+                                                //longExitPrice = position.getLongAvgPrice().invert();
+                                                //shortEntryPrice = p.getShortAvgPrice().invert();
 
-                                        // need to calcuate teh volume here
-                                        // we have opposite postions, so if I am long, 
-                                        // tests
-                                        // long - postions =10, net =-5 -> neet ot take 5 max(), postion =10, net =-10 net to take 10 (max), psotis =10, net =-20 net to take  (Min)10
-                                        // short postion =-10, net =5 neet to take 5, Max) postions = -10, net =10 need to take 10, postion =-10, net =20 net to take  min 10
-
-                                        // need to srt out closing postions here
-                                        // as we use negative numbers not long ans short numbers
-
-                                        //	10,-5 () my volume is 5
-                                        //	5,-10 my voulme is 5
-                                        //	-10,5 my volume is -5
-                                        //	-5,10 my volume is -5
-                                        //	10,-10 my voulme is 10
-
-                                        //Math.abs(a)
-
-                                        closingVolumeCount = (openingTransactionType.equals(TransactionType.SELL)) ? (Math.min(
-                                                Math.abs(openPosition.getOpenVolumeCount()), Math.abs(p.getOpenVolumeCount())))
-                                                * -1 : (Math.min(Math.abs(openPosition.getOpenVolumeCount()), Math.abs(p.getOpenVolumeCount())));
-                                        // need to think hwere as one if negative and one is postive, nwee to work out what is the quanity to update on currrnet and the passed position
-                                        //when p=43 and open postion =-42
-                                        if (Math.abs(p.getOpenVolumeCount()) >= Math.abs(openPosition.getOpenVolumeCount())) {
-                                            long updatedVolumeCount = p.getOpenVolumeCount() + closingVolumeCount;
-                                            //updatedVolumeCount = (p.isShort()) ? updatedVolumeCount * -1 : updatedVolumeCount;
-                                            p.setOpenVolumeCount(updatedVolumeCount);
-                                            p.persit();
-                                            // pos.Merge();
-                                            if (Math.abs(updatedVolumeCount) == 0) {
-                                                //itPos.remove();
-                                                //     itP.remove();
-                                                pos.removeFill(p);
-                                                p.persit();
-                                                //pos.Merge();
-                                                if (!pos.hasFills())
-                                                    itPos.remove();
-                                                //listingPositions.remove(pos);
-
-                                                //  itP.remove();
-                                                //            PersistUtil.merge(pos);
-
-                                                //listingPositions.remove(pos);
+                                            } else if (p.getMarket().getTradedCurrency() != p.getMarket().getQuote()) {
+                                                throw new NotImplementedException("Listings traded in neither base or quote currency are not supported");
                                             }
-                                            //    PersistUtil.merge(p);
-                                            // listingPositions.remove(p);
-                                            //  itOp.remove();
-                                            openPosition.setOpenVolumeCount(0);
-                                            //  PersistUtil.merge(openPosition);
-                                            //openPos.Merge();
-                                            //itOp.remove();
-                                            //
 
-                                            openPos.removeFill(openPosition);
-                                            openPosition.persit();
+                                            // need to calcuate teh volume here
+                                            // we have opposite postions, so if I am long, 
+                                            // tests
+                                            // long - postions =10, net =-5 -> neet ot take 5 max(), postion =10, net =-10 net to take 10 (max), psotis =10, net =-20 net to take  (Min)10
+                                            // short postion =-10, net =5 neet to take 5, Max) postions = -10, net =10 need to take 10, postion =-10, net =20 net to take  min 10
 
-                                            //openPos.Merge();
-                                            //openPos.removeFill(openPosition)
+                                            // need to srt out closing postions here
+                                            // as we use negative numbers not long ans short numbers
 
-                                            //    PersistUtil.merge(openPos);
-                                            if (!openPos.hasFills())
-                                                itOlp.remove();
-                                            // openingListingPositions.remove(openPos);
-                                            //  itOlp.remove();
-                                            //
-                                            //  openingListingPositions.remove(openPos);
+                                            //	10,-5 () my volume is 5
+                                            //	5,-10 my voulme is 5
+                                            //	-10,5 my volume is -5
+                                            //	-5,10 my volume is -5
+                                            //	10,-10 my voulme is 10
 
-                                            //openingListingPositions.remove(openPosition);
+                                            //Math.abs(a)
 
-                                        } else {
-                                            long updatedVolumeCount = openPosition.getOpenVolumeCount() + p.getOpenVolumeCount();
-                                            openPosition.setOpenVolumeCount(updatedVolumeCount);
-                                            openPosition.persit();
-                                            // openPos.Merge();
-                                            if (Math.abs(updatedVolumeCount) == 0) {
-                                                // itOp.remove();
+                                            closingVolumeCount = (openingTransactionType.equals(TransactionType.SELL)) ? (Math.min(
+                                                    Math.abs(openPosition.getOpenVolumeCount()), Math.abs(p.getOpenVolumeCount())))
+                                                    * -1 : (Math.min(Math.abs(openPosition.getOpenVolumeCount()), Math.abs(p.getOpenVolumeCount())));
+                                            // need to think hwere as one if negative and one is postive, nwee to work out what is the quanity to update on currrnet and the passed position
+                                            //when p=43 and open postion =-42
+                                            if (Math.abs(p.getOpenVolumeCount()) >= Math.abs(openPosition.getOpenVolumeCount())) {
+                                                long updatedVolumeCount = p.getOpenVolumeCount() + closingVolumeCount;
+                                                //updatedVolumeCount = (p.isShort()) ? updatedVolumeCount * -1 : updatedVolumeCount;
+                                                logCloseOut(closingVolumeCount, openPosition, p);
+
+                                                p.setOpenVolumeCount(updatedVolumeCount);
+                                                //(closingVolumeCount, openPosition, p);
+                                                p.persit();
+                                                // pos.Merge();
+                                                if (Math.abs(updatedVolumeCount) == 0) {
+                                                    //itPos.remove();
+                                                    //     itP.remove();
+                                                    pos.removeFill(p);
+                                                    cancelStopOrders(p);
+                                                    p.persit();
+                                                    //pos.Merge();
+                                                    if (!pos.hasFills())
+                                                        itPos.remove();
+                                                    //listingPositions.remove(pos);
+
+                                                    //  itP.remove();
+                                                    //            PersistUtil.merge(pos);
+
+                                                    //listingPositions.remove(pos);
+                                                }
+                                                //    PersistUtil.merge(p);
+                                                // listingPositions.remove(p);
+                                                //  itOp.remove();
+                                                openPosition.setOpenVolumeCount(0);
+                                                //  PersistUtil.merge(openPosition);
+                                                //openPos.Merge();
+                                                //itOp.remove();
+                                                //
+
                                                 openPos.removeFill(openPosition);
+                                                // If we remove we need to cancel all coresponding stop limit orders
+                                                cancelStopOrders(openPosition);
                                                 openPosition.persit();
+
+                                                //openPos.Merge();
+                                                //openPos.removeFill(openPosition)
+
+                                                //    PersistUtil.merge(openPos);
                                                 if (!openPos.hasFills())
                                                     itOlp.remove();
                                                 // openingListingPositions.remove(openPos);
+                                                //  itOlp.remove();
                                                 //
-                                                //
-
-                                                //  openPos.removeFill(openPosition);
-                                                //    PersistUtil.merge(openPosition);
-
                                                 //  openingListingPositions.remove(openPos);
-                                                //openPos.Merge();
+
+                                                //openingListingPositions.remove(openPosition);
+
+                                            } else {
+                                                long updatedVolumeCount = openPosition.getOpenVolumeCount() + p.getOpenVolumeCount();
+                                                logCloseOut(p.getOpenVolumeCount(), openPosition, p);
+
+                                                openPosition.setOpenVolumeCount(updatedVolumeCount);
+                                                openPosition.persit();
+                                                // openPos.Merge();
+                                                if (Math.abs(updatedVolumeCount) == 0) {
+                                                    // itOp.remove();
+                                                    openPos.removeFill(openPosition);
+                                                    cancelStopOrders(openPosition);
+                                                    openPosition.persit();
+                                                    if (!openPos.hasFills())
+                                                        itOlp.remove();
+                                                    // openingListingPositions.remove(openPos);
+                                                    //
+                                                    //
+
+                                                    //  openPos.removeFill(openPosition);
+                                                    //    PersistUtil.merge(openPosition);
+
+                                                    //  openingListingPositions.remove(openPos);
+                                                    //openPos.Merge();
+                                                }
+                                                // PersistUtil.merge(openPosition);
+
+                                                //  openingListingPositions.remove(openPosition);
+                                                //  itP.remove();
+                                                //  logCloseOut(updatedVolumeCount, openPosition, p);
+
+                                                p.setOpenVolumeCount(0);
+
+                                                pos.removeFill(p);
+                                                cancelStopOrders(p);
+                                                p.persit();
+                                                //   logCloseOut(updatedVolumeCount, openPosition, p);
+                                                //   PersistUtil.merge(p);
+                                                if (!pos.hasFills())
+                                                    itPos.remove();
+                                                // listingPositions.remove(pos);
+                                                // pos.Merge();
+                                                //itPos.remove();
+                                                // if (itP != null)
+                                                //if (itPos.hasNext())
+                                                //   
+
+                                                // pos.Merge();
+
+                                                //pos.removeFill(p)  itP.remove();
+                                                // pos.removeFill(p);
+                                                //           PersistUtil.merge(openPosition);
+
+                                                // itPos.remove();
+                                                //listingPositions.remove(pos);
+
+                                                // listingPositions.remove(p);
+
                                             }
-                                            // PersistUtil.merge(openPosition);
+                                        }
+                                        pos.removeFill(p);
+                                        cancelStopOrders(p);
+                                        p.persit();
+                                        //pos.Merge();
+                                        //if (!pos.hasFills())
+                                        //  itPos.remove();
 
-                                            //  openingListingPositions.remove(openPosition);
-                                            //  itP.remove();
-                                            p.setOpenVolumeCount(0);
+                                        DiscreteAmount volDiscrete = new DiscreteAmount(closingVolumeCount, p.getMarket().getListing().getVolumeBasis());
 
-                                            pos.removeFill(p);
-                                            p.persit();
-                                            //   PersistUtil.merge(p);
-                                            if (!pos.hasFills())
-                                                itPos.remove();
-                                            // listingPositions.remove(pos);
-                                            // pos.Merge();
-                                            //itPos.remove();
-                                            // if (itP != null)
-                                            //if (itPos.hasNext())
-                                            //   
+                                        realisedPnL = realisedPnL.plus(((entryPrice.minus(exitPrice)).times(volDiscrete, Remainder.ROUND_EVEN)).times(p
+                                                .getMarket().getContractSize(), Remainder.ROUND_EVEN));
 
-                                            // pos.Merge();
+                                        // need to confonvert to deiscreete amount
 
-                                            //pos.removeFill(p)  itP.remove();
-                                            // pos.removeFill(p);
-                                            //           PersistUtil.merge(openPosition);
+                                        //LongRealisedPnL = ((exitPrice.minus(entryPrice)).times(volDiscrete, Remainder.ROUND_EVEN)).times(position.getMarket()
+                                        //	.getContractSize(), Remainder.ROUND_EVEN);
 
-                                            // itPos.remove();
-                                            //listingPositions.remove(pos);
+                                        //	ShortRealisedPnL = (position.getShortAvgPrice().minus(p.getLongAvgPrice())).times(position.getShortVolume().negate(),
+                                        //	Remainder.ROUND_EVEN);
+                                        //	LongRealisedPnL = (position.getLongAvgPrice().minus(p.getShortAvgPrice())).times(position.getLongVolume().negate(),
+                                        //		Remainder.ROUND_EVEN);
 
-                                            // listingPositions.remove(p);
+                                        Amount RealisedPnL = realisedPnL.toBasis(p.getMarket().getTradedCurrency().getBasis(), Remainder.ROUND_EVEN);
+                                        //                            Amount PreviousPnL = (realisedProfits.get(p.getMarket().getTradedCurrency()) == null
+                                        //                                    || realisedProfits.get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange()) == null || realisedProfits
+                                        //                                    .get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange()).get(p.getMarket().getListing()) == null) ? DecimalAmount.ZERO
+                                        //                                    : realisedProfits.get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange()).get(p.getMarket().getListing());
+                                        if (RealisedPnL.isNegative() && fill.getPositionEffect() == PositionEffect.OPEN)
+                                            log.info("realsiedPnL is a loss. netted open position: " + openPosition + " with closing postion: " + p);
+
+                                        if (!RealisedPnL.isZero()) {
+
+                                            Amount TotalRealisedPnL = RealisedPnL.plus(getRealisedPnL().get(p.getMarket().getTradedCurrency())
+                                                    .get(p.getMarket().getExchange()).get(p.getMarket().getListing()));
+
+                                            //   realisedProfits.get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange())
+                                            //         .put(p.getMarket().getListing(), TotalRealisedPnL);
+                                            Transaction trans = new Transaction(p, this, p.getMarket().getExchange(), p.getMarket().getTradedCurrency(),
+                                                    TransactionType.REALISED_PROFIT_LOSS, RealisedPnL, new DiscreteAmount(0, p.getMarket().getTradedCurrency()
+                                                            .getBasis()));
+                                            log.info("Realised PnL:" + trans);
+                                            context.route(trans);
+                                            trans.persit();
+                                            //		manager.getPortfolioService().CreateTransaction(position.getExchange(), position.getMarket().getQuote(),
+                                            //			TransactionType.REALISED_PROFIT_LOSS, TotalRealisedPnL.minus(PreviousPnL), DecimalAmount.ZERO);
 
                                         }
                                     }
-                                    DiscreteAmount volDiscrete = new DiscreteAmount(closingVolumeCount, p.getMarket().getListing().getVolumeBasis());
-
-                                    realisedPnL = realisedPnL.plus(((entryPrice.minus(exitPrice)).times(volDiscrete, Remainder.ROUND_EVEN)).times(p.getMarket()
-                                            .getContractSize(), Remainder.ROUND_EVEN));
-
-                                    // need to confonvert to deiscreete amount
-
-                                    //LongRealisedPnL = ((exitPrice.minus(entryPrice)).times(volDiscrete, Remainder.ROUND_EVEN)).times(position.getMarket()
-                                    //	.getContractSize(), Remainder.ROUND_EVEN);
-
-                                    //	ShortRealisedPnL = (position.getShortAvgPrice().minus(p.getLongAvgPrice())).times(position.getShortVolume().negate(),
-                                    //	Remainder.ROUND_EVEN);
-                                    //	LongRealisedPnL = (position.getLongAvgPrice().minus(p.getShortAvgPrice())).times(position.getLongVolume().negate(),
-                                    //		Remainder.ROUND_EVEN);
-
                                 }
-                            }
-
-                            Amount RealisedPnL = realisedPnL.toBasis(p.getMarket().getTradedCurrency().getBasis(), Remainder.ROUND_EVEN);
-                            //                            Amount PreviousPnL = (realisedProfits.get(p.getMarket().getTradedCurrency()) == null
-                            //                                    || realisedProfits.get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange()) == null || realisedProfits
-                            //                                    .get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange()).get(p.getMarket().getListing()) == null) ? DecimalAmount.ZERO
-                            //                                    : realisedProfits.get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange()).get(p.getMarket().getListing());
-                            if (!RealisedPnL.isZero()) {
-
-                                Amount TotalRealisedPnL = RealisedPnL.plus(getRealisedPnL().get(p.getMarket().getTradedCurrency())
-                                        .get(p.getMarket().getExchange()).get(p.getMarket().getListing()));
-
-                                //   realisedProfits.get(p.getMarket().getTradedCurrency()).get(p.getMarket().getExchange())
-                                //         .put(p.getMarket().getListing(), TotalRealisedPnL);
-                                Transaction trans = new Transaction(p, this, p.getMarket().getExchange(), p.getMarket().getTradedCurrency(),
-                                        TransactionType.REALISED_PROFIT_LOSS, RealisedPnL, new DiscreteAmount(0, p.getMarket().getTradedCurrency().getBasis()));
-
-                                context.route(trans);
-                                trans.persit();
-                                //		manager.getPortfolioService().CreateTransaction(position.getExchange(), position.getMarket().getQuote(),
-                                //			TransactionType.REALISED_PROFIT_LOSS, TotalRealisedPnL.minus(PreviousPnL), DecimalAmount.ZERO);
 
                             }
-
-                            //							if (!totalQuantity.isZero()) {
-                            //								//generate PnL
-                            //								//Update postion Quanitty
-                            //								//Recculate Avaerge Price
-                            //								Amount avgPrice = ((p.getAvgPrice().times(p.getVolume(), Remainder.ROUND_EVEN)).plus(position.getLongVolume().times(
-                            //										position.getAvgPrice(), Remainder.ROUND_EVEN))).dividedBy(p.getVolume().plus(position.getLongVolume()),
-                            //										Remainder.ROUND_EVEN);
-                            //								p.setAvgPrice(avgPrice);
-                            //							}
-
-                            //							if (!position.getLongVolume().isZero()) {
-                            //								// i.e long position
-                            //								Amount vol = (p.getLongAvgPrice().isZero()) ? position.getLongVolume() : p.getLongVolume().plus(position.getLongVolume());
-                            //								if (!vol.isZero()) {
-                            //									longExitPrice = ((p.getLongAvgPrice().times(p.getLongVolume(), Remainder.ROUND_EVEN)).plus(position.getLongVolume().times(
-                            //											position.getLongAvgPrice(), Remainder.ROUND_EVEN))).dividedBy(vol, Remainder.ROUND_EVEN);
-                            //									p.setLongAvgPrice(longExitPrice);
-                            //								}
-                            //							}
-
-                            //							if (!position.getShortVolume().isZero()) {
-                            //								// i.e short position
-                            //								//this does not work when we net out the postion as we have a divid by zero error
-                            //								Amount vol = (p.getShortAvgPrice().isZero()) ? position.getShortVolume() : p.getShortVolume().plus(position.getShortVolume());
-                            //								if (vol.isZero()) {
-                            //									shortExitPrice = ((p.getShortAvgPrice().times(p.getShortVolume(), Remainder.ROUND_EVEN)).plus(position.getShortVolume()
-                            //											.times(position.getShortAvgPrice(), Remainder.ROUND_EVEN))).dividedBy(vol, Remainder.ROUND_EVEN);
-                            //									p.setShortAvgPrice(shortExitPrice);
-                            //								}
-                            //							}
-                            //p.setLongVolumeCount(p.getLongVolumeCount() + position.getLongVolumeCount());
-                            //p.setShortVolumeCount(p.getShortVolumeCount() + position.getShortVolumeCount());
-
-                            //	Long avgPriceCount = (long) avgPrice.divide(BigDecimal.valueOf(p.getMarket().getPriceBasis()), Remainder.ROUND_EVEN).asDouble();
-                            //avgPrice = new DiscreteAmount(avgPriceCount, p.getMarket().getPriceBasis());
-                            //DiscreteAmount avgDiscretePrice = new DiscreteAmount((long) avgPrice.times(p.getMarket().getPriceBasis(), Remainder.ROUND_EVEN)
-                            //	.asDouble(), (long) (p.getMarket().getPriceBasis()));
-                            // I need to net the amounts
-
-                            // if the long and short volumes are zero we can remove the position
-                            //if (p.getShortVolumeCount() * -1 == p.getLongVolumeCount()) {
-                            //listingPositions.remove(p);
-                            // publish realised PnL for the long and short posiotion
-                            //TODO: we are merging postions based on the order they were creted (FIFO), might want to have a comparator to merge using LIFO, or some other algo
-
-                            //}
-                            //return true;
-
-                            //}
-
                         }
                     }
-
-                    //listingPositions.add(position);
-                    //// true;
                     if (getNetPosition(fill.getMarket().getBase(), fill.getMarket()) == null) {
                         Position detPosition = new Position(fill);
                         detPosition.Persit();
@@ -1067,15 +1099,8 @@ public class Portfolio extends EntityBase {
 
                 return true;
 
-            }//else {
-             //listingPositions.add(position);
-             //return true;
-             //}
-
-            //return true;
-
+            }
         }
-        // }
 
     }
 
@@ -1099,6 +1124,11 @@ public class Portfolio extends EntityBase {
     @Transient
     public PortfolioService getPortfolioService() {
         return portfolioService;
+    }
+
+    @Transient
+    public OrderService getOrderService() {
+        return orderService;
     }
 
     @OneToMany(fetch = FetchType.LAZY)
@@ -1192,6 +1222,10 @@ public class Portfolio extends EntityBase {
         this.portfolioService = portfolioService;
     }
 
+    protected void setOrderService(OrderService orderService) {
+        this.orderService = orderService;
+    }
+
     protected void setStakes(List<Stake> stakes) {
         this.stakes = stakes;
     }
@@ -1256,6 +1290,8 @@ public class Portfolio extends EntityBase {
     protected transient Context context;
     @Inject
     protected transient PortfolioService portfolioService;
+    @Inject
+    protected transient OrderService orderService;
     private Asset baseAsset;
     private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>>>> positionsMap;
     private ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>> realisedProfits;
