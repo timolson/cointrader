@@ -17,9 +17,9 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <xchange.version>3.1.0</xchange.version>
+        <xchange.version>4.0.0-SNAPSHOT</xchange.version>
         <slf4j-api.version>1.7.5</slf4j-api.version>
-        <hibernate.version>4.3.6.Final</hibernate.version>
+        <hibernate.version>4.3.11.Final</hibernate.version>
         <antlr.version>4.2.2</antlr.version>
     </properties>
 
@@ -35,6 +35,7 @@
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j-api.version}</version>
         </dependency>
+         
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>log4j-over-slf4j</artifactId>
@@ -75,11 +76,25 @@
             <artifactId>jcommander</artifactId>
             <version>1.30</version>
         </dependency>
+
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
-            <version>4.0-beta4</version>
+            <version>4.0</version>
         </dependency>
+        
+<dependency>
+	<groupId>com.google.inject.extensions</groupId>
+	<artifactId>guice-persist</artifactId>
+	<version>4.0</version>
+</dependency>
+
+<dependency>
+	<groupId>com.google.inject.extensions</groupId>
+	<artifactId>guice-assistedinject</artifactId>
+	<version>4.0</version>
+</dependency>
+
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
