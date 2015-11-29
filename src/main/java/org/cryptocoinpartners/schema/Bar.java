@@ -5,9 +5,14 @@ import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.Table;
 
+import org.cryptocoinpartners.schema.dao.BarJpaDao;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 
 @SuppressWarnings("UnusedDeclaration")
 @Entity
@@ -19,22 +24,50 @@ public class Bar extends MarketData {
     private Double high;
     private Double low;
     private static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
-
+    @Inject
+    protected BarJpaDao barDao;
     // private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
     private static final String SEPARATOR = ",";
 
-    public Bar(long timestamp, Double open, Double close, Double high, Double low, Market market) {
+    @AssistedInject
+    public Bar(@Assisted long timestamp, @Assisted("barOpen") Double open, @Assisted("barClose") Double close, @Assisted("barHigh") Double high,
+            @Assisted("barLow") Double low, @Assisted Market market) {
         this(new Instant(timestamp), Instant.now(), null, open, close, high, low, market);
 
     }
 
-    public Bar(Instant time, Instant recievedTime, @Nullable String remoteKey, Double open, Double close, Double high, Double low, Market market) {
+    @AssistedInject
+    public Bar(@Assisted Bar bar) {
+        super(bar.time, bar.remoteKey, bar.getMarket());
+        this.open = bar.open;
+        this.close = bar.close;
+        this.high = bar.high;
+        this.low = bar.low;
+
+    }
+
+    @AssistedInject
+    public Bar(@Assisted("barTime") Instant time, @Assisted("barRecievedTime") Instant recievedTime, @Nullable @Assisted String remoteKey,
+            @Assisted("barOpen") Double open, @Assisted("barClose") Double close, @Assisted("barHigh") Double high, @Assisted("barLow") Double low,
+            @Assisted Market market) {
         super(time, remoteKey, market);
         this.open = open;
         this.close = close;
         this.high = high;
         this.low = low;
 
+    }
+
+    public <T> T queryZeroOne(Class<T> resultType, String queryStr, Object... params) {
+
+        //  em = createEntityManager();
+        return barDao.queryZeroOne(resultType, queryStr, params);
+
+    }
+
+    @Override
+    public void persit() {
+        barDao.persist(this);
     }
 
     public Double getOpen() {
@@ -78,5 +111,18 @@ public class Bar extends MarketData {
 
         return "Bar Start=" + (getTimestamp() != 0 ? (FORMAT.print(getTimestamp())) : "") + SEPARATOR + "Market=" + getMarket() + SEPARATOR + "Open="
                 + getOpen() + SEPARATOR + "High=" + getHigh() + SEPARATOR + "Low=" + getLow() + SEPARATOR + "Close=" + getClose();
+    }
+
+    @Override
+    public void detach() {
+        barDao.persist(this);
+
+    }
+
+    @Override
+    public void merge() {
+        barDao.merge(this);
+        // TODO Auto-generated method stub
+
     }
 }

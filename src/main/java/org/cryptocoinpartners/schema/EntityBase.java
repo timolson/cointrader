@@ -26,7 +26,7 @@ public abstract class EntityBase implements Serializable, Delayed {
      */
     private static final long serialVersionUID = -7893439827939854533L;
     private static long delay = 1000;
-    private String data;
+
     private long startTime;
 
     @Override
@@ -56,13 +56,13 @@ public abstract class EntityBase implements Serializable, Delayed {
 
     @Version
     @Column(name = "version", columnDefinition = "integer DEFAULT 0", nullable = false)
-    public Integer getVersion() {
-        if (version == null)
-            return 0;
+    public long getVersion() {
+        //  if (version == null)
+        //    return 0;
         return version;
     }
 
-    public void setVersion(Integer version) {
+    public void setVersion(long version) {
         this.version = version;
     }
 
@@ -120,6 +120,12 @@ public abstract class EntityBase implements Serializable, Delayed {
         //  setVersion(getVersion() + 1);
     }
 
+    public abstract void persit();
+
+    public abstract void detach();
+
+    public abstract void merge();
+
     private void ensureId() {
         if (id == null)
             id = UUID.randomUUID();
@@ -128,7 +134,7 @@ public abstract class EntityBase implements Serializable, Delayed {
     }
 
     protected UUID id;
-    protected Integer version;
+    protected long version;
     protected Integer retryCount;
 
 }

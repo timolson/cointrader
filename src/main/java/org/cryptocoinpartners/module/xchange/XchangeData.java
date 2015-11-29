@@ -16,19 +16,19 @@ import java.util.concurrent.RejectedExecutionException;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import javax.persistence.EntityManager;
-import javax.persistence.TypedQuery;
 
 import org.apache.commons.configuration.Configuration;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.schema.Book;
+import org.cryptocoinpartners.schema.BookFactory;
 import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.MarketDataError;
 import org.cryptocoinpartners.schema.Prompt;
+import org.cryptocoinpartners.schema.TradeFactory;
 import org.cryptocoinpartners.util.CompareUtils;
-import org.cryptocoinpartners.util.PersistUtil;
+import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.RateLimiter;
 import org.cryptocoinpartners.util.XchangeUtil;
 import org.joda.time.Duration;
@@ -61,8 +61,10 @@ import com.xeiam.xchange.service.streaming.StreamingExchangeService;
 public class XchangeData {
 
     @Inject
-    public XchangeData(Context context, Configuration config) {
+    public XchangeData(Context context, Configuration config, BookFactory bookFactory, TradeFactory tradeFactory) {
         this.context = context;
+        this.bookFactory = bookFactory;
+        this.tradeFactory = tradeFactory;
         final String configPrefix = "xchange";
         Set<String> exchangeTags = XchangeUtil.getExchangeTags();
 
@@ -135,10 +137,11 @@ public class XchangeData {
         List<Market> markets = new ArrayList<>(listings.size());
         Market market;
         //  ExchangeStreamingConfiguration streamingConfiguration = new OkCoinExchangeStreamingConfiguration();
-        for (Iterator<List> il = listings.iterator(); il.hasNext(); markets.add(market)) {
+        for (Iterator<List> il = listings.iterator(); il.hasNext();) {
             Object listingSymbol = il.next();
             Listing listing = Listing.forSymbol(listingSymbol.toString().toUpperCase());
-            market = Market.findOrCreate(coinTraderExchange, listing);
+            market = context.getInjector().getInstance(Market.class).findOrCreate(coinTraderExchange, listing);
+            markets.add(market);
         }
 
         if (streamingConfigClassName != null) {
@@ -303,14 +306,13 @@ public class XchangeData {
                 // TODO Auto-generated catch block
                 e2.printStackTrace();
             }
-            EntityManager entityManager = PersistUtil.createEntityManager();
+            //   EntityManager entityManager = //.createEntityManager();
             try {
 
-                TypedQuery<org.cryptocoinpartners.schema.Trade> query = entityManager.createQuery(
-                        "select t from Trade t where market=?1 and time=(select max(time) from Trade where market=?1)",
-                        org.cryptocoinpartners.schema.Trade.class);
-                query.setParameter(1, market);
-                for (org.cryptocoinpartners.schema.Trade trade : query.getResultList()) {
+                List<org.cryptocoinpartners.schema.Trade> results = EM.queryList(org.cryptocoinpartners.schema.Trade.class,
+                        "select t from Trade t where market=?1 and time=(select max(time) from Trade where market=?1)", market);
+
+                for (org.cryptocoinpartners.schema.Trade trade : results) {
                     // org.cryptocoinpartners.schema.Trade trade = query.getSingleResult();
                     long millis = trade.getTime().getMillis();
                     if (millis > lastTradeTime)
@@ -322,7 +324,7 @@ public class XchangeData {
                         lastTradeId = remoteId;
                 }
             } finally {
-                entityManager.close();
+                //  EM.em().close();
             }
 
             //StreamingExchangeService streamingDataService = xchangeExchange.getStreamingExchangeService(streamingConfiguration,new CurrencyPair[]{ CurrencyPair.BTC_USD }));
@@ -349,9 +351,12 @@ public class XchangeData {
 
                                 Instant tradeInstant = new Instant(trade.getTimestamp());
                                 BigDecimal volume = (trade.getType() == OrderType.ASK) ? trade.getTradableAmount().negate() : trade.getTradableAmount();
-                                org.cryptocoinpartners.schema.Trade ourTrade = new org.cryptocoinpartners.schema.Trade(market, tradeInstant, trade.getId(),
-                                        trade.getPrice(), volume);
+                                org.cryptocoinpartners.schema.Trade ourTrade = tradeFactory.create(market, tradeInstant, trade.getId(), trade.getPrice(),
+                                        volume);
+
                                 context.publish(ourTrade);
+                                if (ourTrade.getDao() == null)
+                                    System.out.println("empty thingh");
                                 lastTradeTime = tradeInstant.getMillis();
                                 lastTradeId = remoteId;
                             }
@@ -360,26 +365,42 @@ public class XchangeData {
                             OrderBook orderBook = (OrderBook) event.getPayload();
                             if (helper != null)
                                 helper.handleOrderBook(orderBook);
-                            bookBuilder.start(new Instant(orderBook.getTimeStamp()), null, market);
+                            Book book = bookFactory.create(new Instant(orderBook.getTimeStamp()), market);
+
+                            // bookBuilder.start(new Instant(orderBook.getTimeStamp()), null, market);
                             LimitOrder limitOrder;
-                            for (Iterator<LimitOrder> itb = orderBook.getBids().iterator(); itb.hasNext(); bookBuilder.addBid(limitOrder.getLimitPrice(),
+                            for (Iterator<LimitOrder> itb = orderBook.getBids().iterator(); itb.hasNext(); book.addBid(limitOrder.getLimitPrice(),
                                     limitOrder.getTradableAmount()))
                                 limitOrder = itb.next();
 
-                            for (Iterator<LimitOrder> ita = orderBook.getAsks().iterator(); ita.hasNext(); bookBuilder.addAsk(limitOrder.getLimitPrice(),
+                            for (Iterator<LimitOrder> ita = orderBook.getAsks().iterator(); ita.hasNext(); book.addAsk(limitOrder.getLimitPrice(),
                                     limitOrder.getTradableAmount()))
                                 limitOrder = ita.next();
 
-                            Book book = bookBuilder.build();
+                            book.build();
                             context.publish(book);
 
+                        }
+                        if (event.getEventType().equals(ExchangeEventType.DISCONNECT)) {
+                            log.error(this.getClass().getSimpleName() + " Disconnected");
+                            //Thread.currentThread().interrupt();
+                            //dataService.
+                            // dataService.disconnect();
+                            //    dataService.connect();
+                            //READYSTATE status = dataService.getWebSocketStatus();
+                            //  dataService.connect();
+
+                            // let's resubmit and connect
                         }
 
                     }
                 }
             } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                log.error("Threw a Execption, full stack trace follows disconnecting:", e);
+
+                //  Thread.currentThread().interrupt();
                 dataService.disconnect();
+
                 // Thread.currentThread().interrupt();
 
             } catch (RejectedExecutionException rej) {
@@ -399,7 +420,7 @@ public class XchangeData {
             return Thread.currentThread();
         }
 
-        private final Book.Builder bookBuilder = new Book.Builder();
+        //   private final Book.Builder bookBuilder = new Book.Builder();
         private final boolean getTradesNext = true;
         private StreamingExchangeService dataService = null;
         private final Context context;
@@ -428,14 +449,13 @@ public class XchangeData {
 
             lastTradeTime = 0;
             lastTradeId = 0;
-            EntityManager entityManager = PersistUtil.createEntityManager();
+            // EntityManager entityManager = PersistUtil.createEntityManager();
             try {
 
-                TypedQuery<org.cryptocoinpartners.schema.Trade> query = entityManager.createQuery(
-                        "select t from Trade t where market=?1 and time=(select max(time) from Trade where market=?1)",
-                        org.cryptocoinpartners.schema.Trade.class);
-                query.setParameter(1, market);
-                for (org.cryptocoinpartners.schema.Trade trade : query.getResultList()) {
+                List<org.cryptocoinpartners.schema.Trade> results = EM.queryList(org.cryptocoinpartners.schema.Trade.class,
+                        "select t from Trade t where market=?1 and time=(select max(time) from Trade where market=?1)", market);
+
+                for (org.cryptocoinpartners.schema.Trade trade : results) {
                     // org.cryptocoinpartners.schema.Trade trade = query.getSingleResult();
                     long millis = trade.getTime().getMillis();
                     if (millis > lastTradeTime)
@@ -447,7 +467,7 @@ public class XchangeData {
                         lastTradeId = remoteId;
                 }
             } finally {
-                entityManager.close();
+                // EM.em().close();
             }
         }
 
@@ -491,9 +511,10 @@ public class XchangeData {
                         Instant tradeInstant = new Instant(trade.getTimestamp());
                         BigDecimal volume = (trade.getType() == OrderType.ASK) ? trade.getTradableAmount().negate() : trade.getTradableAmount();
 
-                        org.cryptocoinpartners.schema.Trade ourTrade = new org.cryptocoinpartners.schema.Trade(market, tradeInstant, trade.getId(),
-                                trade.getPrice(), volume);
+                        org.cryptocoinpartners.schema.Trade ourTrade = tradeFactory.create(market, tradeInstant, trade.getId(), trade.getPrice(), volume);
                         context.publish(ourTrade);
+                        if (ourTrade.getDao() == null)
+                            System.out.println("duffer");
                         lastTradeTime = tradeInstant.getMillis();
                         lastTradeId = remoteId;
                     }
@@ -522,17 +543,18 @@ public class XchangeData {
                 OrderBook orderBook = dataService.getOrderBook(pair, params);
                 if (helper != null)
                     helper.handleOrderBook(orderBook);
-                bookBuilder.start(new Instant(orderBook.getTimeStamp()), null, market);
+                Book book = bookFactory.create(new Instant(orderBook.getTimeStamp()), market);
                 LimitOrder limitOrder;
-                for (Iterator<LimitOrder> itb = orderBook.getBids().iterator(); itb.hasNext(); bookBuilder.addBid(limitOrder.getLimitPrice(),
+                for (Iterator<LimitOrder> itb = orderBook.getBids().iterator(); itb.hasNext(); book.addBid(limitOrder.getLimitPrice(),
                         limitOrder.getTradableAmount()))
                     limitOrder = itb.next();
 
-                for (Iterator<LimitOrder> ita = orderBook.getAsks().iterator(); ita.hasNext(); bookBuilder.addAsk(limitOrder.getLimitPrice(),
+                for (Iterator<LimitOrder> ita = orderBook.getAsks().iterator(); ita.hasNext(); book.addAsk(limitOrder.getLimitPrice(),
                         limitOrder.getTradableAmount()))
                     limitOrder = ita.next();
 
-                Book book = bookBuilder.build();
+                book.build();
+                //        log.debug("publish book:" + book.getId());
                 context.publish(book);
 
             } catch (IOException e) {
@@ -541,7 +563,7 @@ public class XchangeData {
             }
         }
 
-        private final Book.Builder bookBuilder = new Book.Builder();
+        // private final Book.Builder bookBuilder = new Book.Builder();
         private boolean getTradesNext = true;
         private final PollingMarketDataService dataService;
         private final RateLimiter rateLimiter;
@@ -555,6 +577,11 @@ public class XchangeData {
     }
 
     protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.xchangeData");
+    private final BookFactory bookFactory;
+
+    private final TradeFactory tradeFactory;
+    //  @Inject
+    //protected EntityManager entityManager;
 
     private final Context context;
 }

@@ -6,7 +6,12 @@ import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.NoResultException;
 
-import org.cryptocoinpartners.util.PersistUtil;
+import org.cryptocoinpartners.schema.dao.CurrencyJpaDao;
+import org.cryptocoinpartners.util.EM;
+
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 
 /**
  * @author Tim Olson
@@ -20,16 +25,22 @@ public class Currency extends Asset {
      */
     private static final long serialVersionUID = 5360515183621144962L;
 
+    @Inject
+    protected static CurrencyJpaDao currencyDao;
+
+    @Inject
+    protected transient static CurrencyFactory currencyFactory;
+
     public boolean isFiat() {
         return fiat;
     }
 
     public static Currency forSymbol(String symbol) {
-        return PersistUtil.queryOne(Currency.class, "select c from Currency c where symbol=?1", symbol);
+        return EM.queryOne(Currency.class, "select c from Currency c where symbol=?1", symbol);
     }
 
     public static List<String> allSymbols() {
-        return PersistUtil.queryList(String.class, "select symbol from Currency");
+        return EM.queryList(String.class, "select symbol from Currency");
     }
 
     // JPA
@@ -43,10 +54,15 @@ public class Currency extends Asset {
     // used by Currencies
     static Currency forSymbolOrCreate(String symbol, boolean isFiat, double basis) {
         try {
-            return forSymbol(symbol);
+            Currency currency = forSymbol(symbol);
+            currencyDao.persist(currency);
+            return currency;
         } catch (NoResultException e) {
+
+            //
             final Currency currency = new Currency(isFiat, symbol, basis);
-            PersistUtil.insert(currency);
+            // final Currency currency = currencyFactory.create(isFiat, symbol, basis);
+            currencyDao.persist(currency);
             return currency;
         }
     }
@@ -57,17 +73,19 @@ public class Currency extends Asset {
             return forSymbol(symbol);
         } catch (NoResultException e) {
             final Currency currency = new Currency(isFiat, symbol, basis, multiplier);
-            PersistUtil.insert(currency);
+            EM.persist(currency);
             return currency;
         }
     }
 
-    private Currency(boolean fiat, String symbol, double basis) {
+    @AssistedInject
+    private Currency(@Assisted boolean fiat, @Assisted String symbol, @Assisted double basis) {
         super(symbol, basis);
         this.fiat = fiat;
     }
 
-    private Currency(boolean fiat, String symbol, double basis, double multiplier) {
+    @AssistedInject
+    private Currency(@Assisted boolean fiat, @Assisted String symbol, @Assisted("basis") double basis, @Assisted("multiplier") double multiplier) {
         super(symbol, basis);
         this.fiat = fiat;
         this.multiplier = multiplier;
@@ -75,4 +93,22 @@ public class Currency extends Asset {
 
     private boolean fiat;
     private double multiplier;
+
+    @Override
+    public void persit() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void detach() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void merge() {
+        // TODO Auto-generated method stub
+
+    }
 }

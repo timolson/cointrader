@@ -15,10 +15,12 @@ import javax.inject.Singleton;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.StringUtils;
 import org.cryptocoinpartners.schema.Book;
+import org.cryptocoinpartners.schema.BookFactory;
 import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Trade;
+import org.cryptocoinpartners.schema.TradeFactory;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +50,7 @@ public class ReadTicksCsv {
     private final SaveMarketData dbPersistance = new SaveMarketData();;
 
     @Inject
-    public ReadTicksCsv(Context context, Configuration config) {
+    public ReadTicksCsv(Context context, Configuration config, TradeFactory tradefactory, BookFactory bookFactory) {
         final String filename = config.getString("readtickscsv.filename");
         if (!StringUtils.isNotBlank(filename))
             throw new ConfigurationError("You must set the property readtickscsv.filename");
@@ -102,16 +104,14 @@ public class ReadTicksCsv {
                 }
 
                 if (market == null)
-                    market = Market.findOrCreate(exchange, listing);
+                    market = market.findOrCreate(exchange, listing);
 
-                Trade trade = Trade.fromDoubles(market, instant, instant, csvtrade.getTime().toString(), csvtrade.getLast(), csvtrade.getVol());
-                bookBuilder.start(instant, instant, csvtrade.getTime().toString(), market);
-                bookBuilder.addBid(BigDecimal.valueOf(csvtrade.getBidprice1()), BigDecimal.valueOf(csvtrade.getBidvol1()));
-                bookBuilder.addAsk(BigDecimal.valueOf(csvtrade.getAskprice1()), BigDecimal.valueOf(csvtrade.getAskvol1()));
-                // bookBuilder.
-                // bookBuilder.
-                Book book = bookBuilder.build();
-                //TODO create insertion and deltion blobs from book.
+                Trade trade = tradefactory.fromDoubles(market, instant, instant, csvtrade.getTime().toString(), csvtrade.getLast(), csvtrade.getVol());
+                Book book = bookFactory.create(instant, instant, csvtrade.getTime().toString(), market);
+                book.addBid(BigDecimal.valueOf(csvtrade.getBidprice1()), BigDecimal.valueOf(csvtrade.getBidvol1()));
+                book.addAsk(BigDecimal.valueOf(csvtrade.getAskprice1()), BigDecimal.valueOf(csvtrade.getAskvol1()));
+
+                book.build();
                 context.publish(book);
                 context.publish(trade);
 

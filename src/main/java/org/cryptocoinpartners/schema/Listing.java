@@ -11,11 +11,15 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.NoResultException;
 import javax.persistence.PostPersist;
+import javax.persistence.QueryHint;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FeeMethod;
-import org.cryptocoinpartners.util.PersistUtil;
+import org.cryptocoinpartners.schema.dao.ListingDao;
+import org.cryptocoinpartners.util.EM;
+
+import com.google.inject.Inject;
 
 /**
  * Represents the possibility to trade one Asset for another
@@ -23,12 +27,15 @@ import org.cryptocoinpartners.util.PersistUtil;
 @SuppressWarnings("UnusedDeclaration")
 @Entity
 @Cacheable
-@NamedQueries({ @NamedQuery(name = "Listing.findByQuoteBase", query = "select a from Listing a where base=?1 and quote=?2 and prompt IS NULL"),
-        @NamedQuery(name = "Listing.findByQuoteBasePrompt", query = "select a from Listing a where base=?1 and quote=?2 and prompt=?3") })
+@NamedQueries({
+        @NamedQuery(name = "Listing.findByQuoteBase", query = "select a from Listing a where base=?1 and quote=?2 and prompt IS NULL", hints = { @QueryHint(name = "org.hibernate.cacheable", value = "true") }),
+        @NamedQuery(name = "Listing.findByQuoteBasePrompt", query = "select a from Listing a where base=?1 and quote=?2 and prompt=?3", hints = { @QueryHint(name = "org.hibernate.cacheable", value = "true") }) })
 @Table(indexes = { @Index(columnList = "base"), @Index(columnList = "quote"), @Index(columnList = "prompt") })
 //@Table(name = "listing", uniqueConstraints = { @UniqueConstraint(columnNames = { "base", "quote", "prompt" }),
 //@UniqueConstraint(columnNames = { "base", "quote" }) })
 public class Listing extends EntityBase {
+    @Inject
+    protected static ListingDao listingDao;
 
     @ManyToOne(optional = false)
     //@Column(unique = true)
@@ -61,17 +68,17 @@ public class Listing extends EntityBase {
     public static Listing forPair(Asset base, Asset quote) {
 
         try {
-            Listing listing = PersistUtil.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBase", base, quote);
+            Listing listing = EM.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBase", base, quote);
             if (listing == null) {
                 listing = new Listing(base, quote);
-                PersistUtil.find(base);
-                PersistUtil.find(quote);
-                PersistUtil.insert(listing);
+                EM.find(base);
+                EM.find(quote);
+                EM.persist(listing);
             }
             return listing;
         } catch (NoResultException e) {
             final Listing listing = new Listing(base, quote);
-            PersistUtil.insert(listing);
+            EM.persist(listing);
             return listing;
         }
     }
@@ -79,15 +86,15 @@ public class Listing extends EntityBase {
     public static Listing forPair(Asset base, Asset quote, Prompt prompt) {
         try {
 
-            Listing listing = PersistUtil.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBasePrompt", base, quote, prompt);
+            Listing listing = EM.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBasePrompt", base, quote, prompt);
             if (listing == null) {
                 listing = new Listing(base, quote, prompt);
-                PersistUtil.insert(listing);
+                EM.persist(listing);
             }
             return listing;
         } catch (NoResultException e) {
             final Listing listing = new Listing(base, quote, prompt);
-            PersistUtil.insert(listing);
+            EM.persist(listing);
             return listing;
         }
     }
@@ -204,7 +211,7 @@ public class Listing extends EntityBase {
 
     public static List<String> allSymbols() {
         List<String> result = new ArrayList<>();
-        List<Listing> listings = PersistUtil.queryList(Listing.class, "select x from Listing x");
+        List<Listing> listings = EM.queryList(Listing.class, "select x from Listing x");
         for (Listing listing : listings)
             result.add((listing.getSymbol()));
         return result;
@@ -292,6 +299,40 @@ public class Listing extends EntityBase {
     @Override
     public int hashCode() {
         return getPrompt() != null ? getQuote().hashCode() + getBase().hashCode() + getPrompt().hashCode() : getQuote().hashCode() + getBase().hashCode();
+
+    }
+
+    @Override
+    public void persit() {
+        listingDao.persist(this);
+
+    }
+
+    public <T> T find() {
+        //   synchronized (persistanceLock) {
+        try {
+            return (T) listingDao.find(Listing.class, this.getId());
+            //if (duplicate == null || duplicate.isEmpty())
+        } catch (Exception | Error ex) {
+            return null;
+            // System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":find, full stack trace follows:" + ex);
+            // ex.printStackTrace();
+
+        }
+
+    }
+
+    @Override
+    public void detach() {
+        listingDao.detach(this);
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void merge() {
+        listingDao.merge(this);
+        // TODO Auto-generated method stub
 
     }
 

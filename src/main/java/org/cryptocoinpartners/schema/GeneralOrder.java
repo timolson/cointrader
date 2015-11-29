@@ -1,6 +1,8 @@
 package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.Nullable;
 import javax.persistence.Cacheable;
@@ -11,6 +13,9 @@ import javax.persistence.Transient;
 import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.util.Remainder;
 import org.joda.time.Instant;
+
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 
 /**
  * A GeneralOrder only specifies a Listing but not an Exchange.  The GeneralOrder must be processed and broken down into
@@ -26,6 +31,11 @@ public class GeneralOrder extends Order {
 
     public GeneralOrder(Instant time, Portfolio portfolio, Listing listing, BigDecimal volume) {
         super(time);
+        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
+        this.children = new CopyOnWriteArrayList<Order>();
+
+        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.transactions = new CopyOnWriteArrayList<Transaction>();
         super.setPortfolio(portfolio);
         this.listing = listing;
         this.volume = DecimalAmount.of(volume);
@@ -33,15 +43,28 @@ public class GeneralOrder extends Order {
 
     public GeneralOrder(Instant time, Portfolio portfolio, Order parentOrder, Listing listing, BigDecimal volume) {
         super(time);
+        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
+
+        this.children = new CopyOnWriteArrayList<Order>();
+
+        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.transactions = new CopyOnWriteArrayList<Transaction>();
         super.setPortfolio(portfolio);
-        parentOrder.addChild(this);
+        parentOrder.addChildOrder(this);
         this.setParentOrder(parentOrder);
         this.listing = listing;
         this.volume = DecimalAmount.of(volume);
     }
 
-    public GeneralOrder(Instant time, Portfolio portfolio, Market market, BigDecimal volume, FillType type) {
+    @AssistedInject
+    public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted BigDecimal volume, @Assisted FillType type) {
         super(time);
+        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
+
+        this.children = new CopyOnWriteArrayList<Order>();
+
+        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.transactions = new CopyOnWriteArrayList<Transaction>();
         super.setPortfolio(portfolio);
         this.market = market;
         this.listing = market.getListing();
@@ -51,8 +74,14 @@ public class GeneralOrder extends Order {
 
     public GeneralOrder(Instant time, Portfolio portfolio, Order parentOrder, Market market, BigDecimal volume, FillType type) {
         super(time);
+        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
+
         super.setPortfolio(portfolio);
-        parentOrder.addChild(this);
+        this.children = new CopyOnWriteArrayList<Order>();
+
+        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.transactions = new CopyOnWriteArrayList<Transaction>();
+        parentOrder.addChildOrder(this);
         this.setParentOrder(parentOrder);
         this.market = market;
         this.listing = market.getListing();
@@ -60,10 +89,17 @@ public class GeneralOrder extends Order {
         this.fillType = type;
     }
 
-    public GeneralOrder(Instant time, Portfolio portfolio, Fill parentFill, Market market, BigDecimal volume, FillType type) {
+    @AssistedInject
+    public GeneralOrder(@Assisted Instant time, @Assisted Fill parentFill, @Assisted Market market, @Assisted BigDecimal volume, @Assisted FillType type) {
         super(time);
-        super.setPortfolio(portfolio);
-        parentFill.addChild(this);
+        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
+
+        super.setPortfolio(parentFill.getPortfolio());
+        this.children = new CopyOnWriteArrayList<Order>();
+
+        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.transactions = new CopyOnWriteArrayList<Transaction>();
+        parentFill.addChildOrder(this);
         this.setParentFill(parentFill);
         this.market = market;
         this.listing = market.getListing();
@@ -73,7 +109,13 @@ public class GeneralOrder extends Order {
 
     public GeneralOrder(Instant time, Portfolio portfolio, Listing listing, String volume) {
         super(time);
+        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
+
         super.setPortfolio(portfolio);
+        this.children = new CopyOnWriteArrayList<Order>();
+
+        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.transactions = new CopyOnWriteArrayList<Transaction>();
         this.listing = listing;
         this.volume = DecimalAmount.of(volume);
     }
@@ -82,6 +124,24 @@ public class GeneralOrder extends Order {
     @ManyToOne(optional = true)
     public Listing getListing() {
         return listing;
+    }
+
+    @Override
+    public Order withLimitPrice(String price) {
+        this.setLimitPrice(DecimalAmount.of(price));
+        return this;
+    }
+
+    @Override
+    public Order withLimitPrice(DiscreteAmount price) {
+        this.setLimitPriceDecimal(price.asBigDecimal());
+        return this;
+    }
+
+    @Override
+    public Order withLimitPrice(BigDecimal price) {
+        this.setLimitPrice(DecimalAmount.of(price));
+        return this;
     }
 
     @Override
@@ -141,36 +201,43 @@ public class GeneralOrder extends Order {
     }
 
     @Override
+    @Transient
     public DecimalAmount getVolume() {
         return volume;
     }
 
     @Override
+    @Transient
     public DecimalAmount getLimitPrice() {
         return limitPrice;
     }
 
     @Override
+    @Transient
     public DecimalAmount getStopAmount() {
         return stopAmount;
     }
 
     @Override
+    @Transient
     public DecimalAmount getTargetAmount() {
         return targetAmount;
     }
 
     @Override
+    @Transient
     public DecimalAmount getStopPrice() {
         return stopPrice;
     }
 
     @Override
+    @Transient
     public DecimalAmount getTargetPrice() {
         return targetPrice;
     }
 
     @Override
+    @Transient
     public DecimalAmount getTrailingStopPrice() {
         return trailingStopPrice;
     }
@@ -179,9 +246,23 @@ public class GeneralOrder extends Order {
     @Transient
     public Amount getUnfilledVolume() {
         Amount filled = DecimalAmount.ZERO;
+        if (volume.isZero())
+            return DecimalAmount.ZERO;
         for (Fill fill : getFills())
             filled = filled.plus(fill.getVolume());
-        return filled;
+
+        ArrayList<Fill> allChildFills = new ArrayList<Fill>();
+        getAllFillsByParentOrder(this, allChildFills);
+
+        for (Fill fill : allChildFills) {
+            if (volume == null || fill.getVolume() == null)
+                return null;
+            if (!volume.isZero() && (fill.getVolume().isPositive() && volume.isPositive()) || (fill.getVolume().isNegative() && volume.isNegative()))
+                filled = filled.plus(fill.getVolume());
+        }
+        Amount unfilled = (volume.isNegative()) ? (volume.abs().minus(filled.abs())).negate() : volume.abs().minus(filled.abs());
+        return unfilled;
+
     }
 
     @Override
@@ -208,7 +289,8 @@ public class GeneralOrder extends Order {
     @Override
     public String toString() {
         String s = "GeneralOrder{" + "id=" + getId() + ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + ", parentFill="
-                + (getParentFill() == null ? "null" : getParentFill().getId()) + ", listing=" + listing + ", volume=" + volume;
+                + (getParentFill() == null ? "null" : getParentFill().getId()) + ", listing=" + listing + ", volume=" + volume + ", unfilled volume="
+                + (getUnfilledVolume() == null ? "null" : getUnfilledVolume());
         if (limitPrice != null && limitPrice.asBigDecimal() != null)
             s += ", limitPrice=" + limitPrice;
         if (stopAmount != null && stopAmount.asBigDecimal() != null)
@@ -240,11 +322,11 @@ public class GeneralOrder extends Order {
         super(time);
     }
 
-    protected void setVolume(DecimalAmount volume) {
+    public void setVolume(DecimalAmount volume) {
         this.volume = volume;
     }
 
-    protected void setVolumeDecimal(BigDecimal volume) {
+    public void setVolumeDecimal(BigDecimal volume) {
         this.volume = new DecimalAmount(volume);
     }
 
@@ -290,9 +372,12 @@ public class GeneralOrder extends Order {
 
     @Override
     public void setStopPrice(DecimalAmount stopPrice) {
-        this.stopPrice = stopPrice;
-        if (getParentFill() != null && stopPrice != null)
-            getParentFill().setStopPriceCount(stopPrice.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+        if (stopPrice != null) {
+            this.stopPrice = stopPrice;
+            if (getParentFill() != null)
+
+                getParentFill().setStopPriceCount(stopPrice.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+        }
 
     }
 

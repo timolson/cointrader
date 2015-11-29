@@ -8,7 +8,6 @@ import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.service.Strategy;
-import org.cryptocoinpartners.util.PersistUtil;
 import org.slf4j.Logger;
 
 /**
@@ -30,7 +29,8 @@ public class BaseStrategy implements Strategy {
         portfolio.getContext().publish(portfolioSubcribeEvent);
         Asset baseAsset = Asset.forSymbol(portfolio.getContext().getConfig().getString("base.symbol", "USD"));
         portfolio.setBaseAsset(baseAsset);
-        PersistUtil.insert(portfolio);
+        portfolio.merge();
+        // PersistUtil.insert(portfolio);
         order = new OrderBuilder(portfolio, orderService);
         log = portfolio.getLogger();
     }
@@ -81,7 +81,7 @@ public class BaseStrategy implements Strategy {
     /** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
     @Inject
     protected transient QuoteService quotes;
-
+    @Inject
     protected transient Portfolio portfolio;
     @Inject
     protected transient Context context;
@@ -89,6 +89,15 @@ public class BaseStrategy implements Strategy {
     protected transient OrderService orderService;
     @Inject
     protected transient PortfolioService portfolioService;
+    @Inject
+    protected transient GeneralOrderFactory generalOrderFactory;
+
+    @Inject
+    protected transient SpecificOrderFactory specificOrderFactory;
+
+    @Inject
+    protected transient TransactionFactory transactionFactory;
+
     // @Inject
     protected static Logger log;
 

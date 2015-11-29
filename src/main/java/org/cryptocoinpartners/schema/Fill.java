@@ -1,6 +1,8 @@
 package org.cryptocoinpartners.schema;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.Nullable;
@@ -8,17 +10,21 @@ import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToMany;
+import javax.persistence.PostPersist;
+import javax.persistence.PrePersist;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.PositionType;
+import org.cryptocoinpartners.schema.dao.FillDao;
 import org.cryptocoinpartners.util.FeesUtil;
-import org.cryptocoinpartners.util.PersistUtil;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
 
 /**
  * A Fill represents some completion of an Order.  The volume of the Fill might be less than the requested volume of the
@@ -34,16 +40,25 @@ public class Fill extends RemoteEvent {
     // private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
     private static final String SEPARATOR = ",";
     private PositionEffect positionEffect;
+    @Inject
+    protected FillDao fillDao;
 
-    public Fill(SpecificOrder order, Instant time, Instant timeReceived, Market market, long priceCount, long volumeCount, String remoteKey) {
+    // @Inject
+
+    @Inject
+    public Fill(@Assisted SpecificOrder order, @Assisted("fillTime") Instant time, @Assisted("fillTimeReceived") Instant timeReceived, @Assisted Market market,
+            @Assisted("fillPriceCount") long priceCount, @Assisted("fillVolumeCount") long volumeCount, @Assisted String remoteKey) {
         super(time, timeReceived, remoteKey);
+
+        this.children = new CopyOnWriteArrayList<Order>();
+        this.transactions = new CopyOnWriteArrayList<Transaction>();
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
         this.openVolumeCount = volumeCount;
         this.positionType = (openVolumeCount > 0) ? PositionType.LONG : PositionType.SHORT;
         this.order = order;
         this.order.addFill(this);
-
+        this.remoteKey = order.getId().toString();
         this.market = market;
         if (priceCount == 0)
             this.priceCount = priceCount;
@@ -55,8 +70,23 @@ public class Fill extends RemoteEvent {
 
     }
 
-    public Fill(SpecificOrder order, Instant time, Instant timeReceived, Market market, long priceCount, long volumeCount, Amount commission, String remoteKey) {
+    //    @Override
+    //    @Basic(optional = true)
+    //    public String getRemoteKey() {
+    //        return remoteKey;
+    //    }
+    //
+    //    @Override
+    //    public void setRemoteKey(@Nullable String remoteKey) {
+    //        this.remoteKey = remoteKey;
+    //    }
+
+    public Fill(@Assisted SpecificOrder order, @Assisted Instant time, @Assisted Instant timeReceived, @Assisted Market market, @Assisted long priceCount,
+            @Assisted long volumeCount, @Assisted Amount commission, @Assisted String remoteKey) {
         super(time, timeReceived, remoteKey);
+        this.children = new CopyOnWriteArrayList<Order>();
+        this.transactions = new CopyOnWriteArrayList<Transaction>();
+        this.remoteKey = order.getId().toString();
         this.order = order;
         this.order.addFill(this);
 
@@ -68,7 +98,6 @@ public class Fill extends RemoteEvent {
         this.volumeCount = volumeCount;
         this.openVolumeCount = volumeCount;
         this.positionType = (openVolumeCount > 0) ? PositionType.LONG : PositionType.SHORT;
-
         this.commission = commission;
         this.portfolio = order.getPortfolio();
         this.stopAmountCount = (order.getStopAmount() != null) ? order.getStopAmount().getCount() : 0;
@@ -76,28 +105,88 @@ public class Fill extends RemoteEvent {
 
     }
 
+    public <T> T find() {
+        //   synchronized (persistanceLock) {
+        try {
+            return (T) fillDao.find(Order.class, this.getId());
+            //if (duplicate == null || duplicate.isEmpty())
+        } catch (Exception | Error ex) {
+            return null;
+            // System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":find, full stack trace follows:" + ex);
+            // ex.printStackTrace();
+
+        }
+
+    }
+
     // public @ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE, CascadeType.REFRESH })
     public @ManyToOne
+    //(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     @JoinColumn(name = "`order`")
     SpecificOrder getOrder() {
         return order;
     }
 
-    public void persit() {
+    @Override
+    public synchronized void merge() {
+        // try {
+        // if (getOrder() != null)
+        //   getOrder().persit();
+        //  i//f (getPosition() != null)
+        // getPosition().persit();
+        //   if (order != null)
+        //     order.find();
+        try {
+            //   find();
+            fillDao.merge(this);
+            //if (duplicate == null || duplicate.isEmpty())
+        } catch (Exception | Error ex) {
+
+            System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":merge, full stack trace follows:" + ex);
+
+            // ex.printStackTrace();
+
+        }
+
+        //fillDao.merge(this);
+    }
+
+    @Override
+    public synchronized void persit() {
+        // Any @ManyToOne I need to persist first to get them in the EM context.
         //   synchronized (persistanceLock) {
         //  if (this.hasFills()) {
         //    for (Fill fill : this.getFills())
 
         //PersistUtil.merge(fill);
         //}
-
-        //  List<Fill> duplicate = PersistUtil.queryList(Fill.class, "select f from Fill f where f=?1", this);
+        // if (getOrder() != null)
+        //   getOrder().persit();
         // if (getPosition() != null)
-        //   getPosition().Persit();
+        //   getPosition().persit();
+
+        //List<Fill> duplicate = fillDao.queryList(Fill.class, "select f from Fill f where f=?1", this);
 
         //if (duplicate == null || duplicate.isEmpty())
-        PersistUtil.insert(this);
+        // if (fillDao != null)
+        // avoid session conflicts due to lazy loading.
+        //for (Order childOrder : this.getFillChildOrders())
+        //    childOrder.p
+        //  childOrder.persit();
+        // try {
+
+        fillDao.persist(this);
+        //  } catch (Exception | Error ex) {
+        //   fillDao.merge(this);
+
+        //    System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":persist, full stack trace follows:" + ex);
+        //ex.printStackTrace();
+
+        //  }
+
+        //  PersistUtil.insert(this);
         //else
+        //  fillDao.merge(this);
         //  PersistUtil.merge(this);
         //  }
         //Iterator<Order> itc = getChildren().iterator();
@@ -127,12 +216,11 @@ public class Fill extends RemoteEvent {
 
     @Nullable
     @ManyToOne(optional = true)
-    //, fetch = FetchType.EAGER)
-    //cascade = CascadeType.ALL)
+    //, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    //cascade = { CascadeType.ALL })
     @JoinColumn(name = "position")
     public Position getPosition() {
-        if (openVolumeCount == 0)
-            return null;
+
         return position;
     }
 
@@ -157,32 +245,77 @@ public class Fill extends RemoteEvent {
         return getOpenVolume().isPositive();
     }
 
-    public void addChild(Order order) {
-        synchronized (lock) {
-            getChildren().add(order);
+    public synchronized void addChildOrder(Order order) {
+        this.children.add(order);
+
+    }
+
+    public void removeChildOrder(Order order) {
+        order.setParentOrder(null);
+        this.children.remove(order);
+    }
+
+    @PostPersist
+    private void postPersist() {
+        //detach();
+    }
+
+    @PrePersist
+    private void prePersist() {
+
+        UUID orderId = null;
+        UUID positionId = null;
+        if (fillDao == null)
+            System.out.println("dude");
+        if (order != null) {
+            orderId = (fillDao.queryZeroOne(UUID.class, "select o.id from Order o where o.id=?1", order.getId()));
+
+            if (orderId == null)
+                order.persit();
         }
+
+        if (position != null) {
+            positionId = (fillDao.queryZeroOne(UUID.class, "select p.id from Position p where p.id=?1", position.getId()));
+            if (positionId == null)
+                position.persit();
+        }
+
+        //detach();
+    }
+
+    @Override
+    public void detach() {
+
+        fillDao.detach(this);
     }
 
     //@Nullable
     //@OneToMany(cascade = CascadeType.MERGE)
     //(mappedBy = "parentFill")
     //@OrderBy
+    //@Transient
+
+    //@OneToMany(mappedBy = "parentFill")
+    // @OneToMany(orphanRemoval = true)
+    // @JoinColumn(name = "parentFill")
+    //@Column
+    //@ElementCollection(targetClass = Order.class)
     @Transient
-    public List<Order> getChildren() {
+    public List<Order> getFillChildOrders() {
         if (children == null)
-            children = new CopyOnWriteArrayList<Order>();
+            return new CopyOnWriteArrayList<Order>();
         //  synchronized (//) {
         return children;
         // }
     }
 
-    protected void setChildren(List<Order> children) {
+    protected void setFillChildOrders(List<Order> children) {
         this.children = children;
     }
 
     @Transient
     public boolean hasChildren() {
-        return !getChildren().isEmpty();
+        return !getFillChildOrders().isEmpty();
     }
 
     @Transient
@@ -197,15 +330,14 @@ public class Fill extends RemoteEvent {
     }
 
     @Nullable
-    @OneToMany(mappedBy = "fill")
+    // @OneToMany(mappedBy = "fill")
+    //, orphanRemoval = true, cascade = CascadeType.REMOVE)
     // , fetch = FetchType.EAGER)
     // , cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     //, mappedBy = "fill")
     //(fetch = FetchType.EAGER)
-    //  @Transient
+    @Transient
     public List<Transaction> getTransactions() {
-        if (transactions == null)
-            transactions = new CopyOnWriteArrayList<Transaction>();
 
         //synchronized (lock) {
         return transactions;
@@ -215,8 +347,13 @@ public class Fill extends RemoteEvent {
     public void addTransaction(Transaction transaction) {
 
         // synchronized (lock) {
-        getTransactions().add(transaction);
+        this.transactions.add(transaction);
         //  }
+    }
+
+    public void removeTransaction(Transaction transaction) {
+        transaction.setFill(null);
+        this.transactions.remove(transactions);
     }
 
     protected void setTransactions(List<Transaction> transactions) {
@@ -305,9 +442,18 @@ public class Fill extends RemoteEvent {
 
     @Transient
     public PositionType getPositionType() {
-        if (getOpenVolumeCount() != 0)
+        //  if (getOpenVolumeCount() != 0)
+        if (positionType == null)
+            if (getVolume().isPositive())
+                return PositionType.LONG;
+            else
+                return PositionType.SHORT;
+        // If i have children and all the children are fully filled, then I set to flat
+        if (hasChildren() && getUnfilledVolume().isZero())
+            return PositionType.FLAT;
+        else
             return positionType;
-        return PositionType.FLAT;
+        // return PositionType.FLAT;
     }
 
     @ManyToOne(optional = false)
@@ -317,13 +463,20 @@ public class Fill extends RemoteEvent {
 
     @Transient
     public FillType getFillType() {
-        return getOrder().getFillType();
+        if (getOrder() != null)
+            return getOrder().getFillType();
+        return null;
     }
 
     public PositionEffect getPositionEffect() {
 
         return positionEffect;
 
+    }
+
+    @Transient
+    public FillDao getFillDao() {
+        return fillDao;
     }
 
     protected void setPositionEffect(PositionEffect positionEffect) {
@@ -334,11 +487,16 @@ public class Fill extends RemoteEvent {
     public String toString() {
         // + (order.getId() != null ? order.getId() : "")
         //   + (getFillType() != null ? getFillType() : "")
+        // getVolume()
         return "Id=" + (getId() != null ? getId() : "") + SEPARATOR + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR
                 + "PositionType=" + (getPositionType() != null ? getPositionType() : "") + SEPARATOR + "Market=" + (market != null ? market : "") + SEPARATOR
                 + "Price=" + (getPrice() != null ? getPrice() : "") + SEPARATOR + "Volume=" + (getVolume() != null ? getVolume() : "") + SEPARATOR
-                + "Open Volume=" + (getOpenVolume() != null ? getOpenVolume() : "") + SEPARATOR + "Order=" + (getOrder() != null ? getOrder().getId() : "")
-                + SEPARATOR + "Parent Fill=" + ((getOrder() != null && getOrder().getParentFill() != null) ? getOrder().getParentFill().getId() : "");
+                + "Unfilled Volume=" + (hasChildren() ? getUnfilledVolume() : "") + SEPARATOR + "Open Volume="
+                + (getOpenVolume() != null ? getOpenVolume() : "") + SEPARATOR + "Position Effect=" + (getPositionEffect() != null ? getPositionEffect() : "")
+                + SEPARATOR + "Position=" + (getPosition() != null ? getPosition() : "") + SEPARATOR + "Comment="
+                + (getOrder() != null && getOrder().getComment() != null ? getOrder().getComment() : "") + SEPARATOR + "Order="
+                + (getOrder() != null ? getOrder().getId() : "") + SEPARATOR + "Parent Fill="
+                + ((getOrder() != null && getOrder().getParentFill() != null) ? getOrder().getParentFill().getId() : "");
     }
 
     // JPA
@@ -354,7 +512,34 @@ public class Fill extends RemoteEvent {
     }
 
     public void setPositionType(PositionType positionType) {
+        if (this.positionType == PositionType.FLAT)
+            System.out.println("previous was flat");
         this.positionType = positionType;
+    }
+
+    @Transient
+    public Amount getUnfilledVolume() {
+        Amount filled = DecimalAmount.ZERO;
+        Amount unfilled = getVolume();
+        if (getVolume().isZero())
+            return DecimalAmount.ZERO;
+        for (Order childOrder : getFillChildOrders()) {
+
+            ArrayList<Fill> allChildFills = new ArrayList<Fill>();
+            childOrder.getAllFillsByParentOrder(childOrder, allChildFills);
+
+            for (Fill childFill : allChildFills) {
+                if (getVolume() == null || childFill.getVolume() == null)
+                    System.out.println("null fill volume");
+                if (getVolume() != null && !getVolume().isZero() && (childFill.getVolume().isPositive() && getVolume().isNegative())
+                        || (childFill.getVolume().isNegative() && getVolume().isPositive()))
+                    filled = filled.plus(childFill.getVolume());
+            }
+            unfilled = (getVolume().isNegative()) ? (getVolume().abs().minus(filled.abs())).negate() : getVolume().abs().minus(filled.abs());
+
+        }
+        return unfilled;
+
     }
 
     protected void setPriceCount(long priceCount) {
@@ -405,8 +590,7 @@ public class Fill extends RemoteEvent {
         this.position = position;
     }
 
-    private List<Order> children = new CopyOnWriteArrayList<Order>();
-
+    private List<Order> children;
     private SpecificOrder order;
     private Market market;
     private long priceCount;
@@ -419,7 +603,7 @@ public class Fill extends RemoteEvent {
     private Amount commission;
     private Amount margin;
     private PositionType positionType;
-    private List<Transaction> transactions = new CopyOnWriteArrayList<Transaction>();
+    private List<Transaction> transactions;
     private Portfolio portfolio;
     private Position position;
 

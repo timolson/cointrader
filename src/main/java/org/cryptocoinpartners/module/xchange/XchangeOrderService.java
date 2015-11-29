@@ -2,9 +2,10 @@ package org.cryptocoinpartners.module.xchange;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.List;
 
 import javax.inject.Singleton;
 import javax.persistence.Transient;
@@ -13,6 +14,7 @@ import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.OrderState;
 import org.cryptocoinpartners.exceptions.OrderNotFoundException;
 import org.cryptocoinpartners.module.BaseOrderService;
+import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Portfolio;
@@ -85,7 +87,7 @@ public class XchangeOrderService extends BaseOrderService {
     @Override
     @Transient
     public Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio) {
-        Collection<SpecificOrder> pendingOrders = new ConcurrentLinkedQueue<SpecificOrder>();
+        Collection<SpecificOrder> pendingOrders = new ArrayList<SpecificOrder>();
         com.xeiam.xchange.Exchange exchange;
         try {
             exchange = XchangeUtil.getExchangeForMarket(market.getExchange());
@@ -135,7 +137,7 @@ public class XchangeOrderService extends BaseOrderService {
 
     @Override
     public Collection<SpecificOrder> getPendingOrders() {
-        return new ConcurrentLinkedQueue<>();
+        return new ArrayList<>();
 
     }
 
@@ -185,16 +187,17 @@ public class XchangeOrderService extends BaseOrderService {
 
     @Override
     public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio) {
-        Collection<SpecificOrder> pendingOrders = new ConcurrentLinkedQueue<SpecificOrder>();
 
-        for (Market market : Market.findAll())
+        Collection<SpecificOrder> pendingOrders = new ArrayList<SpecificOrder>();
+
+        for (Market market : portfolio.getContext().getInjector().getInstance(Market.class).findAll())
             pendingOrders.addAll(getPendingOrders(market, portfolio));
 
         return pendingOrders;
 
     }
 
-    protected static final Collection<SpecificOrder> pendingOrders = new ConcurrentLinkedQueue<SpecificOrder>();
+    protected static final Collection<SpecificOrder> pendingOrders = new ArrayList<SpecificOrder>();
     protected static final HashBiMap<SpecificOrder, com.xeiam.xchange.dto.Order> externalOrderMap = HashBiMap.create();
 
     @Override
@@ -247,6 +250,48 @@ public class XchangeOrderService extends BaseOrderService {
 
     @Override
     public void handleCancelSpecificOrderByParentFill(Fill parentFill) throws OrderNotFoundException {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void getAllSpecificOrdersByParentFill(Fill parentFill, List allChildren) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void getAllSpecificOrdersByParentOrder(org.cryptocoinpartners.schema.Order parentOrder, List allChildren) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    protected void handleUpdateSpecificOrderWorkingQuantity(SpecificOrder specificOrder, DiscreteAmount quantity) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public Collection<SpecificOrder> getPendingLongOpenOrders(Portfolio portfolio) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Collection<SpecificOrder> getPendingShortOpenOrders(Portfolio portfolio) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public void handleCancelAllLongOpeningSpecificOrders(Portfolio portfolio, Market market) {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void handleCancelAllShortOpeningSpecificOrders(Portfolio portfolio, Market market) {
         // TODO Auto-generated method stub
 
     }

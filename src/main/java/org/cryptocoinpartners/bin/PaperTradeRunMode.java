@@ -6,6 +6,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
+import javax.inject.Inject;
+
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.BasicQuoteService;
@@ -17,9 +19,12 @@ import org.cryptocoinpartners.module.xchange.XchangeData;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Holding;
 import org.cryptocoinpartners.schema.Portfolio;
+import org.cryptocoinpartners.schema.ReplayFactory;
 import org.cryptocoinpartners.schema.StrategyInstance;
 import org.cryptocoinpartners.schema.Transaction;
+import org.cryptocoinpartners.schema.TransactionFactory;
 import org.cryptocoinpartners.service.OrderService;
+import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.Replay;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -35,20 +40,27 @@ import com.espertech.esper.client.time.TimerControlEvent;
 @SuppressWarnings("UnusedDeclaration")
 @Parameters(commandNames = { "paper" }, commandDescription = "Run strategies against live streaming data but use the mock order system instead of live trades")
 public class PaperTradeRunMode extends RunMode {
+    @Inject
+    protected transient TransactionFactory transactionFactory;
+
+    @Inject
+    protected transient ReplayFactory replayFactory;
+
     public List<String> positions = Arrays.asList("OKCOIN:USD", "1000000"); //private final Instant start = new DateTime(2014, 11, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
     final ExecutorService service = Executors.newSingleThreadExecutor();
     private final Instant end = new DateTime(DateTime.now()).toInstant();
     Semaphore paperSemaphore = new Semaphore(0);
-    private final Instant start = end.minus(Duration.standardHours(2)).toInstant();
+    private final Instant start = end.minus(Duration.standardHours(25)).toInstant();
 
     // new DateTime(2013, 12, 20, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
     @Override
     public void run(Semaphore semaphore) {
         //context = Context.create();
-        Replay replay = Replay.between(start, end, true, paperSemaphore);
+        Replay replay = replayFactory.between(start, end, true, paperSemaphore);
         context = replay.getContext();
-        // context = Context.create();
+
+        context = replay.getContext();
 
         context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
@@ -75,7 +87,9 @@ public class PaperTradeRunMode extends RunMode {
         // context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
 
         //  context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
-        context.attach(SaveMarketData.class);
+        if (ConfigUtil.combined().getBoolean("save.marketdata", true))
+
+            context.attach(SaveMarketData.class);
         context.attach(XchangeData.class);
         orderService.setTradingEnabled(true); //  context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
 
@@ -97,7 +111,9 @@ public class PaperTradeRunMode extends RunMode {
             //  Long str = (positions.get(i++));
             DiscreteAmount amount = new DiscreteAmount(Long.parseLong(positions.get(i++)), holding.getAsset().getBasis());
             DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
-            Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
+            Transaction initialCredit = transactionFactory.create(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
+            context.setPublishTime(initialCredit);
+
             context.publish(initialCredit);
             initialCredit.persit();
 

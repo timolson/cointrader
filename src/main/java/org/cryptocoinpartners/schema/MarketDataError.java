@@ -44,4 +44,22 @@ public class MarketDataError extends Event {
 
     private Exception exception;
     private Market market;
+
+    @Override
+    public void persit() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void detach() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void merge() {
+        // TODO Auto-generated method stub
+
+    }
 }

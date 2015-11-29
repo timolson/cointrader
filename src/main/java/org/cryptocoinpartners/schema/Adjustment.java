@@ -78,4 +78,23 @@ public class Adjustment extends EntityBase {
     private Instant timeApplied;
     private Authorization authorization;
     private List<Position> deltas;
+
+    @Override
+    public void persit() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void detach() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void merge() {
+        // TODO Auto-generated method stub
+
+    }
+
 }

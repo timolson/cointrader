@@ -22,6 +22,8 @@ import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.inject.Inject;
+
 /**
  * This service listens to the Context and caches the most recent Trades and Books
  *
@@ -126,7 +128,7 @@ public class BasicQuoteService implements QuoteService {
     Offer getImpliedBestAskForListing(Listing listing) {
         try {
             long bestImpliedAsk = impliedAskMatrix.getRate(listing.getBase(), listing.getQuote());
-            Market market = Market.findOrCreate(Exchanges.SELF, listing);
+            Market market = context.getInjector().getInstance(Market.class).findOrCreate(Exchanges.SELF, listing);
             return new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
         } catch (java.lang.IllegalArgumentException e) {
 
@@ -139,7 +141,7 @@ public class BasicQuoteService implements QuoteService {
     Offer getImpliedBestBidForListing(Listing listing) {
         try {
             long bestImpliedBid = impliedBidMatrix.getRate(listing.getBase(), listing.getQuote());
-            Market market = Market.findOrCreate(Exchanges.SELF, listing);
+            Market market = context.getInjector().getInstance(Market.class).findOrCreate(Exchanges.SELF, listing);
             return new Offer(market, Instant.now(), Instant.now(), bestImpliedBid, 0L);
         } catch (java.lang.IllegalArgumentException e) {
 
@@ -229,7 +231,7 @@ public class BasicQuoteService implements QuoteService {
 
     }
 
-    @When("@Priority(5) select * from Trade.std:lastevent()")
+    @When("@Priority(5) select * from Trade")
     private void recordTrade(Trade t) {
         Market market = t.getMarket();
         handleMarket(market);
@@ -260,6 +262,8 @@ public class BasicQuoteService implements QuoteService {
     private final ListingsMatrix impliedBidMatrix = new ListingsMatrix();
     private final ListingsMatrix impliedAskMatrix = new ListingsMatrix();
     protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.quoteService");
+    @Inject
+    protected Context context;
 
     private final Map<String, Trade> lastTradeByListing = new HashMap<>();
     private final Map<String, Book> lastBookByListing = new HashMap<>();

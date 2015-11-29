@@ -34,7 +34,7 @@ public class DemoStrategy extends SimpleStatefulStrategy {
         // String marketSymbol = config.getString("demostrategy.market","BITFINEX:BTC.USD");
         String marketSymbol = ("BITFINEX:BTC.USD");
 
-        market = Market.forSymbol(marketSymbol);
+        market = context.getInjector().getInstance(Market.class).forSymbol(marketSymbol);
         if (market == null)
             throw new Error("Could not find Market for symbol " + marketSymbol);
         BigDecimal volumeBD = new BigDecimal("1");// 100 satoshis

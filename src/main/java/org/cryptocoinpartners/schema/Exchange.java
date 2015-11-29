@@ -8,7 +8,10 @@ import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 
 import org.cryptocoinpartners.enumeration.FeeMethod;
-import org.cryptocoinpartners.util.PersistUtil;
+import org.cryptocoinpartners.schema.dao.ExchangeJpaDao;
+import org.cryptocoinpartners.util.EM;
+
+import com.google.inject.Inject;
 
 /**
  * @author Tim Olson
@@ -20,45 +23,47 @@ public class Exchange extends EntityBase {
     /**
      * 
      */
+    // @Inject
+    //protected static ExchangeJpaDao exchangeDao;
+
+    @Inject
+    protected static ExchangeJpaDao exchangeDao;
 
     public static Exchange forSymbolOrCreate(String symbol) {
-        PersistUtil persistUtil = new PersistUtil();
         Exchange found = forSymbol(symbol);
         if (found == null) {
             found = new Exchange(symbol);
-            persistUtil.insert(found);
+            exchangeDao.persist(found);
         }
         return found;
     }
 
     public static Exchange forSymbolOrCreate(String symbol, int margin, double feeRate, FeeMethod feeMethod) {
-        PersistUtil persistUtil = new PersistUtil();
         Exchange found = forSymbol(symbol);
         if (found == null) {
             found = new Exchange(symbol, margin, feeRate, feeMethod);
-            persistUtil.insert(found);
+            exchangeDao.persist(found);
+
         }
         return found;
     }
 
     public static Exchange forSymbolOrCreate(String symbol, int margin, double feeRate, FeeMethod feeMethod, double marginFeeRate, FeeMethod marginFeeMethod) {
-        PersistUtil persistUtil = new PersistUtil();
         Exchange found = forSymbol(symbol);
         if (found == null) {
             found = new Exchange(symbol, margin, feeRate, feeMethod, marginFeeRate, marginFeeMethod);
-            persistUtil.insert(found);
+            exchangeDao.persist(found);
         }
         return found;
     }
 
     /** returns null if the symbol does not represent an existing exchange */
     public static Exchange forSymbol(String symbol) {
-        PersistUtil persistUtil = new PersistUtil();
-        return persistUtil.queryZeroOne(Exchange.class, "select e from Exchange e where symbol=?1", symbol);
+        return EM.queryZeroOne(Exchange.class, "select e from Exchange e where symbol=?1", symbol);
     }
 
     public static List<String> allSymbols() {
-        return PersistUtil.queryList(String.class, "select symbol from Exchange");
+        return EM.queryList(String.class, "select symbol from Exchange");
     }
 
     @Basic(optional = false)
@@ -154,5 +159,26 @@ public class Exchange extends EntityBase {
     private int margin;
     private double feeRate;
     private double marginFeeRate;
+
+    @Override
+    public void persit() {
+        exchangeDao.persist(this);
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void detach() {
+        exchangeDao.detach(this);
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void merge() {
+        exchangeDao.merge(this);
+        // TODO Auto-generated method stub
+
+    }
 
 }

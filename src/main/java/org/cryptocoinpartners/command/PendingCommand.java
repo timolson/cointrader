@@ -25,7 +25,7 @@ public class PendingCommand extends CommandBase {
     @Override
     public void parse(String commandArguments) {
         try {
-            market = Market.forSymbol(commandArguments);
+            market = market.forSymbol(commandArguments);
 
             //   listing = Listing.forSymbol(commandArguments);
         } catch (IllegalArgumentException e) {
@@ -55,6 +55,7 @@ public class PendingCommand extends CommandBase {
     @Inject
     private ConsoleWriter console;
     private BigDecimal volume;
+    @Inject
     private Market market;
     private Listing listing;
     private BigDecimal limit;

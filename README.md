@@ -191,6 +191,8 @@ Filled order 3ff02408-8269-4bf9-929f-8d2ca060f6fc: Fill{order=3ff02408-8269-4bf9
 Order has been completely filled.  SpecificOrder{id=3ff02408-8269-4bf9-929f-8d2ca060f6fc, parentOrder=a4664af4-a21d-4b77-a999-bc8a78a8d951, market=BITSTAMP:BTC.USD, volumeCount=100000000, averageFillPrice=584.99}
 Order has been completely filled.  GeneralOrder{id=a4664af4-a21d-4b77-a999-bc8a78a8d951, parentOrder=null, listing=BTC.USD, volume=1}
 
+ct> buy 1 OKCOIN_THISWEEK:BTC.USD.THISWEEK limit 218.3
+
 ct> exit
 
 $

@@ -1,6 +1,6 @@
 package org.cryptocoinpartners.module;
 
-import java.util.concurrent.ExecutionException;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -9,12 +9,20 @@ import javax.inject.Singleton;
 
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Bar;
+import org.cryptocoinpartners.schema.BarFactory;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.MarketData;
 import org.cryptocoinpartners.schema.Trade;
-import org.cryptocoinpartners.util.PersistUtil;
+import org.cryptocoinpartners.schema.dao.BarJpaDao;
+import org.cryptocoinpartners.schema.dao.BookJpaDao;
+import org.cryptocoinpartners.schema.dao.MarketDataJpaDao;
+import org.cryptocoinpartners.schema.dao.TradeJpaDao;
+import org.cryptocoinpartners.util.ConfigUtil;
+import org.cryptocoinpartners.util.EM;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.inject.Inject;
 
 /**
  * @author Tim Olson
@@ -22,35 +30,71 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class SaveMarketData {
 
-    private static ExecutorService service = Executors.newFixedThreadPool(1);
+    private static ExecutorService tradeService;
+    private static ExecutorService bookService;
+    private static ExecutorService barService;
     static Future future;
     private static MarketData lastMktData = null;
 
-    //@When("select * from MarketData")
-    @When("select * from MarketData.std:lastevent()")
-    public static void handleMarketData(MarketData m) {
+    @Inject
+    protected BarFactory barFactory;
 
-        if (future == null || future.isDone()) {
-            Future future = service.submit(new saveDataRunnable(m));
-            try {
-                future.get();
-            } catch (InterruptedException e) {
-                log.error("Threw a Execption, full stack trace follows:", e);
+    @Inject
+    protected BookJpaDao bookDao;
 
-                e.printStackTrace();
-                Thread.currentThread().interrupt();
+    @Inject
+    protected TradeJpaDao tradeDao;
 
-            } catch (ExecutionException ex) {
-                log.error("Threw a Execption, full stack trace follows:", ex);
+    @Inject
+    protected MarketDataJpaDao marketDataDao;
 
-                ex.getCause().printStackTrace();
+    @Inject
+    protected BarJpaDao barDao;
+    static {
+        tradeService = Executors.newFixedThreadPool(ConfigUtil.combined().getInt("db.trade.writer.threads"));
+        bookService = Executors.newFixedThreadPool(ConfigUtil.combined().getInt("db.book.writer.threads"));
 
-            }
-        }
+        barService = Executors.newFixedThreadPool(ConfigUtil.combined().getInt("db.bar.writer.threads"));
     }
 
-    private static class saveDataRunnable implements Runnable {
-        static MarketData m;
+    //@When("select * from MarketData")
+    // @When("select * from MarketData")
+    @When("@Priority(1) select * from Book")
+    public void handleBook(Book m) {
+
+        //  if (future == null || future.isDone()) {
+        //Future future = 
+        log.trace("book recieved: " + m.getId() + " thread: " + Thread.currentThread().getName());
+        bookService.submit(new saveBookRunnable(m));
+
+    }
+
+    @When("@Priority(1) select * from Trade")
+    public void handleTrade(Trade m) {
+
+        //  if (future == null || future.isDone()) {
+        //Future future = 
+        // log.debug("trade recieved: " + m.getId() + " thread: " + Thread.currentThread().getName());
+        log.trace("Trade recieved: " + m.getId() + " thread: " + Thread.currentThread().getName());
+
+        tradeService.submit(new saveTradeRunnable(m));
+
+    }
+
+    @When("@Priority(1) select * from Bar")
+    public void handleBar(Bar m) {
+
+        //  if (future == null || future.isDone()) {
+        //Future future = 
+        //  log.debug("bar recieved: " + m.getId() + " thread: " + Thread.currentThread().getName());
+        log.trace("Bar recieved: " + m.getId() + " thread: " + Thread.currentThread().getName());
+
+        barService.submit(new saveBarRunnable(m));
+
+    }
+
+    public class saveTradeRunnable implements Runnable {
+        Trade trade;
 
         @Override
         public void run() {
@@ -58,60 +102,71 @@ public class SaveMarketData {
 
         }
 
-        public saveDataRunnable(MarketData m) {
-            this.m = m;
+        public saveTradeRunnable(Trade m) {
+            this.trade = m;
         }
 
-        public static void saveData() {
+        public void saveData() {
+            // issues is when we have mutlipe thread persisting , we have persitance contect per thread that is not updated.
 
-            if (m instanceof Trade) {
-                Trade trade = (Trade) m;
-                final Trade duplicate = PersistUtil.queryZeroOne(Trade.class, "select t from Trade t where market=?1 and remoteKey=?2 and time=?3",
-                        trade.getMarket(), trade.getRemoteKey(), trade.getTime());
-                if (duplicate == null)
-                    PersistUtil.persist(trade);
-                //else
-                //log.warn("dropped duplicate Trade " + trade);
-                //  } else if (m instanceof Book) {
+            Trade duplicate = (trade.getDao() == null) ? EM.queryZeroOne(Trade.class, "select t from Trade t where market=?1 and remoteKey=?2 and time=?3",
+                    trade.getMarket(), trade.getRemoteKey(), trade.getTime()) : trade.queryZeroOne(Trade.class,
+                    "select t from Trade t where market=?1 and remoteKey=?2 and time=?3", trade.getMarket(), trade.getRemoteKey(), trade.getTime());
 
-            }
+            if (duplicate == null)
+                trade.persit();
 
-            else if (m instanceof Book) {
-                Book book = (Book) m;
+        }
+    }
 
-                final Book duplicate = PersistUtil.queryZeroOne(Book.class, "select b from Book b where b=?1", book);
-                if (duplicate == null)
-                    PersistUtil.persist(book);
+    public class saveBookRunnable implements Runnable {
+        Book book;
 
-                //if (book.getParent() != null)
-                //  PersistUtil.merge(book.getParent());
-                //  book.setParent(null);
-                // PersistUtil.insert(book);
+        @Override
+        public void run() {
+            saveData();
 
-            } else if (m instanceof Bar) {
-                Bar bar = (Bar) m;
+        }
 
-                final Bar duplicate = PersistUtil.queryZeroOne(Bar.class, "select b from Bar b where b=?1", bar);
-                if (duplicate == null)
-                    PersistUtil.persist(bar);
+        public saveBookRunnable(Book m) {
+            this.book = m;
+        }
 
-                //if (book.getParent() != null)
-                //  PersistUtil.merge(book.getParent());
-                //  book.setParent(null);
-                // PersistUtil.insert(book);
+        public void saveData() {
 
-            } else { //// if not a Trade, persist unconditionally
-                try {
-                    PersistUtil.persist(m);
-                } catch (Throwable e) {
-                    throw new Error("Could not insert " + m, e);
-                }
+            UUID duplicate = null;
+            if (book.getId() != null)
+                duplicate = (book.getDao() == null) ? (EM.queryZeroOne(UUID.class, "select b.id from Book b where b.id=?1", book.getId())) : (book
+                        .queryZeroOne(UUID.class, "select b.id from Book b where b.id=?1", book.getId()));
+
+            if (duplicate == null) {
+                //try {
+                //      log.info("persiting book: " + book.getId());
+                book.persit();
             }
         }
     }
 
-    public SaveMarketData() {
-        int myint = 1;
+    public class saveBarRunnable implements Runnable {
+        Bar rawBar;
+
+        @Override
+        public void run() {
+            saveData();
+
+        }
+
+        public saveBarRunnable(Bar m) {
+            this.rawBar = m;
+        }
+
+        public void saveData() {
+            Bar bar = barFactory.create(rawBar);
+            Bar duplicate = barDao.queryZeroOne(Bar.class, "select b from Bar b where b=?1", bar);
+            if (duplicate == null)
+                bar.persit();
+
+        }
     }
 
     protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.saveMarketData");

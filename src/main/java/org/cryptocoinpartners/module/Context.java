@@ -10,6 +10,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -53,6 +54,7 @@ import com.espertech.esper.client.time.CurrentTimeSpanEvent;
 import com.espertech.esper.client.time.TimerControlEvent;
 import com.espertech.esper.core.service.EPServiceProviderImpl;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Module;
 
 /**
@@ -190,7 +192,42 @@ public class Context {
         attach(instance.getClass(), instance);
     }
 
+    public void setPublishTime(Event e) {
+        Instant now;
+        //  if (timeProvider != null) {
+        //    now = timeProvider.nextTime(e);
+        //if (now != null)
+        //  advanceTime(now);
+        //else
+        //  now = new Instant(epRuntime.getCurrentTime());
+        //} else
+        now = new Instant(epRuntime.getCurrentTime());
+        e.publishedAt(now);
+    }
+
+    private class publishRunnable implements Runnable {
+        private final Event event;
+
+        // protected Logger log;
+
+        public publishRunnable(Event event) {
+            this.event = event;
+
+        }
+
+        @Override
+        public void run() {
+            handlePublish(event);
+
+        }
+    }
+
     public void publish(Event e) {
+        //  contextService.submit(new publishRunnable(e));
+        handlePublish(e);
+    }
+
+    private void handlePublish(Event e) {
         Instant now;
         if (timeProvider != null) {
             now = timeProvider.nextTime(e);
@@ -201,11 +238,12 @@ public class Context {
         } else
             now = new Instant(epRuntime.getCurrentTime());
         e.publishedAt(now);
+        log.trace("publishg event: " + e);
         epRuntime.sendEvent(e);
         //   epRuntime.route(e);
     }
 
-    public void publish(TimerControlEvent e) {
+    public synchronized void publish(TimerControlEvent e) {
 
         epRuntime.sendEvent(e);
         //   epRuntime.route(e);
@@ -220,8 +258,10 @@ public class Context {
         } else
             now = new Instant(epRuntime.getCurrentTime());
         e.publishedAt(now);
-        // epRuntime.sendEvent(e);
+        log.trace("routing event: " + e);
+
         epRuntime.route(e);
+        // epRuntime.sendEvent(e);
     }
 
     public void destroy() {
@@ -233,10 +273,12 @@ public class Context {
             throw new IllegalArgumentException("Can only advanceTime() when the Context was constructed with a TimeProvider");
         if (lastTime == null) {
             // jump to the start time instead of stepping to it
+            // log.debug("time:" + now.getMillis());
             epRuntime.sendEvent(new CurrentTimeEvent(now.getMillis()));
         } else if (now.isBefore(lastTime))
             throw new IllegalArgumentException("advanceTime must always move time forward. " + now + " < " + lastTime);
         else if (now.isAfter(lastTime)) {
+            // log.debug("time:" + now.getMillis());
             // step time up to now
             epRuntime.sendEvent(new CurrentTimeSpanEvent(now.getMillis()));
         }
@@ -505,6 +547,7 @@ public class Context {
         this.timeProvider = timeProvider;
     }
 
+    @Inject
     private Context(TimeProvider timeProvider) {
         this.timeProvider = timeProvider;
 
@@ -571,6 +614,7 @@ public class Context {
     }
 
     protected static Logger log = LoggerFactory.getLogger(Context.class);
+    protected static ExecutorService contextService = Executors.newFixedThreadPool(1);
 
     private Configuration config;
     private Injector injector;

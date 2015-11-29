@@ -10,9 +10,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 
 import org.apache.commons.configuration.ConfigurationException;
+import org.cryptocoinpartners.module.ApplicationInitializer;
+import org.cryptocoinpartners.module.StaticInjectionModule;
 import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.Injector;
-import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.ReflectionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,6 +66,24 @@ public class Main {
         }
         ConfigUtil.init(mainParamsOnly.propertiesFilename, mainParamsOnly.definitions);
         Injector rootInjector = Injector.root();
+        rootInjector.getInstance(ApplicationInitializer.class);
+        //  context.getInjector().root().
+        rootInjector.createChildInjector(new StaticInjectionModule());
+        //  rootInjector.getInstance(BookJpaDao.class);
+        // rootInjector.getInstance(BarJpaDao.class);
+        // rootInjector.getInstance(CurrencyJpaDao.class);
+        // rootInjector.getInstance(ExchangeJpaDao.class);
+        //rootInjector.getInstance(FillJpaDao.class);
+        //rootInjector.getInstance(ListingJpaDao.class);
+        // rootInjector.getInstance(MarketJpaDao.class);
+        // rootInjector.getInstance(MarketDataJpaDao.class);
+        // rootInjector.getInstance(OrderJpaDao.class);
+        //rootInjector.getInstance(PortfolioJpaDao.class);
+        // rootInjector.getInstance(PositionJpaDao.class);
+        // rootInjector.getInstance(PromptJpaDao.class);
+        // rootInjector.getInstance(TradeJpaDao.class);
+        //rootInjector.getInstance(TransactionJpaDao.class);
+        //rootInjector.getInstance(OrderUpdateJpaDao.class);
 
         // now parse the full command line
         MainParams mainParams = new MainParams();
@@ -81,6 +100,8 @@ public class Main {
                 System.err.println("The RunMode subclass " + runModeClass + " must have the com.beust.jcommander.Parameters annotation.");
                 System.exit(1);
             }
+            //  rootInjector.getInstance(ApplicationInitializer.class);
+            //   new Binder
             RunMode runMode = rootInjector.getInstance(runModeClass);
             for (String commandName : annotation.commandNames())
                 runModesByName.put(commandName, runMode);
@@ -102,15 +123,16 @@ public class Main {
             parameterParser.usage();
             System.exit(7001);
         }
-        PersistUtil.init();
+
+        // PersistUtil.init();
         try {
             runMode.run(semaphore);
             semaphore.acquire(1);
         } catch (Throwable t) {
             log.error("Uncaught error while running " + runMode.getClass().getSimpleName(), t);
         } finally {
+            // rootInjector.getInstance(EntityManagerFactory.class).close();
             //  PersistUtil.shutdown();
         }
     }
-
 }

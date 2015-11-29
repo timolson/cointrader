@@ -56,4 +56,22 @@ public class Holding extends EntityBase {
 
     protected Exchange exchange;
     protected Asset asset;
+
+    @Override
+    public void persit() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void detach() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void merge() {
+        // TODO Auto-generated method stub
+
+    }
 }

@@ -12,8 +12,10 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.annotation.Nullable;
+import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.Lob;
@@ -26,10 +28,17 @@ import javax.persistence.Transient;
 
 import jline.internal.Log;
 
-import org.cryptocoinpartners.util.PersistUtil;
+import org.cryptocoinpartners.schema.dao.BookDao;
+import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.Visitor;
+import org.hibernate.annotations.Cache;
+import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.joda.time.Instant;
 import org.joda.time.Interval;
+
+import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 
 /**
  * Book represents a snapshot of all the limit orders for a Market.  Book has a "compact" database representation
@@ -38,20 +47,23 @@ import org.joda.time.Interval;
  */
 @SuppressWarnings("UnusedDeclaration")
 @Entity
+@Cacheable
+@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE, region = "book")
 @Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived") })
 public class Book extends MarketData implements Spread {
 
     /** Books will be saved in the database as diffs against the previous Book, but a full Book will be saved if the
      * number of parent hops to the previous full Book reaches MAX_PARENT_CHAIN_LENGTH */
     private static final int MAX_PARENT_CHAIN_LENGTH = 20;
+    @Inject
+    protected static transient BookFactory bookFactory;
 
     public static void find(Interval timeInterval, Visitor<Book> visitor) {
-        PersistUtil.queryEach(Book.class, visitor, "select b from Book b where time > ?1 and time < ?2", timeInterval.getStartMillis(),
-                timeInterval.getEndMillis());
+        EM.queryEach(Book.class, visitor, "select b from Book b where time > ?1 and time < ?2", timeInterval.getStartMillis(), timeInterval.getEndMillis());
     }
 
     public static void findAll(Visitor<Book> visitor) {
-        PersistUtil.queryEach(Book.class, visitor, "select b from Book b");
+        EM.queryEach(Book.class, visitor, "select b from Book b");
     }
 
     private static final Object lock = new Object();
@@ -86,11 +98,39 @@ public class Book extends MarketData implements Spread {
 
     @Override
     @Transient
+    public Offer getBestBidByVolume(DiscreteAmount volume) {
+        long remainingVolume = volume.getCount();
+
+        for (Offer bid : getBids()) {
+            if (bid.getVolumeCount() >= remainingVolume)
+                return bid;
+            else
+                remainingVolume = Math.max(remainingVolume - bid.getVolumeCount(), 0);
+        }
+        return new Offer(getMarket(), getTime(), getTimeReceived(), 0L, 0L);
+    }
+
+    @Override
+    @Transient
     public Offer getBestAsk() {
         if (getAsks().isEmpty()) {
             return new Offer(getMarket(), getTime(), getTimeReceived(), Long.MAX_VALUE, 0L);
         }
         return getAsks().get(0);
+    }
+
+    @Override
+    @Transient
+    public Offer getBestAskByVolume(DiscreteAmount volume) {
+        long remainingVolume = volume.getCount();
+
+        for (Offer ask : getAsks()) {
+            if (ask.getVolumeCount() <= remainingVolume)
+                return ask;
+            else
+                remainingVolume = Math.min(remainingVolume - ask.getVolumeCount(), 0);
+        }
+        return new Offer(getMarket(), getTime(), getTimeReceived(), 0L, 0L);
     }
 
     @Nullable
@@ -155,6 +195,13 @@ public class Book extends MarketData implements Spread {
         return getAsks().get(0).getVolume();
     }
 
+    @Nullable
+    @Transient
+    public BookDao getDao() {
+
+        return bookDao;
+    }
+
     /** saved to the db for query convenience */
     @Nullable
     public Double getAskPriceAsDouble() {
@@ -201,10 +248,112 @@ public class Book extends MarketData implements Spread {
         return result;
     }
 
+    @AssistedInject
+    Book(@Assisted Instant time, @Assisted Market market) {
+        //  this.bookDao = bookDao;
+        // Book();
+        this.id = getId();
+
+        this.bids = new ArrayList<>();
+        this.asks = new ArrayList<>();
+        this.setTime(time);
+        this.setTimeReceived(Instant.now());
+        this.setRemoteKey(null);
+        this.setMarket(market);
+    }
+
+    @AssistedInject
+    Book(@Assisted Instant time, @Assisted String remoteKey, @Assisted Market market) {
+        // Book();
+        //this.bookDao = bookDao;
+
+        this.id = getId();
+        this.bids = new ArrayList<>();
+        this.asks = new ArrayList<>();
+        this.setTime(time);
+        this.setTimeReceived(Instant.now());
+        this.setRemoteKey(remoteKey);
+        this.setMarket(market);
+    }
+
+    @AssistedInject
+    Book(@Assisted("bookTime") Instant time, @Assisted("bookTimeReceived") Instant timeReceived, @Assisted String remoteKey, @Assisted Market market) {
+        this.id = getId();
+        this.bids = new ArrayList<>();
+        this.asks = new ArrayList<>();
+        this.setTime(time);
+        this.setTimeReceived(timeReceived);
+        this.setRemoteKey(remoteKey);
+        this.setMarket(market);
+    }
+
+    public Book addBid(BigDecimal price, BigDecimal volume) {
+        Market market = this.getMarket();
+        //   synchronized (lock) {
+        this.bids.add(Offer.bid(market, this.getTime(), this.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
+                DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
+        return this;
+
+        //   }
+
+    }
+
+    public <T> T queryZeroOne(Class<T> resultType, String queryStr, Object... params) {
+
+        //  em = createEntityManager();
+        return bookDao.queryZeroOne(resultType, queryStr, params);
+
+    }
+
+    public Book addAsk(BigDecimal price, BigDecimal volume) {
+        Market market = this.getMarket();
+        //   synchronized (lock) {
+        this.asks.add(Offer.ask(market, this.getTime(), this.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
+                DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
+        return this;
+
+        //   }
+
+    }
+
+    public Book build() {
+        this.sortBook();
+
+        // look for a Chain of Books of the same Market
+        String marketSymbol = this.getMarket().getSymbol();
+        Chain chain = chains.get(marketSymbol);
+        if (chain == null) {
+            // no chain exists for the Market, so create one
+            chain = new Chain();
+            chain.previousBook = this;
+            chains.put(marketSymbol, chain);
+        } else {
+            // a parent Book exists in the chain
+            Book parentBook;
+            if (chain.chainLength == MAX_PARENT_CHAIN_LENGTH) {
+                // reached max chain length.  set parent to null and reset the chain length count
+                parentBook = null;
+                chain.chainLength = 0;
+            } else {
+                // the chain is not too long.  use the previous book in the chain as a parent
+                parentBook = chain.previousBook;
+                chain.chainLength++;
+            }
+
+            this.setParent(parentBook);
+            chain.previousBook = this;
+
+        }
+
+        Book result = this;
+        return result;
+    }
+
     /** Book.Builder remembers the previous Book it built, allowing for diffs to be saved in the db */
     public static class Builder {
 
         public Builder() {
+            //this.book = bookFactory.create(true);
             this.book = Book.create();
         }
 
@@ -284,6 +433,12 @@ public class Book extends MarketData implements Spread {
         private final Map<String, Chain> chains = new HashMap<>();
     }
 
+    private static class Chain {
+        private int chainLength;
+        private Book previousBook;
+        private String marketSymbol;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(getMarket().toString() + " Book at " + getTime() + " bids={");
@@ -314,6 +469,7 @@ public class Book extends MarketData implements Spread {
 
     // JPA
     protected Book() {
+
     }
 
     // These getters and setters are for conversion in JPA
@@ -418,9 +574,21 @@ public class Book extends MarketData implements Spread {
         return result;
     }
 
+    private Book(boolean init) {
+        Book result = new Book();
+        result.bids = new ArrayList<>();
+        result.asks = new ArrayList<>();
+
+    }
+
     @PrePersist
     private void prePersist() {
+
+        //  if (parent != null)
+        //    if (parent.find() == null)
+        //      parent.persit();
         if (parent == null) {
+
             //PersistUtil.insert(getMarket());
             if (bids != null)
                 bidInsertionsBlob = convertQuotesToDatabaseBlob(bids);
@@ -429,6 +597,11 @@ public class Book extends MarketData implements Spread {
             bidDeletionsBlob = null;
             askDeletionsBlob = null;
         } else {
+            UUID duplicate = (this.getDao() == null) ? (EM.queryZeroOne(UUID.class, "select b.id from Book b where b.id=?1", parent.getId())) : (this
+                    .queryZeroOne(UUID.class, "select b.id from Book b where b.id=?1", parent.getId()));
+
+            if (duplicate == null)
+                parent.persit();
             //PersistUtil.find(getParentBook());
             //PersistUtil.refresh(this);
             //PersistUtil.merge(this);
@@ -457,10 +630,11 @@ public class Book extends MarketData implements Spread {
 
     @PostPersist
     private void postPersist() {
-        //    if (this.parent != null)
+        if (this.parent != null)
+            parent.detach();
 
-        //    PersistUtil.detach(this.parent);
-        //  PersistUtil.detach(this);
+        //detach();
+        // detach();
         clearBlobs();
 
     }
@@ -469,8 +643,16 @@ public class Book extends MarketData implements Spread {
     private void postLoad() {
         bids = convertDatabaseBlobToQuoteList(bidInsertionsBlob);
         asks = convertDatabaseBlobToQuoteList(askInsertionsBlob);
-        if (parent != null)
+        if (parent != null) {
             needToResolveDiff = true;
+
+            parent.detach();
+
+        }
+        //if (this.parent != null)
+
+        // detach();
+        // detach();
     }
 
     // if this is implemented as a @PostLoad, the transitive dependencies for the parent's parent are not resolved
@@ -644,6 +826,73 @@ public class Book extends MarketData implements Spread {
         //   }
     }
 
+    public <T> T find() {
+        //   synchronized (persistanceLock) {
+        try {
+            return (T) bookDao.find(Book.class, this.getId());
+            //if (duplicate == null || duplicate.isEmpty())
+        } catch (Exception | Error ex) {
+            return null;
+            // System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":find, full stack trace follows:" + ex);
+            // ex.printStackTrace();
+
+        }
+
+    }
+
+    //    public <T> T findByReference() {
+    //        //   synchronized (persistanceLock) {
+    //        try {
+    //            return (T) bookDao.getReference(Book.class, this.getId());
+    //            //if (duplicate == null || duplicate.isEmpty())
+    //        } catch (Exception | Error ex) {
+    //            return null;
+    //            // System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":find, full stack trace follows:" + ex);
+    //            // ex.printStackTrace();
+    //
+    //        }
+    //
+    //    }
+
+    @Override
+    public void persit() {
+        try {
+            //  if (parent != null)
+            //    if (parent.find() == null)
+            //      parent.persit();
+
+            bookDao.persist(this);
+
+        } catch (javax.persistence.PersistenceException pex) {
+            System.out.println("Unable to perist entity " + this.getClass().getSimpleName() + ": " + this.getId() + ". " + pex.getCause());
+
+        } catch (Exception | Error ex) {
+
+            //     unitOfWork.end();
+            System.out.println("Unable to perist entity " + this.getClass().getSimpleName() + ": " + this.getId() + ". " + ex);
+            throw ex;
+
+        }
+        // Do transactions, queries, etc...
+
+    }
+
+    @Override
+    public void detach() {
+        try {
+            bookDao.detach(this);
+        } catch (Exception | Error ex) {
+
+        }
+
+    }
+
+    private static final Map<String, Chain> chains = new HashMap<>();
+
+    // @Inject
+    // private FillJpaDao fillDao;
+    @Inject
+    protected BookDao bookDao;
     private List<Offer> bids;
     private List<Offer> asks;
     private List<Book> children;
@@ -653,6 +902,13 @@ public class Book extends MarketData implements Spread {
     private byte[] bidInsertionsBlob;
     private byte[] askInsertionsBlob;
     private boolean needToResolveDiff;
+
     //private Collection<Book> children;
+
+    @Override
+    public void merge() {
+        bookDao.merge(this);
+
+    }
 
 }

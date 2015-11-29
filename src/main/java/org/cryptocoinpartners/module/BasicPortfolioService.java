@@ -3,11 +3,12 @@ package org.cryptocoinpartners.module;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -26,13 +27,13 @@ import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Offer;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.Position;
+import org.cryptocoinpartners.schema.RemoteEvent;
 import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.schema.Transaction;
 import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.PortfolioServiceException;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.FeesUtil;
-import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,25 +78,50 @@ public class BasicPortfolioService implements PortfolioService {
         // List<Portfolio> portfolios = PersistUtil.queryList(Portfolio.class, queryPortfolioStr, null);
         for (Portfolio portfolio : portfolios) {
 
-            String queryStr = "select p from Position p  join fetch p.fills f join fetch p.portfolio po where f.openVolumeCount!=0 and po = ?1 group by p";
-            // String queryStr = "select p from Position p  where p.portfolio = ?1 group by p";
-            List<Position> positions = PersistUtil.queryList(Position.class, queryStr, portfolio);
-            for (Position position : positions) {
-                portfolio.addPosition(position);
-                position.setPortfolio(portfolio);
+            //  String queryStr = "select p from Position p  join fetch p.fills f join fetch p.portfolio po where f.openVolumeCount!=0 and po = ?1 group by p";
+
+            //  String queryStr = "select p from Position p  where f.openVolumeCount!=0 and po = ?1 group by p";
+            // String queryStr = "select p from Position p  where p.portfolio = ?1";
+            //EntityGraph graph = EM.getEnityManager().getEntityGraph("graph.Position.fills");
+
+            // Map hints = new HashMap();
+            // hints.put("javax.persistence.fetchgraph", "graph.Position.fills");
+            // hints.put("javax.persistence.fetchgraph", "graph.Position.portfolio");
+
+            //  List<Position> positions = EM.queryList(Position.class, queryStr, hints, portfolio);
+            List<Fill> fills = new ArrayList<>();
+            for (Position position : portfolio.getPositions()) {
+                context.getInjector().injectMembers(position);
+                //  position.getDao(localPositionDao);
+                // portfolio.addPosition(position);
+                //position.setPortfolio(portfolio);
                 for (Fill fill : position.getFills()) {
-                    portfolio.merge(fill);
+                    context.getInjector().injectMembers(fill);
+                    if (!fill.getOpenVolume().isZero()) {
+                        fills.add(fill);
+                    }
+                    // portfolio.merge(fill);
 
                 }
-
             }
+            Collections.sort(fills, timeReceivedComparator);
+            for (Fill fill : fills)
+                portfolio.merge(fill);
+
         }
     }
 
+    private static final Comparator<RemoteEvent> timeReceivedComparator = new Comparator<RemoteEvent>() {
+        @Override
+        public int compare(RemoteEvent event, RemoteEvent event2) {
+            return event.getTimeReceived().compareTo(event2.getTimeReceived());
+        }
+    };
+
     @Override
     @Nullable
-    public ConcurrentLinkedQueue<Position> getPositions() {
-        ConcurrentLinkedQueue<Position> AllPositions = new ConcurrentLinkedQueue<Position>();
+    public Collection<Position> getPositions() {
+        Collection<Position> AllPositions = new ArrayList<Position>();
         for (Portfolio portfolio : getPortfolios()) {
             for (Position position : portfolio.getNetPositions())
                 AllPositions.add(position);
@@ -284,7 +310,7 @@ public class BasicPortfolioService implements PortfolioService {
                 Iterator<Listing> itm = getRealisedPnLByMarket().get(asset).get(exchange).keySet().iterator();
                 while (itm.hasNext()) {
                     Listing listing = itm.next();
-                    Market market = Market.findOrCreate(exchange, listing);
+                    Market market = context.getInjector().getInstance(Market.class).findOrCreate(exchange, listing);
 
                     Amount realisedPnL = getRealisedPnLByMarket().get(asset).get(exchange).get(listing);
                     // need to change this to the market and check the margin.
@@ -805,7 +831,7 @@ public class BasicPortfolioService implements PortfolioService {
     @Override
     public Collection<Portfolio> getPortfolios() {
         if (portfolios == null)
-            portfolios = new ConcurrentLinkedQueue<Portfolio>();
+            portfolios = new ArrayList<Portfolio>();
 
         // synchronized (lock) {
         return portfolios;

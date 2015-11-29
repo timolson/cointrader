@@ -30,7 +30,7 @@ public class MockTicker {
             Exchange exchange = Exchange.forSymbolOrCreate(upperMarket);
             if (exchange == null)
                 throw new ConfigurationError("Could not find Exchange with symbol \"" + upperMarket + "\"");
-            for (Market market : Market.find(exchange)) {
+            for (Market market : context.getInjector().getInstance(Market.class).find(exchange)) {
 
                 new Thread(new PoissonTickerThread(market)).start();
 
