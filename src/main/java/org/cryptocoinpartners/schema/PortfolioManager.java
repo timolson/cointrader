@@ -66,8 +66,11 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         Transaction reservation = update.getOrder().getReservation();
         if (reservation != null && update.getState() != OrderState.NEW) {
             if (reservation.getType().equals(TransactionType.BUY_RESERVATION) || reservation.getType().equals(TransactionType.SELL_RESERVATION)) {
-                Amount updateAmount = reservation.getType().equals(TransactionType.BUY_RESERVATION) ? (update.getOrder().getUnfilledVolume().times(update
-                        .getOrder().getLimitPrice(), Remainder.ROUND_EVEN)).negate() : update.getOrder().getVolume();
+                Amount price = (update.getOrder().getLimitPrice() == null) ? ((update.getOrder().getVolume().isNegative()) ? quotes.getLastBidForMarket(
+                        update.getOrder().getMarket()).getPrice() : quotes.getLastAskForMarket(update.getOrder().getMarket()).getPrice()) : update.getOrder()
+                        .getLimitPrice();
+                Amount updateAmount = reservation.getType().equals(TransactionType.BUY_RESERVATION) ? (update.getOrder().getUnfilledVolume().times(price,
+                        Remainder.ROUND_EVEN)).negate() : update.getOrder().getVolume();
                 reservation.setAmount(updateAmount);
             }
         }
@@ -143,7 +146,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
         @Override
         public void run() {
-            fill.persit();
+            // fill.persit();
             portfolio.modifyPosition(fill, new Authorization("Fill for " + fill.toString()));
 
         }
@@ -159,7 +162,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     @When("@Priority(8) select * from Transaction")
     public void handleTransaction(Transaction transaction) {
         //
-        //updatePortfolio(transaction);
+        // updatePortfolio(transaction);
         service.submit(new handleTransactionRunnable(transaction));
 
     }
@@ -187,29 +190,30 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
             //  portfolioService.
             Position position;
             // update postion
-            if (type == TransactionType.BUY || type == TransactionType.SELL) {
+            //if (type == TransactionType.BUY || type == TransactionType.SELL) {
 
-                //position = new Position(portfolio, exchange, market, baseAsset, amount, price);
-                //transaction.getFill();
-                portfolio.modifyPosition(transaction.getFill(), new Authorization("Fill for " + transaction.toString()));
+            //position = new Position(portfolio, exchange, market, baseAsset, amount, price);
+            //transaction.getFill();
 
-            } else if (type == TransactionType.REALISED_PROFIT_LOSS) {
-                //Transfer ammount to base currency
-                // neeed to be able to implment this on the exchange via orders
-                //                if (!transaction.getCurrency().equals(transaction.getPortfolio().getBaseAsset())) {
-                //                    Listing tradedListing = Listing.forPair(transaction.getCurrency(), transaction.getPortfolio().getBaseAsset());
-                //                    //we will be selling transaction currency and buying base currency i.e. sell BTC, buy USD
-                //                    Offer tradedRate = quotes.getImpliedBestAskForListing(tradedListing);
-                //
-                //                   TransactionType type=(transaction.getAmount().isPositive()) ? TransactionType.CREDIT:TransactionType.DEBIT;
-                //                    
-                //                    Transaction initialDedit = new Transaction(transaction.getPortfolio(), transaction.getExchange(), transaction.getCurrency(),
-                //                            type, transaction.getAmount());
-                //                    context.route(initialDedit);
-                //                    initialDedit.persit();
+            //portfolio.modifyPosition(transaction.getFill(), new Authorization("Fill for " + transaction.toString()));
 
-                //}
-            }
+            //} else if (type == TransactionType.REALISED_PROFIT_LOSS) {
+            //Transfer ammount to base currency
+            // neeed to be able to implment this on the exchange via orders
+            //                if (!transaction.getCurrency().equals(transaction.getPortfolio().getBaseAsset())) {
+            //                    Listing tradedListing = Listing.forPair(transaction.getCurrency(), transaction.getPortfolio().getBaseAsset());
+            //                    //we will be selling transaction currency and buying base currency i.e. sell BTC, buy USD
+            //                    Offer tradedRate = quotes.getImpliedBestAskForListing(tradedListing);
+            //
+            //                   TransactionType type=(transaction.getAmount().isPositive()) ? TransactionType.CREDIT:TransactionType.DEBIT;
+            //                    
+            //                    Transaction initialDedit = new Transaction(transaction.getPortfolio(), transaction.getExchange(), transaction.getCurrency(),
+            //                            type, transaction.getAmount());
+            //                    context.route(initialDedit);
+            //                    initialDedit.persit();
+
+            //}
+            // }
             log.info("transaction: " + transaction + " Proccessed.");
 
         } else {
@@ -281,16 +285,39 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         this.portfolio = portfolio;
     }
 
+    @Transient
+    protected void setPortfolioService(PortfolioService portfolioService) {
+        this.portfolioService = portfolioService;
+    }
+
     protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.portfolioManager");
 
     @Inject
     protected transient Context context;
     @Inject
-    private QuoteService quotes;
+    protected QuoteService quotes;
     @Inject
-    private PortfolioService portfolioService;
-    // @Inject
-    private Portfolio portfolio;
+    protected PortfolioService portfolioService;
+
+    protected Portfolio portfolio;
     private static ExecutorService service = Executors.newFixedThreadPool(1);
+
+    @Override
+    public void persit() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void detach() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void merge() {
+        // TODO Auto-generated method stub
+
+    }
 
 }

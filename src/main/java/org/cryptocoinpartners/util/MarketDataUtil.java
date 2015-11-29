@@ -1,15 +1,19 @@
 package org.cryptocoinpartners.util;
 
-import org.cryptocoinpartners.schema.Market;
-
 import java.util.Collection;
 
+import org.cryptocoinpartners.schema.Market;
+
+import com.google.inject.Inject;
 
 public class MarketDataUtil
-{
-    public Collection<Market> allMarkets() {
-        return Market.findAll();
-    }
 
+{
+    @Inject
+    Market market;
+
+    public Collection<Market> allMarkets() {
+        return market.findAll();
+    }
 
 }

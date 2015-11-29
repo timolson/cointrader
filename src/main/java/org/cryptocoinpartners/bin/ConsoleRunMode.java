@@ -172,8 +172,10 @@ public class ConsoleRunMode extends RunMode {
             DiscreteAmount amount = new DiscreteAmount(Long.parseLong(positions.get(i++)), holding.getAsset().getBasis());
             DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
             Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
-            context.publish(initialCredit);
+            context.setPublishTime(initialCredit);
             initialCredit.persit();
+
+            context.publish(initialCredit);
 
             strategyInstance.getStrategy().init();
 

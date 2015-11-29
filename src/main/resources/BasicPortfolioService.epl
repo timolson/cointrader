@@ -1,6 +1,6 @@
 @Name('PORTFOLIO_WINDOW')
 create window
-	PortfolioWindow.std:groupwin(portfolio.id).std:lastevent() 
+	PortfolioWindow.std:lastevent()
 as
 	select *
 from

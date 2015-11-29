@@ -133,6 +133,7 @@ public class OrderBuilder {
         }
 
         public GeneralOrderBuilder(Instant time, Market market, BigDecimal volume, FillType type) {
+            //order = portfolio.getContext().getInjector().getInstance(GeneralOrder.class);
             order = new GeneralOrder(time, portfolio, market, volume, type);
         }
 
@@ -141,7 +142,7 @@ public class OrderBuilder {
         }
 
         public GeneralOrderBuilder(Instant time, Fill parentFill, Market market, BigDecimal volume, FillType type) {
-            order = new GeneralOrder(time, portfolio, parentFill, market, volume, type);
+            order = new GeneralOrder(time, portfolio, market, volume, type);
         }
 
         public GeneralOrderBuilder(Instant time, Listing listing, String volume) {

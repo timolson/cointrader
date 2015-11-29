@@ -25,6 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.espertech.esper.client.EPRuntime;
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 
 /**
  Manages a Context into which Trades and Books from the database are replayed.  The Context time is also managed by this
@@ -32,54 +34,77 @@ import com.espertech.esper.client.EPRuntime;
  */
 public class Replay implements Runnable {
 
-    public static Replay all(boolean orderByTimeReceived) {
-        return during(new Interval(getEventsStart(orderByTimeReceived), getEventsEnd(orderByTimeReceived)), orderByTimeReceived);
+    @AssistedInject
+    public Replay(@Assisted boolean orderByTimeReceived) {
+        // new Interval(this.getEventsStart(orderByTimeReceived), this.getEventsEnd(orderByTimeReceived));
+
+        this(new Interval(getEventsStart(orderByTimeReceived), getEventsEnd(orderByTimeReceived)), orderByTimeReceived);
     }
 
-    public static Replay all(boolean orderByTimeReceived, Semaphore semaphore) {
-        return during(new Interval(getEventsStart(orderByTimeReceived), getEventsEnd(orderByTimeReceived)), orderByTimeReceived, semaphore);
+    //
+    @AssistedInject
+    public Replay(@Assisted boolean orderByTimeReceived, @Assisted Semaphore semaphore) {
+        this(new Interval(getEventsStart(orderByTimeReceived), getEventsEnd(orderByTimeReceived)), orderByTimeReceived, semaphore);
     }
 
-    public static Replay since(Instant start, boolean orderByTimeReceived) {
-        return during(new Interval(start, getEventsEnd(orderByTimeReceived)), orderByTimeReceived);
+    //
+    @AssistedInject
+    public Replay(@Assisted("startTime") Instant start, @Assisted boolean orderByTimeReceived) {
+        this(new Interval(start, getEventsEnd(orderByTimeReceived)), orderByTimeReceived);
     }
 
-    public static Replay since(Instant start, boolean orderByTimeReceived, Semaphore semaphore) {
-        return during(new Interval(start, getEventsEnd(orderByTimeReceived)), orderByTimeReceived, semaphore);
+    //
+    @AssistedInject
+    public Replay(@Assisted("startTime") Instant start, @Assisted boolean orderByTimeReceived, @Assisted Semaphore semaphore) {
+        this(new Interval(start, getEventsEnd(orderByTimeReceived)), orderByTimeReceived, semaphore);
     }
 
-    public static Replay until(Instant end, boolean orderByTimeReceived) {
-        return during(new Interval(getEventsStart(orderByTimeReceived), end), orderByTimeReceived);
+    //
+
+    @AssistedInject
+    public Replay(@Assisted("endTime") Instant end, @Assisted boolean orderByTimeReceived, @Assisted("until") boolean until) {
+        this(new Interval(getEventsStart(orderByTimeReceived), end), orderByTimeReceived);
     }
 
-    public static Replay until(Instant end, boolean orderByTimeReceived, Semaphore semaphore) {
-        return during(new Interval(getEventsStart(orderByTimeReceived), end), orderByTimeReceived, semaphore);
+    //
+    @AssistedInject
+    public Replay(@Assisted("endTime") Instant end, @Assisted boolean orderByTimeReceived, @Assisted Semaphore semaphore, @Assisted("until") boolean until) {
+        this(new Interval(getEventsStart(orderByTimeReceived), end), orderByTimeReceived, semaphore);
     }
 
-    public static Replay between(Instant start, Instant end, boolean orderByTimeReceived) {
-        return during(new Interval(start, end), orderByTimeReceived);
+    //
+    @AssistedInject
+    public Replay(@Assisted("startTime") Instant start, @Assisted("endTime") Instant end, @Assisted boolean orderByTimeReceived) {
+        this(new Interval(start, end), orderByTimeReceived);
     }
 
-    public static Replay between(Instant start, Instant end, boolean orderByTimeReceived, Semaphore semaphore) {
-        return during(new Interval(start, end), orderByTimeReceived, semaphore);
+    //
+    @AssistedInject
+    public Replay(@Assisted("startTime") Instant start, @Assisted("endTime") Instant end, @Assisted boolean orderByTimeReceived, @Assisted Semaphore semaphore) {
+        this(new Interval(start, end), orderByTimeReceived, semaphore);
     }
 
-    public static Replay during(Interval interval, boolean orderByTimeReceived) {
-        return new Replay(interval, orderByTimeReceived);
-    }
+    //
+    // @AssistedInject
+    // public Replay (Interval interval, boolean orderByTimeReceived) {
+    //  return new Replay(interval, orderByTimeReceived);
+    // }
+    //
+    //    @AssistedInject
+    //    public Replay during(Interval interval, boolean orderByTimeReceived, Semaphore semaphore) {
+    //        return new Replay(interval, orderByTimeReceived, semaphore);
+    //    }
 
-    public static Replay during(Interval interval, boolean orderByTimeReceived, Semaphore semaphore) {
-        return new Replay(interval, orderByTimeReceived, semaphore);
-    }
-
-    public Replay(Interval replayTimeInterval, boolean orderByTimeReceived) {
+    @AssistedInject
+    public Replay(@Assisted Interval replayTimeInterval, @Assisted boolean orderByTimeReceived) {
         this.replayTimeInterval = replayTimeInterval; // set this before creating EventTimeManager
         this.semaphore = null;
         this.context = Context.create(new EventTimeManager());
         this.orderByTimeReceived = orderByTimeReceived;
     }
 
-    public Replay(Interval replayTimeInterval, boolean orderByTimeReceived, Semaphore semaphore) {
+    @AssistedInject
+    public Replay(@Assisted Interval replayTimeInterval, @Assisted boolean orderByTimeReceived, @Assisted Semaphore semaphore) {
         this.replayTimeInterval = replayTimeInterval; // set this before creating EventTimeManager
         this.semaphore = semaphore;
         this.context = Context.create(new EventTimeManager());
@@ -204,16 +229,23 @@ public class Replay implements Runnable {
                         //   queue.put(event);
 
                         context.publish(event);
+                        EM.detach(event);
+
                     }
 
-                } catch (InterruptedException e) {
+                } catch (Error | Exception e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
 
                 // context.advanceTime(stop);
 
-            } finally {
+            } catch (Error | Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+            finally {
                 if (semaphore != null)
                     semaphore.release();
 
@@ -229,6 +261,7 @@ public class Replay implements Runnable {
         while (ite.hasNext()) {
             RemoteEvent event = ite.next();
             context.publish(event);
+            event.detach();
         }
         context.advanceTime(stop); // advance to the end of the time window to trigger any timer events
     }
@@ -239,16 +272,16 @@ public class Replay implements Runnable {
         final String tradeQuery = "select t from Trade t where market=?1 and " + timeField + " >= ?2 and " + timeField + " <= ?3";
         final String bookQuery = "select b from Book b where market=?1 and " + timeField + " >= ?2 and " + timeField + " <= ?3";
         final List<RemoteEvent> events = new ArrayList<>();
-        events.addAll(PersistUtil.queryList(Trade.class, tradeQuery, market, start, stop));
-        events.addAll(PersistUtil.queryList(Book.class, bookQuery, market, start, stop));
+        events.addAll(EM.queryList(Trade.class, tradeQuery, market, start, stop));
+        events.addAll(EM.queryList(Book.class, bookQuery, market, start, stop));
         Collections.sort(events, orderByTimeReceived ? timeReceivedComparator : timeHappenedComparator);
         return events;
     }
 
     private static Instant getEventsStart(boolean orderByRemoteTime) {
         String timeField = timeFieldForOrdering(orderByRemoteTime);
-        Instant bookStart = PersistUtil.queryOne(Instant.class, "select min(" + timeField + ") from Book");
-        Instant tradeStart = PersistUtil.queryOne(Instant.class, "select min(" + timeField + ") from Trade");
+        Instant bookStart = EM.queryOne(Instant.class, "select min(" + timeField + ") from Book");
+        Instant tradeStart = EM.queryOne(Instant.class, "select min(" + timeField + ") from Trade");
         if (bookStart == null && tradeStart == null)
             return null;
         if (bookStart == null)
@@ -261,8 +294,8 @@ public class Replay implements Runnable {
     private static Instant getEventsEnd(boolean orderByTimeReceived) {
         final String timeField = timeFieldForOrdering(orderByTimeReceived);
         // queries use max(time)+1 because the end of a range is exclusive, and we want to include the last event
-        Instant bookEnd = PersistUtil.queryOne(Instant.class, "select max(" + timeField + ") from Book");
-        Instant tradeEnd = PersistUtil.queryOne(Instant.class, "select max(" + timeField + ") from Trade");
+        Instant bookEnd = EM.queryOne(Instant.class, "select max(" + timeField + ") from Book");
+        Instant tradeEnd = EM.queryOne(Instant.class, "select max(" + timeField + ") from Trade");
         if (bookEnd == null && tradeEnd == null)
             return null;
         if (bookEnd == null)
@@ -309,10 +342,11 @@ public class Replay implements Runnable {
     protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.replay");
     private final BlockingQueue<RemoteEvent> queue = new LinkedBlockingQueue<RemoteEvent>();
     private final Interval replayTimeInterval;
-    private final Integer dbReaderThreads = 5;
+    private final Integer dbReaderThreads = ConfigUtil.combined().getInt("db.replay.reader.threads");
     private final Semaphore semaphore;
     private static ExecutorService service;
     private static ExecutorService engines;
+
     private final Context context;
     private static final Duration timeStep = Duration.standardDays(1); // how many rows from the DB to gather in one batch
     private final boolean orderByTimeReceived;

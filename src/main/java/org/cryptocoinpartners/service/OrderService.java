@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.service;
 
 import java.util.Collection;
+import java.util.List;
 
 import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.OrderState;
@@ -22,6 +23,10 @@ public interface OrderService {
     void init();
 
     public Collection<SpecificOrder> getPendingOpenOrders(Portfolio portfolio);
+
+    public Collection<SpecificOrder> getPendingLongOpenOrders(Portfolio portfolio);
+
+    public Collection<SpecificOrder> getPendingShortOpenOrders(Portfolio portfolio);
 
     public Collection<SpecificOrder> getPendingCloseOrders(Portfolio portfolio);
 
@@ -80,6 +85,10 @@ public interface OrderService {
 
     void handleCancelAllOpeningSpecificOrders(Portfolio portfolio, Market market);
 
+    void handleCancelAllLongOpeningSpecificOrders(Portfolio portfolio, Market market);
+
+    void handleCancelAllShortOpeningSpecificOrders(Portfolio portfolio, Market market);
+
     void handleCancelAllClosingSpecificOrders(Portfolio portfolio, Market market);
 
     void handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market, ExecutionInstruction execInst);
@@ -97,5 +106,13 @@ public interface OrderService {
     Order getPendingTriggerOrder(Order order);
 
     void handleCancelSpecificOrderByParentFill(Fill parentFill) throws OrderNotFoundException;
+
+    void getAllSpecificOrdersByParentFill(Fill parentFill, List allChildren);
+
+    void getAllSpecificOrdersByParentOrder(Order parentOrder, List allChildren);
+
+    void getAllOrdersByParentFill(Fill parentFill, List allChildren);
+
+    void updateWorkingOrderQuantity(Order order, Amount quantity);
 
 }

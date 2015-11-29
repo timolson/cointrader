@@ -73,7 +73,7 @@ public class ListingsMatrix {
         ArgumentChecker.notNull(ccyToAdd, "Asset to add to the Listings matrix should not be null");
         ArgumentChecker.notNull(ccyReference, "Reference currency should not be null");
         ArgumentChecker.isTrue(!ccyToAdd.equals(ccyReference), "Currencies should be different");
-        if (listings.get(ccyReference) == null || (listings.isEmpty() && rate != 0)) { // Listings Matrix is empty.
+        if ((listings.get(ccyReference) == null && rate != 0) || (listings.isEmpty() && rate != 0)) { // Listings Matrix is empty.
             BigDecimal inverseRateBD = (((BigDecimal.valueOf(1.0 / (ccyReference.getBasis()))).divide(BigDecimal.valueOf(rate), ccyToAdd.getScale(),
                     RoundingMode.HALF_EVEN)).divide(BigDecimal.valueOf(ccyToAdd.getBasis())));
             long inverseCrossRate = inverseRateBD.longValue();

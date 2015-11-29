@@ -1,5 +1,7 @@
 package org.cryptocoinpartners.schema;
 
+import java.util.UUID;
+
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.persistence.Cacheable;
@@ -7,18 +9,23 @@ import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.TransactionType;
-import org.cryptocoinpartners.util.PersistUtil;
+import org.cryptocoinpartners.schema.dao.TransactionDao;
+import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.Remainder;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 
 /**
  * A Transaction represents the modification of multiple Positions, whether it is a purchase on a Market or a
@@ -37,7 +44,12 @@ public class Transaction extends Event {
     private static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
     private static final String SEPARATOR = ",";
 
-    public Transaction(Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount, Amount price) {
+    @Inject
+    protected TransactionDao transactionDao;
+
+    @AssistedInject
+    public Transaction(@Assisted Portfolio portfolio, @Assisted Exchange exchange, @Assisted Asset currency, @Assisted TransactionType type,
+            @Assisted("transactionAmount") Amount amount, @Assisted("transactionPrice") Amount price) {
         // this.id = getId();
         this.version = getVersion();
         this.setAmount(amount);
@@ -51,7 +63,9 @@ public class Transaction extends Event {
         this.setPortfolioName(portfolio);
     }
 
-    public Transaction(Fill fill, Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount, Amount price) {
+    @AssistedInject
+    public Transaction(@Assisted Fill fill, @Assisted Portfolio portfolio, @Assisted Exchange exchange, @Assisted Asset currency,
+            @Assisted TransactionType type, @Assisted("transactionAmount") Amount amount, @Assisted("transactionPrice") Amount price) {
         // this.id = getId();
         this.version = getVersion();
         fill.addTransaction(this);
@@ -79,7 +93,8 @@ public class Transaction extends Event {
         this.setPortfolioName(portfolio);
     }
 
-    public Transaction(Fill fill, Instant creationTime) throws Exception {
+    @AssistedInject
+    public Transaction(@Assisted Fill fill, @Assisted Instant creationTime) {
         //  this.id = getId();
         this.version = getVersion();
         Portfolio portfolio = fill.getOrder().getPortfolio();
@@ -116,7 +131,8 @@ public class Transaction extends Event {
 
     }
 
-    public Transaction(Order order, Instant creationTime) throws Exception {
+    @AssistedInject
+    public Transaction(@Assisted Order order, @Assisted Instant creationTime) {
         // this.id = getId();
         this.version = getVersion();
         Portfolio portfolio = order.getPortfolio();
@@ -272,23 +288,82 @@ public class Transaction extends Event {
         return order;
     }
 
+    @PrePersist
+    private void prePersist() {
+
+        UUID portfolioId = null;
+        UUID orderId = null;
+        UUID fillId = null;
+        if (portfolio != null) {
+            portfolioId = (transactionDao == null) ? (EM.queryZeroOne(UUID.class, "select p.id from Portfolio p where p.id=?1", portfolio.getId()))
+                    : (transactionDao.queryZeroOne(UUID.class, "select p.id from Portfolio p where p.id=?1", portfolio.getId()));
+            if (portfolioId == null)
+                portfolio.persit();
+        }
+
+        if (order != null) {
+            orderId = (transactionDao == null) ? (EM.queryZeroOne(UUID.class, "select o.id from Order o where o.id=?1", order.getId())) : (transactionDao
+                    .queryZeroOne(UUID.class, "select o.id from Order o where o.id=?1", order.getId()));
+
+            if (orderId == null)
+                order.persit();
+        }
+        if (fill != null) {
+            fillId = (transactionDao == null) ? (EM.queryZeroOne(UUID.class, "select f.id from Fill f where f.id=?1", fill.getId())) : (transactionDao
+                    .queryZeroOne(UUID.class, "select f.id from Fill f where f.id=?1", fill.getId()));
+
+            if (fillId == null)
+                fill.persit();
+        }
+
+        //detach();
+    }
+
     public @ManyToOne(optional = true)
+    @JoinColumn(name = "fill")
     //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     Fill getFill() {
         return fill;
     }
 
-    public void persit() {
-        //  List<Transaction> duplicate = PersistUtil.queryList(Transaction.class, "select t from  Transaction t where t=?1", this);
+    @Override
+    public synchronized void merge() {
+        try {
+            if (fill != null)
+                fill.find();
+            if (order != null)
+                order.find();
+            transactionDao.merge(this);
+            //if (duplicate == null || duplicate.isEmpty())
+        } catch (Exception | Error ex) {
 
-        //   if (getOrder() != null)
-        //     getOrder().persit();
+            System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":merge, full stack trace follows:" + ex);
+            // ex.printStackTrace();
 
-        //if (getFill() != null)
-        ///    getFill().persit();
-        // if (duplicate == null || duplicate.isEmpty())
-        PersistUtil.insert(this);
+        }
+
+    }
+
+    @Override
+    public synchronized void persit() {
+        //  
+        //
+        // List<Transaction> duplicate = transactionDao.queryList(Transaction.class, "select t from  Transaction t where t=?1", this);
+        //if (duplicate == null || duplicate.isEmpty())
+        try {
+
+            transactionDao.persist(this);
+            //  System.out.println("saved:" + this); //if (duplicate == null || duplicate.isEmpty())
+        } catch (Exception | Error ex) {
+
+            System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":persist, full stack trace follows:" + ex);
+            // ex.printStackTrace();
+
+        }
+        //
+        //PersistUtil.insert(this);
         //else
+        //  transactionDao.merge(this);
         //  PersistUtil.merge(this);
         //  }
         // if (this.parentOrder != null)
@@ -337,8 +412,9 @@ public class Transaction extends Event {
     @Override
     public String toString() {
 
-        return "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Portfolio=" + getPortfolio() + SEPARATOR + "Exchange="
-                + getExchange() + SEPARATOR + "type=" + getType() + SEPARATOR + "amount=" + getAmount()
+        return "id=" + getId() + SEPARATOR + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Portfolio=" + getPortfolio()
+                + SEPARATOR + "Exchange=" + getExchange() + SEPARATOR + "type=" + getType() + (getFill() != null ? (SEPARATOR + "fill=" + getFill()) : "")
+                + (getOrder() != null ? (SEPARATOR + "order=" + getOrder()) : "") + SEPARATOR + "amount=" + getAmount()
                 + (getAsset() != null ? (SEPARATOR + "currency=" + getAsset()) : "") + SEPARATOR + "price="
                 + (getPrice() != DecimalAmount.ZERO ? getPrice() : "") + (getCurrency() != null ? (SEPARATOR + "currency=" + getCurrency()) : "");
     }
@@ -347,7 +423,6 @@ public class Transaction extends Event {
         this.amount = amount;
     }
 
-    @Inject
     protected void setPortfolio(Portfolio portfolio) {
         this.portfolio = portfolio;
     }
@@ -446,5 +521,12 @@ public class Transaction extends Event {
     private Asset commissionCurrency;
     private Market market;
     protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.transaction");
+
+    @Override
+    public void detach() {
+
+        transactionDao.detach(this);
+
+    }
 
 }

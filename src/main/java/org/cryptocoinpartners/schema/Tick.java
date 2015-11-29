@@ -70,4 +70,34 @@ public class Tick extends PriceData implements Spread {
 
     private Instant startInstant;
     private Book lastBook;
+
+    @Override
+    public Offer getBestBidByVolume(DiscreteAmount volume) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public Offer getBestAskByVolume(DiscreteAmount volume) {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public void persit() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void detach() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void merge() {
+        // TODO Auto-generated method stub
+
+    }
 }

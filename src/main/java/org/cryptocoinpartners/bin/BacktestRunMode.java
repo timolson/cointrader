@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 
+import javax.inject.Inject;
+
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.BasicQuoteService;
@@ -14,8 +16,10 @@ import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Holding;
 import org.cryptocoinpartners.schema.Portfolio;
+import org.cryptocoinpartners.schema.ReplayFactory;
 import org.cryptocoinpartners.schema.StrategyInstance;
 import org.cryptocoinpartners.schema.Transaction;
+import org.cryptocoinpartners.schema.TransactionFactory;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.util.Replay;
 import org.joda.time.DateTime;
@@ -32,23 +36,30 @@ import com.beust.jcommander.Parameters;
 @Parameters(commandNames = "backtest", commandDescription = "backtest a strategy (not functional)")
 public class BacktestRunMode extends RunMode {
 
+    @Inject
+    protected transient TransactionFactory transactionFactory;
+    @Inject
+    protected transient ReplayFactory replayFactory;
+
     @Parameter(description = "Strategy name to load", arity = 1, required = true)
     public List<String> strategyNames;
     private Context context;
     private static ExecutorService service;
     Semaphore backTestSemaphore = new Semaphore(0);
-
-    private final Instant start = new DateTime(2015, 02, 15, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    //
+    //private final Instant start = new DateTime(2015, 02, 15, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
     // private final Instant start = new DateTime(2015, 8, 30, 16, 50, 0, 0, DateTimeZone.UTC).toInstant();
     //private final Instant start = new DateTime(2015, 2, , 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
-    //private final Instant start = new DateTime(2014, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    // 
+    private final Instant start = new DateTime(2014, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
-    //private final Instant end = new DateTime(2015, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    private final Instant end = new DateTime(2015, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
     // private final Instant end = new DateTime(2015, 8, 31, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
     //private final Instant start = new DateTime(2014, 9, 9, 23, 0, 0, 0, DateTimeZone.UTC).toInstant();
     //private final Instant end = new DateTime(2014, 9, 10, 6, 0, 0, 0, DateTimeZone.UTC).toInstant();
-    private final Instant end = new DateTime(2015, 02, 27, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+    //
+    // private final Instant end = new DateTime(2015, 02, 27, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
     // private final Instant end = new DateTime(2015, 8, 7, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
     @Parameter(names = { "-p", "--position" }, arity = 2, description = "specify initial portfolio positions as {Exchange}:{Asset} {Amount} e.g. BITFINEX:BTC 1.0")
@@ -63,8 +74,11 @@ public class BacktestRunMode extends RunMode {
         //PersistUtil.purgeTransactions();
         //Replay replay = Replay.all(true);
         //Replay replay = Replay.between(start, end, true);
-        Replay replay = Replay.between(start, end, true, backTestSemaphore);
+        Replay replay = replayFactory.between(start, end, true, backTestSemaphore);
+        //  rootInjector.createChildInjector(new PersistanceModule());
+
         context = replay.getContext();
+
         context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
         context.attach(BasicPortfolioService.class);
@@ -106,9 +120,11 @@ public class BacktestRunMode extends RunMode {
             //	Long str = (positions.get(i++));
             DiscreteAmount amount = new DiscreteAmount(Long.parseLong(positions.get(i++)), holding.getAsset().getBasis());
             DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
-            Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
-            context.publish(initialCredit);
+            Transaction initialCredit = transactionFactory.create(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
+            context.setPublishTime(initialCredit);
             initialCredit.persit();
+
+            context.publish(initialCredit);
 
             strategyInstance.getStrategy().init();
 

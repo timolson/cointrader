@@ -10,7 +10,10 @@ import javax.persistence.NoResultException;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FeeMethod;
-import org.cryptocoinpartners.util.PersistUtil;
+import org.cryptocoinpartners.schema.dao.PromptJpaDao;
+import org.cryptocoinpartners.util.EM;
+
+import com.google.inject.Inject;
 
 /**
  * @author Tim Olson
@@ -18,13 +21,15 @@ import org.cryptocoinpartners.util.PersistUtil;
 @Entity
 @Cacheable
 public class Prompt extends EntityBase {
+    @Inject
+    protected static PromptJpaDao promptDao;
 
     public static Prompt forSymbol(String symbol) {
-        return PersistUtil.queryOne(Prompt.class, "select c from Prompt c where symbol=?1", symbol);
+        return EM.queryOne(Prompt.class, "select c from Prompt c where symbol=?1", symbol);
     }
 
     public static List<String> allSymbols() {
-        return PersistUtil.queryList(String.class, "select symbol from Prompt");
+        return EM.queryList(String.class, "select symbol from Prompt");
     }
 
     // JPA
@@ -156,7 +161,7 @@ public class Prompt extends EntityBase {
             Asset tradedCurrency = Currency.forSymbol(currency);
             final Prompt prompt = new Prompt(symbol, tickValue, tickSize, tradedCurrency, volumeBasis, margin, marginMethod, feeRate, feeMethod,
                     marginFeeMethod);
-            PersistUtil.insert(prompt);
+            promptDao.persist(prompt);
             return prompt;
         }
     }
@@ -197,5 +202,23 @@ public class Prompt extends EntityBase {
     private double volumeBasis;
     private int margin;
     private double feeRate;
+
+    @Override
+    public void persit() {
+        promptDao.persist(this);
+
+    }
+
+    @Override
+    public void detach() {
+        promptDao.detach(this);
+
+    }
+
+    @Override
+    public void merge() {
+        promptDao.merge(this);
+
+    }
 
 }

@@ -14,7 +14,6 @@ import org.apache.commons.configuration.MapConfiguration;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.Strategy;
-import org.cryptocoinpartners.util.PersistUtil;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -73,32 +72,52 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
         // attach the actual Strategy instead of this StrategyInstance
         // Set ourselves as the StrategyInstance
         //      context.loadStatements("BasicPortfolioService");
-        portfolio = null;
+        // portfolio = null;
         strategy = context.attach(moduleName, new MapConfiguration(config), new Module()
 
         {
             @Override
             public void configure(Binder binder) {
+                //  binder.install(new FactoryModuleBuilder().build(GeneralOrderFactory.class));
+                //   binder.install(new FactoryModuleBuilder().build(SpecificOrderFactory.class));
+                //  binder.bind(Dao.class).to(DaoJpa.class);
 
                 binder.bind(StrategyInstance.class).toInstance(StrategyInstance.this);
+                //  binder.bind(Dao.class).to(DaoJpa.class);
+
+                // portfolio = context.getInjector().getInstance(Portfolio.class);
                 portfolio = Portfolio.findOrCreate(getModuleName());
                 //  boolean cahced = PersistUtil.cached(portfolio);
                 if (portfolio == null) {
+                    // portfolio = portfolioFactory.create(getModuleName(), StrategyInstance.this);
                     portfolio = context.getInjector().getInstance(Portfolio.class);
+
                     portfolio.setName(getModuleName());
-                    PersistUtil.insert(portfolio);
+                    //  EM.persist(portfolio);
+                    portfolio.persit();
+                    //EM.persist(portfolio);
+
+                    // StrategyInstance.this.setPortfolio(portfolio);
+
+                    // EM.persist(portfolio);
+
+                    //EM.persist(portfolio);
+
+                    // PersistUtil.insert(portfolio);
                 }
 
-                else
+                else {
+                    context.getInjector().injectMembers(portfolio);
                     binder.bind(Portfolio.class).toInstance(portfolio);
+                }
+                StrategyInstance.this.setPortfolio(portfolio);
 
                 //  portfolio = context.getInjector().getInstance(Portfolio.class);
                 //portfolio.setName(getModuleName());
-                portfolio.setManager(StrategyInstance.this);
-                StrategyInstance.this.setPortfolio(portfolio);
+                // portfolio.setManager(StrategyInstance.this);
                 // binder.bind(Portfolio.class).toInstance(portfolio);
 
-                PortfolioService portfolioService = context.getInjector().getInstance(PortfolioService.class);
+                portfolioService = context.getInjector().getInstance(PortfolioService.class);
                 portfolioService.addPortfolio(portfolio);
                 //  portfolio.setName(getModuleName());
                 //  portfolio.setManager(this);
@@ -134,7 +153,8 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
     }
 
     private String moduleName;
-    private Portfolio portfolio;
+    // @Inject
+    //private Portfolio portfolio;
     private Map<String, String> config;
     private Object strategy;
 }

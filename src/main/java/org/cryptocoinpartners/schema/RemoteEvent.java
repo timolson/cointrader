@@ -65,5 +65,5 @@ public abstract class RemoteEvent extends Event {
 
     private Instant timeReceived;
     private long timestampReceived;
-    private String remoteKey;
+    protected String remoteKey;
 }

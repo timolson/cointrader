@@ -1,7 +1,6 @@
 package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -17,19 +16,24 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OrderBy;
+import javax.persistence.PostPersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import org.apache.commons.lang.NotImplementedException;
 import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.TransactionType;
+import org.cryptocoinpartners.schema.dao.FillJpaDao;
+import org.cryptocoinpartners.schema.dao.OrderJpaDao;
 import org.cryptocoinpartners.util.FeesUtil;
-import org.cryptocoinpartners.util.PersistUtil;
 import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+
+import com.google.inject.Inject;
 
 /**
  * This is the base class for GeneralOrder and SpecificOrder.  To create orders, see OrderBuilder or BaseStrategy.order
@@ -46,13 +50,18 @@ import org.joda.time.format.DateTimeFormatter;
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @SuppressWarnings({ "JpaDataSourceORMInspection", "UnusedDeclaration" })
 public abstract class Order extends Event {
+    @Inject
+    protected OrderJpaDao orderDao;
+    @Inject
+    protected FillJpaDao fillDao;
+
     protected static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
     private static Object lock = new Object();
     // private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
     protected static final String SEPARATOR = ",";
 
     @ManyToOne(optional = true)
-    // @JoinColumn(name = "parentOrder")
+    @JoinColumn(name = "parentOrder")
     //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     //@Transient
     public Order getParentOrder() {
@@ -61,7 +70,13 @@ public abstract class Order extends Event {
 
     //@ManyToOne(optional = true)
     //  @JoinColumn(name = "parentFill")
-    @Transient
+
+    // @Transient
+    @Nullable
+    @ManyToOne(optional = true)
+    //, cascade = { CascadeType.PERSIST })
+    //cascade = { CascadeType.ALL })
+    @JoinColumn(name = "parentFill")
     public Fill getParentFill() {
         return parentFill;
     }
@@ -72,6 +87,14 @@ public abstract class Order extends Event {
     @Transient
     public boolean isAsk() {
         return !isBid();
+    }
+
+    @Transient
+    public TransactionType getTransactionType() {
+        if (isBid())
+            return TransactionType.BUY;
+        else
+            return TransactionType.SELL;
     }
 
     @ManyToOne(optional = false)
@@ -100,6 +123,12 @@ public abstract class Order extends Event {
     @Column(insertable = false, updatable = false)
     @Transient
     public abstract Amount getLimitPrice();
+
+    public abstract Order withLimitPrice(String price);
+
+    public abstract Order withLimitPrice(BigDecimal price);
+
+    public abstract Order withLimitPrice(DiscreteAmount price);
 
     @ManyToOne(optional = true)
     @JoinColumn(insertable = false, updatable = false)
@@ -212,26 +241,143 @@ public abstract class Order extends Event {
 
     // @Transient
     @Nullable
-    @OneToMany(mappedBy = "order")
+    @OneToMany
+    //(cascade = CascadeType.PERSIST)
+    //, mappedBy = "order")
+    (mappedBy = "order", orphanRemoval = true)
+    //, cascade = CascadeType.MERGE)
     //, fetch = FetchType.LAZY)
     @OrderBy
     // @OrderColumn(name = "id")
     //, fetch = FetchType.EAGER)
     //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
     public List<Fill> getFills() {
-        if (fills == null)
-            fills = new CopyOnWriteArrayList<Fill>();
-
         return fills;
         // }
     }
 
+    void getAllFillsByParentOrder(Order parentOrder, List allChildren) {
+        for (Order child : parentOrder.getOrderChildren()) {
+            allChildren.addAll(child.getFills());
+            getAllFillsByParentOrder(child, allChildren);
+        }
+    }
+
+    //  @Nullable
+    //@OneToMany(cascade = CascadeType.PERSIST, mappedBy = "order")
+    //, orphanRemoval = true, cascade = CascadeType.REMOVE)
+    //, fetch = FetchType.LAZY)
+    //@OrderBy
+    // @OrderColumn(name = "id")
+    //, fetch = FetchType.EAGER)
+    //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
+    @Transient
+    public List<OrderUpdate> getOrderUpdate() {
+        return orderUpdates;
+        // }
+    }
+
+    public Order withTargetPrice(String price) {
+        if (this.fillType.equals(FillType.STOP_LIMIT) || this.fillType.equals(FillType.STOP_LOSS) || this.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
+            this.setTargetPrice(DecimalAmount.of(price));
+            return this;
+        }
+        throw new NotImplementedException();
+    }
+
+    public Order withFillType(FillType fillType) {
+        this.setFillType(fillType);
+        return this;
+
+    }
+
+    public Order withParentFill(Fill fill) {
+        this.setParentFill(fill);
+        return this;
+
+    }
+
+    public Order withTargetPrice(BigDecimal price) {
+        if (this.fillType.equals(FillType.STOP_LIMIT) || this.fillType.equals(FillType.STOP_LOSS) || this.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
+            this.setTargetPrice(DecimalAmount.of(price));
+            return this;
+        }
+
+        throw new NotImplementedException();
+    }
+
+    public Order withStopPrice(String price) {
+        if (this.fillType.equals(FillType.STOP_LIMIT) || this.fillType.equals(FillType.STOP_LOSS) || this.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
+            this.setStopAmount(DecimalAmount.of(price));
+            return this;
+        }
+        throw new NotImplementedException();
+    }
+
+    public Order withStopPrice(BigDecimal price) {
+        if (this.fillType.equals(FillType.STOP_LIMIT) || this.fillType.equals(FillType.STOP_LOSS) || this.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
+            this.setStopPrice(DecimalAmount.of(price));
+            return this;
+        }
+
+        throw new NotImplementedException();
+    }
+
+    public Order withStopAmount(BigDecimal price) {
+        if (this.fillType.equals(FillType.STOP_LIMIT) || this.fillType.equals(FillType.STOP_LOSS) || this.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
+            this.setStopAmount(DecimalAmount.of(price));
+            return this;
+        }
+
+        throw new NotImplementedException();
+    }
+
+    public Order withTargetAmount(BigDecimal price) {
+        this.setTargetAmount(DecimalAmount.of(price));
+        return this;
+
+    }
+
+    public Order withTrailingStopPrice(BigDecimal price, BigDecimal trailingStopPrice) {
+        if (this.fillType.equals(FillType.STOP_LIMIT) || this.fillType.equals(FillType.STOP_LOSS) || this.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
+            this.setStopAmount(DecimalAmount.of(price));
+            this.setTrailingStopPrice(DecimalAmount.of(trailingStopPrice));
+            return this;
+        }
+        throw new NotImplementedException();
+    }
+
+    public Order withTrailingStopPrice(String price, String trailingStopPrice) {
+        if (this.fillType.equals(FillType.STOP_LIMIT) || this.fillType.equals(FillType.STOP_LOSS) || this.fillType.equals(FillType.TRAILING_STOP_LIMIT)) {
+            this.setStopAmount(DecimalAmount.of(price));
+            this.setTrailingStopPrice(DecimalAmount.of(trailingStopPrice));
+            return this;
+        }
+        throw new NotImplementedException();
+    }
+
+    public Order withComment(String comment) {
+        this.setComment(comment);
+        return this;
+    }
+
+    public Order withPositionEffect(PositionEffect positionEffect) {
+        this.setPositionEffect(positionEffect);
+        return this;
+    }
+
+    public Order withExecutionInstruction(ExecutionInstruction executionInstruction) {
+        this.setExecutionInstruction(executionInstruction);
+        return this;
+    }
+
     @Nullable
-    @OneToMany(mappedBy = "order")
-    @OrderBy
+    //@OneToMany(mappedBy = "order")
+    //, orphanRemoval = true, cascade = CascadeType.REMOVE)
+    //@OrderBy
     // @OrderColumn(name = "id")
     //, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
-    //@Transient
+    @Transient
     public List<Transaction> getTransactions() {
         if (transactions == null)
             transactions = new CopyOnWriteArrayList<Transaction>();
@@ -240,7 +386,47 @@ public abstract class Order extends Event {
         // }
     }
 
-    public void persit() {
+    @Override
+    public synchronized void merge() {
+        //   synchronized (persistanceLock) {
+        try {
+            orderDao.merge(this);
+            //if (duplicate == null || duplicate.isEmpty())
+        } catch (Exception | Error ex) {
+
+            System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":merge, full stack trace follows:" + ex);
+            // ex.printStackTrace();
+
+        }
+    }
+
+    public <T> T find() {
+        //   synchronized (persistanceLock) {
+        try {
+            return (T) orderDao.find(Order.class, this.getId());
+            //if (duplicate == null || duplicate.isEmpty())
+        } catch (Exception | Error ex) {
+            return null;
+            //System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":find, full stack trace follows:" + ex);
+            // ex.printStackTrace();
+
+        }
+        // return null;
+    }
+
+    @PostPersist
+    private void postPersist() {
+        //   detach();
+
+    }
+
+    @Override
+    public void detach() {
+        orderDao.detach(this);
+    }
+
+    @Override
+    public synchronized void persit() {
         //   synchronized (persistanceLock) {
         //  if (this.hasFills()) {
         //    for (Fill fill : this.getFills())
@@ -258,30 +444,43 @@ public abstract class Order extends Event {
         //   PersistUtil.insert(this);
 
         //  PersistUtil.find(this);
-        //  List<Order> duplicate = PersistUtil.queryList(Order.class, "select o from Order o where o=?1", this);
+        //  List<Order> duplicate = orderDao.queryList(Order.class, "select o from Order o where o=?1", this);
         //List<Order> duplicate = null;
         //  EntityBase entity = PersistUtil.find(this);
+        try {
 
-        // if (duplicate == null || duplicate.isEmpty())
-        PersistUtil.insert(this);
+            orderDao.persist(this);
+            //if (duplicate == null || duplicate.isEmpty())
+        } catch (Exception | Error ex) {
+
+            System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":persist, full stack trace follows:" + ex);
+            // ex.printStackTrace();
+
+        }
+        //else
+        //  orderDao.merge(this);
+
+        //  PersistUtil.insert(this);
         // else
         //   PersistUtil.merge(this);
         //  }
-        Iterator<Fill> itf = getFills().iterator();
-        while (itf.hasNext()) {
-            //                //  for (Fill pos : getFills()) {
-            Fill fill = itf.next();
+        // Iterator<Fill> itf = getFills().iterator();
+        //while (itf.hasNext()) {
+        //                //  for (Fill pos : getFills()) {
 
-            fill.persit();
-        }
+        //  Fill fill = itf.next();
+
+        //fillDao.persist(fill);
+        //   fill.persit();
+
+        // }
 
     }
 
     @Transient
     public Transaction getReservation() {
-        Iterator<Transaction> it = getTransactions().iterator();
-        while (it.hasNext()) {
-            Transaction tran = it.next();
+        for (Transaction tran : getTransactions()) {
+
             if (tran.getType().equals(TransactionType.BUY_RESERVATION) || tran.getType().equals(TransactionType.SELL_RESERVATION)) {
                 return tran;
 
@@ -292,64 +491,66 @@ public abstract class Order extends Event {
 
     @Transient
     public void removeTransaction(Transaction transaction) {
-        Iterator<Transaction> it = getTransactions().iterator();
-        while (it.hasNext()) {
-            if (it.next().equals(transaction)) {
-                it.remove();
-
-            }
-        }
+        this.transactions.remove(transaction);
+        transaction.setOrder(null);
 
     }
 
-    @Transient
-    public void removeChild(Order child) {
-        Iterator<Order> it = getChildren().iterator();
-        while (it.hasNext()) {
-            if (it.next().equals(child)) {
-                it.remove();
-
-            }
-        }
+    public void removeChildOrder(Order child) {
+        this.children.remove(child);
+        child.setParentOrder(null);
 
     }
 
-    @Transient
-    public void removeChildren() {
-        getChildren().clear();
+    public void removeFill(Fill fill) {
+        this.fills.remove(fill);
+        fill.setOrder(null);
 
     }
 
-    @Transient
+    public void removeOrderUpdate(OrderUpdate orderUpdate) {
+        this.orderUpdates.remove(orderUpdate);
+        orderUpdate.setOrder(null);
+
+    }
+
+    public void removeChildOrders() {
+        this.children.clear();
+
+    }
+
     public void removeTransactions() {
-        getTransactions().clear();
+        this.transactions.clear();
 
     }
 
     @Nullable
-    @OneToMany
-    //(mappedBy = "parentOrder")
+    @OneToMany(mappedBy = "parentOrder")
+    //(orphanRemoval = true, cascade = CascadeType.REMOVE)
+    //
     @OrderBy
     //  @OrderColumn(name = "id")
     //  @Transient
-    public List<Order> getChildren() {
-        if (children == null)
-            children = new CopyOnWriteArrayList<Order>();
+    public List<Order> getOrderChildren() {
         //  synchronized (lock) {
         return children;
         //  }
     }
 
     public void addFill(Fill fill) {
-        getFills().add(fill);
+        this.fills.add(fill);
+    }
+
+    public void addOrderUpdate(OrderUpdate orderUpdate) {
+        this.orderUpdates.add(orderUpdate);
     }
 
     public void addTransaction(Transaction transaction) {
-        getTransactions().add(transaction);
+        this.transactions.add(transaction);
     }
 
-    public void addChild(Order order) {
-        getChildren().add(order);
+    public void addChildOrder(Order order) {
+        this.children.add(order);
     }
 
     @Transient
@@ -359,7 +560,7 @@ public abstract class Order extends Event {
 
     @Transient
     public boolean hasChildren() {
-        return !getChildren().isEmpty();
+        return !getOrderChildren().isEmpty();
     }
 
     @Transient
@@ -391,6 +592,10 @@ public abstract class Order extends Event {
 
     protected void setFills(List<Fill> fills) {
         this.fills = fills;
+    }
+
+    protected void setOrderUpdates(List<OrderUpdate> orderUpdates) {
+        this.orderUpdates = orderUpdates;
     }
 
     protected void setTransactions(List<Transaction> transactions) {
@@ -444,27 +649,28 @@ public abstract class Order extends Event {
 
     }
 
-    protected void setChildren(List<Order> children) {
+    protected void setOrderChildren(List<Order> children) {
         this.children = children;
     }
 
-    private List<Order> children = new CopyOnWriteArrayList<Order>();
+    protected List<Order> children;
 
     protected Instant entryTime;
 
-    private Portfolio portfolio;
-    private List<Fill> fills = new CopyOnWriteArrayList<Fill>();
-    private List<Transaction> transactions = new CopyOnWriteArrayList<Transaction>();
+    protected Portfolio portfolio;
+    protected List<Fill> fills;
+    protected List<OrderUpdate> orderUpdates;
+    protected List<Transaction> transactions;
     protected FillType fillType;
-    private MarginType marginType;
-    private Amount commission;
-    private Amount margin;
+    protected MarginType marginType;
+    protected Amount commission;
+    protected Amount margin;
     protected String comment;
     protected PositionEffect positionEffect;
-    private Instant expiration;
+    protected Instant expiration;
     protected ExecutionInstruction executionInstruction;
-    private boolean force; // allow this order to override various types of panic
-    private boolean emulation; // ("allow order type emulation" [default, true] or "only use exchange's native functionality")
+    protected boolean force; // allow this order to override various types of panic
+    protected boolean emulation; // ("allow order type emulation" [default, true] or "only use exchange's native functionality")
     protected Order parentOrder;
     protected Fill parentFill;
 

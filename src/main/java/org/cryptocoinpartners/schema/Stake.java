@@ -58,4 +58,22 @@ public class Stake extends EntityBase {
     private Owner owner;
     private BigDecimal stake;
     private Portfolio portfolio;
+
+    @Override
+    public void persit() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void detach() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void merge() {
+        // TODO Auto-generated method stub
+
+    }
 }

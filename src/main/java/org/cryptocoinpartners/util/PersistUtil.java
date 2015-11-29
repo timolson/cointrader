@@ -11,6 +11,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.persistence.Cache;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityNotFoundException;
@@ -41,6 +43,8 @@ public class PersistUtil {
 
     private static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
     private static Object lock = new Object();
+    @Inject
+    static Provider<EntityManager> entityManagerProvider;
 
     // private static final BlockingQueue<EntityBase> insertQueue = new DelayQueue();
     // private static final BlockingQueue<EntityBase> mergeQueue = new DelayQueue();
@@ -219,7 +223,7 @@ public class PersistUtil {
 
             if (persited)
                 for (EntityBase entity : entities)
-                    log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " inserted to database");
+                    log.trace(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " inserted to database");
             else
                 for (EntityBase entity : entities)
                     log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not inserted to database");
@@ -692,7 +696,7 @@ public class PersistUtil {
 
     public static EntityManager createEntityManager() {
         init(false);
-        return PersistUtilHelper.getEntityManager();
+        return entityManagerProvider.get();
     }
 
     public static void resetDatabase() {
@@ -717,20 +721,20 @@ public class PersistUtil {
 
         }
 
-        if (PersistUtilHelper.getEntityManagerFactory() != null)
-            PersistUtilHelper.closeEntityManagerFactory();
+        if (createEntityManager().getEntityManagerFactory() != null)
+            createEntityManager().getEntityManagerFactory().close();
     }
 
     private static void init(boolean resetDatabase) {
-        if (PersistUtilHelper.getEntityManagerFactory() != null) {
-            if (!PersistUtilHelper.isOpen()) {
-                log.warn("entityManagerFactory was closed.  Re-initializing");
-                PersistUtilHelper.reset();
-            } else if (!resetDatabase) {
-                // entityManagerFactory exists, is open, and a reset is not requested.  continue to use existing EMF
-                return;
-            }
-        }
+        /*    //    if (createEntityManager().getEntityManagerFactory() != null) {
+                    if (!createEntityManager().getEntityManagerFactory().isOpen()) {
+                        log.warn("entityManagerFactory was closed.  Re-initializing");
+                        //PersistUtilHelper.reset();
+                    } else if (!resetDatabase) {
+                        // entityManagerFactory exists, is open, and a reset is not requested.  continue to use existing EMF
+                        return;
+                    }
+                }*/
 
         if (resetDatabase) {
             log.info("resetting database");
@@ -751,9 +755,9 @@ public class PersistUtil {
         properties.put("hibernate.connection.username", ConfigUtil.combined().getString("db.username"));
         properties.put("hibernate.connection.password", ConfigUtil.combined().getString("db.password"));
         properties.put("hibernate.ejb.naming_strategy", "org.hibernate.cfg.ImprovedNamingStrategy");
-        properties.put("hibernate.connection.autocommit", "true");
-        properties.put("hibernate.connection.autocommit", "true");
-        properties.put("hibernate.connection.release_mode", "auto");
+        properties.put("hibernate.connection.autocommit", "false");
+        properties.put("org.hibernate.flushMode", "COMMIT");
+        properties.put("hibernate.connection.release_mode", "after_transaction");
         properties.put("hibernate.connection.provider_class", "org.hibernate.connection.C3P0ConnectionProvider");
         properties.put("hibernate.cache.region.factory_class", "org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory");
         properties.put("hibernate.cache.use_second_level_cache", "true");
@@ -775,10 +779,12 @@ public class PersistUtil {
         //  properties.put("hibernate.c3p0.maxConnectionAge", ConfigUtil.combined().getString("db.max.connection.age"));
         final String testConnection = resetDatabase ? "false" : ConfigUtil.combined().getString("db.test.connection");
         properties.put("hibernate.c3p0.testConnectionOnCheckin", testConnection);
+        properties.put("hibernate.c3p0.testConnectionOnCheckout", "true");
         properties.put("hibernate.c3p0.acquireRetryDelay", "1000");
         properties.put("hibernate.c3p0.acquireRetryAttempts", "0");
-        properties.put("hibernate.c3p0.breakAfterAcquireFailure", "false");
-        properties.put("hibernate.c3p0.checkoutTimeout", "10000");
+        properties.put("hibernate.c3p0.breakAfterAcquireFailure", "true");
+        properties.put("hibernate.c3p0.maxIdleTime", "3600");
+        properties.put("hibernate.c3p0.checkoutTimeout", "1000");
         properties.put("hibernate.c3p0.idleConnectionTestPeriod", "100");
 
         properties.put("javax.persistence.sharedCache.mode", "ENABLE_SELECTIVE");
@@ -791,14 +797,14 @@ public class PersistUtil {
         service.execute(new mergeRunnable());
 
         try {
-            PersistUtilHelper emh = new PersistUtilHelper(properties);
+            //PersistUtilHelper emh = new PersistUtilHelper(properties);
             ensureSingletonsExist();
 
         } catch (Throwable t) {
-            if (PersistUtilHelper.getEntityManagerFactory() != null) {
-                PersistUtilHelper.closeEntityManagerFactory();
+            //if (createEntityManager().getEntityManagerFactory() != null) {
+            //  createEntityManager().getEntityManagerFactory().close();
 
-            }
+            // }
             throw new Error("Could not initialize db", t);
         }
         //  if (!shutdown && running && persitanceTask == null && !running) {
@@ -815,11 +821,11 @@ public class PersistUtil {
         Currencies.BTC.getSymbol(); // this should load all the singletons in Currencies
         Exchanges.BITFINEX.getSymbol(); // this should load all the singletons in Exchanges
         Prompts.THIS_WEEK.getSymbol();
-        queryList(Currency.class, "select c from Currency c");
-        queryList(Prompt.class, "select p from Prompt p");
-        queryList(Listing.class, "select l from Listing l");
-        queryList(Exchange.class, "select e from Exchange e");
-        queryList(Market.class, "select m from Market m");
+        EM.queryList(Currency.class, "select c from Currency c");
+        EM.queryList(Prompt.class, "select p from Prompt p");
+        EM.queryList(Listing.class, "select l from Listing l");
+        EM.queryList(Exchange.class, "select e from Exchange e");
+        EM.queryList(Market.class, "select m from Market m");
 
     }
 

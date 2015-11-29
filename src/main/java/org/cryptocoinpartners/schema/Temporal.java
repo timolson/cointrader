@@ -13,10 +13,11 @@ import org.joda.time.Instant;
  * @author Tim Olson
  */
 @MappedSuperclass
-public class Temporal extends EntityBase {
+public abstract class Temporal extends EntityBase {
 
     public Temporal(Instant time) {
         super();
+        this.id = getId();
         this.time = time;
         this.dateTime = time.toDate();
         this.timestamp = time.getMillis();
@@ -35,19 +36,39 @@ public class Temporal extends EntityBase {
         return dateTime;
     }
 
-    @Transient
+    //  @Transient
+    // @AttributeOverride(name = "timestamp", column = @Column(name = "version")) we need ot set this to last update time.
     public long getTimestamp() {
-        return timestamp;
+        if (time == null)
+            return 0L;
+        else
+            return time.getMillis();
+        // return timestamp;
     }
+
+    //@Override
+    //@AttributeOverride(name = "version", column = @Column(name = "version"))
+    // public long getVersion() {
+    //if (timestamp == null)
+    //  return 0;
+    //   version = timestamp;
+    // return version;
+    // }
 
     // JPA
     protected Temporal() {
     }
 
+    protected void setTimestamp(long timestamp) {
+        //  this.time = time;
+        //this.dateTime = time.toDate();
+        this.timestamp = timestamp;
+    }
+
     protected void setTime(Instant time) {
         this.time = time;
         this.dateTime = time.toDate();
-        this.timestamp = time.getMillis();
+        setTimestamp(time.getMillis());
     }
 
     protected Instant time;

@@ -4,6 +4,8 @@ import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 
 import org.cryptocoinpartners.enumeration.PositionType;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 /**
  * When Fill change Position, this Event is published
@@ -12,6 +14,8 @@ import org.cryptocoinpartners.enumeration.PositionType;
  */
 @Entity
 public class PositionUpdate extends Event {
+    protected static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+    protected static final String SEPARATOR = ",";
 
     @ManyToOne
     public Position getPosition() {
@@ -62,5 +66,31 @@ public class PositionUpdate extends Event {
     private PositionType type;
     private PositionType lastType;
     private Market market;
+
+    @Override
+    public void persit() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void detach() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void merge() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public String toString() {
+
+        return "PositionUpdate{ id=" + getId() + SEPARATOR + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Type=" + getType()
+                + SEPARATOR + "Last Type=" + (getLastType() == null ? "null" : getLastType()) + SEPARATOR + "market={"
+                + (getMarket() == null ? "null}" : getMarket() + "}") + SEPARATOR + "position=" + getPosition() + "}";
+    }
 
 }
