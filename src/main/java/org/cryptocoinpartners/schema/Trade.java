@@ -47,6 +47,7 @@ public class Trade extends PriceData {
 
     }
 
+    @Override
     @Transient
     public TradeDao getDao() {
         return tradeDao;
@@ -67,6 +68,11 @@ public class Trade extends PriceData {
     @Override
     public void persit() {
         tradeDao.persist(this);
+    }
+
+    @Override
+    public EntityBase refresh() {
+        return tradeDao.refresh(this);
     }
 
     /**
@@ -142,6 +148,12 @@ public class Trade extends PriceData {
     @Override
     public void merge() {
         tradeDao.merge(this);
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void delete() {
         // TODO Auto-generated method stub
 
     }

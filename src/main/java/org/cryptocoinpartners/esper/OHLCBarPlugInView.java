@@ -4,10 +4,10 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.Iterator;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.cryptocoinpartners.schema.Bar;
 import org.cryptocoinpartners.schema.Market;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.espertech.esper.client.EventBean;
 import com.espertech.esper.client.EventType;
@@ -34,7 +34,7 @@ import com.espertech.esper.view.ViewSupport;
  */
 public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
     private final static int LATE_EVENT_SLACK_SECONDS = 5;
-    private static Log log = LogFactory.getLog(OHLCBarPlugInView.class);
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.OHLCBarPlugInView");
 
     private final AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext;
     private final ScheduleSlot scheduleSlot;
@@ -80,34 +80,86 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 
         for (EventBean theEvent : newData) {
             eventsPerStream[0] = theEvent;
+            log.trace(this.getClass().getSimpleName() + ":updaate recieved new event" + eventsPerStream[0].toString());
+
             interval = (Double) intervalExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
+
             Long timestamp = (Long) timestampExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
             Long timestampMinute = removeSeconds(timestamp);
             double value = (Double) valueExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
+
             if (marketExpression != null)
                 market = (Market) marketExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
             // test if this minute has already been published, the event is too late
+            if (interval == null || interval == 0 || timestamp == null || timestamp == 0 || timestampMinute == null || timestampMinute == 0 || value == 0
+                    || (marketExpression != null && market == null)) {
+                log.error(this.getClass().getSimpleName() + ":unable to create bar with interval: " + interval + " timestamp: " + timestamp
+                        + " timestampMinute:" + timestampMinute + " value: " + value + " market: " + market + " cutoffTimestampMinute: "
+                        + cutoffTimestampMinute);
+
+                return;
+            }
+            log.trace(this.getClass().getSimpleName() + ":update determing bar for interval: " + interval + " timestamp: " + timestamp + " timestampMinute:"
+                    + timestampMinute + " value: " + value + " market: " + market + " cutoffTimestampMinute: " + cutoffTimestampMinute);
+
             if ((cutoffTimestampMinute != null) && (timestampMinute <= cutoffTimestampMinute)) {
                 continue;
             }
 
             // if the same minute, aggregate
-            if (timestampMinute.equals(currentTimestampMinute)) {
+            if (timestampMinute.equals(getCurrentTimestampMinute())) {
+                log.trace(this.getClass().getSimpleName() + ":apply value for " + value);
                 applyValue(value);
             }
             // first time we see an event for this minute
             else {
                 // there is data to post
-                if (currentTimestampMinute != null) {
+                if (getCurrentTimestampMinute() != null) {
+                    log.trace(this.getClass().getSimpleName() + " update: posing data for bar for market: " + market + " with timestamp:"
+                            + currentTimestampMinute + " first:" + first + " high: " + max + " low: " + min + " close: " + last);
+
                     postData();
                 }
+                setCurrentTimestampMinute(timestampMinute);
 
-                currentTimestampMinute = timestampMinute;
+                // currentTimestampMinute = timestampMinute;
+                log.trace(this.getClass().getSimpleName() + ":apply value for " + value);
+
                 applyValue(value);
 
                 // schedule a callback to fire in case no more events arrive
+                log.trace(this.getClass().getSimpleName() + ":scheduleCallback for interval: " + interval.longValue() + " slack " + LATE_EVENT_SLACK_SECONDS);
+
                 scheduleCallback();
             }
+        }
+    }
+
+    public Long getCurrentTimestampMinute() {
+        return currentTimestampMinute;
+    }
+
+    protected void setCurrentTimestampMinute(Long timestamp) {
+        if ((timestamp == null || currentTimestampMinute == null) || (timestamp > 0 && timestamp > currentTimestampMinute)) {
+            this.currentTimestampMinute = timestamp;
+        } else {
+            log.error("setCurrentTimestampMinute: unable to set curren time stamp minute as currnet currentTimestampMinute " + currentTimestampMinute
+                    + " is greater than new time stamp " + timestamp);
+
+        }
+    }
+
+    public Long getCutoffTimestampMinute() {
+        return cutoffTimestampMinute;
+    }
+
+    protected void setCutoffTimestampMinute(Long cutoff) {
+        if (cutoffTimestampMinute == null || (cutoff != null && cutoff > cutoffTimestampMinute)) {
+            this.cutoffTimestampMinute = cutoff;
+        } else {
+            log.error("setCutoffTimestampMinute: unable to set cut off timestamp as currnet cutoffTimestampMinute " + cutoffTimestampMinute
+                    + " is greater than new cut off time stamp " + cutoff);
+
         }
     }
 
@@ -207,6 +259,8 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
         long targetTime = currentRemoveSeconds + ((interval.longValue() + LATE_EVENT_SLACK_SECONDS) * 1000); // leave some seconds for late comers
 
         long scheduleAfterMSec = targetTime - currentTime;
+        log.trace(this.getClass().getSimpleName() + ":scheduling Callback after : " + scheduleAfterMSec + " for currentTime " + currentTime + " targetTime "
+                + targetTime);
 
         ScheduleHandleCallback callback = new ScheduleHandleCallback() {
             @Override
@@ -218,23 +272,46 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 
         handle = new EPStatementHandleCallback(agentInstanceViewFactoryContext.getEpStatementAgentInstanceHandle(), callback);
         agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().add(scheduleAfterMSec, handle, scheduleSlot);
+        log.trace(this.getClass().getSimpleName() + ":scheduledCallback after : " + scheduleAfterMSec + " for handle " + handle + " scheduleSlot "
+                + scheduleSlot);
+
     }
 
     private void postData() {
-        Bar barValue = new Bar(currentTimestampMinute, first, last, max, min, market);
-        EventBean outgoing = agentInstanceViewFactoryContext.getStatementContext().getEventAdapterService().adapterForBean(barValue);
-        if (lastEvent == null) {
-            this.updateChildren(new EventBean[] { outgoing }, null);
-        } else {
-            this.updateChildren(new EventBean[] { outgoing }, new EventBean[] { lastEvent });
-        }
-        lastEvent = outgoing;
+        Bar barValue;
+        if (currentTimestampMinute != null && first != null && last != null && max != null && min != null && market != null) {
+            try {
+                barValue = new Bar(currentTimestampMinute, first, last, max, min, market);
+            } catch (Exception | Error ex) {
+                log.error("PostData: Unable to generate bar for market: " + market + " with timestamp:" + currentTimestampMinute + " first:" + first
+                        + " high: " + max + " low: " + min + " close: " + last);
+                return;
+            }
+            EventBean outgoing = agentInstanceViewFactoryContext.getStatementContext().getEventAdapterService().adapterForBean(barValue);
+            if (lastEvent == null) {
+                log.trace("PostData: updating child " + outgoing.getUnderlying().toString());
 
-        cutoffTimestampMinute = currentTimestampMinute;
-        first = null;
-        last = null;
-        max = null;
-        min = null;
-        currentTimestampMinute = null;
+                this.updateChildren(new EventBean[] { outgoing }, null);
+            } else {
+                log.trace("PostData: updating child outgoing event " + outgoing.getUnderlying().toString() + " last event "
+                        + lastEvent.getUnderlying().toString());
+
+                this.updateChildren(new EventBean[] { outgoing }, new EventBean[] { lastEvent });
+            }
+            lastEvent = outgoing;
+
+            setCutoffTimestampMinute(currentTimestampMinute);
+            // cutoffTimestampMinute = currentTimestampMinute;
+            first = null;
+            last = null;
+            max = null;
+            min = null;
+            setCurrentTimestampMinute(null);
+
+            // currentTimestampMinute = null;
+
+        } else
+            log.error("PostData: Unable to generate bar for market: " + market + " with timestamp:" + currentTimestampMinute + " first:" + first + " high: "
+                    + max + " low: " + min + " close: " + last);
     }
 }

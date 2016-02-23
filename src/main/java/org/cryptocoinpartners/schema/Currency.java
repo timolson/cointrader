@@ -5,8 +5,10 @@ import java.util.List;
 import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.NoResultException;
+import javax.persistence.Transient;
 
 import org.cryptocoinpartners.schema.dao.CurrencyJpaDao;
+import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.util.EM;
 
 import com.google.inject.Inject;
@@ -55,14 +57,14 @@ public class Currency extends Asset {
     static Currency forSymbolOrCreate(String symbol, boolean isFiat, double basis) {
         try {
             Currency currency = forSymbol(symbol);
-            currencyDao.persist(currency);
+            currencyDao.persistEntities(currency);
             return currency;
         } catch (NoResultException e) {
 
             //
             final Currency currency = new Currency(isFiat, symbol, basis);
             // final Currency currency = currencyFactory.create(isFiat, symbol, basis);
-            currencyDao.persist(currency);
+            currencyDao.persistEntities(currency);
             return currency;
         }
     }
@@ -73,7 +75,7 @@ public class Currency extends Asset {
             return forSymbol(symbol);
         } catch (NoResultException e) {
             final Currency currency = new Currency(isFiat, symbol, basis, multiplier);
-            EM.persist(currency);
+            currencyDao.persistEntities(currency);
             return currency;
         }
     }
@@ -95,7 +97,14 @@ public class Currency extends Asset {
     private double multiplier;
 
     @Override
+    public EntityBase refresh() {
+        return currencyDao.refresh(this);
+    }
+
+    @Override
     public void persit() {
+
+        currencyDao.persist(this);
         // TODO Auto-generated method stub
 
     }
@@ -108,6 +117,18 @@ public class Currency extends Asset {
 
     @Override
     public void merge() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    @Transient
+    public Dao getDao() {
+        return currencyDao;
+    }
+
+    @Override
+    public void delete() {
         // TODO Auto-generated method stub
 
     }

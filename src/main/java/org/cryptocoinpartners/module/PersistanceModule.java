@@ -1,16 +1,52 @@
 package org.cryptocoinpartners.module;
 
-import org.cryptocoinpartners.schema.Currency;
-import org.cryptocoinpartners.schema.Exchange;
-import org.cryptocoinpartners.schema.Listing;
-import org.cryptocoinpartners.schema.Market;
-import org.cryptocoinpartners.schema.Prompt;
-import org.cryptocoinpartners.util.EM;
-import org.cryptocoinpartners.util.IoUtil;
+import org.cryptocoinpartners.schema.BarFactory;
+import org.cryptocoinpartners.schema.BookFactory;
+import org.cryptocoinpartners.schema.CurrencyFactory;
+import org.cryptocoinpartners.schema.FillFactory;
+import org.cryptocoinpartners.schema.GeneralOrderFactory;
+import org.cryptocoinpartners.schema.MarketFactory;
+import org.cryptocoinpartners.schema.OrderUpdateFactory;
+import org.cryptocoinpartners.schema.PositionFactory;
+import org.cryptocoinpartners.schema.ReplayFactory;
+import org.cryptocoinpartners.schema.SpecificOrderFactory;
+import org.cryptocoinpartners.schema.TradeFactory;
+import org.cryptocoinpartners.schema.TransactionFactory;
+import org.cryptocoinpartners.schema.dao.BarDao;
+import org.cryptocoinpartners.schema.dao.BarJpaDao;
+import org.cryptocoinpartners.schema.dao.BookDao;
+import org.cryptocoinpartners.schema.dao.BookJpaDao;
+import org.cryptocoinpartners.schema.dao.CurrencyDao;
+import org.cryptocoinpartners.schema.dao.CurrencyJpaDao;
+import org.cryptocoinpartners.schema.dao.ExchangeDao;
+import org.cryptocoinpartners.schema.dao.ExchangeJpaDao;
+import org.cryptocoinpartners.schema.dao.FillDao;
+import org.cryptocoinpartners.schema.dao.FillJpaDao;
+import org.cryptocoinpartners.schema.dao.HoldingDao;
+import org.cryptocoinpartners.schema.dao.HoldingJpaDao;
+import org.cryptocoinpartners.schema.dao.ListingDao;
+import org.cryptocoinpartners.schema.dao.ListingJpaDao;
+import org.cryptocoinpartners.schema.dao.MarketDao;
+import org.cryptocoinpartners.schema.dao.MarketJpaDao;
+import org.cryptocoinpartners.schema.dao.OrderDao;
+import org.cryptocoinpartners.schema.dao.OrderJpaDao;
+import org.cryptocoinpartners.schema.dao.OrderUpdateDao;
+import org.cryptocoinpartners.schema.dao.OrderUpdateJpaDao;
+import org.cryptocoinpartners.schema.dao.PortfolioDao;
+import org.cryptocoinpartners.schema.dao.PortfolioJpaDao;
+import org.cryptocoinpartners.schema.dao.PositionDao;
+import org.cryptocoinpartners.schema.dao.PositionJpaDao;
+import org.cryptocoinpartners.schema.dao.PromptDao;
+import org.cryptocoinpartners.schema.dao.PromptJpaDao;
+import org.cryptocoinpartners.schema.dao.TradeDao;
+import org.cryptocoinpartners.schema.dao.TradeJpaDao;
+import org.cryptocoinpartners.schema.dao.TransactionDao;
+import org.cryptocoinpartners.schema.dao.TransactionJpaDao;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
 
-public class StaticInjectionModule extends AbstractModule {
+public class PersistanceModule extends AbstractModule {
 
     //private static final ThreadLocal<EntityManager> ENTITY_MANAGER_CACHE = new ThreadLocal<EntityManager>();
 
@@ -67,36 +103,54 @@ public class StaticInjectionModule extends AbstractModule {
         //        jpa.properties(properties);
         //        jpa.configure(binder());
 
-        requestStaticInjection(Market.class);
-        requestStaticInjection(Exchange.class);
-        requestStaticInjection(Listing.class);
-        requestStaticInjection(Prompt.class);
-        requestStaticInjection(Currency.class);
-        // requestStaticInjection(FeesUtil.class);
-        // requestStaticInjection(Portfolio.class);
-        //requestStaticInjection(Transaction.class);
-        //requestStaticInjection(Fill.class);
-        //requestStaticInjection(OrderUpdate.class);
-        requestStaticInjection(EM.class);
-        // requestStaticInjection(Market.class);
-        //  requestStaticInjection(Exchange.class);
-        //requestStaticInjection(Listing.class);
-        // requestStaticInjection(Prompt.class);
-        //  requestStaticInjection(Currency.class);
-        // requestStaticInjection(Replay.class);
-        // requestStaticInjection(Book.class);
-        //requestStaticInjection(Trade.class);
-        // requestStaticInjection(Bar.class);
-        // requestStaticInjection(SaveMarketData.class);
-        requestStaticInjection(IoUtil.class);
-        // requestStaticInjection(Portfolio.class);
-        //requestStaticInjection(Transaction.class);
-        // requestStaticInjection(Fill.class);
-        //requestStaticInjection(OrderUpdate.class);
+        /* requestStaticInjection(Market.class);
+         requestStaticInjection(Exchange.class);
+         requestStaticInjection(Listing.class);
+         requestStaticInjection(Prompt.class);
+         requestStaticInjection(Currency.class);
+         requestStaticInjection(Portfolio.class);
+         requestStaticInjection(Transaction.class);
+         requestStaticInjection(Fill.class);
+         requestStaticInjection(OrderUpdate.class);
+        */
 
-        //  install(new FactoryModuleBuilder().build(GeneralOrderFactory.class));
-        //install(new FactoryModuleBuilder().build(SpecificOrderFactory.class));
-        // bind(SpecificOrderFactory.class).to(SpecificOrderFactory.class);
+        //bind(Dao.class).to(DaoJpa.class);
+        bind(PortfolioDao.class).to(PortfolioJpaDao.class);
+
+        bind(BookDao.class).to(BookJpaDao.class);
+        bind(BarDao.class).to(BarJpaDao.class);
+        bind(CurrencyDao.class).to(CurrencyJpaDao.class);
+        bind(ExchangeDao.class).to(ExchangeJpaDao.class);
+        bind(FillDao.class).to(FillJpaDao.class);
+        bind(ListingDao.class).to(ListingJpaDao.class);
+        bind(MarketDao.class).to(MarketJpaDao.class);
+        bind(HoldingDao.class).to(HoldingJpaDao.class);
+        //bind(MarketDataDao.class).to(MarketDataJpaDao.class);
+        bind(OrderDao.class).to(OrderJpaDao.class);
+        bind(PositionDao.class).to(PositionJpaDao.class);
+        bind(PromptDao.class).to(PromptJpaDao.class);
+        bind(TradeDao.class).to(TradeJpaDao.class);
+        bind(TransactionDao.class).to(TransactionJpaDao.class);
+        bind(OrderUpdateDao.class).to(OrderUpdateJpaDao.class);
+
+        //  bind(OrderUpdateDao.class).to(OrderUpdateJpaDao.class);
+
+        //  bind(FillDao.class).to(FillJpaDao.class);
+
+        //bind(SpecificOrderFactory.class).to(SpecificOrderFactory.class);
+        // install(new FactoryModuleBuilder().build(PortfolioFactory.class));
+        install(new FactoryModuleBuilder().build(CurrencyFactory.class));
+        install(new FactoryModuleBuilder().build(MarketFactory.class));
+        install(new FactoryModuleBuilder().build(GeneralOrderFactory.class));
+        install(new FactoryModuleBuilder().build(SpecificOrderFactory.class));
+        install(new FactoryModuleBuilder().build(FillFactory.class));
+        install(new FactoryModuleBuilder().build(PositionFactory.class));
+        install(new FactoryModuleBuilder().build(OrderUpdateFactory.class));
+        install(new FactoryModuleBuilder().build(TransactionFactory.class));
+        install(new FactoryModuleBuilder().build(ReplayFactory.class));
+        install(new FactoryModuleBuilder().build(BookFactory.class));
+        install(new FactoryModuleBuilder().build(TradeFactory.class));
+        install(new FactoryModuleBuilder().build(BarFactory.class));
 
         // .build(SpecificOrderFactory.class));
         // install(new FactoryModuleBuilder().implement(Serializable.class, GeneralOrder.class).build(GeneralOrderFactory.class));

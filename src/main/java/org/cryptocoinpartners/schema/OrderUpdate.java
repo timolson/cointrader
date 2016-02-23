@@ -2,10 +2,23 @@ package org.cryptocoinpartners.schema;
 
 import java.util.UUID;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Index;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.NamedAttributeNode;
+import javax.persistence.NamedEntityGraph;
+import javax.persistence.NamedEntityGraphs;
+import javax.persistence.NamedQueries;
+import javax.persistence.NamedQuery;
+import javax.persistence.NamedSubgraph;
+import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.OrderState;
+import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.schema.dao.OrderUpdateDao;
 
 import com.google.inject.Inject;
@@ -23,7 +36,30 @@ import com.google.inject.assistedinject.AssistedInject;
 //@IdClass(OrderUpdateId.class)
 //@Table(indexes = { @Index(columnList = "state") })
 //@IdClass(OrderUpdateID.class)
-//@Table(indexes = { @Index(columnList = "seq") })
+@Table(indexes = { @Index(columnList = "sequence"), @Index(columnList = "state"), @Index(columnList = "`order`") })
+//@NamedQueries({ @NamedQuery(name = "orderUpdate.findTriggerOrders", query = "select ou from OrderUpdate ou where  ou.sequence = (select max(ouu.sequence) from OrderUpdate ouu where ouu.order = ou.order) and state=?1") })
+//
+//@NamedEntityGraphs({
+//@NamedEntityGraph(name = "orderUpdateWithChildOrders", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "order") })
+////, subgraphs = { @NamedSubgraph(name = "ordersWithChildOrders", attributeNodes = { @NamedAttributeNode("parentFill") }) })
+// @NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "order"))
+//,@NamedSubgraph(name = "order", attributeNodes = @NamedAttributeNode("order")) 
+//})
+@NamedQueries({ @NamedQuery(name = "orderUpdate.findOrders", query = "select ou from OrderUpdate ou where  ou.state = (select max(ouu.state) from OrderUpdate ouu where ouu.order = ou.order) and state in (?1)") })
+//
+@NamedEntityGraphs({
+// @NamedEntityGraph(name = "orderUpdateWithTransactions", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithTransactions") }, subgraphs = { @NamedSubgraph(name = "orderWithTransactions", attributeNodes = { @NamedAttributeNode("transactions") }) }),
+// @NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithFills") }, subgraphs = { @NamedSubgraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
+//@NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode("order.fills") })
+@NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithFills") }, subgraphs = { @NamedSubgraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
+
+//attributeNodes = @NamedAttributeNode(value = "items", subgraph = "items"), 
+//subgraphs = @NamedSubgraph(name = "items", attributeNodes = @NamedAttributeNode("product")))
+//  @NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithFills") }, subgraphs = { @NamedSubgraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
+
+// @NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "order"))
+//,@NamedSubgraph(name = "order", attributeNodes = @NamedAttributeNode("order")) 
+})
 public class OrderUpdate extends Event {
 
     //  @GeneratedValue(strategy = GenerationType.TABLE, generator = "tab")
@@ -39,11 +75,31 @@ public class OrderUpdate extends Event {
     // @GeneratedValue(strategy = GenerationType.SEQUENCE)
     // @Id
     // @Column(columnDefinition = "integer auto_increment", name = "seq", unique = true, nullable = false, insertable = false, updatable = false)
-    //@Id
-    //@Column(columnDefinition = "integer auto_increment")
-    @Transient
+    @Id
+    @Column(columnDefinition = "integer auto_increment")
+    // @Transient
     public Long getSequence() {
         return sequence;
+    }
+
+    //  @PrePersist
+    private void prePersist() {
+        if (orderUpdateDao != null) {
+            Order parentOrder = null;
+
+            if (getOrder() != null) {
+                // parentOrder = ;
+
+                // orderId = (fillDao.queryZeroOne(UUID.class, "select o.id from Order o where o.id=?1", order.getId()));
+
+                parentOrder = orderUpdateDao.find(getOrder().getClass(), getOrder().getId());
+                if (parentOrder == null)
+                    orderUpdateDao.persist(getOrder());
+                //  order.merge();
+            }
+        }
+
+        //detach();
     }
 
     //@Id
@@ -57,8 +113,11 @@ public class OrderUpdate extends Event {
 
     // @ManyToOne
     // @JoinColumn(name = "`order`")
-    @Transient
-    public Order getOrder() {
+    //  @Transient
+    public @ManyToOne
+    //(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    @JoinColumn(name = "`order`")
+    Order getOrder() {
         return order;
     }
 
@@ -75,6 +134,11 @@ public class OrderUpdate extends Event {
         this.order = order;
         this.lastState = lastState;
         this.state = state;
+    }
+
+    @Override
+    public EntityBase refresh() {
+        return orderUpdateDao.refresh(this);
     }
 
     @Override
@@ -110,7 +174,7 @@ public class OrderUpdate extends Event {
     protected OrderUpdate() {
     }
 
-    protected void setOrder(Order order) {
+    public void setOrder(Order order) {
         this.order = order;
     }
 
@@ -149,6 +213,18 @@ public class OrderUpdate extends Event {
     @Override
     public synchronized void merge() {
         orderUpdateDao.merge(this);
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    @Transient
+    public Dao getDao() {
+        return orderUpdateDao;
+    }
+
+    @Override
+    public void delete() {
         // TODO Auto-generated method stub
 
     }

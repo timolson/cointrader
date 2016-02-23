@@ -195,6 +195,7 @@ public class Book extends MarketData implements Spread {
         return getAsks().get(0).getVolume();
     }
 
+    @Override
     @Nullable
     @Transient
     public BookDao getDao() {
@@ -597,11 +598,12 @@ public class Book extends MarketData implements Spread {
             bidDeletionsBlob = null;
             askDeletionsBlob = null;
         } else {
-            UUID duplicate = (this.getDao() == null) ? (EM.queryZeroOne(UUID.class, "select b.id from Book b where b.id=?1", parent.getId())) : (this
-                    .queryZeroOne(UUID.class, "select b.id from Book b where b.id=?1", parent.getId()));
+            if (this.getDao() != null) {
+                UUID duplicate = this.queryZeroOne(UUID.class, "select b.id from Book b where b.id=?1", parent.getId());
 
-            if (duplicate == null)
-                parent.persit();
+                if (duplicate == null)
+                    parent.persit();
+            }
             //PersistUtil.find(getParentBook());
             //PersistUtil.refresh(this);
             //PersistUtil.merge(this);
@@ -853,6 +855,10 @@ public class Book extends MarketData implements Spread {
     //        }
     //
     //    }
+    @Override
+    public EntityBase refresh() {
+        return bookDao.refresh(this);
+    }
 
     @Override
     public void persit() {
@@ -908,6 +914,12 @@ public class Book extends MarketData implements Spread {
     @Override
     public void merge() {
         bookDao.merge(this);
+
+    }
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
 
     }
 

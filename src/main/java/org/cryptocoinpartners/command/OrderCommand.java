@@ -4,11 +4,13 @@ import java.math.BigDecimal;
 
 import javax.inject.Inject;
 
+import org.cryptocoinpartners.enumeration.FillType;
+import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.schema.DiscreteAmount;
+import org.cryptocoinpartners.schema.GeneralOrder;
+import org.cryptocoinpartners.schema.GeneralOrderFactory;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
-import org.cryptocoinpartners.schema.Order;
-import org.cryptocoinpartners.schema.OrderBuilder;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.PortfolioService;
@@ -28,7 +30,7 @@ public abstract class OrderCommand extends AntlrCommandBase {
 
     @Override
     public String getUsageHelp() {
-        return (isSell ? "sell" : "buy") + " {volume} {exchange}:{base}.{quote} [limit {price}] [stop {price}]";
+        return (isSell ? "sell" : "buy") + " {volume} {exchange}:{base}.{quote} [limit {price}] [stop {price}] [position {\"open|close\"}]";
     }
 
     @Override
@@ -55,24 +57,41 @@ public abstract class OrderCommand extends AntlrCommandBase {
     protected void placeSpecificOrder() {
         //FillType.STOP_LOSS
         volume = isSell ? volume.negate() : volume;
-        OrderBuilder.SpecificOrderBuilder builder = new OrderBuilder(portfolio, orderService).create(context.getTime(), market, volume, "New Order");
+        GeneralOrder order = generalOrderFactory.create(context.getTime(), portfolio, market, volume, FillType.MARKET);
         if (limit != null) {
             long limitCount = DiscreteAmount.roundedCountForBasis(limit, market.getPriceBasis());
-            builder = builder.withLimitPriceCount(limitCount);
-        }
+            order.withLimitPrice(limit);
+            order.withFillType(FillType.LIMIT);
 
-        Order order = builder.place();
+        }
+        if (positionEffect != null)
+            order.withPositionEffect(positionEffect);
+
+        orderService.placeOrder(order);
+
     }
 
     protected void placeGeneralOrder() {
         volume = isSell ? volume.negate() : volume;
+        // GeneralOrder longOrder = generalOrderFactory.create(context.getTime(), portfolio, market, orderDiscrete.asBigDecimal(), FillType.STOP_LOSS);
 
-        OrderBuilder.GeneralOrderBuilder builder = new OrderBuilder(portfolio, orderService).create(context.getTime(), listing, volume);
-        if (limit != null)
-            builder = builder.withLimitPrice(limit);
-        if (stop != null)
-            builder = builder.withStopAmount(stop);
-        Order order = builder.place();
+        GeneralOrder order = generalOrderFactory.create(context.getTime(), portfolio, listing, volume, FillType.MARKET);
+
+        //
+        // GeneralOrder order = generalOrderFactory.create(context.getTime(), portfolio, listing, volume);
+        if (limit != null) {
+            order.withLimitPrice(limit);
+            order.withFillType(FillType.LIMIT);
+        }
+        if (stop != null) {
+            order.withStopAmount(stop);
+            order.withFillType(FillType.STOP_LIMIT);
+        }
+        if (positionEffect != null)
+            order.withPositionEffect(positionEffect);
+
+        orderService.placeOrder(order);
+
     }
 
     @Override
@@ -80,6 +99,7 @@ public abstract class OrderCommand extends AntlrCommandBase {
         // clear optional args
         stop = null;
         limit = null;
+        positionEffect = null;
     }
 
     protected OrderCommand(boolean isSell) {
@@ -132,8 +152,16 @@ public abstract class OrderCommand extends AntlrCommandBase {
         return limit;
     }
 
+    public PositionEffect getPositionEffect() {
+        return positionEffect;
+    }
+
     public void setLimit(BigDecimal limit) {
         this.limit = limit;
+    }
+
+    public void setPositionEffect(PositionEffect positionEffect) {
+        this.positionEffect = positionEffect;
     }
 
     public BigDecimal getStop() {
@@ -156,6 +184,8 @@ public abstract class OrderCommand extends AntlrCommandBase {
     OrderService orderService;
     @Inject
     private PortfolioService portfolioService;
+    @Inject
+    protected transient GeneralOrderFactory generalOrderFactory;
 
     // @Inject
     // private Portfolio portfolio;
@@ -163,6 +193,7 @@ public abstract class OrderCommand extends AntlrCommandBase {
     private Market market;
     private Listing listing;
     private BigDecimal limit;
+    private PositionEffect positionEffect;
     private BigDecimal stop;
     private boolean isSell;
 }

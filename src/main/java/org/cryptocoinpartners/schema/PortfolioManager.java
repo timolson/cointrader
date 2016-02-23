@@ -18,6 +18,7 @@ import org.cryptocoinpartners.enumeration.OrderState;
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.module.Context;
+import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.Remainder;
@@ -65,11 +66,11 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         //removes the reservation from the transactions
         Transaction reservation = update.getOrder().getReservation();
         if (reservation != null && update.getState() != OrderState.NEW) {
-            if (reservation.getType().equals(TransactionType.BUY_RESERVATION) || reservation.getType().equals(TransactionType.SELL_RESERVATION)) {
+            if (reservation.getType() == (TransactionType.BUY_RESERVATION) || reservation.getType() == (TransactionType.SELL_RESERVATION)) {
                 Amount price = (update.getOrder().getLimitPrice() == null) ? ((update.getOrder().getVolume().isNegative()) ? quotes.getLastBidForMarket(
                         update.getOrder().getMarket()).getPrice() : quotes.getLastAskForMarket(update.getOrder().getMarket()).getPrice()) : update.getOrder()
                         .getLimitPrice();
-                Amount updateAmount = reservation.getType().equals(TransactionType.BUY_RESERVATION) ? (update.getOrder().getUnfilledVolume().times(price,
+                Amount updateAmount = reservation.getType() == (TransactionType.BUY_RESERVATION) ? (update.getOrder().getUnfilledVolume().times(price,
                         Remainder.ROUND_EVEN)).negate() : update.getOrder().getVolume();
                 reservation.setAmount(updateAmount);
             }
@@ -173,7 +174,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         //		position.getAvgPrice());
         //context.route(transaction);
         log.info("transaction: " + transaction + " Recieved.");
-        if (transaction.getPortfolio() == (portfolio)) {
+        if (transaction.getPortfolio().equals(portfolio)) {
 
             Portfolio portfolio = transaction.getPortfolio();
 
@@ -318,6 +319,25 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     public void merge() {
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    @Transient
+    public Dao getDao() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public EntityBase refresh() {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }

@@ -12,6 +12,7 @@
             <property name="hibernate.archive.autodetection" value="class"/>
             <property name="javax.persistence.lock.timeout" value="1000"/>
                <property name="javax.persistence.query.timeout" value="1000" />
+               <property name="hibernate.connection.zeroDateTimeBehavior" value="convertToNull"/>
                
                
          <!-- properties.put("hibernate.cache.region.factory_class", "org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory"); -->

@@ -2,8 +2,6 @@ package org.cryptocoinpartners.schema.dao;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityNotFoundException;
@@ -12,14 +10,18 @@ import javax.persistence.OptimisticLockException;
 import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
+import org.cryptocoinpartners.enumeration.PersistanceAction;
+import org.cryptocoinpartners.module.ApplicationInitializer;
 import org.cryptocoinpartners.schema.EntityBase;
 import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.Visitor;
 import org.hibernate.PersistentObjectException;
+import org.hibernate.PropertyAccessException;
 import org.hibernate.StaleObjectStateException;
 import org.hibernate.TransientObjectException;
 import org.hibernate.TransientPropertyValueException;
 import org.hibernate.exception.ConstraintViolationException;
+import org.hibernate.exception.LockTimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,13 +35,14 @@ public abstract class DaoJpa implements Dao {
     protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
     private static final int defaultBatchSize = 20;
     private static int retry;
-    private static final BlockingQueue<EntityBase[]> insertQueue = new LinkedBlockingQueue<EntityBase[]>();
-    private static final BlockingQueue<EntityBase[]> mergeQueue = new LinkedBlockingQueue<EntityBase[]>();
     static {
         retry = ConfigUtil.combined().getInt("db.persist.retry");
     }
     @Inject
     protected Provider<EntityManager> entityManager;
+
+    @Inject
+    protected ApplicationInitializer application;
 
     @Inject
     private UnitOfWork unitOfWork;
@@ -253,6 +256,41 @@ public abstract class DaoJpa implements Dao {
             }
     }
 
+    @Override
+    public EntityBase refresh(EntityBase... entities) {
+        EntityBase localEntity = null;
+        for (EntityBase entity : entities)
+            try {
+
+                // EntityBase existingEntity = entityManager.get().find(entity.getClass(), entity.getId());
+                //if (existingEntity != null) {
+                //entityManager.get().merge(entity);
+                //entityManager.get().flush();
+                ///    } else
+                // update(entity);
+
+                localEntity = restore(entity);
+                // entityManager.get().detach(entity);
+                //    entityManager.get().detach(entity);
+
+                //entityManager.get().flush();
+
+                // log.debug("persisting entity " + entity.getClass().getSimpleName() + " " + entity);
+                //   entityManager.get().getTransaction().commit();
+            }
+
+            catch (Exception | Error ex) {
+
+                log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":detach, full stack trace follows:", ex);
+                //
+                throw ex;
+                //ex.printStackTrace();
+
+            }
+
+        return localEntity;
+    }
+
     @Transactional
     @Override
     public <T> T find(Class<T> resultType, UUID id) {
@@ -266,8 +304,9 @@ public abstract class DaoJpa implements Dao {
 
     }
 
+    @Override
     @Transactional
-    public <T> boolean contains(EntityBase entity) {
+    public boolean contains(EntityBase entity) {
         try {
             return entityManager.get().contains(entity);
         } catch (Error | Exception ex) {
@@ -296,109 +335,161 @@ public abstract class DaoJpa implements Dao {
     //  @Transactional
     //  @Inject
     @Override
-    public void persist(EntityBase... entities) {
+    public void persistEntities(EntityBase... entities) {
         int attempt = 0;
-        // EntityManager em = entityManager.get();
-        // thisEntity=EntityBase
-        //        try {
-        //            unitOfWork.begin();
-        //        } catch (Exception | Error ex) {
-        //            log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ex);
-        //            //throw ex;
-        //
-        //            // catch (IllegalStateException ex) {
-        //
-        //        } finally {
-        //            unitOfWork.end();
-        //        }
-        //  unitOfWork.end();
-
-        while (attempt <= retry) {
-
-            //  EntityBase thisentity;
-
+        boolean persisted = false;
+        for (EntityBase entity : entities) {
             try {
-                for (EntityBase entity : entities) {
-                    // em.lock(entity, LockModeType.PESSIMISTIC_WRITE);
-                    // em.refresh(entity);
-                    //  if (em.contains(entity))
-                    //em.merge(entity);
-                    // else
-
+                long revision = entity.findRevisionById();
+                if (entity.getRevision() > revision) {
                     insert(entity);
-                    //  em.persist(entity);
-                    //  PersistUtilHelper.commit();
-
+                    persisted = true;
                 }
 
-                // } /*catch (ConstraintViolationException cve) {
-                //  for (EntityBase entity : entities) 
-                //    log.info("Entity " + entity.getClass().getSimpleName() + " already pesisted with id: " + entity.getId() + ".", cve);
-                //  unitOfWork.end();
-
-                // merge(entity);
-                //  }
-                // break;
-                //Entity you are trying to insert already exist, then call merge method
-                /// catch (javax.persistence.PersistenceException pe) {
-                //    entity.detach();
-                // unitOfWork.end();
-                // for (EntityBase entity : entities)
-                //   merge(entity);
-                // entity.merge();
-                // break;
-                // }*/
             } catch (OptimisticLockException | StaleObjectStateException ole) {
+                attempt = entity.getAttempt() + 1;
+                entity.setAttempt(attempt);
 
-                for (EntityBase entity : entities) {
-                    //  entity.setVersion(entity.getVersion() + 1);
-                    log.error("Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " already persisted. Persist attempt "
-                            + attempt + " of " + retry);
-                }
-                if (attempt == retry) {
+                if (attempt >= retry) {
                     log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ole);
+
+                    entity.setAttempt(0);
+
                     throw ole;
                 } else {
-                    attempt++;
-                    continue;
+                    log.debug("Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " already persisted. Persist attempt "
+                            + entity.getAttempt() + " of " + retry);
+
+                    entity.setAttempt(0);
                 }
 
-            }
+            } catch (LockTimeoutException lte) {
 
-            catch (Exception | Error ex) {
-                if (ex.getCause() != null && ex.getCause().getCause() instanceof TransientPropertyValueException) {
-                    for (EntityBase entity : entities) {
-                        //  entity.setVersion(entity.getVersion() + 1);
+                attempt = entity.getAttempt() + 1;
+                entity.setAttempt(attempt);
 
-                        log.error("Parent object not persisted for  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + ". Persist attempt "
-                                + attempt + " of " + retry);
-                    }
-                    if (attempt == retry) {
+                if (attempt >= retry) {
+                    log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", lte);
+                    entity.setAttempt(0);
+                    throw lte;
+                } else {
+                    log.error("Record locked version of " + entity.getClass().getSimpleName() + " id: " + entity.getId()
+                            + " already persisted. Persist attempt " + entity.getAttempt() + " of " + retry);
+                    //               entity.setRevision(0);
+                    persist(false, entity);
+
+                }
+
+            } catch (Exception | Error ex) {
+                if (ex.getCause() != null && (ex.getCause() instanceof TransientPropertyValueException || ex.getCause() instanceof IllegalStateException)) {
+                    //.setVersion(entity.getVersion() + 1);
+                    attempt = entity.getAttempt() + 1;
+                    entity.setAttempt(attempt);
+                    //  entity.setStartTime(entity.getDelay() * 2);
+
+                    if (attempt >= retry) {
+                        //log.error(" " + this.getClass().getSimpleName() + ":persist, Parent object not persisted for, attempting last ditch merge.");
                         log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ex);
+
+                        entity.setAttempt(0);
+                        // merge(entities);
+
                         throw ex;
                     } else {
-                        attempt++;
-                        continue;
+                        log.error("Parent object not persisted for  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + ". Persist attempt "
+                                + entity.getAttempt() + " of " + retry);
+                        //                   entity.setRevision(0);
+                        persist(false, entity);
+                        // attempt++;
+                        // continue;
                     }
                 } else if (ex.getCause() != null && ex.getCause().getCause() instanceof ConstraintViolationException) {
-                    for (EntityBase entity : entities)
+                    attempt = entity.getAttempt() + 1;
+                    entity.setAttempt(attempt);
+                    //    entity.setStartTime(entity.getDelay() * 2);
+                    //   EntityBase dbEntity = entity.refresh();
+
+                    //dbEntity = entity;
+
+                    if (attempt >= retry) {
+                        log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ex);
+                        entity.setAttempt(0);
+                        throw ex;
+                    } else {
                         log.debug(" " + this.getClass().getSimpleName() + " " + entity.getClass().getSimpleName() + ":" + entity.getId()
-                                + " :persist, already in db");
-                } else if (ex.getCause() != null && ex.getCause() instanceof PersistentObjectException) {
-                    for (EntityBase entity : entities) {
-                        log.debug(" " + this.getClass().getSimpleName() + " " + entity.getClass().getSimpleName() + ":" + entity.getId()
-                                + " :persist, already in db, merging update");
-                        //   update(entity);
+                                + " :persist, primary key for version " + entity.getVersion() + "  already present in db. Persist attempt "
+                                + entity.getAttempt() + " of " + retry);
+
+                        // entity.setAttempt(0);
+                        //                      entity.setRevision(0);
+                        merge(false, entity);
                     }
 
-                } else {
+                } else if (ex.getCause() != null && ex.getCause() instanceof PersistentObjectException) {
+                    attempt = entity.getAttempt() + 1;
+                    entity.setAttempt(attempt);
+                    // entity.setStartTime(entity.getDelay() * 2);
+                    // entity.setStartTime(entity.getDelay() * 2);
+
+                    //   update(entity);
+
+                    if (attempt >= retry) {
+                        log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ex);
+                        entity.setAttempt(0);
+                        throw ex;
+                    } else {
+                        log.debug(" " + this.getClass().getSimpleName() + " " + entity.getClass().getSimpleName() + ":" + entity.getId()
+                                + " :persist, presistent object expection, will attmpt to merge. Persist attempt " + entity.getAttempt() + " of " + retry);
+
+                        //              for (EntityBase entity : entities)
+                        // entity.setAttempt(0);
+                        //                        entity.setAttempt(0);
+                        //                     entity.setRevision(0);
+                        merge(false, entities);
+                    }
+
+                } else if (ex.getCause() != null && ex.getCause() instanceof OptimisticLockException) {
+                    attempt = entity.getAttempt() + 1;
+                    entity.setAttempt(attempt);
+                    //    entity.setStartTime(entity.getDelay() * 2);
+                    EntityBase dbEntity = entity.refresh();
+
+                    //dbEntity = entity;
+
+                    if (attempt >= retry) {
+                        log.error(" " + this.getClass().getSimpleName() + ":persist attempt:" + entity.getAttempt() + " of " + retry
+                                + ", full stack trace follows:", ex);
+                        entity.setAttempt(0);
+                        throw ex;
+                    } else {
+                        log.debug(" " + this.getClass().getSimpleName() + " " + entity.getClass().getSimpleName() + ":" + entity.getId()
+                                + " :persist, primary key for version " + entity.getVersion() + "  already present in db with version " + dbEntity.getVersion()
+                                + ". Persist attempt " + entity.getAttempt() + " of " + retry);
+
+                    }
+
+                    //for (EntityBase entity : entities)
+                    //    merge(entities);
+                }
+
+                else {
                     log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ex);
+
+                    entity.setAttempt(0);
                     throw ex;
                 }
                 //break;
 
+            } finally {
+                if (persisted) {
+                    entity.setAttempt(0);
+
+                    log.debug(" " + this.getClass().getSimpleName() + ":persist. Succefully persisted " + entity.getClass().getSimpleName() + " " + entity);
+                }
+
             }
-            break;
+            // break;
+            // }
         }
     }
 
@@ -407,14 +498,33 @@ public abstract class DaoJpa implements Dao {
     //     break;
     //   }
 
+    //  @Override
     @Override
-    public void persistEntities(EntityBase... entities) {
+    public void persist(EntityBase... entities) {
+        persist(true, entities);
+
+    }
+
+    private void persist(boolean increment, EntityBase... entities) {
 
         try {
-            insertQueue.put(entities);
-        } catch (InterruptedException e) {
+            for (EntityBase entity : entities) {
+                //    entity.getDao().persistEntities(entity);
+                if (entity != null) {
+                    entity.setPeristanceAction(PersistanceAction.NEW);
+                    if (increment)
+                        entity.setRevision(entity.getRevision() + 1);
+                    application.getInsertQueue().put(entity);
+                    //  } else {
+                    //    application.getInsertQueue().addFirst(entity);
+                    //}
+                    log.debug("persisting " + entity.getClass().getSimpleName() + " id:" + entity.getId());
+                }
+            }
+
+        } catch (Error | Exception e) {
             log.error("Unable to resubmit insert request in " + this.getClass().getSimpleName() + "insert, full stack trace follows:", e);
-            e.printStackTrace();
+            //  e.printStackTrace();
 
         } finally {
 
@@ -422,77 +532,130 @@ public abstract class DaoJpa implements Dao {
 
     }
 
-    public class persistRunnable implements Runnable {
+    @Override
+    public void delete(EntityBase... entities) {
+        delete(true, entities);
 
-        @Override
-        public void run() {
-            while (true) {
-                try {
-                    EntityBase[] entities = insertQueue.take();
-                    persistEntities(entities);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return; // supposing there is no cleanup or other stuff to be done
+    }
 
+    private void delete(boolean increment, EntityBase... entities) {
+
+        try {
+            for (EntityBase entity : entities) {
+                //    entity.getDao().persistEntities(entity);
+                if (entity != null) {
+                    entity.setPeristanceAction(PersistanceAction.DELETE);
+                    if (increment)
+                        entity.setRevision(entity.getRevision() + 1);
+                    entity.setStartTime(entity.getDelay());
+
+                    application.getInsertQueue().put(entity);
+                    log.debug("deleting " + entity.getClass().getSimpleName() + " id:" + entity.getId());
                 }
             }
 
-        }
+        } catch (Error | Exception e) {
+            log.error("Unable to resubmit delete request in " + this.getClass().getSimpleName() + "delete, full stack trace follows:", e);
+            //  e.printStackTrace();
 
-        public persistRunnable() {
+        } finally {
 
         }
 
     }
 
-    public class mergeRunnable implements Runnable {
+    /*    public class persistRunnable implements Runnable {
 
-        @Override
-        public void run() {
-            while (true) {
-                try {
-                    EntityBase[] entities = mergeQueue.take();
-                    mergeEntities(entities);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return; // supposing there is no cleanup or other stuff to be done
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        EntityBase[] entities = insertQueue.take();
+                        persistEntities(entities);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return; // supposing there is no cleanup or other stuff to be done
 
+                    }
                 }
+
+            }
+
+            public persistRunnable() {
+
+            }
+
+        }*/
+
+    /*    public class mergeRunnable implements Runnable {
+
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        EntityBase[] entities = mergeQueue.take();
+                        mergeEntities(entities);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return; // supposing there is no cleanup or other stuff to be done
+
+                    }
+                }
+
+            }
+
+            public mergeRunnable() {
+
             }
 
         }
-
-        public mergeRunnable() {
-
-        }
-
-    }
-
+    */
     //  @Nullable
     // @ManyToOne(optional = true)
     //, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
     //cascade = { CascadeType.ALL })
     // @JoinColumn(name = "position")
-    @Override
-    public BlockingQueue<EntityBase[]> getInsertQueue() {
+    //    @Override
+    //    public BlockingQueue<EntityBase[]> getInsertQueue() {
+    //
+    //        return insertQueue;
+    //    }
+    //
+    //    @Override
+    //    public BlockingQueue<EntityBase[]> getMergeQueue() {
+    //
+    //        return mergeQueue;
+    //    }
 
-        return insertQueue;
+    @Override
+    public void merge(EntityBase... entities) {
+        merge(true, entities);
     }
 
-    @Override
-    public BlockingQueue<EntityBase[]> getMergeQueue() {
-
-        return mergeQueue;
-    }
-
-    @Override
-    public void mergeEntities(EntityBase... entities) {
+    // @Override
+    private void merge(boolean increment, EntityBase... entities) {
 
         try {
-            mergeQueue.put(entities);
-        } catch (InterruptedException e) {
+            for (EntityBase entity : entities) {
+                if (entity != null) {
+                    entity.setPeristanceAction(PersistanceAction.MERGE);
+                    if (increment)
+                        entity.setRevision(entity.getRevision() + 1);
+                    //    entity.getDao().mergeEntities(entity);
+                    application.getInsertQueue().put(entity);
+
+                    // }
+
+                    // else {
+                    //   application.getInsertQueue().addFirst(entity);
+                    //}
+
+                    log.debug("merging " + entity.getClass().getSimpleName() + " id:" + entity.getId());
+                }
+            }
+        } catch (Error | Exception e) {
             log.error("Unable to resubmit merge request in " + this.getClass().getSimpleName() + " merge, full stack trace follows:", e);
-            e.printStackTrace();
+            // e.printStackTrace();
 
         } finally {
 
@@ -502,13 +665,15 @@ public abstract class DaoJpa implements Dao {
 
     @Transactional
     public void insert(EntityBase entity) {
-        try {
-            entityManager.get().persist(entity);
-        } catch (Error | Exception ex) {
-            //   log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":getReference, full stack trace follows:", ex);
+        // try {
+        //entityManager.get().lock(entity, LockModeType.PESSIMISTIC_WRITE);
+        entityManager.get().persist(entity);
+        //entityManager.get().flush();
+        //} catch (Error | Exception ex) {
+        //   log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":getReference, full stack trace follows:", ex);
 
-            throw ex;
-        }
+        //  throw ex;
+        // }
 
         // entityManager.get().getTransaction().commit();
         // entityManager.get().flush();
@@ -517,11 +682,43 @@ public abstract class DaoJpa implements Dao {
     }
 
     @Transactional
-    public void update(EntityBase entity) {
+    public EntityBase restore(EntityBase entity) {
+        EntityBase localEntity = null;
         //  try {
-        entityManager.get().merge(entity);
+        // localEntity = entity;
+        Object dBEntity;
+        if (!entityManager.get().contains(entity))
+            //  try {
+            localEntity = entityManager.get().find(entity.getClass(), entity.getId());
+
+        if (localEntity != null)
+            entityManager.get().merge(entity);
+        // localEntity = entityManager.get().merge(entity);
+
+        //return null;
+        // localEntity = entityManager.get().find(entity.getClass(), entity.getId());
+
+        // entityManager.get().refresh(localEntity);
+        if (localEntity != null)
+            return localEntity;
+        else
+            return entity;
+
         //} catch (Error | Exception ex) {
         //  throw ex;
+        // }
+
+        // TODO Auto-generated method stub
+
+    }
+
+    @Transactional
+    public void update(EntityBase entity) {
+        // try {
+        // entityManager.get().lock(entity, LockModeType.PESSIMISTIC_WRITE);
+        entityManager.get().merge(entity);
+        // } catch (Error | Exception ex) {
+        //   throw ex;
         // }
 
         // TODO Auto-generated method stub
@@ -546,80 +743,373 @@ public abstract class DaoJpa implements Dao {
     // @Override
     // @Transactional
     // @Inject
+
     @Override
-    public void merge(EntityBase... entities) {
-        //  unitOfWork.end();
-        //        try {
-        //            unitOfWork.begin();
-        //        } catch (Exception | Error ex) {
-        //            log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ex);
-        //
-        //            // catch (IllegalStateException ex) {
-        //
-        //        } finally {
-        //            unitOfWork.end();
-        //        }
+    public void deleteEntities(EntityBase... entities) {
         int attempt = 0;
-        while (attempt <= retry) {
-            // unitOfWork.begin();
-            try {
-                for (EntityBase entity : entities)
+        boolean deleted = false;
 
-                    //     entityManager.get().getTransaction().begin();
-                    // entityManager.get().flush();
-                    update(entity);
-                // entityManager.get().merge(entity);
-                // log.debug("merged entity " + entity.getClass().getSimpleName() + " " + entity);
-                //   entityManager.get().getTransaction().commit();
-            } catch (OptimisticLockException | EntityNotFoundException | StaleObjectStateException ole) {
-                //     unitOfWork.end();
-
-                for (EntityBase entity : entities) {
-                    entity.setVersion(entity.getVersion() + 1);
-
-                    log.error("Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " already merged. Merge attempt " + attempt
-                            + " of " + retry);
+        try {
+            for (EntityBase entity : entities) {
+                long revision = entity.findRevisionById();
+                if (entity.getRevision() >= revision) {
+                    attempt = entity.getAttempt();
+                    remove(entity);
+                    deleted = true;
                 }
-                if (attempt == retry) {
-                    log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ole);
-                    throw ole;
-                } else {
-                    attempt++;
-                    continue;
-                }
-
-            } catch (Exception | Error ex) {
-                if (ex.getCause() != null && ex.getCause().getCause() instanceof TransientPropertyValueException) {
-                    for (EntityBase entity : entities) {
-                        //  entity.setVersion(entity.getVersion() + 1);
-
-                        log.error("Parent object not persisted for  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + ". Merge attempt "
-                                + attempt + " of " + retry);
-                    }
-                    if (attempt == retry) {
-                        log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
-                        throw ex;
-                    } else {
-                        attempt++;
-                        continue;
-                    }
-                } else if (ex.getCause() != null && ex.getCause().getCause() instanceof ConstraintViolationException) {
-                    for (EntityBase entity : entities)
-                        log.debug(" " + this.getClass().getSimpleName() + " " + entity.getClass().getSimpleName() + ":" + entity.getId()
-                                + " :merge, already in db");
-                } else {
-                    log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
-                    throw ex;
-                }
-
-                //     unitOfWork.end();
 
             }
-            break;
+        } catch (EntityNotFoundException | LockTimeoutException enf) {
+            for (EntityBase entity : entities) {
+                attempt = entity.getAttempt() + 1;
+                entity.setAttempt(attempt);
+                entity.merge();
+                log.error("Entity  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " not found in database to delete. Delete attempt "
+                        + entity.getAttempt() + " of " + retry);
+                if (attempt >= retry) {
+                    // log.error(
+                    //       " " + this.getClass().getSimpleName() + ":delete attempt:" + entity.getAttempt() + " of " + retry + ", full stack trace follows:",
+                    //      enf);
+                    entity.setAttempt(0);
+                    //throw enf;
+                } else {
+                    entity.setStartTime(entity.getDelay());
+
+                    delete(false, entity);
+                }
+            }
+
+        } catch (OptimisticLockException | StaleObjectStateException ole) {
+            //     unitOfWork.end();
+            for (EntityBase entity : entities) {
+                attempt = entity.getAttempt() + 1;
+                entity.setAttempt(attempt);
+
+                if (attempt >= retry) {
+                    log.error(
+                            " " + this.getClass().getSimpleName() + ":delete attempt:" + entity.getAttempt() + " of " + retry + ", full stack trace follows:",
+                            ole);
+
+                    entity.setAttempt(0);
+                    throw ole;
+                }
+            }
+            for (EntityBase entity : entities) {
+                entity.setVersion(entity.getVersion() + 1);
+                entity.setStartTime(entity.getDelay());
+
+                log.error("Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " already in database. Delete attempt "
+                        + entity.getAttempt() + " of " + retry);
+            }
+
+            delete(false, entities);
+
+        } catch (Exception | Error ex) {
+
+            /*            if (ex.getMessage().equals("Entity not managed")) {
+                            for (EntityBase entity : entities)
+                                try {
+                                    //entityManager.get().persist(entity);
+                                    // restore(entity);
+                                    update(entity);
+                                    remove(entity);
+                                    // entityManager.get().refresh(entity);
+                                    //entityManager.get().remove(entity);
+                                } catch (Exception | Error ex1) {
+                                    throw ex1;
+                                }
+
+                            //  entity.refresh();
+                            delete(entities);
+                        }*/
+            if (ex.getCause() != null && ex.getCause().getCause() instanceof TransientPropertyValueException) {
+                for (EntityBase entity : entities) {
+                    // entity.setVersion(entity.getVersion() + 1);
+                    attempt = entity.getAttempt() + 1;
+                    entity.setAttempt(attempt);
+
+                    log.error("Parent object not persisted for  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + ". Delete attempt "
+                            + entity.getAttempt() + " of " + retry);
+                }
+                if (attempt >= retry) {
+                    log.error(" " + this.getClass().getSimpleName() + ":delete, full stack trace follows:", ex);
+                    for (EntityBase entity : entities) {
+
+                        entity.setAttempt(0);
+                    }
+                    throw ex;
+                } else {
+                    for (EntityBase entity : entities) {
+                        // entity.setAttempt(entity.getAttempt() + 1);
+                        entity.setStartTime(entity.getDelay());
+                    }
+
+                    delete(false, entities);
+                    // attempt++;
+                    //continue;
+                }
+            } else if (ex.getCause() != null && ex.getCause().getCause() instanceof ConstraintViolationException) {
+                for (EntityBase entity : entities) {
+                    attempt = entity.getAttempt() + 1;
+                    entity.setAttempt(attempt);
+
+                    log.debug(" " + this.getClass().getSimpleName() + " " + entity.getClass().getSimpleName() + ":" + entity.getId()
+                            + " :delete, duplicate primary key already in db. Delete attempt " + entity.getAttempt() + " of " + retry);
+
+                }
+                if (attempt >= retry) {
+                    log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
+                    for (EntityBase entity : entities) {
+                        entity.setAttempt(0);
+
+                    }
+                    throw ex;
+                } else {
+                    for (EntityBase entity : entities) {
+                        // entity.setAttempt(entity.getAttempt() + 1);
+                        entity.setStartTime(entity.getDelay());
+                    }
+
+                    delete(false, entities);
+                }
+
+            } else if (ex.getCause() != null && ex.getCause() instanceof PropertyAccessException) {
+                for (EntityBase entity : entities) {
+                    attempt = entity.getAttempt() + 1;
+                    entity.setAttempt(attempt);
+
+                    log.debug(" " + this.getClass().getSimpleName() + " " + entity.getClass().getSimpleName() + ":" + entity.getId()
+                            + " :delete issue with accessing proerpties, retrying delete. Delete attempt " + entity.getAttempt() + " of " + retry);
+
+                    // entity.setStartTime(entity.getDelay() * 2);
+                }
+                if (attempt >= retry) {
+                    log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
+                    for (EntityBase entity : entities) {
+
+                        entity.setAttempt(0);
+                    }
+                    throw ex;
+                } else {
+                    for (EntityBase entity : entities) {
+                        // entity.setAttempt(entity.getAttempt() + 1);
+                        entity.setStartTime(entity.getDelay());
+                    }
+                    delete(false, entities);
+                }
+            } else if (ex.getCause() != null && ex.getCause() instanceof OptimisticLockException) {
+                for (EntityBase entity : entities) {
+                    attempt = entity.getAttempt() + 1;
+                    entity.setAttempt(attempt);
+                    if (attempt >= retry) {
+                        log.error(" " + this.getClass().getSimpleName() + ":delete attempt:" + entity.getAttempt() + " of " + retry
+                                + ", full stack trace follows:", ex);
+
+                        entity.setAttempt(0);
+                        throw ex;
+                    }
+                }
+                for (EntityBase entity : entities) {
+
+                    entity.setVersion(entity.getVersion() + 1);
+
+                    entity.setStartTime(entity.getDelay());
+
+                    log.error("Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " already in database. Delete attempt "
+                            + entity.getAttempt() + " of " + retry);
+                }
+
+                //for (EntityBase entity : entities)
+                delete(false, entities);
+            } else {
+                log.error(" " + this.getClass().getSimpleName() + ":delete, full stack trace follows:", ex);
+                for (EntityBase entity : entities) {
+
+                    entity.setAttempt(0);
+                }
+                throw ex;
+            }
+
+            //     unitOfWork.end();
+
+        } finally {
+            if (deleted)
+                for (EntityBase entity : entities) {
+                    entity.setAttempt(0);
+                    log.debug(this.getClass().getSimpleName() + ":delete. Succefully deleted " + entity.getClass().getSimpleName() + " " + entity);
+                }
+
         }
+        // break;
+        // }
         //  break;
 
         // ex.printStackTrace();
+
+    }
+
+    @Override
+    public void mergeEntities(EntityBase... entities) {
+
+        int attempt = 0;
+        boolean merged = false;
+        try {
+            for (EntityBase entity : entities) {
+                long revision = entity.findRevisionById();
+                if (entity.getRevision() >= revision) {
+                    update(entity);
+                    merged = true;
+                }
+
+            }
+        } catch (EntityNotFoundException | IllegalArgumentException | LockTimeoutException enf) {
+            for (EntityBase entity : entities) {
+                attempt = entity.getAttempt() + 1;
+                entity.setAttempt(attempt);
+                //  entity.setStartTime(entity.getDelay() * 2);f
+
+                log.error(this.getClass().getSimpleName() + "Entity  " + entity.getClass().getSimpleName() + " id: " + entity.getId()
+                        + " not found in database, persisting. Merge attempt " + entity.getAttempt() + " of " + retry);
+                if (attempt >= retry) {
+                    log.error(this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " of " + retry + ", full stack trace follows:", enf);
+                    entity.setAttempt(0);
+                    throw enf;
+                } else {
+                    //try {
+                    //    restore(entity);
+                    // } catch (Exception | Error ex1) {
+                    //     log.error(" " + this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " of " + retry
+                    //           + ", unable to restore entity " + entity.getClass().getSimpleName() + " id " + entity.getId());
+                    // }
+                    // entity.refresh();
+
+                    //  entity.setAttempt(0);
+                    // well it may be in db put not in persistance context
+                    //entity.setRevision(0);
+                    persist(false, entity);
+                }
+            }
+        } catch (OptimisticLockException | StaleObjectStateException ole) {
+            //     unitOfWork.end();
+            for (EntityBase entity : entities) {
+                attempt = entity.getAttempt() + 1;
+                entity.setAttempt(attempt);
+                if (attempt >= retry) {
+                    log.error(" " + this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " of " + retry + ", full stack trace follows:",
+                            ole);
+                    entity.setAttempt(0);
+                    throw ole;
+                } else {
+                    //}
+                    //for (EntityBase entity : entities) {
+                    entity.setVersion(entity.getVersion() + 1);
+
+                    //  entity.setStartTime(entity.getDelay() * 2);
+
+                    log.error("Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " already merged. Merge attempt "
+                            + entity.getAttempt() + " of " + retry);
+                    //  entity.setRevision(0);
+                    merge(false, entities);
+                }
+            }
+
+        } catch (Exception | Error ex) {
+            if (ex.getCause() != null && ex.getCause().getCause() instanceof TransientPropertyValueException) {
+                for (EntityBase entity : entities) {
+                    // entity.setVersion(entity.getVersion() + 1);
+                    attempt = entity.getAttempt() + 1;
+                    entity.setAttempt(attempt);
+
+                    log.error("Parent object not persisted for  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + ". Merge attempt "
+                            + entity.getAttempt() + " of " + retry);
+
+                    if (attempt >= retry) {
+                        log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
+                        entity.setAttempt(0);
+                        throw ex;
+                    } else {
+
+                        // entity.setRevision(0);
+                        merge(false, entities);
+
+                    }
+                }
+            } else if (ex.getCause() != null && ex.getCause().getCause() instanceof ConstraintViolationException) {
+                for (EntityBase entity : entities) {
+                    attempt = entity.getAttempt() + 1;
+                    entity.setAttempt(attempt);
+
+                    log.debug(" " + this.getClass().getSimpleName() + " " + entity.getClass().getSimpleName() + ":" + entity.getId()
+                            + " :merge, duplicate primary key already in db. Persist attempt " + entity.getAttempt() + " of " + retry);
+
+                    if (attempt >= retry) {
+                        log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
+                        entity.setAttempt(0);
+
+                        throw ex;
+                    } else {
+                        //      entity.setRevision(0);
+                        merge(false, entities);
+                    }
+                }
+
+            } else if (ex.getCause() != null && ex.getCause() instanceof PropertyAccessException) {
+                for (EntityBase entity : entities) {
+                    attempt = entity.getAttempt() + 1;
+                    entity.setAttempt(attempt);
+
+                    log.debug(" " + this.getClass().getSimpleName() + " " + entity.getClass().getSimpleName() + ":" + entity.getId()
+                            + " :merge, issue with accessing proerpties, retrying merge. Persist attempt " + entity.getAttempt() + " of " + retry);
+
+                    if (attempt >= retry) {
+                        log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
+                        entity.setAttempt(0);
+                        throw ex;
+                    } else {
+                        //     entity.setRevision(0);
+                        merge(false, entities);
+                    }
+                }
+            } else if (ex.getCause() != null && ex.getCause() instanceof OptimisticLockException) {
+                for (EntityBase entity : entities) {
+                    attempt = entity.getAttempt() + 1;
+                    entity.setAttempt(attempt);
+                    if (attempt >= retry) {
+                        log.error(" " + this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " of " + retry
+                                + ", full stack trace follows:", ex);
+                        entity.setAttempt(0);
+                        throw ex;
+                    } else {
+                        // }
+                        // for (EntityBase entity : entities) {
+                        entity.setVersion(entity.getVersion() + 1);
+
+                        // entity.setStartTime(entity.getDelay() * 2);
+
+                        log.error("Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " already merged. Merge attempt "
+                                + entity.getAttempt() + " of " + retry);
+                        //           entity.setRevision(0);
+                        merge(false, entities);
+                    }
+                }
+            } else {
+                log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
+                for (EntityBase entity : entities)
+                    entity.setAttempt(0);
+                throw ex;
+            }
+
+            //     unitOfWork.end();
+
+        } finally {
+            if (merged)
+                for (EntityBase entity : entities) {
+
+                    entity.setAttempt(0);
+                    log.debug(" " + this.getClass().getSimpleName() + ":merge. Succefully merged " + entity.getClass().getSimpleName() + " " + entity);
+                }
+
+        }
 
     }
 
@@ -640,16 +1130,25 @@ public abstract class DaoJpa implements Dao {
     //
     //    }
 
-    @Override
     @Transactional
-    public void remove(EntityBase... entities) {
-        try {
-            for (EntityBase entity : entities)
-                entityManager.get().remove(entity);
-        } catch (Error | Exception ex) {
-            throw ex;
-        }
+    public void remove(EntityBase entity) {
 
+        // if (!em.contains(entity)) {
+        //   System.out.println("delete() entity not managed: " + entity);
+        // utx.begin();
+
+        EntityBase target = entity;
+        //  em.remove(target);
+        //    utx.commit();
+
+        //  EntityBase localEntity;
+        if (!entityManager.get().contains(entity))
+            target = entityManager.get().merge(entity);
+
+        ///  entityManager.get().refresh(entity);
+
+        //   if (localEntity != null)
+        entityManager.get().remove(target);
     }
 
     @Override
@@ -658,6 +1157,18 @@ public abstract class DaoJpa implements Dao {
             return queryOne(resultType, "select x from " + resultType.getSimpleName() + " x where x.id = ?1", id);
         } catch (Exception | Error ex) {
             log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":findById, full stack trace follows:", ex);
+            throw ex;
+            //break;
+
+        }
+    }
+
+    @Override
+    public <T> int findRevisionById(Class<T> resultType, UUID id) throws NoResultException {
+        try {
+            return queryOne(Integer.class, "select revision from " + resultType.getSimpleName() + " x where x.id = ?1", id);
+        } catch (Exception | Error ex) {
+            //log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":findById, full stack trace follows:", ex);
             throw ex;
             //break;
 

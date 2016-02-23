@@ -5,6 +5,7 @@ import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.schema.dao.Dao;
 import org.joda.time.Instant;
 
 /**
@@ -99,5 +100,24 @@ public class Tick extends PriceData implements Spread {
     public void merge() {
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    @Transient
+    public Dao getDao() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public EntityBase refresh() {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

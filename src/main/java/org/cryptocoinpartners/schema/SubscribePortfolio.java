@@ -6,6 +6,7 @@ import org.apache.commons.lang.builder.CompareToBuilder;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 import org.apache.commons.lang.builder.ToStringBuilder;
+import org.cryptocoinpartners.schema.dao.Dao;
 
 public class SubscribePortfolio extends Event {
 
@@ -106,6 +107,24 @@ public class SubscribePortfolio extends Event {
     public void merge() {
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    public Dao getDao() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public EntityBase refresh() {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }

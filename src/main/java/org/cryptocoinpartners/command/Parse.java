@@ -6,6 +6,7 @@ import javax.inject.Inject;
 
 import org.antlr.v4.runtime.tree.TerminalNode;
 import org.apache.commons.lang.StringUtils;
+import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.schema.Currency;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
@@ -44,6 +45,14 @@ public class Parse {
         if (listing == null)
             throw new ParseError("Unknown listing " + text);
         return listing;
+    }
+
+    public static PositionEffect positionEffect(TerminalNode node) throws ParseError {
+        String text = text(node);
+        PositionEffect positionEffect = (text.equals("close") || text.equals("Close") || text.equals("CLOSE")) ? PositionEffect.CLOSE : PositionEffect.OPEN;
+        if (positionEffect == null)
+            throw new ParseError("Unknown position effect " + text);
+        return positionEffect;
     }
 
     public static Market market(TerminalNode node) throws ParseError {

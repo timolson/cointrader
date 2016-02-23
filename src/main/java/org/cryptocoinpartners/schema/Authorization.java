@@ -1,6 +1,9 @@
 package org.cryptocoinpartners.schema;
 
 import javax.persistence.Entity;
+import javax.persistence.Transient;
+
+import org.cryptocoinpartners.schema.dao.Dao;
 
 /**
  * An Authorization represents an approval or signing of a secured action like a reconciliation Adjustment.
@@ -46,6 +49,25 @@ public class Authorization extends EntityBase {
     public void merge() {
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    @Transient
+    public Dao getDao() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public EntityBase refresh() {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }

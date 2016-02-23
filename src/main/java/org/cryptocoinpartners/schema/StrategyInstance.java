@@ -85,8 +85,8 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
                 binder.bind(StrategyInstance.class).toInstance(StrategyInstance.this);
                 //  binder.bind(Dao.class).to(DaoJpa.class);
 
-                // portfolio = context.getInjector().getInstance(Portfolio.class);
-                portfolio = Portfolio.findOrCreate(getModuleName());
+                // portfolio = context.getInjector().getInstance(Portfolio.class);b                
+                portfolio = Portfolio.findOrCreate(getModuleName(), context);
                 //  boolean cahced = PersistUtil.cached(portfolio);
                 if (portfolio == null) {
                     // portfolio = portfolioFactory.create(getModuleName(), StrategyInstance.this);
@@ -108,6 +108,7 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
 
                 else {
                     context.getInjector().injectMembers(portfolio);
+                    portfolio.merge();
                     binder.bind(Portfolio.class).toInstance(portfolio);
                 }
                 StrategyInstance.this.setPortfolio(portfolio);

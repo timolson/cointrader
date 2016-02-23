@@ -76,6 +76,9 @@ public class BasicPortfolioService implements PortfolioService {
     private void findPositions() {
         // String queryPortfolioStr = "select pf from Portfolio pf";
         // List<Portfolio> portfolios = PersistUtil.queryList(Portfolio.class, queryPortfolioStr, null);
+        log.debug("Loading Portfolios:" + portfolios.toString());
+        List<Position> emptyPositions = Collections.synchronizedList(new ArrayList<Position>());
+
         for (Portfolio portfolio : portfolios) {
 
             //  String queryStr = "select p from Position p  join fetch p.fills f join fetch p.portfolio po where f.openVolumeCount!=0 and po = ?1 group by p";
@@ -89,13 +92,32 @@ public class BasicPortfolioService implements PortfolioService {
             // hints.put("javax.persistence.fetchgraph", "graph.Position.portfolio");
 
             //  List<Position> positions = EM.queryList(Position.class, queryStr, hints, portfolio);
-            List<Fill> fills = new ArrayList<>();
+            List<Fill> fills = new ArrayList<Fill>();
+            log.debug("Loading Positions:" + portfolio.getPositions().toString());
+
             for (Position position : portfolio.getPositions()) {
+                if (position == null)
+                    continue;
                 context.getInjector().injectMembers(position);
+
+                if (!position.hasFills()) {
+                    emptyPositions.add(position);
+                    continue;
+                }
+
                 //  position.getDao(localPositionDao);
                 // portfolio.addPosition(position);
                 //position.setPortfolio(portfolio);
+                //  log.debug("Loading Fills:" + position.getFills().toString());
                 for (Fill fill : position.getFills()) {
+                    if (fill == null)
+                        continue;
+                    // Map fillHints = new HashMap();
+                    // UUID portfolioID = EM.queryOne(UUID.class, queryStr, portfolioName);
+                    //fillHints.put("javax.persistence.fetchgraph", "fillsWithChildOrders");
+
+                    //Fill detailedFill = EM.namedQueryZeroOne(Fill.class, "Fills.findFillsById", fillHints, fill.getId());
+
                     context.getInjector().injectMembers(fill);
                     if (!fill.getOpenVolume().isZero()) {
                         fills.add(fill);
@@ -103,12 +125,22 @@ public class BasicPortfolioService implements PortfolioService {
                     // portfolio.merge(fill);
 
                 }
+
+            }
+            portfolio.removePositions(emptyPositions);
+            for (Position position : emptyPositions) {
+                // EntityBase update = position.refresh();
+                context.getInjector().injectMembers(position);
+                position.delete();
             }
             Collections.sort(fills, timeReceivedComparator);
-            for (Fill fill : fills)
+            for (Fill fill : fills) {
+                log.trace(this.getClass().getSimpleName() + ": findPositions merging fill for " + fill);
                 portfolio.merge(fill);
+            }
 
         }
+        log.trace("completed loading of existing portfolio");
     }
 
     private static final Comparator<RemoteEvent> timeReceivedComparator = new Comparator<RemoteEvent>() {
@@ -367,8 +399,8 @@ public class BasicPortfolioService implements PortfolioService {
         ArrayList<Transaction> cashFlows = new ArrayList<>();
         for (Portfolio portfolio : getPortfolios()) {
             for (Transaction transaction : portfolio.getTransactions()) {
-                if (transaction.getType() == TransactionType.CREDIT || transaction.getType() == TransactionType.DEBIT
-                        || transaction.getType() == TransactionType.INTREST || transaction.getType() == TransactionType.FEES) {
+                if (transaction.getType() == (TransactionType.CREDIT) || transaction.getType() == (TransactionType.DEBIT)
+                        || transaction.getType() == (TransactionType.INTREST) || transaction.getType() == (TransactionType.FEES)) {
                     cashFlows.add(transaction);
                 }
             }
@@ -383,7 +415,7 @@ public class BasicPortfolioService implements PortfolioService {
 
         for (Portfolio portfolio : getPortfolios()) {
             for (Transaction transaction : portfolio.getTransactions()) {
-                if (transaction.getType() == TransactionType.REBALANCE) {
+                if (transaction.getType() == (TransactionType.REBALANCE)) {
                     transfers.add(transaction);
                 }
             }
@@ -401,7 +433,7 @@ public class BasicPortfolioService implements PortfolioService {
         // log.info("transaction hascode" + transHashcode);
         for (Portfolio portfolio : getPortfolios()) {
             for (Transaction transaction : portfolio.getTransactions()) {
-                if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL) {
+                if (transaction.getType() == (TransactionType.BUY) || transaction.getType() == (TransactionType.SELL)) {
                     trades.add(transaction);
                 }
             }
@@ -438,7 +470,7 @@ public class BasicPortfolioService implements PortfolioService {
         if (position.isOpen()) {
             Amount marketPrice = getMarketPrice(position);
 
-            if (position.getMarket().getTradedCurrency() == position.getMarket().getBase())
+            if (position.getMarket().getTradedCurrency().equals(position.getMarket().getBase()))
                 marketPrice = marketPrice.invert();
 
             return (position.getVolume().times(marketPrice, Remainder.ROUND_EVEN)).times(position.getMarket().getContractSize(), Remainder.ROUND_EVEN);
@@ -456,7 +488,7 @@ public class BasicPortfolioService implements PortfolioService {
         Amount marketPrice = position.getAvgPrice();
 
         Amount avgPrice = getMarketPrice(position);
-        if (position.getMarket().getTradedCurrency() == position.getMarket().getBase()) {
+        if (position.getMarket().getTradedCurrency().equals(position.getMarket().getBase())) {
             avgPrice = (position.getAvgPrice()).invert();
             marketPrice = getMarketPrice(position).invert();
         }

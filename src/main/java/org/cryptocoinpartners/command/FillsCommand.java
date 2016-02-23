@@ -1,33 +1,31 @@
 package org.cryptocoinpartners.command;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 import javax.inject.Inject;
 
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
-import org.cryptocoinpartners.schema.Order;
-import org.cryptocoinpartners.schema.SpecificOrder;
+import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.PortfolioService;
 
 /**
  * @author Tim Olson
  */
-@CommandName("cancel")
+@CommandName("fills")
 @SuppressWarnings("UnusedDeclaration")
-public class CancelCommand extends CommandBase {
+public class FillsCommand extends CommandBase {
 
     @Override
     public String getUsageHelp() {
-        return "cancel {id}";
+        return (isSell ? "sell" : "buy") + " {volume} {exchange}:{base}.{quote} [limit {price}] [stop {price}]";
     }
 
     @Override
     public void parse(String commandArguments) {
         try {
-            id = UUID.fromString(commandArguments);
+            market = market.forSymbol(commandArguments);
 
             //   listing = Listing.forSymbol(commandArguments);
         } catch (IllegalArgumentException e) {
@@ -46,16 +44,9 @@ public class CancelCommand extends CommandBase {
 
     @Override
     public void run() {
-        SpecificOrder cancelledOrder = null;
-        // so we need to get pending order by id
-        //for (Portfolio portfolio : portfolioService.getPortfolios())
-        for (Order order : orderService.getOrderStateMap().keySet())
-            if (order instanceof SpecificOrder)
-                if (order.getId().equals(id)) {
-                    cancelledOrder = (SpecificOrder) order;
-                    orderService.handleCancelSpecificOrder(cancelledOrder);
-                }
+        for (Portfolio portfolio : portfolioService.getPortfolios())
 
+            out.printList(orderService.getFills(market, portfolio));
     }
 
     @Inject
@@ -65,7 +56,7 @@ public class CancelCommand extends CommandBase {
     @Inject
     private ConsoleWriter console;
     private BigDecimal volume;
-    private UUID id;
+    @Inject
     private Market market;
     private Listing listing;
     private BigDecimal limit;

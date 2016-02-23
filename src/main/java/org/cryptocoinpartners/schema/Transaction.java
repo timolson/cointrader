@@ -1,7 +1,5 @@
 package org.cryptocoinpartners.schema;
 
-import java.util.UUID;
-
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.persistence.Cacheable;
@@ -9,14 +7,13 @@ import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.TransactionType;
+import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.schema.dao.TransactionDao;
-import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.Remainder;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
@@ -170,19 +167,19 @@ public class Transaction extends Event {
     public Amount getValue() {
         Amount value = DecimalAmount.ZERO;
 
-        if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL)) {
+        if (getType() == (TransactionType.BUY) || getType() == (TransactionType.SELL)) {
 
             Amount notional = getAssetAmount();
             //Amount totalvalue = notional.plus(getCommission());
             value = notional;
-        } else if (getType().equals(TransactionType.BUY_RESERVATION) || getType().equals(TransactionType.SELL_RESERVATION)) {
+        } else if (getType() == (TransactionType.BUY_RESERVATION) || getType() == (TransactionType.SELL_RESERVATION)) {
             value = getAssetAmount().minus(getCommission());
 
-        } else if (getType().equals(TransactionType.CREDIT) || getType().equals(TransactionType.INTREST)) {
+        } else if (getType() == (TransactionType.CREDIT) || getType() == (TransactionType.INTREST)) {
             value = getAmount();
-        } else if (getType().equals(TransactionType.DEBIT) || getType().equals(TransactionType.FEES)) {
+        } else if (getType() == (TransactionType.DEBIT) || getType() == (TransactionType.FEES)) {
             value = getAmount();
-        } else if (getType().equals(TransactionType.REBALANCE)) {
+        } else if (getType() == (TransactionType.REBALANCE)) {
             value = getAmount();
 
         } else {
@@ -195,7 +192,7 @@ public class Transaction extends Event {
     @Transient
     public Amount getCost() {
         Amount value = DecimalAmount.ZERO;
-        if (getType().equals(TransactionType.BUY) || getType().equals(TransactionType.SELL) || getType().equals(TransactionType.REBALANCE)) {
+        if (getType() == (TransactionType.BUY) || getType() == (TransactionType.SELL) || getType() == (TransactionType.REBALANCE)) {
             // issue works when entering position on margin, howeever when exiting no margin applies.
             // so open postion with 3 times mulitpler, so it costs me a 3rd
             // whne a close a postion it still tinks i it is a 3rd so we over cacluated by 1/3rd of the PnL so always overstating the cash balance
@@ -209,13 +206,13 @@ public class Transaction extends Event {
 
             Amount totalcost = value.plus(getCommission());
             value = totalcost;
-        } else if (getType().equals(TransactionType.BUY_RESERVATION) || getType().equals(TransactionType.SELL_RESERVATION)) {
+        } else if (getType() == (TransactionType.BUY_RESERVATION) || getType() == (TransactionType.SELL_RESERVATION)) {
             Amount notional = (getCommission());
             value = notional;
 
-        } else if (getType().equals(TransactionType.CREDIT) || getType().equals(TransactionType.INTREST)) {
+        } else if (getType() == (TransactionType.CREDIT) || getType() == (TransactionType.INTREST)) {
             value = getAmount();
-        } else if (getType().equals(TransactionType.DEBIT) || getType().equals(TransactionType.FEES)) {
+        } else if (getType() == (TransactionType.DEBIT) || getType() == (TransactionType.FEES)) {
             value = getAmount();
         }
 
@@ -288,33 +285,72 @@ public class Transaction extends Event {
         return order;
     }
 
-    @PrePersist
+    // @PrePersist
     private void prePersist() {
 
-        UUID portfolioId = null;
-        UUID orderId = null;
-        UUID fillId = null;
-        if (portfolio != null) {
-            portfolioId = (transactionDao == null) ? (EM.queryZeroOne(UUID.class, "select p.id from Portfolio p where p.id=?1", portfolio.getId()))
-                    : (transactionDao.queryZeroOne(UUID.class, "select p.id from Portfolio p where p.id=?1", portfolio.getId()));
-            if (portfolioId == null)
-                portfolio.persit();
+        if (getDao() != null) {
+
+            Portfolio transactionPortfolio = null;
+            Order transactionOrder = null;
+            Fill transactionFill = null;
+
+            //UUID parentOrderId = null;
+            //  if (portfolio != null) {
+            // transactionPortfolio = (transactionDao.find(Portfolio.class, portfolio.getId()));
+
+            //  positionId = (fillDao.queryZeroOne(UUID.class, "select p.id from Position p where p.id=?1", position.getId()));
+            //    if (!transactionDao.contains(getPortfolio()))
+            //      transactionDao.persist(getPortfolio());
+            //  portfolio.merge();
+            //}
+
+            if (getOrder() != null) {
+                //  transactionOrder = (transactionDao.find(Order.class, order.getId()));
+
+                //  positionId = (fillDao.queryZeroOne(UUID.class, "select p.id from Position p where p.id=?1", position.getId()));
+                //    if (transactionOrder == null)
+                //    transactionDao.persist(order);
+                //    order.merge();
+                transactionOrder = (getDao().find(getOrder().getClass(), getOrder().getId()));
+
+                if (transactionOrder == null)
+                    getDao().persist(getOrder());
+            }
+
+            if (getFill() != null) {
+                //transactionFill = (transactionDao.find(Fill.class, fill.getId()));
+                transactionFill = (getDao().find(getFill().getClass(), getFill().getId()));
+                //  positionId = (fillDao.queryZeroOne(UUID.class, "select p.id from Position p where p.id=?1", position.getId()));
+                if (transactionFill == null)
+                    getDao().persist(getFill());
+            }
         }
 
-        if (order != null) {
-            orderId = (transactionDao == null) ? (EM.queryZeroOne(UUID.class, "select o.id from Order o where o.id=?1", order.getId())) : (transactionDao
-                    .queryZeroOne(UUID.class, "select o.id from Order o where o.id=?1", order.getId()));
-
-            if (orderId == null)
-                order.persit();
-        }
-        if (fill != null) {
-            fillId = (transactionDao == null) ? (EM.queryZeroOne(UUID.class, "select f.id from Fill f where f.id=?1", fill.getId())) : (transactionDao
-                    .queryZeroOne(UUID.class, "select f.id from Fill f where f.id=?1", fill.getId()));
-
-            if (fillId == null)
-                fill.persit();
-        }
+        //        
+        //        UUID portfolioId = null;
+        //        UUID orderId = null;
+        //        UUID fillId = null;
+        //        if (portfolio != null) {
+        //            portfolioId = (transactionDao == null) ? (EM.queryZeroOne(UUID.class, "select p.id from Portfolio p where p.id=?1", portfolio.getId()))
+        //                    : (transactionDao.queryZeroOne(UUID.class, "select p.id from Portfolio p where p.id=?1", portfolio.getId()));
+        //            if (portfolioId == null)
+        //                portfolio.persit();
+        //        }
+        //
+        //        if (order != null) {
+        //            orderId = (transactionDao == null) ? (EM.queryZeroOne(UUID.class, "select o.id from Order o where o.id=?1", order.getId())) : (transactionDao
+        //                    .queryZeroOne(UUID.class, "select o.id from Order o where o.id=?1", order.getId()));
+        //
+        //            if (orderId == null)
+        //                order.persit();
+        //        }
+        //        if (fill != null) {
+        //            fillId = (transactionDao == null) ? (EM.queryZeroOne(UUID.class, "select f.id from Fill f where f.id=?1", fill.getId())) : (transactionDao
+        //                    .queryZeroOne(UUID.class, "select f.id from Fill f where f.id=?1", fill.getId()));
+        //
+        //            if (fillId == null)
+        //                fill.persit();
+        //        }
 
         //detach();
     }
@@ -342,6 +378,11 @@ public class Transaction extends Event {
 
         }
 
+    }
+
+    @Override
+    public EntityBase refresh() {
+        return transactionDao.refresh(this);
     }
 
     @Override
@@ -523,9 +564,21 @@ public class Transaction extends Event {
     protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.transaction");
 
     @Override
+    @Transient
+    public Dao getDao() {
+        return transactionDao;
+    }
+
+    @Override
     public void detach() {
 
         transactionDao.detach(this);
+
+    }
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
 
     }
 

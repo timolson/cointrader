@@ -545,24 +545,27 @@ public class Context {
 
     public void setTimeProvider(TimeProvider timeProvider) {
         this.timeProvider = timeProvider;
+        // EPServiceProviderSPI spi = (EPServiceProviderSPI) epService;
+        //spi.
+        //epService.getEPRuntime().g
     }
 
     @Inject
     private Context(TimeProvider timeProvider) {
         this.timeProvider = timeProvider;
 
-        final com.espertech.esper.client.Configuration esperConfig = new com.espertech.esper.client.Configuration();
-        esperConfig.configure("cointrader-esper.cfg.xml");
+        // final com.espertech.esper.client.Configuration esperConfig = new com.espertech.esper.client.Configuration();
+        epConfig.configure("cointrader-esper.cfg.xml");
 
-        esperConfig.addEventType(Event.class);
+        epConfig.addEventType(Event.class);
         Set<Class<? extends Event>> eventTypes = ReflectionUtil.getSubtypesOf(Event.class);
         for (Class<? extends Event> eventType : eventTypes)
-            esperConfig.addEventType(eventType);
-        esperConfig.addImport(IntoMethod.class);
+            epConfig.addEventType(eventType);
+        epConfig.addImport(IntoMethod.class);
         if (timeProvider != null) {
-            esperConfig.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
+            epConfig.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
         }
-        epService = EPServiceProviderManager.getDefaultProvider(esperConfig);
+        epService = EPServiceProviderManager.getDefaultProvider(epConfig);
         if (timeProvider != null) {
             lastTime = timeProvider.getInitialTime();
             final EPServiceProviderImpl epService1 = (EPServiceProviderImpl) epService;
@@ -623,6 +626,7 @@ public class Context {
     private EPServiceProvider epService;
     private EPRuntime epRuntime;
     private EPAdministrator epAdministrator;
+    private final com.espertech.esper.client.Configuration epConfig = new com.espertech.esper.client.Configuration();
 
     private void privateDestroy() {
         epService.destroy();

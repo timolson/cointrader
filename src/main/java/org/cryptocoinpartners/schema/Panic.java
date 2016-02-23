@@ -3,6 +3,8 @@ package org.cryptocoinpartners.schema;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.cryptocoinpartners.schema.dao.Dao;
+
 /**
  * Panic is a class which records disaster conditions.  Subclasses provide additional information about specific
  * situations so that the engine can make reasonable reactions to adverse conditions.
@@ -39,6 +41,24 @@ public class Panic extends Event {
     public void merge() {
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    public Dao getDao() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public EntityBase refresh() {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }

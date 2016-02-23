@@ -1,5 +1,7 @@
 package org.cryptocoinpartners.schema;
 
+import javax.annotation.Nullable;
+
 import org.joda.time.Instant;
 
 public interface SpecificOrderFactory {
@@ -12,7 +14,7 @@ public interface SpecificOrderFactory {
     //    SpecificOrder create(Instant time, Market market, Amount volume, String comment);
     //
 
-    SpecificOrder create(Instant time, Portfolio portfolio, Market market, Amount volume, Order parentOrder, String comment);
+    SpecificOrder create(Instant time, Portfolio portfolio, Market market, Amount volume, Order parentOrder, @Nullable String comment);
 
     //
     //    SpecificOrder create(Instant time, Market market, long volumeCount);
@@ -29,6 +31,6 @@ public interface SpecificOrderFactory {
     //
     //    SpecificOrder create(Instant time, Portfolio portfolio, Market market, double volume, String comment);
 
-    SpecificOrder create(Instant time, Portfolio portfolio, Market market, Amount negate, String string);
+    SpecificOrder create(Instant time, Portfolio portfolio, Market market, Amount negate, @Nullable String string);
 
 }

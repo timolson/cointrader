@@ -59,7 +59,8 @@ public class SpecificOrder extends Order implements SpecOrder {
     }
 
     @AssistedInject
-    public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted long volumeCount, @Assisted String comment) {
+    public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted long volumeCount,
+            @Assisted @Nullable String comment) {
         super(time);
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
@@ -80,7 +81,7 @@ public class SpecificOrder extends Order implements SpecOrder {
 
     @AssistedInject
     public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted long volumeCount,
-            @Assisted Order parentOrder, @Assisted String comment) {
+            @Assisted Order parentOrder, @Assisted @Nullable String comment) {
         super(time);
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
@@ -92,7 +93,8 @@ public class SpecificOrder extends Order implements SpecOrder {
         this.remoteKey = getId().toString();
         this.market = market;
         this.volumeCount = volumeCount;
-        super.setComment(comment);
+        if (comment != null)
+            super.setComment(comment);
         parentOrder.addChildOrder(this);
         this.setParentOrder(parentOrder);
         super.setPortfolio(portfolio);
@@ -102,7 +104,29 @@ public class SpecificOrder extends Order implements SpecOrder {
     }
 
     @AssistedInject
-    public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted Amount volume, @Assisted String comment) {
+    public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted long volumeCount, @Assisted Order parentOrder) {
+        super(time);
+        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
+
+        this.children = new CopyOnWriteArrayList<Order>();
+
+        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.externalFills = new CopyOnWriteArrayList<Fill>();
+        this.transactions = new CopyOnWriteArrayList<Transaction>();
+        this.remoteKey = getId().toString();
+        this.market = market;
+        this.volumeCount = volumeCount;
+        parentOrder.addChildOrder(this);
+        this.setParentOrder(parentOrder);
+        super.setPortfolio(portfolio);
+        this.placementCount = 1;
+        //  this.positionEffect = PositionEffect.OPEN;
+
+    }
+
+    @AssistedInject
+    public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted Amount volume,
+            @Assisted @Nullable String comment) {
         super(time);
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
@@ -134,9 +158,11 @@ public class SpecificOrder extends Order implements SpecOrder {
         this.fills = new CopyOnWriteArrayList<Fill>();
         this.externalFills = new CopyOnWriteArrayList<Fill>();
         this.transactions = new CopyOnWriteArrayList<Transaction>();
-        Asset baseCCY = Asset.forSymbol(limitOrder.getCurrencyPair().baseSymbol.toUpperCase());
-        Asset quoteCCY = Asset.forSymbol(limitOrder.getCurrencyPair().counterSymbol.toUpperCase());
-        Listing listing = Listing.forPair(baseCCY, quoteCCY);
+        // currencyPair
+        // Asset baseCCY = Asset.forSymbol(limitOrder.getBaseSymbol().toUpperCase());
+        // Asset quoteCCY = Asset.forSymbol(limitOrder.getCounterSymbol().toUpperCase());
+        Listing listing = Listing.forPair(Asset.forSymbol(limitOrder.getCurrencyPair().base.getCurrencyCode().toUpperCase()),
+                Asset.forSymbol(limitOrder.getCurrencyPair().counter.getCurrencyCode().toUpperCase()));
         Exchange exchange = XchangeUtil.getExchangeForMarket(xchangeExchange);
         this.market = market.findOrCreate(exchange, listing);
 
@@ -155,7 +181,7 @@ public class SpecificOrder extends Order implements SpecOrder {
 
     @AssistedInject
     public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted Amount volume, @Assisted Order parentOrder,
-            @Assisted String comment) {
+            @Assisted @Nullable String comment) {
         super(time);
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
@@ -177,7 +203,8 @@ public class SpecificOrder extends Order implements SpecOrder {
         this.positionEffect = (parentOrder.getPositionEffect() == null) ? PositionEffect.OPEN : parentOrder.getPositionEffect();
     }
 
-    public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted BigDecimal volume, @Assisted String comment) {
+    public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted BigDecimal volume,
+            @Assisted @Nullable String comment) {
         this(time, portfolio, market, new DecimalAmount(volume), comment);
     }
 
@@ -212,7 +239,8 @@ public class SpecificOrder extends Order implements SpecOrder {
         this.executionInstruction = specficOrder.getExecutionInstruction();
     }
 
-    public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted double volume, @Assisted String comment) {
+    public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted double volume,
+            @Assisted @Nullable String comment) {
         this(time, portfolio, market, new DecimalAmount(new BigDecimal(volume)), comment);
     }
 
@@ -258,6 +286,8 @@ public class SpecificOrder extends Order implements SpecOrder {
         if (volume == null)
 
             volume = amount().fromVolumeCount(volumeCount);
+        if (volume == null)
+            System.out.println("volume is null");
         return volume;
     }
 
@@ -276,8 +306,23 @@ public class SpecificOrder extends Order implements SpecOrder {
         return limitPrice;
     }
 
+    @Override
+    @Nullable
+    @Embedded
+    public DiscreteAmount getMarketPrice() {
+        if (marketPriceCount == 0)
+            return null;
+        if (marketPrice == null)
+            marketPrice = amount().fromPriceCount(marketPriceCount);
+        return marketPrice;
+    }
+
     protected void setLimitPrice(DiscreteAmount limitPrice) {
         this.limitPrice = limitPrice;
+    }
+
+    protected void setMarketPrice(DiscreteAmount marketPrice) {
+        this.marketPrice = marketPrice;
     }
 
     @Override
@@ -378,7 +423,8 @@ public class SpecificOrder extends Order implements SpecOrder {
     }
 
     public void copyCommonOrderProperties(GeneralOrder generalOrder) {
-        setTime(generalOrder.getTime());
+        //setTime(generalOrder.getTime());
+        setTimeToLive(generalOrder.getTimeToLive());
         setEmulation(generalOrder.isEmulation());
         setExpiration(generalOrder.getExpiration());
         setPortfolio(generalOrder.getPortfolio());
@@ -398,7 +444,7 @@ public class SpecificOrder extends Order implements SpecOrder {
                 + (getFillType() == null ? "" : (SEPARATOR + "Order Type=" + getFillType()))
                 + (getPositionEffect() == null ? "" : (SEPARATOR + "Position Effect=" + getPositionEffect()))
                 + (getExecutionInstruction() == null ? "" : (SEPARATOR + "Execution Instruction=" + getExecutionInstruction()))
-                + (hasFills() ? (SEPARATOR + "averageFillPrice=" + averageFillPrice()) : "") + "}";
+                + (hasFills() ? (SEPARATOR + "averageFillPrice=" + getAverageFillPrice()) : "") + "}";
     }
 
     // JPA
@@ -409,6 +455,10 @@ public class SpecificOrder extends Order implements SpecOrder {
     /** 0 if no limit is set */
     protected long getLimitPriceCount() {
         return limitPriceCount;
+    }
+
+    protected long getMarketPriceCount() {
+        return marketPriceCount;
     }
 
     public int getPlacementCount() {
@@ -441,6 +491,11 @@ public class SpecificOrder extends Order implements SpecOrder {
         limitPrice = null;
     }
 
+    public void setMarketPriceCount(long marketPriceCount) {
+        this.marketPriceCount = marketPriceCount;
+        marketPrice = null;
+    }
+
     @Override
     public Order withLimitPrice(String price) {
         this.setLimitPriceCount(DecimalAmount.of(price).toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount());
@@ -456,6 +511,25 @@ public class SpecificOrder extends Order implements SpecOrder {
     @Override
     public Order withLimitPrice(BigDecimal price) {
         this.setLimitPriceCount(DecimalAmount.of(price).toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount());
+
+        return this;
+    }
+
+    @Override
+    public Order withMarketPrice(String price) {
+        this.setMarketPriceCount(DecimalAmount.of(price).toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount());
+        return this;
+    }
+
+    @Override
+    public Order withMarketPrice(DiscreteAmount price) {
+        this.setMarketPriceCount(price.getCount());
+        return this;
+    }
+
+    @Override
+    public Order withMarketPrice(BigDecimal price) {
+        this.setMarketPriceCount(DecimalAmount.of(price).toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount());
 
         return this;
     }
@@ -545,9 +619,11 @@ public class SpecificOrder extends Order implements SpecOrder {
 
     private DiscreteAmount volume;
     private DiscreteAmount limitPrice;
+    private DiscreteAmount marketPrice;
     private int placementCount;
     private long volumeCount;
     private long limitPriceCount;
+    private long marketPriceCount;
     private String remoteKey;
     private Instant timeReceived;
     private long timestampReceived;
@@ -555,5 +631,11 @@ public class SpecificOrder extends Order implements SpecOrder {
     private static Object lock = new Object();
 
     private Market.MarketAmountBuilder amountBuilder;
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
+
+    }
 
 }

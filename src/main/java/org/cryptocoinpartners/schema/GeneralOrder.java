@@ -11,6 +11,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
+import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.util.Remainder;
 import org.joda.time.Instant;
 
@@ -28,24 +29,28 @@ import com.google.inject.assistedinject.AssistedInject;
 @Entity
 @Cacheable
 public class GeneralOrder extends Order {
-
-    public GeneralOrder(Instant time, Portfolio portfolio, Listing listing, BigDecimal volume) {
+    @AssistedInject
+    public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Listing listing, @Assisted BigDecimal volume) {
         super(time);
-        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
         this.children = new CopyOnWriteArrayList<Order>();
 
         this.fills = new CopyOnWriteArrayList<Fill>();
+        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
         this.transactions = new CopyOnWriteArrayList<Transaction>();
         super.setPortfolio(portfolio);
         this.listing = listing;
         this.volume = DecimalAmount.of(volume);
+        this.fillType = FillType.MARKET;
+        this.positionEffect = PositionEffect.OPEN;
     }
 
-    public GeneralOrder(Instant time, Portfolio portfolio, Order parentOrder, Listing listing, BigDecimal volume) {
+    @AssistedInject
+    public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Order parentOrder, @Assisted Listing listing,
+            @Assisted BigDecimal volume) {
         super(time);
-        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
         this.children = new CopyOnWriteArrayList<Order>();
+        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
         this.fills = new CopyOnWriteArrayList<Fill>();
         this.transactions = new CopyOnWriteArrayList<Transaction>();
@@ -54,6 +59,8 @@ public class GeneralOrder extends Order {
         this.setParentOrder(parentOrder);
         this.listing = listing;
         this.volume = DecimalAmount.of(volume);
+        this.fillType = FillType.MARKET;
+        this.positionEffect = PositionEffect.OPEN;
     }
 
     @AssistedInject
@@ -70,9 +77,28 @@ public class GeneralOrder extends Order {
         this.listing = market.getListing();
         this.volume = DecimalAmount.of(volume);
         this.fillType = type;
+        this.positionEffect = PositionEffect.OPEN;
     }
 
-    public GeneralOrder(Instant time, Portfolio portfolio, Order parentOrder, Market market, BigDecimal volume, FillType type) {
+    @AssistedInject
+    public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Listing listing, @Assisted BigDecimal volume, @Assisted FillType type) {
+        super(time);
+        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
+
+        this.children = new CopyOnWriteArrayList<Order>();
+
+        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.transactions = new CopyOnWriteArrayList<Transaction>();
+        super.setPortfolio(portfolio);
+        this.listing = listing;
+        this.volume = DecimalAmount.of(volume);
+        this.fillType = type;
+        this.positionEffect = PositionEffect.OPEN;
+    }
+
+    @AssistedInject
+    public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Order parentOrder, @Assisted Market market,
+            @Assisted BigDecimal volume, @Assisted FillType type) {
         super(time);
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
@@ -87,6 +113,7 @@ public class GeneralOrder extends Order {
         this.listing = market.getListing();
         this.volume = DecimalAmount.of(volume);
         this.fillType = type;
+        this.positionEffect = PositionEffect.OPEN;
     }
 
     @AssistedInject
@@ -105,9 +132,11 @@ public class GeneralOrder extends Order {
         this.listing = market.getListing();
         this.volume = DecimalAmount.of(volume);
         this.fillType = type;
+        this.positionEffect = PositionEffect.OPEN;
     }
 
-    public GeneralOrder(Instant time, Portfolio portfolio, Listing listing, String volume) {
+    @AssistedInject
+    public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Listing listing, @Assisted String volume) {
         super(time);
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
@@ -118,6 +147,8 @@ public class GeneralOrder extends Order {
         this.transactions = new CopyOnWriteArrayList<Transaction>();
         this.listing = listing;
         this.volume = DecimalAmount.of(volume);
+        this.fillType = FillType.MARKET;
+        this.positionEffect = PositionEffect.OPEN;
     }
 
     @Nullable
@@ -141,6 +172,25 @@ public class GeneralOrder extends Order {
     @Override
     public Order withLimitPrice(BigDecimal price) {
         this.setLimitPrice(DecimalAmount.of(price));
+        // this.fillType=FillType
+        return this;
+    }
+
+    @Override
+    public Order withMarketPrice(String price) {
+        this.setMarketPrice(DecimalAmount.of(price));
+        return this;
+    }
+
+    @Override
+    public Order withMarketPrice(DiscreteAmount price) {
+        this.setMarketPriceDecimal(price.asBigDecimal());
+        return this;
+    }
+
+    @Override
+    public Order withMarketPrice(BigDecimal price) {
+        this.setMarketPrice(DecimalAmount.of(price));
         return this;
     }
 
@@ -210,6 +260,12 @@ public class GeneralOrder extends Order {
     @Transient
     public DecimalAmount getLimitPrice() {
         return limitPrice;
+    }
+
+    @Override
+    @Transient
+    public DecimalAmount getMarketPrice() {
+        return marketPrice;
     }
 
     @Override
@@ -310,7 +366,7 @@ public class GeneralOrder extends Order {
         if (targetPrice != null)
             s += ", target price=" + targetPrice;
         if (hasFills())
-            s += ", averageFillPrice=" + averageFillPrice();
+            s += ", averageFillPrice=" + getAverageFillPrice();
         s += '}';
         return s;
     }
@@ -334,9 +390,19 @@ public class GeneralOrder extends Order {
         this.limitPrice = limitPrice;
     }
 
+    protected void setMarketPrice(DecimalAmount marketPrice) {
+        this.marketPrice = marketPrice;
+    }
+
     protected void setLimitPriceDecimal(BigDecimal limitPrice) {
         if (limitPrice != null) {
             this.limitPrice = DecimalAmount.of(limitPrice);
+        }
+    }
+
+    protected void setMarketPriceDecimal(BigDecimal marketPrice) {
+        if (marketPrice != null) {
+            this.marketPrice = DecimalAmount.of(marketPrice);
         }
     }
 
@@ -418,18 +484,26 @@ public class GeneralOrder extends Order {
     @Override
     public void setMarket(Market market) {
         this.market = market;
-        this.listing = market.getListing();
+        if (market != null)
+            this.listing = market.getListing();
     }
 
     private Listing listing;
     private Market market;
     private DecimalAmount volume;
     private DecimalAmount limitPrice;
+    private DecimalAmount marketPrice;
     private DecimalAmount stopAmount;
     private DecimalAmount stopPrice;
     private DecimalAmount targetAmount;
     private DecimalAmount targetPrice;
     private DecimalAmount trailingStopPrice;
     private Amount forcastedFees;
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
+
+    }
 
 }

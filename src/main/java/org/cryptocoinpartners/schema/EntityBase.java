@@ -2,9 +2,9 @@ package org.cryptocoinpartners.schema;
 
 import java.io.Serializable;
 import java.util.UUID;
-import java.util.concurrent.Delayed;
 import java.util.concurrent.TimeUnit;
 
+import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Id;
 import javax.persistence.Inheritance;
@@ -14,37 +14,58 @@ import javax.persistence.PostPersist;
 import javax.persistence.Transient;
 import javax.persistence.Version;
 
+import org.cryptocoinpartners.enumeration.PersistanceAction;
+import org.cryptocoinpartners.schema.dao.Dao;
+import org.cryptocoinpartners.util.ConfigUtil;
+
 /**
  * @author Tim Olson
  */
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @MappedSuperclass
-public abstract class EntityBase implements Serializable, Delayed {
+public abstract class EntityBase implements Serializable, Comparable<EntityBase> {
 
     /**
      * 
      */
     private static final long serialVersionUID = -7893439827939854533L;
-    private static long delay = 1000;
-
+    static long delay;
     private long startTime;
+    private int attempt;
+    private int revision;
+    private PersistanceAction persistanceAction;
 
-    @Override
+    @Transient
+    public long getDelay() {
+        if (delay == 0)
+            return ConfigUtil.combined().getInt("db.writer.delay");
+        return delay;
+    }
+
     @Transient
     public long getDelay(TimeUnit unit) {
         long diff = startTime - System.currentTimeMillis();
         return unit.convert(diff, TimeUnit.MILLISECONDS);
     }
 
+    /*    @Override
+        public int compareTo(Delayed o) {
+            if (this.startTime < ((EntityBase) o).startTime) {
+                return -1;
+            }
+            if (this.startTime > ((EntityBase) o).startTime) {
+                return 1;
+            }
+            return 0;
+        }*/
+
     @Override
-    public int compareTo(Delayed o) {
-        if (this.startTime < ((EntityBase) o).startTime) {
-            return -1;
-        }
-        if (this.startTime > ((EntityBase) o).startTime) {
-            return 1;
-        }
-        return 0;
+    public int compareTo(EntityBase entityBase) {
+        //if (this.equals(entityBase)) {
+        int compareRevision = entityBase.getRevision();
+        return (compareRevision - this.revision);
+        //   }
+        // return 1;
     }
 
     @Id
@@ -62,13 +83,53 @@ public abstract class EntityBase implements Serializable, Delayed {
         return version;
     }
 
+    @Column(name = "revision", columnDefinition = "integer DEFAULT 0", nullable = false)
+    public int getRevision() {
+        //  if (version == null)
+        //    return 0;
+        return revision;
+    }
+
+    @Transient
+    public int getAttempt() {
+        //  if (version == null)
+        //    return 0;
+        return attempt;
+    }
+
+    public void setAttempt(int attempt) {
+        this.attempt = attempt;
+    }
+
+    @Nullable
+    public PersistanceAction getPeristanceAction() {
+        //  if (version == null)
+        //    return 0;
+        return persistanceAction;
+    }
+
+    public void setPeristanceAction(PersistanceAction persistanceAction) {
+        this.persistanceAction = persistanceAction;
+    }
+
+    @Transient
+    public void setStartTime(long delay) {
+        this.delay = delay;
+        this.startTime = System.currentTimeMillis() + delay;
+
+    }
+
     public void setVersion(long version) {
         this.version = version;
     }
 
+    public void setRevision(int revision) {
+        this.revision = revision;
+    }
+
     @Override
     public String toString() {
-        return "DelayedRunnable [delayMS=" + delay + ", getDelay(ms)=" + getDelay(TimeUnit.MILLISECONDS) + "]";
+        return "DelayedRunnable [delayMS=" + delay + ",(ms)=" + getDelay(TimeUnit.MILLISECONDS) + "]";
     }
 
     @Transient
@@ -109,10 +170,13 @@ public abstract class EntityBase implements Serializable, Delayed {
 
     // JPA
     protected EntityBase() {
+        startTime = System.currentTimeMillis();
+
     }
 
     protected void setId(UUID id) {
-        this.id = id;
+        if (this.id == null)
+            this.id = id;
     }
 
     @PostPersist
@@ -122,15 +186,32 @@ public abstract class EntityBase implements Serializable, Delayed {
 
     public abstract void persit();
 
+    public abstract EntityBase refresh();
+
+    public int findRevisionById() {
+        try {
+            return getDao().findRevisionById(this.getClass(), this.getId());
+        } catch (NullPointerException npe) {
+            return 0;
+        }
+    }
+
+    public abstract void delete();
+
+    @Transient
+    public abstract Dao getDao();
+
     public abstract void detach();
 
     public abstract void merge();
 
     private void ensureId() {
         if (id == null)
-            id = UUID.randomUUID();
-        if (startTime == 0)
-            startTime = System.currentTimeMillis() + delay;
+            setId(UUID.randomUUID());
+        // id = UUID.randomUUID();
+
+        // if (startTime == 0)
+        //   startTime = System.currentTimeMillis() + delay;
     }
 
     protected UUID id;

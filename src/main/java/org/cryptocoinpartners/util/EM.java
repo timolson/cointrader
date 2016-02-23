@@ -58,7 +58,7 @@ public class EM {
     public static <T> T namedQueryZeroOne(Class<T> resultType, String namedQuery, Object... params) {
         try {
             beginUnitOfWork();
-            log.debug("namedQueryZeroOne unit of work ended for thread: " + Thread.currentThread());
+            log.trace("namedQueryZeroOne unit of work ended for thread: " + Thread.currentThread());
 
             TypedQuery<T> query = em().createNamedQuery(namedQuery, resultType);
             if (params != null) {
@@ -73,7 +73,37 @@ public class EM {
             return null;
         } finally {
             unitOfWork.end();
-            log.debug("namedQueryZeroOne unit of work ended for thread: " + Thread.currentThread());
+            log.trace("namedQueryZeroOne unit of work ended for thread: " + Thread.currentThread());
+
+            //  if (em() != null)
+            //    em().close();
+        }
+    }
+
+    public static <T> T namedQueryZeroOne(Class<T> resultType, String namedQuery, Map<String, String> properties, Object... params) {
+        try {
+            beginUnitOfWork();
+            log.trace("namedQueryZeroOne unit of work ended for thread: " + Thread.currentThread());
+
+            TypedQuery<T> query = em().createNamedQuery(namedQuery, resultType);
+            for (Map.Entry<String, String> entry : properties.entrySet()) {
+                EntityGraph graph = em().getEntityGraph(entry.getValue());
+
+                query.setHint(entry.getKey(), graph);
+            }
+            if (params != null) {
+                for (int i = 0; i < params.length; i++) {
+                    Object param = params[i];
+                    query.setParameter(i + 1, param); // JPA uses 1-based indexes
+                }
+
+            }
+            return query.setHint("org.hibernate.cacheable", false).getSingleResult();
+        } catch (NoResultException x) {
+            return null;
+        } finally {
+            unitOfWork.end();
+            log.trace("namedQueryZeroOne unit of work ended for thread: " + Thread.currentThread());
 
             //  if (em() != null)
             //    em().close();
@@ -273,7 +303,7 @@ public class EM {
 
         } finally {
             unitOfWork.end();
-            log.debug("sqlQueryOne unit of work ended for thread: " + Thread.currentThread());
+            log.trace("sqlQueryOne unit of work ended for thread: " + Thread.currentThread());
 
         }
         // em.flush();
@@ -310,7 +340,7 @@ public class EM {
 
         } finally {
             unitOfWork.end();
-            log.debug("sqlQueryOne unit of work ended for thread: " + Thread.currentThread());
+            log.trace("sqlQueryOne unit of work ended for thread: " + Thread.currentThread());
 
         }
         // em.flush();
@@ -320,6 +350,62 @@ public class EM {
     }
 
     //@Transactional
+    public static <T> List<T> namedQueryList(Class<T> resultType, String namedQuery, Object... params) {
+        try {
+            beginUnitOfWork();
+            log.trace("namedQueryList unit of work ended for thread: " + Thread.currentThread());
+
+            TypedQuery<T> query = em().createNamedQuery(namedQuery, resultType);
+
+            if (params != null) {
+                for (int i = 0; i < params.length; i++) {
+                    Object param = params[i];
+                    query.setParameter(i + 1, param); // JPA uses 1-based indexes
+                }
+
+            }
+            return query.setHint("org.hibernate.cacheable", true).getResultList();
+        } catch (NoResultException x) {
+            return null;
+        } finally {
+            unitOfWork.end();
+            log.trace("namedQueryList unit of work ended for thread: " + Thread.currentThread());
+
+            //  if (em() != null)
+            //    em().close();
+        }
+    }
+
+    public static <T> List<T> namedQueryList(Class<T> resultType, String namedQuery, Map<String, String> properties, Object... params) {
+        try {
+            beginUnitOfWork();
+            log.trace("namedQueryList unit of work ended for thread: " + Thread.currentThread());
+
+            TypedQuery<T> query = em().createNamedQuery(namedQuery, resultType);
+            for (Map.Entry<String, String> entry : properties.entrySet()) {
+                EntityGraph graph = em().getEntityGraph(entry.getValue());
+
+                query.setHint(entry.getKey(), graph);
+            }
+            if (params != null) {
+                for (int i = 0; i < params.length; i++) {
+                    Object param = params[i];
+                    query.setParameter(i + 1, param); // JPA uses 1-based indexes
+                }
+
+            }
+            return query.setHint("org.hibernate.cacheable", true).getResultList();
+        } catch (NoResultException x) {
+            return null;
+        } finally {
+            unitOfWork.end();
+            log.trace("namedQueryList unit of work ended for thread: " + Thread.currentThread());
+
+            //  if (em() != null)
+            //    em().close();
+        }
+    }
+
     public static <T> List<T> queryList(Class<T> resultType, String queryStr, Object... params) {
         //  EntityManager em = em();
         try {

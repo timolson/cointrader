@@ -59,9 +59,6 @@ public class PaperTradeRunMode extends RunMode {
         //context = Context.create();
         Replay replay = replayFactory.between(start, end, true, paperSemaphore);
         context = replay.getContext();
-
-        context = replay.getContext();
-
         context.attach(XchangeAccountService.class);
         context.attach(BasicQuoteService.class);
         context.attach(BasicPortfolioService.class);
@@ -81,8 +78,10 @@ public class PaperTradeRunMode extends RunMode {
         //}
 
         replay.run();
-        context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
+        //context.esperConfig.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
         context.setTimeProvider(null);
+        context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
+        //  context.setTimeProvider(null);
         OrderService orderService = context.getInjector().getInstance(OrderService.class);
         // context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
 

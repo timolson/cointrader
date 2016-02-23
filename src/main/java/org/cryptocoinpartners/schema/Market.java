@@ -18,6 +18,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FeeMethod;
+import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.schema.dao.MarketDao;
 import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.RemainderHandler;
@@ -198,10 +199,10 @@ public class Market extends EntityBase {
     }
 
     public static Market forSymbol(String marketSymbol) {
-
         for (Market market : findAll()) {
-            if (market.getSymbol().equalsIgnoreCase(marketSymbol))
+            if (market.getSymbol().equalsIgnoreCase(marketSymbol)) {
                 return market;
+            }
         }
         return null;
     }
@@ -297,6 +298,11 @@ public class Market extends EntityBase {
     }
 
     @Override
+    public EntityBase refresh() {
+        return marketDao.refresh(this);
+    }
+
+    @Override
     public void detach() {
         marketDao.detach(this);
 
@@ -305,6 +311,18 @@ public class Market extends EntityBase {
     @Override
     public void merge() {
         marketDao.merge(this);
+
+    }
+
+    @Override
+    @Transient
+    public Dao getDao() {
+        return marketDao;
+    }
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
 
     }
 }

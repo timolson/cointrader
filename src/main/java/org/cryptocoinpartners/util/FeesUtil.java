@@ -1,5 +1,7 @@
 package org.cryptocoinpartners.util;
 
+import javax.inject.Inject;
+
 import org.cryptocoinpartners.enumeration.FeeMethod;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.schema.Amount;
@@ -8,6 +10,7 @@ import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.Position;
+import org.cryptocoinpartners.service.QuoteService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,6 +18,8 @@ import org.slf4j.LoggerFactory;
  * @author Tim Olson
  */
 public class FeesUtil {
+    @Inject
+    protected transient QuoteService quotes;
 
     public static Amount getCommission(Fill fill) {
         double rate = fill.getMarket().getFeeRate();
@@ -30,15 +35,16 @@ public class FeesUtil {
             case PerUnit:
                 return calculatePerUnit(ammount, rate, fill.getMarket());
             case PercentagePerUnitOpening:
-                commission = (fill.getOrder().getPositionEffect().equals(PositionEffect.OPEN)) ? calculatePercentagePerUnit(price, ammount, rate,
-                        fill.getMarket()) : DecimalAmount.ZERO;
+                commission = (fill.getOrder().getPositionEffect() == (PositionEffect.OPEN)) ? calculatePercentagePerUnit(price, ammount, rate, fill.getMarket())
+                        : DecimalAmount.ZERO;
                 return commission;
             case FlatRatePerUnitOpening:
-                commission = (fill.getOrder().getPositionEffect().equals(PositionEffect.OPEN)) ? calculateFlatRatePerUnit(price, ammount, rate,
-                        fill.getMarket()) : DecimalAmount.ZERO;
+                commission = (fill.getOrder().getPositionEffect() == (PositionEffect.OPEN)) ? calculateFlatRatePerUnit(price, ammount, rate, fill.getMarket())
+                        : DecimalAmount.ZERO;
                 return commission;
             case PerUnitOpening:
-                commission = (fill.getOrder().equals(PositionEffect.OPEN)) ? calculatePerUnit(ammount, rate, fill.getMarket()) : DecimalAmount.ZERO;
+                commission = (fill.getOrder().getPositionEffect() == (PositionEffect.OPEN)) ? calculatePerUnit(ammount, rate, fill.getMarket())
+                        : DecimalAmount.ZERO;
                 return commission;
             default:
                 log.error("No commission fee method calcation for : " + method);
@@ -56,10 +62,10 @@ public class FeesUtil {
             case PerUnit:
                 return calculatePerUnit(ammount, rate, market);
             case PercentagePerUnitOpening:
-                margin = (positionEffect.equals(PositionEffect.OPEN)) ? calculatePercentagePerUnit(price, ammount, rate, market) : DecimalAmount.ZERO;
+                margin = (positionEffect == (PositionEffect.OPEN)) ? calculatePercentagePerUnit(price, ammount, rate, market) : DecimalAmount.ZERO;
                 return margin;
             case PerUnitOpening:
-                margin = (positionEffect.equals(PositionEffect.OPEN)) ? calculatePerUnit(ammount, rate, market) : DecimalAmount.ZERO;
+                margin = (positionEffect == (PositionEffect.OPEN)) ? calculatePerUnit(ammount, rate, market) : DecimalAmount.ZERO;
                 return margin;
             default:
                 log.error("No margin fee method calcation for : " + method);
@@ -88,7 +94,8 @@ public class FeesUtil {
             double rate = order.getMarket().getFeeRate();
             FeeMethod method = order.getMarket().getFeeMethod();
 
-            Amount price = order.getLimitPrice();
+            Amount price = (order.getLimitPrice() != null) ? order.getLimitPrice() : order.getMarketPrice();
+
             Amount ammount = order.getVolume().abs();
             Amount commission;
             switch (method) {
@@ -97,10 +104,10 @@ public class FeesUtil {
                 case PerUnit:
                     return calculatePerUnit(ammount, rate, order.getMarket());
                 case FlatRatePerUnitOpening:
-                    commission = (order.getPositionEffect().equals(PositionEffect.OPEN)) ? calculateFlatRatePerUnit(price, ammount, rate, order.getMarket())
+                    commission = (order.getPositionEffect() == (PositionEffect.OPEN)) ? calculateFlatRatePerUnit(price, ammount, rate, order.getMarket())
                             : DecimalAmount.ZERO;
                 case PercentagePerUnitOpening:
-                    commission = (order.getPositionEffect().equals(PositionEffect.OPEN)) ? calculatePercentagePerUnit(price, ammount, rate, order.getMarket())
+                    commission = (order.getPositionEffect() == (PositionEffect.OPEN)) ? calculatePercentagePerUnit(price, ammount, rate, order.getMarket())
                             : DecimalAmount.ZERO;
                     return commission;
                 case PerUnitOpening:
@@ -121,8 +128,10 @@ public class FeesUtil {
 
             double rate = (order.getMarket().getMargin() == 0) ? 1 : order.getMarket().getMargin();
             // need a check in here to see if margin fee moethos is null they assume full margin
+            //quotes.
+
             FeeMethod method = (order.getMarket().getMarginFeeMethod() == null) ? FeeMethod.PercentagePerUnit : order.getMarket().getMarginFeeMethod();
-            Amount price = order.getLimitPrice();
+            Amount price = (order.getLimitPrice() != null) ? order.getLimitPrice() : order.getMarketPrice();
             Amount ammount = order.getVolume().abs();
             Market market = order.getMarket();
             PositionEffect positionEffect = order.getPositionEffect();
@@ -160,10 +169,10 @@ public class FeesUtil {
             case PerUnit:
                 return calculatePerUnit(ammount, rate, market);
             case PercentagePerUnitOpening:
-                commission = (postionEffect.equals(PositionEffect.OPEN)) ? calculatePercentagePerUnit(price, ammount, rate, market) : DecimalAmount.ZERO;
+                commission = (postionEffect == (PositionEffect.OPEN)) ? calculatePercentagePerUnit(price, ammount, rate, market) : DecimalAmount.ZERO;
                 return commission;
             case PerUnitOpening:
-                commission = (postionEffect.equals(PositionEffect.OPEN)) ? calculatePerUnit(ammount, rate, market) : DecimalAmount.ZERO;
+                commission = (postionEffect == (PositionEffect.OPEN)) ? calculatePerUnit(ammount, rate, market) : DecimalAmount.ZERO;
                 return commission;
 
             default:
@@ -184,10 +193,10 @@ public class FeesUtil {
             case PerUnit:
                 return calculatePerUnit(amount, rate, market);
             case PercentagePerUnitOpening:
-                margin = (postionEffect.equals(PositionEffect.OPEN)) ? calculatePercentagePerUnitOpening(price, amount, rate, market) : DecimalAmount.ZERO;
+                margin = (postionEffect == (PositionEffect.OPEN)) ? calculatePercentagePerUnitOpening(price, amount, rate, market) : DecimalAmount.ZERO;
                 return margin;
             case PerUnitOpening:
-                margin = (postionEffect.equals(PositionEffect.OPEN)) ? calculatePerUnitOpening(amount, rate, market) : DecimalAmount.ZERO;
+                margin = (postionEffect == (PositionEffect.OPEN)) ? calculatePerUnitOpening(amount, rate, market) : DecimalAmount.ZERO;
                 return margin;
             default:
                 log.error("No margin fee method calcation for : " + method);

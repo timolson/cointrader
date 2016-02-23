@@ -2,8 +2,10 @@ package org.cryptocoinpartners.schema;
 
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
+import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.PositionType;
+import org.cryptocoinpartners.schema.dao.Dao;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -91,6 +93,25 @@ public class PositionUpdate extends Event {
         return "PositionUpdate{ id=" + getId() + SEPARATOR + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Type=" + getType()
                 + SEPARATOR + "Last Type=" + (getLastType() == null ? "null" : getLastType()) + SEPARATOR + "market={"
                 + (getMarket() == null ? "null}" : getMarket() + "}") + SEPARATOR + "position=" + getPosition() + "}";
+    }
+
+    @Override
+    @Transient
+    public Dao getDao() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public EntityBase refresh() {
+        // TODO Auto-generated method stub
+        return null;
     }
 
 }

@@ -31,7 +31,7 @@ public class BaseStrategy implements Strategy {
         portfolio.setBaseAsset(baseAsset);
         portfolio.merge();
         // PersistUtil.insert(portfolio);
-        order = new OrderBuilder(portfolio, orderService);
+        //  order = new OrderBuilder(portfolio, orderService);
         log = portfolio.getLogger();
     }
 

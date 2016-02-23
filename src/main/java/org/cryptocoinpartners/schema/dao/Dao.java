@@ -2,7 +2,6 @@ package org.cryptocoinpartners.schema.dao;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
 
 import javax.persistence.NoResultException;
 
@@ -14,19 +13,21 @@ public interface Dao {
 
     void detach(EntityBase... entities);
 
-    void remove(EntityBase... entities);
+    EntityBase refresh(EntityBase... entities);
 
     void merge(EntityBase... entities);
-
-    BlockingQueue<EntityBase[]> getInsertQueue();
-
-    BlockingQueue<EntityBase[]> getMergeQueue();
 
     void persistEntities(EntityBase... entities);
 
     void mergeEntities(EntityBase... entities);
 
+    void deleteEntities(EntityBase... entities);
+
+    void delete(EntityBase... entities);
+
     <T> T find(Class<T> resultType, UUID id);
+
+    boolean contains(EntityBase entity);
 
     <T> T queryZeroOne(Class<T> resultType, String queryStr, Object... params);
 
@@ -43,6 +44,8 @@ public interface Dao {
     <T> void queryEach(Class<T> resultType, Visitor<T> handler, String queryStr, Object... params);
 
     void queryEach(Visitor<Object[]> handler, int batchSize, String queryStr, Object... params);
+
+    <T> int findRevisionById(Class<T> resultType, UUID id) throws NoResultException;
 
     // T queryZeroOne(Class<T> resultType, String queryStr, Object[] params);
 

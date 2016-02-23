@@ -10,6 +10,7 @@ import javax.persistence.NoResultException;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FeeMethod;
+import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.schema.dao.PromptJpaDao;
 import org.cryptocoinpartners.util.EM;
 
@@ -161,7 +162,7 @@ public class Prompt extends EntityBase {
             Asset tradedCurrency = Currency.forSymbol(currency);
             final Prompt prompt = new Prompt(symbol, tickValue, tickSize, tradedCurrency, volumeBasis, margin, marginMethod, feeRate, feeMethod,
                     marginFeeMethod);
-            promptDao.persist(prompt);
+            promptDao.persistEntities(prompt);
             return prompt;
         }
     }
@@ -210,14 +211,31 @@ public class Prompt extends EntityBase {
     }
 
     @Override
+    public EntityBase refresh() {
+        return promptDao.refresh(this);
+    }
+
+    @Override
     public void detach() {
         promptDao.detach(this);
 
     }
 
     @Override
+    @Transient
+    public Dao getDao() {
+        return promptDao;
+    }
+
+    @Override
     public void merge() {
         promptDao.merge(this);
+
+    }
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
 
     }
 

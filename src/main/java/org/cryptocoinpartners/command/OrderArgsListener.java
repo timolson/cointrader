@@ -1,15 +1,13 @@
 package org.cryptocoinpartners.command;
 
-import org.antlr.v4.runtime.misc.NotNull;
+import java.math.BigDecimal;
 
 import javax.inject.Inject;
 
-import java.math.BigDecimal;
-
-import org.cryptocoinpartners.command.Parse;
+import org.antlr.v4.runtime.misc.NotNull;
+import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
-
 
 /**
  * @author Tim Olson
@@ -34,7 +32,12 @@ public class OrderArgsListener extends OrderBaseListener {
         BigDecimal limit = Parse.amount(ctx.Amount());
         command.setLimit(limit);
     }
-    
+
+    @Override
+    public void exitPositionEffect(@NotNull OrderParser.PositionEffectContext ctx) {
+        PositionEffect positionEffect = Parse.positionEffect(ctx.String());
+        command.setPositionEffect(positionEffect);
+    }
 
     @Override
     public void exitMarket(@NotNull OrderParser.MarketContext ctx) {
@@ -47,7 +50,6 @@ public class OrderArgsListener extends OrderBaseListener {
         Listing listing = Parse.listing(ctx.Listing());
         command.setListing(listing);
     }
-
 
     @Inject
     private OrderCommand command; // this gets injected by AntlrCommandBase.

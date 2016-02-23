@@ -6,8 +6,10 @@ import javax.persistence.Basic;
 import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
+import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FeeMethod;
+import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.schema.dao.ExchangeJpaDao;
 import org.cryptocoinpartners.util.EM;
 
@@ -33,26 +35,27 @@ public class Exchange extends EntityBase {
         Exchange found = forSymbol(symbol);
         if (found == null) {
             found = new Exchange(symbol);
-            exchangeDao.persist(found);
+            exchangeDao.persistEntities(found);
         }
         return found;
     }
 
-    public static Exchange forSymbolOrCreate(String symbol, int margin, double feeRate, FeeMethod feeMethod) {
+    public static Exchange forSymbolOrCreate(String symbol, int margin, double feeRate, FeeMethod feeMethod, boolean fillsProvided) {
         Exchange found = forSymbol(symbol);
         if (found == null) {
-            found = new Exchange(symbol, margin, feeRate, feeMethod);
-            exchangeDao.persist(found);
+            found = new Exchange(symbol, margin, feeRate, feeMethod, fillsProvided);
+            exchangeDao.persistEntities(found);
 
         }
         return found;
     }
 
-    public static Exchange forSymbolOrCreate(String symbol, int margin, double feeRate, FeeMethod feeMethod, double marginFeeRate, FeeMethod marginFeeMethod) {
+    public static Exchange forSymbolOrCreate(String symbol, int margin, double feeRate, FeeMethod feeMethod, double marginFeeRate, FeeMethod marginFeeMethod,
+            boolean fillsProvided) {
         Exchange found = forSymbol(symbol);
         if (found == null) {
-            found = new Exchange(symbol, margin, feeRate, feeMethod, marginFeeRate, marginFeeMethod);
-            exchangeDao.persist(found);
+            found = new Exchange(symbol, margin, feeRate, feeMethod, marginFeeRate, marginFeeMethod, fillsProvided);
+            exchangeDao.persistEntities(found);
         }
         return found;
     }
@@ -111,6 +114,16 @@ public class Exchange extends EntityBase {
         this.marginFeeMethod = marginFeeMethod;
     }
 
+    @Basic(optional = true)
+    public boolean getFillsProvided() {
+        return fillsProvided;
+
+    }
+
+    protected void setFillsProvided(boolean fillsProvided) {
+        this.fillsProvided = fillsProvided;
+    }
+
     @Basic(optional = false)
     public int getMargin() {
         return Math.max(margin, 1);
@@ -134,20 +147,23 @@ public class Exchange extends EntityBase {
         this.symbol = symbol;
     }
 
-    private Exchange(String symbol, int margin, double feeRate, FeeMethod feeMethod) {
+    private Exchange(String symbol, int margin, double feeRate, FeeMethod feeMethod, boolean fillsProvided) {
         this.symbol = symbol;
         this.margin = margin;
         this.feeRate = feeRate;
         this.feeMethod = feeMethod;
+        this.fillsProvided = fillsProvided;
+
     }
 
-    private Exchange(String symbol, int margin, double feeRate, FeeMethod feeMethod, double marginFeeRate, FeeMethod marginFeeMethod) {
+    private Exchange(String symbol, int margin, double feeRate, FeeMethod feeMethod, double marginFeeRate, FeeMethod marginFeeMethod, boolean fillsProvided) {
         this.symbol = symbol;
         this.margin = margin;
         this.feeRate = feeRate;
         this.feeMethod = feeMethod;
         this.marginFeeMethod = marginFeeMethod;
         this.marginFeeRate = marginFeeRate;
+        this.fillsProvided = fillsProvided;
     }
 
     private Exchange(String symbol) {
@@ -159,12 +175,18 @@ public class Exchange extends EntityBase {
     private int margin;
     private double feeRate;
     private double marginFeeRate;
+    private boolean fillsProvided;
 
     @Override
     public void persit() {
         exchangeDao.persist(this);
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    public EntityBase refresh() {
+        return exchangeDao.refresh(this);
     }
 
     @Override
@@ -177,6 +199,18 @@ public class Exchange extends EntityBase {
     @Override
     public void merge() {
         exchangeDao.merge(this);
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    @Transient
+    public Dao getDao() {
+        return exchangeDao;
+    }
+
+    @Override
+    public void delete() {
         // TODO Auto-generated method stub
 
     }

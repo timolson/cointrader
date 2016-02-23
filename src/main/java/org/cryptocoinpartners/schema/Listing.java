@@ -16,6 +16,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FeeMethod;
+import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.schema.dao.ListingDao;
 import org.cryptocoinpartners.util.EM;
 
@@ -308,6 +309,11 @@ public class Listing extends EntityBase {
 
     }
 
+    @Override
+    public EntityBase refresh() {
+        return listingDao.refresh(this);
+    }
+
     public <T> T find() {
         //   synchronized (persistanceLock) {
         try {
@@ -332,6 +338,18 @@ public class Listing extends EntityBase {
     @Override
     public void merge() {
         listingDao.merge(this);
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    @Transient
+    public Dao getDao() {
+        return listingDao;
+    }
+
+    @Override
+    public void delete() {
         // TODO Auto-generated method stub
 
     }

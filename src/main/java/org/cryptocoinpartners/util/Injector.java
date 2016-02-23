@@ -106,13 +106,14 @@ public class Injector {
         properties.put("hibernate.ejb.naming_strategy", "org.hibernate.cfg.ImprovedNamingStrategy");
 
         properties.put("hibernate.connection.autocommit", "true");
-        properties.put("org.hibernate.flushMode", "COMMIT");
+        properties.put("org.hibernate.flushMode", "AUTO");
         properties.put("hibernate.connection.release_mode", "auto");
 
         properties.put("hibernate.connection.provider_class", "org.hibernate.connection.C3P0ConnectionProvider");
         properties.put("hibernate.cache.region.factory_class", "org.hibernate.cache.ehcache.EhCacheRegionFactory");
         //	"org.hibernate.cache.ehcache.SingletonEhCacheRegionFactory");
         properties.put("hibernate.cache.use_second_level_cache", "true");
+
         properties.put("hibernate.cache.use_query_cache", "true");
         properties.put("hibernate.cache.use_structured_entries ", "true");
         properties.put("net.sf.ehcache.configurationResourceName", "META-INF/ehcache.xml");
@@ -131,7 +132,7 @@ public class Injector {
         //  properties.put("hibernate.c3p0.max_statements", "0");
         // properties.put("hibernate.c3p0.maxIdleTimeExcessConnections", "2");
         // properties.put("hibernate.c3p0.timeout", "300");
-        properties.put("hibernate.c3p0.maxIdleTime", "1800");
+        properties.put("hibernate.c3p0.maxIdleTime", "21600");
 
         //properties.put("hibernate.c3p0.checkoutTimeout", "500");
         properties.put("hibernate.c3p0.preferredTestQuery", "SELECT 1 from exchange");
@@ -143,7 +144,7 @@ public class Injector {
         properties.put("hibernate.c3p0.acquireRetryAttempts", "30");
         properties.put("hibernate.c3p0.breakAfterAcquireFailure", "false");
         properties.put("hibernate.c3p0.checkoutTimeout", "5000");
-        properties.put("hibernate.c3p0.idleConnectionTestPeriod", "60");
+        properties.put("hibernate.c3p0.idleConnectionTestPeriod", "10800");
         properties.put("hibernate.c3p0.numHelperThreads", "10");
 
         //  properties.put("hibernate.c3p0.max_statements", "0");
@@ -152,7 +153,7 @@ public class Injector {
         //   properties.put("hibernate.c3p0.idleConnectionTestPeriod", "100");
 
         properties.put("javax.persistence.sharedCache.mode", "ENABLE_SELECTIVE");
-        properties.put("javax.persistence.LockModeType", "OPTIMISTIC_FORCE_INCREMENT");
+        // properties.put("javax.persistence.LockModeType", "OPTIMISTIC");
 
         // root = new Injector(Guice.createInjector(new LogInjector(), new PersistanceModule()), ConfigUtil.combined());
         //  new JpaPersistModule("org.cryptocoinpartners.schema")

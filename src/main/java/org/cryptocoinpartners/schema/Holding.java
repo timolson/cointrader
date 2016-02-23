@@ -6,6 +6,12 @@ import java.util.regex.Pattern;
 import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.OneToOne;
+import javax.persistence.Transient;
+
+import org.cryptocoinpartners.schema.dao.Dao;
+import org.cryptocoinpartners.schema.dao.HoldingDao;
+
+import com.google.inject.Inject;
 
 /**
  * A Holding represents an Asset on an Exchange.  It does not specify how much of the asset is held. See Position
@@ -14,6 +20,8 @@ import javax.persistence.OneToOne;
  */
 @MappedSuperclass
 public class Holding extends EntityBase {
+    @Inject
+    protected HoldingDao holdingDao;
 
     public static Holding forSymbol(String symbol) {
         Matcher matcher = Pattern.compile("(\\w+):(\\w+)").matcher(symbol);
@@ -73,5 +81,23 @@ public class Holding extends EntityBase {
     public void merge() {
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    @Transient
+    public Dao getDao() {
+        return holdingDao;
+    }
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public EntityBase refresh() {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

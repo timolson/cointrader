@@ -19,7 +19,7 @@ public class PendingCommand extends CommandBase {
 
     @Override
     public String getUsageHelp() {
-        return (isSell ? "sell" : "buy") + " {volume} {exchange}:{base}.{quote} [limit {price}] [stop {price}]";
+        return "pending {market}";
     }
 
     @Override
@@ -45,7 +45,10 @@ public class PendingCommand extends CommandBase {
     @Override
     public void run() {
         for (Portfolio portfolio : portfolioService.getPortfolios())
-            out.printList(orderService.getPendingOrders(market, portfolio));
+            if (market == null)
+                out.printList(orderService.getPendingOrders(portfolio));
+            else
+                out.printList(orderService.getPendingOrders(market, portfolio));
     }
 
     @Inject

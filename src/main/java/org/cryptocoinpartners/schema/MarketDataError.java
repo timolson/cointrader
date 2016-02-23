@@ -3,6 +3,9 @@ package org.cryptocoinpartners.schema;
 import javax.annotation.Nullable;
 import javax.persistence.ManyToOne;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.Transient;
+
+import org.cryptocoinpartners.schema.dao.Dao;
 
 /**
  * This event is posted when there are any problems retreiving market data
@@ -61,5 +64,24 @@ public class MarketDataError extends Event {
     public void merge() {
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    @Transient
+    public Dao getDao() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
+    @Override
+    public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public EntityBase refresh() {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

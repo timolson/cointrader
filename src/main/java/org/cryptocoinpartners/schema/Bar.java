@@ -4,8 +4,10 @@ import javax.annotation.Nullable;
 import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.Table;
+import javax.persistence.Transient;
 
 import org.cryptocoinpartners.schema.dao.BarJpaDao;
+import org.cryptocoinpartners.schema.dao.Dao;
 import org.joda.time.Instant;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
@@ -70,6 +72,11 @@ public class Bar extends MarketData {
         barDao.persist(this);
     }
 
+    @Override
+    public EntityBase refresh() {
+        return barDao.refresh(this);
+    }
+
     public Double getOpen() {
         return open;
     }
@@ -122,6 +129,18 @@ public class Bar extends MarketData {
     @Override
     public void merge() {
         barDao.merge(this);
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    @Transient
+    public Dao getDao() {
+        return barDao;
+    }
+
+    @Override
+    public void delete() {
         // TODO Auto-generated method stub
 
     }
