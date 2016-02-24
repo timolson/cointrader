@@ -146,7 +146,9 @@ public class Injector {
         properties.put("hibernate.c3p0.checkoutTimeout", ConfigUtil.combined().getString("db.checkout_timeout", "5000"));
         properties.put("hibernate.c3p0.idleConnectionTestPeriod", ConfigUtil.combined().getString("db.idle_connection_test_period", "10800"));
         properties.put("hibernate.c3p0.numHelperThreads", ConfigUtil.combined().getString("db.num_helper_threads", "10"));
-
+        properties.put("hibernate.c3p0.debugUnreturnedConnectionStackTraces",
+                ConfigUtil.combined().getString("db.debug_unreturned_connection_stack_traces", "false"));
+        //  properties.put("hibernate.c3p0.max_statements", "0");", "false"));. debug_unreturned_connection_stack_traces
         //  properties.put("hibernate.c3p0.max_statements", "0");
         //  properties.put("hibernate.c3p0.maxStatementsPerConnection", "100");
         // properties.put("hibernate.c3p0.validate", "true");
