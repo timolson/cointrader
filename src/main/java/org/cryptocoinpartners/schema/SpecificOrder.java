@@ -37,7 +37,7 @@ import com.xeiam.xchange.dto.trade.LimitOrder;
 @SuppressWarnings("UnusedDeclaration")
 @Entity
 @Cacheable
-public class SpecificOrder extends Order implements SpecOrder {
+public class SpecificOrder extends Order {
     @AssistedInject
     public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted long volumeCount) {
         super(time);
