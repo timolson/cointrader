@@ -137,15 +137,15 @@ public class Injector {
         //properties.put("hibernate.c3p0.checkoutTimeout", "500");
         properties.put("hibernate.c3p0.preferredTestQuery", "SELECT 1 from exchange");
         //  properties.put("hibernate.c3p0.maxConnectionAge", ConfigUtil.combined().getString("db.max.connection.age"));
-        final String testConnection = ConfigUtil.combined().getString("db.test.connection");
+        final String testConnection = ConfigUtil.combined().getString("db.test.connection", "false");
         properties.put("hibernate.c3p0.testConnectionOnCheckout", testConnection);
         // properties.put("hibernate.c3p0.testConnectionOnCheckin", testConnection);
-        properties.put("hibernate.c3p0.acquireRetryDelay", "1000");
-        properties.put("hibernate.c3p0.acquireRetryAttempts", "30");
-        properties.put("hibernate.c3p0.breakAfterAcquireFailure", "false");
-        properties.put("hibernate.c3p0.checkoutTimeout", "5000");
-        properties.put("hibernate.c3p0.idleConnectionTestPeriod", "10800");
-        properties.put("hibernate.c3p0.numHelperThreads", "10");
+        properties.put("hibernate.c3p0.acquireRetryDelay", ConfigUtil.combined().getString("db.acquire_retry_delay", "1000"));
+        properties.put("hibernate.c3p0.acquireRetryAttempts", ConfigUtil.combined().getString("db.acquire_retry_attempts", "30"));
+        properties.put("hibernate.c3p0.breakAfterAcquireFailure", ConfigUtil.combined().getString("db.break_after_acquire_failure", "false"));
+        properties.put("hibernate.c3p0.checkoutTimeout", ConfigUtil.combined().getString("db.checkout_timeout", "5000"));
+        properties.put("hibernate.c3p0.idleConnectionTestPeriod", ConfigUtil.combined().getString("db.idle_connection_test_period", "10800"));
+        properties.put("hibernate.c3p0.numHelperThreads", ConfigUtil.combined().getString("db.num_helper_threads", "10"));
 
         //  properties.put("hibernate.c3p0.max_statements", "0");
         //  properties.put("hibernate.c3p0.maxStatementsPerConnection", "100");
