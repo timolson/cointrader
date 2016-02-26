@@ -11,6 +11,7 @@ import javax.persistence.EntityGraph;
 import javax.persistence.EntityManager;
 import javax.persistence.NoResultException;
 import javax.persistence.OptimisticLockException;
+import javax.persistence.Query;
 import javax.persistence.TypedQuery;
 
 import org.cryptocoinpartners.schema.EntityBase;
@@ -51,6 +52,39 @@ public class EM {
             return entityManagerProvider.get();
         } finally {
             unitOfWork.end();
+        }
+    }
+
+    @SuppressWarnings("ConstantConditions")
+    public static void queryEach(Visitor<Object[]> handler, int batchSize, String queryStr, Object... params) {
+        EntityManager em = null;
+        try {
+            beginUnitOfWork();
+            log.trace("namedQueryZeroOne unit of work ended for thread: " + Thread.currentThread());
+
+            final Query query = em().createQuery(queryStr);
+            if (params != null) {
+                for (int i = 0; i < params.length; i++) {
+                    Object param = params[i];
+                    query.setParameter(i + 1, param); // JPA uses 1-based indexes
+                }
+            }
+            query.setMaxResults(batchSize);
+            for (int start = 0;; start += batchSize) {
+                query.setFirstResult(start);
+                List list = query.getResultList();
+                if (list.isEmpty())
+                    return;
+                for (Object row : list) {
+                    if (row.getClass().isArray() && !handler.handleItem((Object[]) row) || !row.getClass().isArray()
+                            && !handler.handleItem(new Object[] { row }))
+                        return;
+                }
+            }
+        } finally {
+            unitOfWork.end();
+            log.trace("namedQueryZeroOne unit of work ended for thread: " + Thread.currentThread());
+
         }
     }
 
