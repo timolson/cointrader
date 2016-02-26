@@ -7,7 +7,6 @@ import javax.inject.Inject;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.cryptocoinpartners.util.EM;
-import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.Visitor;
 import org.slf4j.Logger;
 
@@ -50,7 +49,7 @@ public abstract class JpaReport implements Report {
                     return true;
                 }
             };
-            PersistUtil.queryEach(visitor, query.queryStr, query.params);
+            EM.queryEach(visitor, query.queryStr, query.params);
         }
         String[][] rowStringTable = new String[rowStrings.size()][];
         rowStrings.toArray(rowStringTable);

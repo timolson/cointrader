@@ -55,6 +55,10 @@ public class EM {
         }
     }
 
+    public static void queryEach(Visitor<Object[]> handler, String queryStr, Object... params) {
+        queryEach(handler, defaultBatchSize, queryStr, params);
+    }
+
     @SuppressWarnings("ConstantConditions")
     public static void queryEach(Visitor<Object[]> handler, int batchSize, String queryStr, Object... params) {
         EntityManager em = null;
