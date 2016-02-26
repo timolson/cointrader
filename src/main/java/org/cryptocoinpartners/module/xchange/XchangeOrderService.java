@@ -450,7 +450,8 @@ public class XchangeOrderService extends BaseOrderService {
         if (specificOrder.getPositionEffect() == null || specificOrder.getPositionEffect() == PositionEffect.OPEN)
             orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
         else if (specificOrder.getPositionEffect() == PositionEffect.CLOSE)
-            orderType = specificOrder.isAsk() ? Order.OrderType.EXIT_BID : Order.OrderType.EXIT_ASK;
+            orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
+        // orderType = specificOrder.isAsk() ? Order.OrderType.EXIT_BID : Order.OrderType.EXIT_ASK;
         BigDecimal tradeableVolume = specificOrder.getVolume().abs().asBigDecimal();
         CurrencyPair currencyPair = XchangeUtil.getCurrencyPairForListing(specificOrder.getMarket().getListing());
         String id = specificOrder.getId().toString();
