@@ -6,7 +6,7 @@ import java.util.List;
 import javax.inject.Inject;
 
 import org.apache.commons.lang.ArrayUtils;
-import org.cryptocoinpartners.util.EM;
+import org.cryptocoinpartners.schema.dao.ReportDao;
 import org.cryptocoinpartners.util.Visitor;
 import org.slf4j.Logger;
 
@@ -14,6 +14,8 @@ import org.slf4j.Logger;
  * @author Tim Olson
  */
 public abstract class JpaReport implements Report {
+    @Inject
+    protected ReportDao reportDao;
 
     public int getLimit() {
         return limit;
@@ -40,7 +42,7 @@ public abstract class JpaReport implements Report {
                     return ++count < limit;
                 }
             };
-            EM.queryEach(visitor, limit, query.queryStr, query.params);
+            reportDao.queryEach(visitor, limit, query.queryStr, query.params);
         } else {
             Visitor<Object[]> visitor = new Visitor<Object[]>() {
                 @Override
@@ -49,7 +51,7 @@ public abstract class JpaReport implements Report {
                     return true;
                 }
             };
-            EM.queryEach(visitor, query.queryStr, query.params);
+            reportDao.queryEach(visitor, query.queryStr, query.params);
         }
         String[][] rowStringTable = new String[rowStrings.size()][];
         rowStrings.toArray(rowStringTable);

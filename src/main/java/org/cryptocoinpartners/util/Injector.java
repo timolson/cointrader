@@ -155,6 +155,8 @@ public class Injector {
         //   properties.put("hibernate.c3p0.idleConnectionTestPeriod", "100");
 
         properties.put("javax.persistence.sharedCache.mode", "ENABLE_SELECTIVE");
+        properties.put("javax.persistence.query.timeout", ConfigUtil.combined().getString("db.query_timeout", "5000"));
+
         // properties.put("javax.persistence.LockModeType", "OPTIMISTIC");
 
         // root = new Injector(Guice.createInjector(new LogInjector(), new PersistanceModule()), ConfigUtil.combined());

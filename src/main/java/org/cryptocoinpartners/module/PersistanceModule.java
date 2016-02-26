@@ -38,6 +38,8 @@ import org.cryptocoinpartners.schema.dao.PositionDao;
 import org.cryptocoinpartners.schema.dao.PositionJpaDao;
 import org.cryptocoinpartners.schema.dao.PromptDao;
 import org.cryptocoinpartners.schema.dao.PromptJpaDao;
+import org.cryptocoinpartners.schema.dao.ReportDao;
+import org.cryptocoinpartners.schema.dao.ReportJpaDao;
 import org.cryptocoinpartners.schema.dao.TradeDao;
 import org.cryptocoinpartners.schema.dao.TradeJpaDao;
 import org.cryptocoinpartners.schema.dao.TransactionDao;
@@ -132,6 +134,7 @@ public class PersistanceModule extends AbstractModule {
         bind(TradeDao.class).to(TradeJpaDao.class);
         bind(TransactionDao.class).to(TransactionJpaDao.class);
         bind(OrderUpdateDao.class).to(OrderUpdateJpaDao.class);
+        bind(ReportDao.class).to(ReportJpaDao.class);
 
         //  bind(OrderUpdateDao.class).to(OrderUpdateJpaDao.class);
 
