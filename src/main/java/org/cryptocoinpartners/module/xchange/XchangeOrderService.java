@@ -451,8 +451,8 @@ public class XchangeOrderService extends BaseOrderService {
             orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
         else if (specificOrder.getPositionEffect() == PositionEffect.CLOSE)
             // if order volume is < 0 && it is closing, then I am exiting Bid, else I am exit bid
-            orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
-        // orderType = specificOrder.isAsk() ? Order.OrderType.EXIT_BID : Order.OrderType.EXIT_ASK;
+            //  orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
+            orderType = specificOrder.isAsk() ? Order.OrderType.EXIT_BID : Order.OrderType.EXIT_ASK;
         BigDecimal tradeableVolume = specificOrder.getVolume().abs().asBigDecimal();
         CurrencyPair currencyPair = XchangeUtil.getCurrencyPairForListing(specificOrder.getMarket().getListing());
         String id = specificOrder.getId().toString();
