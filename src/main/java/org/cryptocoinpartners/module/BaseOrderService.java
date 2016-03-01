@@ -1839,44 +1839,36 @@ public abstract class BaseOrderService implements OrderService {
 
     @Override
     public synchronized void handleCancelAllSpecificOrders(Portfolio portfolio, Market market) {
-        Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
+        Collection<SpecificOrder> ordersToCancel = new ArrayList<>();
         // synchronized (lock) {
         for (Iterator<Order> it = getPendingOrders().iterator(); it.hasNext();) {
             Order order = it.next();
             if (order instanceof SpecificOrder) {
                 SpecificOrder specificOrder = (SpecificOrder) order;
                 if (specificOrder.getMarket().equals(market)) {
-                    cancelledOrders.add(specificOrder);
+                    ordersToCancel.add(specificOrder);
                     log.info("handleCancelAllSpecificOrders cancelling order : " + specificOrder);
                 }
             }
+        }
+        Collection<SpecificOrder> cancelledOrders = cancelSpecificOrder(ordersToCancel);
 
-            if (!cancelSpecificOrder(cancelledOrders)) {
-                log.info("handleCancelAllSpecificOrders Orders not found: " + cancelledOrders);
-
-                // throw new OrderNotFoundException("Unable to cancelled order" + cancelledOrders);
-
-            } else {
-
-                for (Order cancelledOrder : cancelledOrders) {
-                    log.info("handleCancelAllSpecificOrders cancelled order : " + cancelledOrder);
-                    updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
-                }
-
-            }
+        for (Order cancelledOrder : cancelledOrders) {
+            log.info("handleCancelAllSpecificOrders cancelled order : " + cancelledOrder);
+            updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
         }
 
-        //cancelledOrders.add(specificOrder);
-        // updateOrderState(specificOrder, OrderState.CANCELLING);
-
-        //          for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
-        //              SpecificOrder specificOrder = it.next();
-        //
-        //              
-        //          }
-        //  }
-
     }
+
+    //cancelledOrders.add(specificOrder);
+    // updateOrderState(specificOrder, OrderState.CANCELLING);
+
+    //          for (Iterator<SpecificOrder> it = cancelledOrders.iterator(); it.hasNext();) {
+    //              SpecificOrder specificOrder = it.next();
+    //
+    //              
+    //          }
+    //  }
 
     @Override
     public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio) {
@@ -2008,7 +2000,7 @@ public abstract class BaseOrderService implements OrderService {
 
     @Override
     public synchronized void handleCancelAllShortClosingSpecificOrders(Portfolio portfolio, Market market, ExecutionInstruction execInst) {
-        Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
+        Collection<SpecificOrder> orderToCancel = new ArrayList<>();
         //   synchronized (lock) {
         for (Iterator<Order> it = getPendingOrders().iterator(); it.hasNext();) {
             Order order = it.next();
@@ -2019,23 +2011,18 @@ public abstract class BaseOrderService implements OrderService {
                         && specificOrder.isBid()
                         && (specificOrder.getExecutionInstruction() == null || (specificOrder.getExecutionInstruction() != null && specificOrder
                                 .getExecutionInstruction().equals(execInst)))) {
-                    cancelledOrders.add(specificOrder);
+                    orderToCancel.add(specificOrder);
                     log.info("handleCancelAllShortClosingSpecificOrders cancelling order : " + specificOrder);
 
                 }
             }
-
-            if (!cancelSpecificOrder(cancelledOrders)) {
-                log.info("handleCancelAllShortClosingSpecificOrders Order not found: " + cancelledOrders);
-
-                // throw new OrderNotFoundException("Unable to cancelled order + cancelledOrders");
-            } else {
-
-                for (Order cancelledOrder : cancelledOrders)
-                    updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
-
-            }
         }
+
+        Collection<SpecificOrder> cancelledOrders = cancelSpecificOrder(orderToCancel);
+
+        for (Order cancelledOrder : cancelledOrders)
+            updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
+
     }
 
     protected void handleUpdateSpecificOrderWorkingQuantity(SpecificOrder specificOrder, DiscreteAmount quantity) {
@@ -2093,7 +2080,7 @@ public abstract class BaseOrderService implements OrderService {
 
     @Override
     public synchronized void handleCancelAllClosingSpecificOrders(Portfolio portfolio, Market market) {
-        Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
+        Collection<SpecificOrder> orderToCancel = new ArrayList<>();
         //   synchronized (lock) {
         for (Iterator<Order> it = getPendingOrders().iterator(); it.hasNext();) {
             Order order = it.next();
@@ -2101,54 +2088,38 @@ public abstract class BaseOrderService implements OrderService {
                 SpecificOrder specificOrder = (SpecificOrder) order;
                 if (specificOrder.getMarket().equals(market) && specificOrder.getPositionEffect() == (PositionEffect.CLOSE)) {
                     //cancelledOrders.add(specificOrder);
-                    cancelledOrders.add(specificOrder);
+                    orderToCancel.add(specificOrder);
                     log.debug("handleCancelAllLongClosingSpecificOrders cancelling order : " + specificOrder);
                 }
             }
-            if (!cancelSpecificOrder(cancelledOrders)) {
-                log.info("handleCancelAllLongClosingSpecificOrders Order not found: " + cancelledOrders);
+        }
+        Collection<SpecificOrder> cancelledOrders = cancelSpecificOrder(orderToCancel);
 
-                // throw new OrderNotFoundException("Unable to cancelled order" + cancelledOrders);
-
-            } else {
-
-                for (Order cancelledOrder : cancelledOrders) {
-                    log.info("handleCancelAllLongClosingSpecificOrders cancelled order : " + order);
-                    updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
-                }
-
-            }
+        for (Order cancelledOrder : cancelledOrders) {
+            log.info("handleCancelAllLongClosingSpecificOrders cancelled order : " + cancelledOrder);
+            updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
         }
 
     }
 
     @Override
     public synchronized void handleCancelAllLongOpeningSpecificOrders(Portfolio portfolio, Market market) {
-        Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
+        Collection<SpecificOrder> orderToCancel = new ArrayList<>();
         //  synchronized (lock) {
         for (Order order : getPendingOrders()) {
             if (order instanceof SpecificOrder) {
                 SpecificOrder specificOrder = (SpecificOrder) order;
                 if (specificOrder.getMarket().equals(market) && specificOrder.getPositionEffect() == (PositionEffect.OPEN) && specificOrder.isBid()) {
-                    cancelledOrders.add(specificOrder);
+                    orderToCancel.add(specificOrder);
                     log.info("handleCancelAllLongOpeningSpecificOrders cancelling order : " + specificOrder);
                 }
 
             }
-            if (!cancelSpecificOrder(cancelledOrders)) {
-
-                log.info("handleCancelAllLongOpeningSpecificOrders Orders not found: " + cancelledOrders);
-
-                //throw new OrderNotFoundException("Unable to cancelled orders" + cancelledOrders);
-
-            } else {
-
-                for (Order cancelledOrder : cancelledOrders) {
-                    log.info("handleCancelAllLongOpeningSpecificOrder cancelled order : " + order);
-                    updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
-                }
-
-            }
+        }
+        Collection<SpecificOrder> cancelledOrders = cancelSpecificOrder(orderToCancel);
+        for (Order cancelledOrder : cancelledOrders) {
+            log.info("handleCancelAllLongOpeningSpecificOrder cancelled order : " + cancelledOrder);
+            updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
         }
 
     }
@@ -2197,7 +2168,7 @@ public abstract class BaseOrderService implements OrderService {
 
     @Override
     public synchronized void handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market, ExecutionInstruction execInst) {
-        Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
+        Collection<SpecificOrder> orderToCancel = new ArrayList<>();
         //   synchronized (lock) {
         for (Iterator<Order> it = getPendingOrders().iterator(); it.hasNext();) {
             Order order = it.next();
@@ -2208,20 +2179,16 @@ public abstract class BaseOrderService implements OrderService {
                         && specificOrder.isAsk()
                         && (specificOrder.getExecutionInstruction() == null || (specificOrder.getExecutionInstruction() != null && specificOrder
                                 .getExecutionInstruction().equals(execInst)))) {
-                    cancelledOrders.add(specificOrder);
+                    orderToCancel.add(specificOrder);
                     log.info("handleCancelAllLongClosingSpecificOrders cancelling order : " + specificOrder);
                 }
             }
-            if (!cancelSpecificOrder(cancelledOrders)) {
-                log.info("handleCancelAllLongClosingSpecificOrders Order not found: " + cancelledOrders);
+        }
+        Collection<SpecificOrder> cancelledOrders = cancelSpecificOrder(orderToCancel);
 
-                // throw new OrderNotFoundException("Unable to cancelled order + cancelledOrders");
-            } else {
-
-                for (Order cancelledOrder : cancelledOrders)
-                    updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
-
-            }
+        for (Order cancelledOrder : cancelledOrders) {
+            log.info("handleCancelAllLongOpeningSpecificOrder cancelled order : " + cancelledOrder);
+            updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
         }
 
     }
@@ -2454,38 +2421,31 @@ public abstract class BaseOrderService implements OrderService {
 
     @Override
     public synchronized void handleCancelAllShortOpeningSpecificOrders(Portfolio portfolio, Market market) {
-        Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
+        Collection<SpecificOrder> orderToCancel = new ArrayList<>();
         //  synchronized (lock) {
         for (Order order : getPendingOrders()) {
             if (order instanceof SpecificOrder) {
                 SpecificOrder specificOrder = (SpecificOrder) order;
                 if (specificOrder.getMarket().equals(market) && specificOrder.getPositionEffect() == (PositionEffect.OPEN) && specificOrder.isAsk()) {
-                    cancelledOrders.add(specificOrder);
+                    orderToCancel.add(specificOrder);
                     log.info("handleCancelAllShortOpeningSpecificOrders cancelling order : " + specificOrder);
                 }
 
             }
+        }
 
-            if (!cancelSpecificOrder(cancelledOrders)) {
-                log.info("handleCancelAllShortOpeningSpecificOrders Orders not found: " + cancelledOrders);
+        Collection<SpecificOrder> cancelledOrders = cancelSpecificOrder(orderToCancel);
 
-                //      throw new OrderNotFoundException("Unable to cancelled order" + cancelledOrders);
-
-            } else {
-
-                for (Order cancelledOrder : cancelledOrders) {
-                    log.info("handleCancelAllShortOpeningSpecificOrders cancelled order : " + order);
-                    updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
-                }
-
-            }
+        for (Order cancelledOrder : cancelledOrders) {
+            log.info("handleCancelAllShortOpeningSpecificOrders cancelled order : " + cancelledOrder);
+            updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
         }
 
     }
 
     @Override
     public synchronized void handleCancelAllOpeningSpecificOrders(Portfolio portfolio, Market market) {
-        Collection<SpecificOrder> cancelledOrders = new ArrayList<>();
+        Collection<SpecificOrder> orderToCancel = new ArrayList<>();
         //  synchronized (lock) {
         for (Order order : getPendingOrders()) {
             SpecificOrder specificOrder;
@@ -2493,36 +2453,29 @@ public abstract class BaseOrderService implements OrderService {
                 specificOrder = (SpecificOrder) order;
 
                 if (specificOrder.getMarket().equals(market) && specificOrder.getPositionEffect() == (PositionEffect.OPEN)) {
-                    cancelledOrders.add(specificOrder);
+                    orderToCancel.add(specificOrder);
                     log.info("handleCancelAllOpeningSpecificOrders cancelling order : " + specificOrder);
                 }
 
             }
-
-            if (!cancelSpecificOrder(cancelledOrders)) {
-                log.info("handleCancelAllOpeningSpecificOrders Orders not found: " + cancelledOrders);
-
-                //    throw new OrderNotFoundException("Unable to cancelled order" + cancelledOrders);
-
-            } else {
-
-                for (Order cancelledOrder : cancelledOrders) {
-                    log.info("handleCancelAllOpeningSpecificOrders cancelled order : " + order);
-                    updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
-                }
-
-            }
         }
+
+        Collection<SpecificOrder> cancelledOrders = cancelSpecificOrder(orderToCancel);
+        for (Order cancelledOrder : cancelledOrders) {
+            log.info("handleCancelAllOpeningSpecificOrders cancelled order : " + cancelledOrders);
+            updateOrderState(cancelledOrder, OrderState.CANCELLED, false);
+        }
+
     }
 
     @Override
-    public synchronized boolean cancelSpecificOrder(Collection<SpecificOrder> orders) {
-        boolean cancelled = true;
+    public synchronized Collection<SpecificOrder> cancelSpecificOrder(Collection<SpecificOrder> orders) {
+        Collection<SpecificOrder> cancelledOrders = new ArrayList<SpecificOrder>();
         for (SpecificOrder order : orders) {
-            if (!cancelSpecificOrder(order))
-                cancelled = false;
+            if (cancelSpecificOrder(order))
+                cancelledOrders.add(order);
         }
-        return cancelled;
+        return cancelledOrders;
 
     }
 

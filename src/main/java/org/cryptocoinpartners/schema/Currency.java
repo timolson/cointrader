@@ -15,6 +15,8 @@ import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
 
+// import org.cryptocoinpartners.util.EM;
+
 /**
  * @author Tim Olson
  */
@@ -57,13 +59,16 @@ public class Currency extends Asset {
     static Currency forSymbolOrCreate(String symbol, boolean isFiat, double basis) {
         try {
             Currency currency = forSymbol(symbol);
+            currency.setRevision(currency.getRevision() + 1);
             currencyDao.persistEntities(currency);
             return currency;
         } catch (NoResultException e) {
 
             //
             final Currency currency = new Currency(isFiat, symbol, basis);
+            //Injector.root().injectMembers(currency);
             // final Currency currency = currencyFactory.create(isFiat, symbol, basis);
+            currency.setRevision(currency.getRevision() + 1);
             currencyDao.persistEntities(currency);
             return currency;
         }
@@ -75,6 +80,7 @@ public class Currency extends Asset {
             return forSymbol(symbol);
         } catch (NoResultException e) {
             final Currency currency = new Currency(isFiat, symbol, basis, multiplier);
+            currency.setRevision(currency.getRevision() + 1);
             currencyDao.persistEntities(currency);
             return currency;
         }
@@ -103,8 +109,8 @@ public class Currency extends Asset {
 
     @Override
     public void persit() {
-
-        currencyDao.persist(this);
+        this.setRevision(this.getRevision() + 1);
+        currencyDao.persistEntities(this);
         // TODO Auto-generated method stub
 
     }

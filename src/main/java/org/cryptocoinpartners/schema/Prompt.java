@@ -162,6 +162,7 @@ public class Prompt extends EntityBase {
             Asset tradedCurrency = Currency.forSymbol(currency);
             final Prompt prompt = new Prompt(symbol, tickValue, tickSize, tradedCurrency, volumeBasis, margin, marginMethod, feeRate, feeMethod,
                     marginFeeMethod);
+            prompt.setRevision(prompt.getRevision() + 1);
             promptDao.persistEntities(prompt);
             return prompt;
         }
@@ -206,7 +207,8 @@ public class Prompt extends EntityBase {
 
     @Override
     public void persit() {
-        promptDao.persist(this);
+        this.setRevision(this.getRevision() + 1);
+        promptDao.persistEntities(this);
 
     }
 

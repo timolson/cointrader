@@ -234,7 +234,18 @@ public class MockOrderService extends BaseOrderService {
     @Override
     protected synchronized boolean cancelSpecificOrder(SpecificOrder order) {
 
-        return (pendingOrders.remove(order));
+        try {
+            if (pendingOrders.remove(order))
+                return true;
+            else {
+                log.error("Unable to cancel order :" + order);
+
+                return false;
+            }
+        } catch (Error | Exception e) {
+            log.error("Unable to cancel order :" + order);
+            return false;
+        }
 
     }
 

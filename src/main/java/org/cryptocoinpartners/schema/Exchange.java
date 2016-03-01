@@ -35,6 +35,7 @@ public class Exchange extends EntityBase {
         Exchange found = forSymbol(symbol);
         if (found == null) {
             found = new Exchange(symbol);
+            found.setRevision(found.getRevision() + 1);
             exchangeDao.persistEntities(found);
         }
         return found;
@@ -44,6 +45,7 @@ public class Exchange extends EntityBase {
         Exchange found = forSymbol(symbol);
         if (found == null) {
             found = new Exchange(symbol, margin, feeRate, feeMethod, fillsProvided);
+            found.setRevision(found.getRevision() + 1);
             exchangeDao.persistEntities(found);
 
         }
@@ -55,7 +57,9 @@ public class Exchange extends EntityBase {
         Exchange found = forSymbol(symbol);
         if (found == null) {
             found = new Exchange(symbol, margin, feeRate, feeMethod, marginFeeRate, marginFeeMethod, fillsProvided);
+            found.setRevision(found.getRevision() + 1);
             exchangeDao.persistEntities(found);
+            // exchangeDao.persist(found);
         }
         return found;
     }
@@ -179,7 +183,8 @@ public class Exchange extends EntityBase {
 
     @Override
     public void persit() {
-        exchangeDao.persist(this);
+        this.setRevision(this.getRevision() + 1);
+        exchangeDao.persistEntities(this);
         // TODO Auto-generated method stub
 
     }

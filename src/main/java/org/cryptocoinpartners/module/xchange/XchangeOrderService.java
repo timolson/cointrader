@@ -450,6 +450,7 @@ public class XchangeOrderService extends BaseOrderService {
         if (specificOrder.getPositionEffect() == null || specificOrder.getPositionEffect() == PositionEffect.OPEN)
             orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
         else if (specificOrder.getPositionEffect() == PositionEffect.CLOSE)
+            // if order volume is < 0 && it is closing, then I am exiting Bid, else I am exit bid
             orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
         // orderType = specificOrder.isAsk() ? Order.OrderType.EXIT_BID : Order.OrderType.EXIT_ASK;
         BigDecimal tradeableVolume = specificOrder.getVolume().abs().asBigDecimal();
@@ -1029,8 +1030,13 @@ public class XchangeOrderService extends BaseOrderService {
         try {
             exchange = XchangeUtil.getExchangeForMarket(order.getMarket().getExchange());
             PollingTradeService tradeService = exchange.getPollingTradeService();
-            tradeService.cancelOrder(order.getRemoteKey());
-            return true;
+            if (tradeService.cancelOrder(order.getRemoteKey()))
+                return true;
+            else {
+                log.error("Unable to cancel order :" + order);
+
+                return false;
+            }
         } catch (Error | Exception e) {
             log.error("Unable to cancel order :" + order);
             return false;

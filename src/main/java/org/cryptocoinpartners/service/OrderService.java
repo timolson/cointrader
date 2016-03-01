@@ -121,7 +121,7 @@ public interface OrderService {
 
     public Map<Order, OrderState> getOrderStateMap();
 
-    boolean cancelSpecificOrder(Collection<SpecificOrder> orders);
+    Collection<SpecificOrder> cancelSpecificOrder(Collection<SpecificOrder> orders);
 
     public Collection<Fill> getFills(Market market, Portfolio portfolio);
 
