@@ -46,6 +46,17 @@ public class XchangeUtil {
 
     }
 
+    public static synchronized com.xeiam.xchange.Exchange resetExchange(Exchange coinTraderExchange) {
+        ExchangeSpecification spec = getExchangeForMarket(coinTraderExchange).getExchangeSpecification();
+        if (spec != null) {
+            com.xeiam.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
+            exchangesByMarket.put(coinTraderExchange, exchange);
+            return exchange;
+        } else
+            throw new Error("Could not get XChange Exchange for Coin Trader Exchange " + coinTraderExchange);
+
+    }
+
     public static CurrencyPair getCurrencyPairForListing(Listing listing) {
         return new CurrencyPair(listing.getBase().getSymbol(), listing.getQuote().getSymbol());
     }

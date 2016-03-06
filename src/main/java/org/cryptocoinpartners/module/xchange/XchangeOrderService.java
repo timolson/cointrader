@@ -113,10 +113,12 @@ public class XchangeOrderService extends BaseOrderService {
                 final String helperClassName = config.getString(prefix + "helper.class", null);
                 final String streamingConfigClassName = config.getString(prefix + "streaming.config.class", null);
                 int queries = config.getInt(prefix + "rate.queries", 1);
+                int retryCount = config.getInt(prefix + "retry", 10);
+
                 Duration period = Duration.millis((long) (2000 * config.getDouble(prefix + "rate.period", 1))); // rate.period in seconds
                 final List listings = config.getList(prefix + "listings");
 
-                initExchange(helperClassName, streamingConfigClassName, queries, period, exchange, listings);
+                initExchange(helperClassName, streamingConfigClassName, retryCount, queries, period, exchange, listings);
             } else {
                 log.warn("Could not find Exchange for property \"xchange." + tag + ".*\"");
             }
@@ -133,7 +135,7 @@ public class XchangeOrderService extends BaseOrderService {
         void handleOrderBook(OrderBook orderBook);
     }
 
-    private void initExchange(@Nullable String helperClassName, @Nullable String streamingConfigClassName, int queries, Duration per,
+    private void initExchange(@Nullable String helperClassName, @Nullable String streamingConfigClassName, int retryCount, int queries, Duration per,
             Exchange coinTraderExchange, List listings) {
         com.xeiam.xchange.Exchange xchangeExchange = XchangeUtil.getExchangeForMarket(coinTraderExchange);
         StreamingExchangeService streamingDataService;
@@ -200,12 +202,12 @@ public class XchangeOrderService extends BaseOrderService {
             }
             return;
         } else {
-            PollingTradeService dataService = xchangeExchange.getPollingTradeService();
+            //    PollingTradeService dataService = xchangeExchange.getPollingTradeService();
 
             RateLimiter rateLimiter = new RateLimiter(queries, per);
 
-            for (Iterator<Market> im = markets.iterator(); im.hasNext(); rateLimiter.execute(new FetchOrdersRunnable(context, market, rateLimiter, dataService,
-                    helper)))
+            for (Iterator<Market> im = markets.iterator(); im.hasNext(); rateLimiter.execute(new FetchOrdersRunnable(context, market, rateLimiter,
+                    coinTraderExchange, retryCount, helper)))
                 market = im.next();
 
             return;
@@ -565,16 +567,18 @@ public class XchangeOrderService extends BaseOrderService {
         private final Helper helper;
         DateFormat dateFormat = new SimpleDateFormat("ddMMyy");
 
-        public FetchOrdersRunnable(Context context, Market market, RateLimiter rateLimiter, PollingTradeService tradeService, @Nullable Helper helper) {
+        public FetchOrdersRunnable(Context context, Market market, RateLimiter rateLimiter, Exchange coinTraderExchange, int restartCount,
+                @Nullable Helper helper) {
             this.context = context;
             this.market = market;
             this.rateLimiter = rateLimiter;
-            this.tradeService = tradeService;
+            this.coinTraderExchange = coinTraderExchange;
+            //   this.tradeService = tradeService;
             this.helper = helper;
             this.prompt = market.getListing().getPrompt();
             pair = XchangeUtil.getCurrencyPairForListing(market.getListing());
             contract = prompt == null ? null : XchangeUtil.getContractForListing(market.getListing());
-
+            this.restartCount = restartCount;
             lastTradeTime = 0;
             lastTradeId = 0;
             // EntityManager entityManager = PersistUtil.createEntityManager();
@@ -586,6 +590,12 @@ public class XchangeOrderService extends BaseOrderService {
             try {
 
                 getOrders();
+            } catch (Throwable e) {
+                log.error(this.getClass().getSimpleName() + ":run. Unable to retrive order statuses for market:" + market);
+                //Thread.currentThread().
+                // throw e;
+                //Thread.currentThread().interrupt();
+                // throw e;
 
             } finally {
                 // getTradesNext = !getTradesNext;
@@ -649,7 +659,7 @@ public class XchangeOrderService extends BaseOrderService {
 
          }*/
 
-        protected void getOrders() {
+        protected void getOrders() throws Throwable {
             try {
                 Object params[];
                 if (helper != null)
@@ -702,7 +712,11 @@ public class XchangeOrderService extends BaseOrderService {
                 // getPendingOrders();
                 Collection<Order> exchangeOrders = null;
                 if (!openOrders.isEmpty()) {
-                    exchangeOrders = tradeService.getOrder(openOrders.toArray(new String[openOrders.size()]));
+
+                    // Trades tradeSpec = XchangeUtil.getExchangeForMarket(coinTraderExchange).
+
+                    exchangeOrders = XchangeUtil.getExchangeForMarket(coinTraderExchange).getPollingTradeService()
+                            .getOrder(openOrders.toArray(new String[openOrders.size()]));
 
                     // OpenOrders tradeSpec = tradeService.getOpenOrders();
                     // List<LimitOrder> openExchangeOrders = tradeSpec.getOpenOrders();
@@ -819,20 +833,37 @@ public class XchangeOrderService extends BaseOrderService {
                   //                    }
                   //
                   //                } while (true);
+                tradeFailureCount = 0;
+                return;
             } catch (Exception | Error e) {
-                log.error(this.getClass().getSimpleName() + ":getOrders Unabel to get trade for market " + market + " pair " + pair + " . Full stack trade: "
-                        + e);
 
-                //  log.warn("Could not get trades for " + market, e);
-                //  context.publish(new d(market, e));
+                tradeFailureCount++;
+                log.error(this.getClass().getSimpleName() + ":getOrders unable to get orders for market  " + market + " pair " + pair + ".  Failure "
+                        + tradeFailureCount + " of " + restartCount + ". Full Stack Trace: " + e);
+                if (tradeFailureCount >= restartCount) {
+                    //try {
+                    //  if (rateLimiter.getRunnables() == null || rateLimiter.getRunnables().isEmpty() || rateLimiter.remove(this)) {
+
+                    log.error(this.getClass().getSimpleName() + ":getOrders unable to get orders for " + market + " pair " + pair + " for " + tradeFailureCount
+                            + " of " + restartCount + " time. Resetting Trade Service Connection.");
+                    com.xeiam.xchange.Exchange xchangeExchange = XchangeUtil.resetExchange(coinTraderExchange);
+                    // dataService = xchangeExchange.getPollingMarketDataService();
+                    tradeFailureCount = 0;
+                    throw e;
+                    //}
+
+                }
             }
             return;
         }
 
         // private final Book.Builder bookBuilder = new Book.Builder();
         private final boolean getTradesNext = true;
-        private final PollingTradeService tradeService;
         private final RateLimiter rateLimiter;
+        private final Exchange coinTraderExchange;
+        private final int restartCount;
+        private int tradeFailureCount = 0;
+
         private final Context context;
         private final Market market;
         private final CurrencyPair pair;
@@ -1023,23 +1054,27 @@ public class XchangeOrderService extends BaseOrderService {
         }
     };
 
+    @SuppressWarnings("finally")
     @Override
     protected synchronized boolean cancelSpecificOrder(SpecificOrder order) {
         com.xeiam.xchange.Exchange exchange;
+
+        boolean deleted = false;
 
         try {
             exchange = XchangeUtil.getExchangeForMarket(order.getMarket().getExchange());
             PollingTradeService tradeService = exchange.getPollingTradeService();
             if (tradeService.cancelOrder(order.getRemoteKey()))
-                return true;
+                deleted = true;
             else {
                 log.error("Unable to cancel order :" + order);
 
-                return false;
             }
         } catch (Error | Exception e) {
             log.error("Unable to cancel order :" + order);
-            return false;
+
+        } finally {
+            return deleted;
         }
 
     }

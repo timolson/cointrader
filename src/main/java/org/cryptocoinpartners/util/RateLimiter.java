@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.util;
 
+import java.util.Collection;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
@@ -64,10 +65,28 @@ public class RateLimiter implements Executor {
     @Override
     public void execute(Runnable runnable) {
         waitingRunnables.add(runnable);
-
         runnableCount.release();
     }
 
+    public boolean remove(Runnable runnable) throws Throwable {
+        if (waitingRunnables.remove(runnable)) {
+            finalize();
+            // runnableCount.release();
+            // requestsAvailable.release();
+            return true;
+        }
+        return false;
+    }
+
+    public Collection<Runnable> getRunnables() {
+        return waitingRunnables;
+    }
+
+    public void stopRunnablePump() {
+        pump.interrupt();
+    }
+
+    //}
     // This thread waits for a Runnable to be put on the waitingRunnables queue, then waits for the rate limit
     // to be available, then pushes the Runnable to the executor for execution.
     private class RunnablePump extends Thread {
@@ -78,7 +97,7 @@ public class RateLimiter implements Executor {
         @Override
         public void run() {
             boolean running = true;
-            while (running) {
+            while (running && !isInterrupted()) {
                 try {
                     runnableCount.acquire(); // wait until there are any scheduled runnables available
                     Runnable runnable;
@@ -86,7 +105,9 @@ public class RateLimiter implements Executor {
                     requestsAvailable.acquire(); // wait until there is request limit available, issue here with acquring the lock
                     executor.execute(runnable);
                 } catch (InterruptedException e) {
+
                     running = false;
+                    break;
                 }
             }
         }
@@ -94,7 +115,7 @@ public class RateLimiter implements Executor {
     }
 
     @Override
-    protected void finalize() throws Throwable {
+    public void finalize() throws Throwable {
         pump.interrupt();
         super.finalize();
     }

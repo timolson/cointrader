@@ -2,6 +2,9 @@ package org.cryptocoinpartners.module.xchange;
 
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -48,7 +51,6 @@ import com.xeiam.xchange.dto.marketdata.Trade;
 import com.xeiam.xchange.dto.marketdata.Trades;
 import com.xeiam.xchange.dto.trade.LimitOrder;
 import com.xeiam.xchange.okcoin.FuturesContract;
-import com.xeiam.xchange.service.polling.marketdata.PollingMarketDataService;
 import com.xeiam.xchange.service.streaming.ExchangeEvent;
 import com.xeiam.xchange.service.streaming.ExchangeEventType;
 import com.xeiam.xchange.service.streaming.ExchangeStreamingConfiguration;
@@ -82,9 +84,10 @@ public class XchangeData {
                 final String helperClassName = config.getString(prefix + "helper.class", null);
                 final String streamingConfigClassName = config.getString(prefix + "streaming.config.class", null);
                 int queries = config.getInt(prefix + "rate.queries", 1);
+                int retryCount = config.getInt(prefix + "retry", 10);
                 Duration period = Duration.millis((long) (1000 * config.getDouble(prefix + "rate.period", 1))); // rate.period in seconds
                 final List listings = config.getList(prefix + "listings");
-                initExchange(helperClassName, streamingConfigClassName, queries, period, exchange, listings);
+                initExchange(helperClassName, streamingConfigClassName, queries, period, exchange, listings, retryCount);
             } else {
                 log.warn("Could not find Exchange for property \"xchange." + tag + ".*\"");
             }
@@ -108,7 +111,7 @@ public class XchangeData {
     }
 
     private void initExchange(@Nullable String helperClassName, @Nullable String streamingConfigClassName, int queries, Duration per,
-            Exchange coinTraderExchange, List listings) {
+            Exchange coinTraderExchange, List listings, int retryCount) {
         com.xeiam.xchange.Exchange xchangeExchange = XchangeUtil.getExchangeForMarket(coinTraderExchange);
         StreamingExchangeService streamingDataService;
         Helper helper = null;
@@ -174,12 +177,16 @@ public class XchangeData {
             }
             return;
         } else {
-            PollingMarketDataService dataService = xchangeExchange.getPollingMarketDataService();
 
             RateLimiter rateLimiter = new RateLimiter(queries, per);
 
-            for (Iterator<Market> im = markets.iterator(); im.hasNext(); rateLimiter.execute(new FetchTradesRunnable(context, market, rateLimiter, dataService,
-                    helper)))
+            //   initExchange(helperClassName, streamingConfigClassName, queries, period, exchange, listings);
+
+            //   (@Nullable String helperClassName, @Nullable String streamingConfigClassName, int queries, Duration per,
+            //         Exchange coinTraderExchange, List listings
+
+            for (Iterator<Market> im = markets.iterator(); im.hasNext(); rateLimiter.execute(new FetchTradesRunnable(context, helperClassName,
+                    streamingConfigClassName, queries, per, coinTraderExchange, retryCount, xchangeExchange, market, rateLimiter, helper)))
                 market = im.next();
 
             return;
@@ -438,11 +445,24 @@ public class XchangeData {
         private final Helper helper;
         DateFormat dateFormat = new SimpleDateFormat("ddMMyy");
 
-        public FetchTradesRunnable(Context context, Market market, RateLimiter rateLimiter, PollingMarketDataService dataService, @Nullable Helper helper) {
+        //    @Nullable String helperClassName, @Nullable String streamingConfigClassName, int queries, Duration per,
+        //  Exchange coinTraderExchange, List listings
+
+        public FetchTradesRunnable(Context context, @Nullable String helperClassName, @Nullable String streamingConfigClassName, int queries, Duration per,
+                Exchange coinTraderExchange, int restartCount, com.xeiam.xchange.Exchange xchangeExchange, Market market, RateLimiter rateLimiter,
+                @Nullable Helper helper) {
+
+            this.helperClassName = helperClassName;
+            this.streamingConfigClassName = streamingConfigClassName;
+            this.queries = queries;
+            this.period = per;
+            this.coinTraderExchange = coinTraderExchange;
+            this.restartCount = restartCount;
+
             this.context = context;
             this.market = market;
             this.rateLimiter = rateLimiter;
-            this.dataService = dataService;
+            this.xchangeExchange = xchangeExchange;
             this.helper = helper;
             this.prompt = market.getListing().getPrompt();
             pair = XchangeUtil.getCurrencyPairForListing(market.getListing());
@@ -481,13 +501,18 @@ public class XchangeData {
                 getBook();
             } catch (Exception | Error e) {
                 log.error(this.getClass().getSimpleName() + ":run. Unable to retrive book or trades for market:" + market);
+                //Thread.currentThread().
+                // throw e;
+                //Thread.currentThread().interrupt();
+                // throw e;
             } finally {
                 // getTradesNext = !getTradesNext;
                 rateLimiter.execute(this); // run again. requeue
+
             }
         }
 
-        protected void getTrades() {
+        protected void getTrades() throws Exception {
             try {
                 Object params[];
                 if (helper != null)
@@ -500,7 +525,7 @@ public class XchangeData {
 
                 }
                 log.trace("Attempting to get trades from data service");
-                Trades tradeSpec = dataService.getTrades(pair, params);
+                Trades tradeSpec = XchangeUtil.getExchangeForMarket(coinTraderExchange).getPollingMarketDataService().getTrades(pair, params);
                 if (helper != null)
                     helper.handleTrades(tradeSpec);
                 List<com.xeiam.xchange.dto.marketdata.Trade> trades = tradeSpec.getTrades();
@@ -531,17 +556,39 @@ public class XchangeData {
                     }
 
                 }
-            } catch (Exception | Error e) {
-                log.error(this.getClass().getSimpleName() + ":getTrades Unabel to get trade for market " + market + " pair " + pair + " . Full stack trade: "
-                        + e);
+                tradeFailureCount = 0;
+                return;
 
-                //  log.warn("Could not get trades for " + market, e);
-                //  context.publish(new d(market, e));
+            } catch (Exception | Error e) {
+                tradeFailureCount++;
+                log.error(this.getClass().getSimpleName() + ":getTrades Unabel to get trade for market " + market + " pair " + pair + ".  Failure "
+                        + tradeFailureCount + " of " + restartCount + ". Full Stack Trace: " + e);
+                if (tradeFailureCount >= restartCount) {
+                    //try {
+                    //  if (rateLimiter.getRunnables() == null || rateLimiter.getRunnables().isEmpty() || rateLimiter.remove(this)) {
+
+                    log.error(this.getClass().getSimpleName() + ":getTrades Unabel to get trade for market " + market + " pair " + pair + " for "
+                            + tradeFailureCount + " of " + restartCount + " time. Resetting Data Service Connection.");
+                    com.xeiam.xchange.Exchange xchangeExchange = XchangeUtil.resetExchange(coinTraderExchange);
+                    // dataService = xchangeExchange.getPollingMarketDataService();
+                    tradeFailureCount = 0;
+                    bookFailureCount = 0;
+                    throw e;
+                    //}
+                    // } catch (Throwable e) {
+                    // TODO Auto-generated catch block
+                    //       throw e;
+                    // }
+                    //Thread.currentThread().
+
+                    // dataService = xchangeExchange.getPollingMarketDataService();
+
+                }
             }
-            return;
+
         }
 
-        protected void getBook() {
+        protected void getBook() throws Exception {
             try {
                 Object params[];
                 if (helper != null)
@@ -555,7 +602,7 @@ public class XchangeData {
                 }
                 log.trace("Attempting to get book from data service");
 
-                OrderBook orderBook = dataService.getOrderBook(pair, params);
+                OrderBook orderBook = XchangeUtil.getExchangeForMarket(coinTraderExchange).getPollingMarketDataService().getOrderBook(pair, params);
                 if (helper != null)
                     helper.handleOrderBook(orderBook);
                 log.trace("Attempting create book from: " + orderBook);
@@ -582,18 +629,50 @@ public class XchangeData {
                 book.build();
                 //        log.debug("publish book:" + book.getId());
                 context.publish(book);
+                bookFailureCount = 0;
 
+            } catch (SocketTimeoutException | UnknownHostException | SocketException ce) {
+                bookFailureCount++;
+                log.error(this.getClass().getSimpleName() + ":getBook Unabel to get book for market " + market + " pair " + pair + ".  Failure "
+                        + bookFailureCount + " of " + restartCount + " due to network issue. " + ce);
+                if ((bookFailureCount >= restartCount)) {
+                    //try {
+                    //if (rateLimiter.getRunnables() == null || rateLimiter.getRunnables().isEmpty() || rateLimiter.remove(this)) {
+
+                    //     rateLimiter.finalize();
+
+                    log.error(this.getClass().getSimpleName() + ":getBook Unabel to get book for market " + market + " pair " + pair + ". Failure "
+                            + bookFailureCount + " of " + restartCount + " . Resetting Data Service Connection.");
+                    com.xeiam.xchange.Exchange xchangeExchange = XchangeUtil.resetExchange(coinTraderExchange);
+                    tradeFailureCount = 0;
+                    bookFailureCount = 0;
+                    //   failureCount=0;
+                    throw ce;
+                    //}
+                    //  } catch (Throwable e) {
+                    // TODO Auto-generated catch block
+                    //     e.printStackTrace();
+                    //   }
+
+                }
             } catch (Exception | Error e) {
+                bookFailureCount++;
                 log.error(this.getClass().getSimpleName() + ":getBook Unabel to get book for market " + market + " pair " + pair + ". Full stack trace " + e);
-
-                // log.warn("Could not get book for " + market, e);
-                //   context.publish(new MarketDataError(market, e));
+                throw e;
             }
         }
 
         // private final Book.Builder bookBuilder = new Book.Builder();
         private final boolean getTradesNext = true;
-        private final PollingMarketDataService dataService;
+        private final boolean restarted = false;
+        private final String helperClassName;
+        private final String streamingConfigClassName;
+        private final int queries;
+        private final Duration period;
+        private final Exchange coinTraderExchange;
+        private final int restartCount;
+        private int tradeFailureCount = 0;
+        private int bookFailureCount = 0;
         private final RateLimiter rateLimiter;
         private final Context context;
         private final Market market;
@@ -602,6 +681,8 @@ public class XchangeData {
         private long lastTradeTime;
         private final Prompt prompt;
         private long lastTradeId;
+        private final com.xeiam.xchange.Exchange xchangeExchange;
+
     }
 
     private static final Comparator<LimitOrder> limitPriceComparator = new Comparator<LimitOrder>() {
