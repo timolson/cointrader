@@ -67,7 +67,13 @@ public abstract class OrderCommand extends AntlrCommandBase {
         if (positionEffect != null)
             order.withPositionEffect(positionEffect);
 
-        orderService.placeOrder(order);
+        try {
+            orderService.placeOrder(order);
+        } catch (Throwable e) {
+            // TODO Auto-generated catch block
+            out.println("Unable to place order " + order + ". Stack Trace " + e);
+
+        }
 
     }
 
@@ -90,7 +96,13 @@ public abstract class OrderCommand extends AntlrCommandBase {
         if (positionEffect != null)
             order.withPositionEffect(positionEffect);
 
-        orderService.placeOrder(order);
+        try {
+            orderService.placeOrder(order);
+        } catch (Throwable e) {
+            // TODO Auto-generated catch block
+            out.println("Unable to place order " + order + ". Stack Trace " + e);
+
+        }
 
     }
 

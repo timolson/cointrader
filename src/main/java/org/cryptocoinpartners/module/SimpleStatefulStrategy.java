@@ -47,7 +47,12 @@ public abstract class SimpleStatefulStrategy extends BaseStrategy {
                 //entryOrder.
                 state = State.ENTERING;
                 log.info("Entering trade with order " + entryOrder);
-                orderService.placeOrder(entryOrder);
+                try {
+                    orderService.placeOrder(entryOrder);
+                } catch (Throwable e) {
+                    log.info("Unable to place order " + entryOrder);
+
+                }
             }
         }
     }
@@ -63,7 +68,13 @@ public abstract class SimpleStatefulStrategy extends BaseStrategy {
                 exitOrder = orderBuilder.getOrder();
                 state = State.EXITING;
                 log.debug("Exiting trade with order " + exitOrder);
-                orderService.placeOrder(exitOrder);
+                try {
+                    orderService.placeOrder(exitOrder);
+                } catch (Throwable e) {
+                    // TODO Auto-generated catch block
+                    log.info("Unable to place order " + exitOrder);
+
+                }
             }
         }
     }

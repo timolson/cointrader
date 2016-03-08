@@ -29,6 +29,7 @@ import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.PositionType;
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.exceptions.OrderNotFoundException;
+import org.cryptocoinpartners.exceptions.TradingDisabledException;
 import org.cryptocoinpartners.schema.Amount;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.DecimalAmount;
@@ -79,10 +80,11 @@ public abstract class BaseOrderService implements OrderService {
     }
 
     @Override
-    public void placeOrder(Order order) {
+    public void placeOrder(Order order) throws Throwable {
         if (!enableTrading) {
             log.info("Trading Mode Disabled");
-            return;
+            throw new TradingDisabledException("Trading Mode Disabled");
+            // return;
         }
         order.persit();
         updateOrderState(order, OrderState.NEW, true);
@@ -96,7 +98,11 @@ public abstract class BaseOrderService implements OrderService {
         } else if (order instanceof SpecificOrder) {
             SpecificOrder specificOrder = (SpecificOrder) order;
             log.info("new specific order recieved " + specificOrder);
-            handleSpecificOrder(specificOrder);
+            try {
+                handleSpecificOrder(specificOrder);
+            } catch (Throwable ex) {
+                throw ex;
+            }
         }
         // updateOrderState(order, OrderState.NEW, true);
 
@@ -1023,8 +1029,12 @@ public abstract class BaseOrderService implements OrderService {
         //    stopOrder.persit();
         if (stopOrder != null && order.getPositionEffect() == (PositionEffect.OPEN)) {
 
-            placeOrder(stopOrder);
-            log.info("Placed Stop order " + stopOrder);
+            try {
+                placeOrder(stopOrder);
+                log.info("Placed Stop order " + stopOrder);
+            } catch (Throwable e) {
+                log.info("Unable to place Stop order " + stopOrder + ". Full stack trace" + e);
+            }
 
         }
         /*        TransactionType oppositeSide = (order.getParentFill() != null && order.getParentFill().isLong()) ? TransactionType.SELL : TransactionType.BUY;
@@ -1209,77 +1219,79 @@ public abstract class BaseOrderService implements OrderService {
             }
             generalOrder.setMarket(offer.getMarket());
         }
-
-        switch (generalOrder.getFillType()) {
-            case GOOD_TIL_CANCELLED:
-                throw new NotImplementedException();
-            case GTC_OR_MARGIN_CAP:
-                throw new NotImplementedException();
-            case CANCEL_REMAINDER:
-                throw new NotImplementedException();
-            case ONE_CANCELS_OTHER:
-                specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
-                if (specificOrder == null)
-                    break;
-                updateOrderState(generalOrder, OrderState.ROUTED, true);
-                log.info("Routing OCO order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
-                placeOrder(specificOrder);
-
-                break;
-            case COMPLETED_CANCELS_OTHER:
-                specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
-                if (specificOrder == null)
-                    break;
-                updateOrderState(generalOrder, OrderState.ROUTED, true);
-                log.info("Routing CCO order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
-                placeOrder(specificOrder);
-
-                break;
-            case LIMIT:
-                specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
-                if (specificOrder == null)
-                    break;
-                updateOrderState(generalOrder, OrderState.ROUTED, true);
-                log.info("Routing Limit order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
-                placeOrder(specificOrder);
-                break;
-            case MARKET:
-                specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
-                if (specificOrder == null)
-                    break;
-                updateOrderState(generalOrder, OrderState.ROUTED, true);
-                log.info("Routing Limit order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
-                placeOrder(specificOrder);
-                break;
-            case STOP_LIMIT:
-                addTriggerOrder(generalOrder);
-                updateOrderState(generalOrder, OrderState.TRIGGER, true);
-                if (generalOrder.getStopPrice() != null)
-                    log.info(generalOrder + " Stop trade Entered at " + generalOrder.getStopPrice());
-                if (generalOrder.getTargetPrice() != null)
-                    log.info("Target trade Entered at " + generalOrder.getTargetPrice());
-                break;
-            case TRAILING_STOP_LIMIT:
-                addTriggerOrder(generalOrder);
-                updateOrderState(generalOrder, OrderState.TRIGGER, true);
-                log.info("Trailing Stop trade Entered at " + generalOrder.getStopPrice());
-                break;
-            case STOP_LOSS:
-                if (generalOrder.getTargetPrice() != null) {
-                    addTriggerOrder(generalOrder);
-                    updateOrderState(generalOrder, OrderState.TRIGGER, true);
-                    log.info("Trigger Order Entered at " + generalOrder.getTargetPrice());
-                    break;
-                } else {
+        try {
+            switch (generalOrder.getFillType()) {
+                case GOOD_TIL_CANCELLED:
+                    throw new NotImplementedException();
+                case GTC_OR_MARGIN_CAP:
+                    throw new NotImplementedException();
+                case CANCEL_REMAINDER:
+                    throw new NotImplementedException();
+                case ONE_CANCELS_OTHER:
                     specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
                     if (specificOrder == null)
                         break;
                     updateOrderState(generalOrder, OrderState.ROUTED, true);
-                    log.info("Routing Stop Loss order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
+                    log.info("Routing OCO order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
+                    placeOrder(specificOrder);
+
+                    break;
+                case COMPLETED_CANCELS_OTHER:
+                    specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
+                    if (specificOrder == null)
+                        break;
+                    updateOrderState(generalOrder, OrderState.ROUTED, true);
+                    log.info("Routing CCO order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
+                    placeOrder(specificOrder);
+
+                    break;
+                case LIMIT:
+                    specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
+                    if (specificOrder == null)
+                        break;
+                    updateOrderState(generalOrder, OrderState.ROUTED, true);
+                    log.info("Routing Limit order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
                     placeOrder(specificOrder);
                     break;
-                }
-
+                case MARKET:
+                    specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
+                    if (specificOrder == null)
+                        break;
+                    updateOrderState(generalOrder, OrderState.ROUTED, true);
+                    log.info("Routing Limit order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
+                    placeOrder(specificOrder);
+                    break;
+                case STOP_LIMIT:
+                    addTriggerOrder(generalOrder);
+                    updateOrderState(generalOrder, OrderState.TRIGGER, true);
+                    if (generalOrder.getStopPrice() != null)
+                        log.info(generalOrder + " Stop trade Entered at " + generalOrder.getStopPrice());
+                    if (generalOrder.getTargetPrice() != null)
+                        log.info("Target trade Entered at " + generalOrder.getTargetPrice());
+                    break;
+                case TRAILING_STOP_LIMIT:
+                    addTriggerOrder(generalOrder);
+                    updateOrderState(generalOrder, OrderState.TRIGGER, true);
+                    log.info("Trailing Stop trade Entered at " + generalOrder.getStopPrice());
+                    break;
+                case STOP_LOSS:
+                    if (generalOrder.getTargetPrice() != null) {
+                        addTriggerOrder(generalOrder);
+                        updateOrderState(generalOrder, OrderState.TRIGGER, true);
+                        log.info("Trigger Order Entered at " + generalOrder.getTargetPrice());
+                        break;
+                    } else {
+                        specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
+                        if (specificOrder == null)
+                            break;
+                        updateOrderState(generalOrder, OrderState.ROUTED, true);
+                        log.info("Routing Stop Loss order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
+                        placeOrder(specificOrder);
+                        break;
+                    }
+            }
+        } catch (Throwable e) {
+            log.info("Unable to place general order  " + generalOrder + ". Full stack trace" + e);
         }
 
     }
@@ -1317,6 +1329,10 @@ public abstract class BaseOrderService implements OrderService {
 
     @SuppressWarnings("ConstantConditions")
     private synchronized void updateRestingOrders(Book b) {
+        if (!getTradingEnabled()) {
+            log.info(this.getClass().getSimpleName() + ":updateRestingOrders Not Updating orders as trading mode disabled");
+            return;
+        }
 
         Offer offer;
         //  synchronized (lock) {
@@ -1334,8 +1350,8 @@ public abstract class BaseOrderService implements OrderService {
                 SpecificOrder pendingOrder = (SpecificOrder) order;
                 if (pendingOrder.getExpiryTime() != null && context.getTime().isAfter(pendingOrder.getExpiryTime())) {
                     try {
-                        if (!getOrderState(pendingOrder).isCancelled()) {
-                            log.info("Order Expired Cancelling Specifc Order: " + pendingOrder);
+                        if (getOrderState(pendingOrder).isOpen()) {
+                            log.info("Order Expired with state " + getOrderState(pendingOrder) + ". Cancelling Specifc Order: " + pendingOrder);
                             handleCancelSpecificOrder(pendingOrder);
                         }
                         //cancelled = false;
@@ -1456,7 +1472,6 @@ public abstract class BaseOrderService implements OrderService {
                             //convert order to specfic order
 
                             log.info("triggered order:" + triggeredOrder);
-                            triggeredOrders.add(triggeredOrder);
                             if (triggeredOrder.getParentFill() != null)
                                 log.info("triggered order:"
                                         + triggeredOrder
@@ -1546,12 +1561,19 @@ public abstract class BaseOrderService implements OrderService {
                                     log.info("order not found");
                                 }
 
-                                placeOrder(specificOrder);
-                                if (triggeredOrder.getParentFill() != null)
-                                    triggeredOrder.getParentFill().setPositionType(PositionType.EXITING);
+                                try {
+                                    placeOrder(specificOrder);
 
-                                log.info(triggeredOrder + " triggered as specificOrder " + specificOrder);
-                                context.publish(new PositionUpdate(null, specificOrder.getMarket(), PositionType.SHORT, PositionType.EXITING));
+                                    triggeredOrders.add(triggeredOrder);
+
+                                    if (triggeredOrder.getParentFill() != null)
+                                        triggeredOrder.getParentFill().setPositionType(PositionType.EXITING);
+
+                                    log.info(triggeredOrder + " triggered as specificOrder " + specificOrder);
+                                    context.publish(new PositionUpdate(null, specificOrder.getMarket(), PositionType.SHORT, PositionType.EXITING));
+                                } catch (Throwable e) {
+                                    log.error("Unable to place trigged order " + specificOrder);
+                                }
                             } else {
                                 log.info(triggeredOrder
                                         + " not triggered as zero volume"
@@ -1591,7 +1613,6 @@ public abstract class BaseOrderService implements OrderService {
                             //Place order
 
                             log.info("triggered order:" + triggeredOrder);
-                            triggeredOrders.add(triggeredOrder);
                             if (triggeredOrder.getParentFill() != null)
                                 log.info("triggered order:"
                                         + triggeredOrder
@@ -1672,12 +1693,20 @@ public abstract class BaseOrderService implements OrderService {
                                 } catch (OrderNotFoundException e) {
                                     log.info("order not found");
                                 }
-                                if (triggeredOrder.getParentFill() != null)
-                                    triggeredOrder.getParentFill().setPositionType(PositionType.EXITING);
 
-                                placeOrder(specificOrder);
-                                log.info(triggeredOrder + " triggered as specificOrder " + specificOrder);
-                                context.publish(new PositionUpdate(null, specificOrder.getMarket(), PositionType.LONG, PositionType.EXITING));
+                                try {
+                                    placeOrder(specificOrder);
+
+                                    triggeredOrders.add(triggeredOrder);
+                                    if (triggeredOrder.getParentFill() != null)
+                                        triggeredOrder.getParentFill().setPositionType(PositionType.EXITING);
+
+                                    log.info(triggeredOrder + " triggered as specificOrder " + specificOrder);
+                                    context.publish(new PositionUpdate(null, specificOrder.getMarket(), PositionType.LONG, PositionType.EXITING));
+                                } catch (Throwable e) {
+                                    // TODO Auto-generated catch block
+                                    log.error("Unable place triggered order" + specificOrder);
+                                }
                             } else {
                                 log.info(triggeredOrder
                                         + " not triggered as zero volume"
@@ -1833,7 +1862,7 @@ public abstract class BaseOrderService implements OrderService {
         updateOrderState(order, OrderState.REJECTED, false);
     }
 
-    protected abstract void handleSpecificOrder(SpecificOrder specificOrder);
+    protected abstract void handleSpecificOrder(SpecificOrder specificOrder) throws Throwable;
 
     protected abstract boolean cancelSpecificOrder(SpecificOrder specificOrder);
 
@@ -2651,8 +2680,18 @@ public abstract class BaseOrderService implements OrderService {
             case EXPIRED:
                 if (!childOrder.getExpiration().isEqual(order.getExpiration()))
                     throw new Error("Child order expirations must match parent order expirations");
-                updateOrderState(order, OrderState.EXPIRED, true);
+                boolean fullyExpired = true;
+                for (Order child : order.getOrderChildren()) {
+                    if (orderStateMap.get(child) != null && !orderStateMap.get(child).isExpired()) {
+                        fullyExpired = false;
+                        break;
+                    }
+                }
+                if (fullyExpired)
+                    updateOrderState(order, OrderState.EXPIRED, true);
+                // }
                 break;
+
             default:
                 log.warn("Unknown order state: " + childOrderState);
                 break;

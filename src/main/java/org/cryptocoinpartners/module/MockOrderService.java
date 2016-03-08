@@ -3,7 +3,9 @@ package org.cryptocoinpartners.module;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -240,11 +242,14 @@ public class MockOrderService extends BaseOrderService {
             if (pendingOrders.remove(order))
                 deleted = true;
             else {
-                log.error("Unable to cancel order :" + order);
+                if (!pendingOrders.contains(order)) {
+                    log.error("Unable to cancel order as not present in mock order book. Order:" + order);
+                    // deleted = false;
+                }
 
             }
         } catch (Error | Exception e) {
-            log.error("Unable to cancel order :" + order);
+            log.error("Unable to cancel order :" + order + ". full stack trace" + e);
 
         } finally {
             return deleted;
@@ -279,9 +284,24 @@ public class MockOrderService extends BaseOrderService {
 
     @Override
     public void init() {
-        super.init();
-        // TODO Auto-generated method stub
+        Set<org.cryptocoinpartners.schema.Order> cointraderOpenOrders = new HashSet<org.cryptocoinpartners.schema.Order>();
 
+        super.init();
+        // Once we have all the order loaded, let's add all the open specific orders to the mock order book (pendingOrders)
+        if (stateOrderMap.get(OrderState.NEW) != null)
+            cointraderOpenOrders.addAll(stateOrderMap.get(OrderState.NEW));
+        if (stateOrderMap.get(OrderState.PLACED) != null)
+            cointraderOpenOrders.addAll(stateOrderMap.get(OrderState.PLACED));
+        if (stateOrderMap.get(OrderState.PARTFILLED) != null)
+            cointraderOpenOrders.addAll(stateOrderMap.get(OrderState.PARTFILLED));
+        if (stateOrderMap.get(OrderState.PARTFILLED) != null)
+            cointraderOpenOrders.addAll(stateOrderMap.get(OrderState.ROUTED));
+        if (stateOrderMap.get(OrderState.CANCELLING) != null)
+            cointraderOpenOrders.addAll(stateOrderMap.get(OrderState.CANCELLING));
+        for (org.cryptocoinpartners.schema.Order openOrder : cointraderOpenOrders) {
+            if (openOrder instanceof SpecificOrder)
+                addOrder((SpecificOrder) openOrder);
+        }
     }
 
 }

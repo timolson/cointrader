@@ -18,7 +18,7 @@ import org.cryptocoinpartners.schema.SpecificOrder;
 public interface OrderService {
 
     // send new Order events to the correct market
-    public void placeOrder(Order order);
+    public void placeOrder(Order order) throws Throwable;
 
     void init();
 

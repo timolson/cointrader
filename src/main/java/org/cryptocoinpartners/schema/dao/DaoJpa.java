@@ -484,7 +484,7 @@ public abstract class DaoJpa implements Dao {
                 if (persisted) {
                     entity.setAttempt(0);
 
-                    log.debug(" " + this.getClass().getSimpleName() + ":persist. Succefully persisted " + entity.getClass().getSimpleName() + " " + entity);
+                    log.trace(" " + this.getClass().getSimpleName() + ":persist. Succefully persisted " + entity.getClass().getSimpleName() + " " + entity);
                 }
 
             }
@@ -518,7 +518,7 @@ public abstract class DaoJpa implements Dao {
                     //  } else {
                     //    application.getInsertQueue().addFirst(entity);
                     //}
-                    log.debug("persisting " + entity.getClass().getSimpleName() + " id:" + entity.getId());
+                    log.trace("persisting " + entity.getClass().getSimpleName() + " id:" + entity.getId());
                 }
             }
 
@@ -936,7 +936,7 @@ public abstract class DaoJpa implements Dao {
             if (deleted)
                 for (EntityBase entity : entities) {
                     entity.setAttempt(0);
-                    log.debug(this.getClass().getSimpleName() + ":delete. Succefully deleted " + entity.getClass().getSimpleName() + " " + entity);
+                    log.trace(this.getClass().getSimpleName() + ":delete. Succefully deleted " + entity.getClass().getSimpleName() + " " + entity);
                 }
 
         }
@@ -1106,7 +1106,7 @@ public abstract class DaoJpa implements Dao {
                 for (EntityBase entity : entities) {
 
                     entity.setAttempt(0);
-                    log.debug(" " + this.getClass().getSimpleName() + ":merge. Succefully merged " + entity.getClass().getSimpleName() + " " + entity);
+                    log.trace(" " + this.getClass().getSimpleName() + ":merge. Succefully merged " + entity.getClass().getSimpleName() + " " + entity);
                 }
 
         }

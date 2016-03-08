@@ -2,9 +2,6 @@ package org.cryptocoinpartners.module.xchange;
 
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -631,23 +628,19 @@ public class XchangeData {
                 context.publish(book);
                 bookFailureCount = 0;
 
-            } catch (SocketTimeoutException | UnknownHostException | SocketException ce) {
+            } catch (Exception | Error e) {
                 bookFailureCount++;
-                log.error(this.getClass().getSimpleName() + ":getBook Unabel to get book for market " + market + " pair " + pair + ".  Failure "
-                        + bookFailureCount + " of " + restartCount + " due to network issue. " + ce);
+                log.error(this.getClass().getSimpleName() + ":getTrades Unabel to get trade for market " + market + " pair " + pair + ".  Failure "
+                        + bookFailureCount + " of " + restartCount + ". Full Stack Trace: " + e);
+
                 if ((bookFailureCount >= restartCount)) {
-                    //try {
-                    //if (rateLimiter.getRunnables() == null || rateLimiter.getRunnables().isEmpty() || rateLimiter.remove(this)) {
-
-                    //     rateLimiter.finalize();
-
                     log.error(this.getClass().getSimpleName() + ":getBook Unabel to get book for market " + market + " pair " + pair + ". Failure "
                             + bookFailureCount + " of " + restartCount + " . Resetting Data Service Connection.");
                     com.xeiam.xchange.Exchange xchangeExchange = XchangeUtil.resetExchange(coinTraderExchange);
                     tradeFailureCount = 0;
                     bookFailureCount = 0;
                     //   failureCount=0;
-                    throw ce;
+                    throw e;
                     //}
                     //  } catch (Throwable e) {
                     // TODO Auto-generated catch block
@@ -655,10 +648,6 @@ public class XchangeData {
                     //   }
 
                 }
-            } catch (Exception | Error e) {
-                bookFailureCount++;
-                log.error(this.getClass().getSimpleName() + ":getBook Unabel to get book for market " + market + " pair " + pair + ". Full stack trace " + e);
-                throw e;
             }
         }
 

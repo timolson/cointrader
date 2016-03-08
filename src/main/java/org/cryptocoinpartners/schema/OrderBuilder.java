@@ -113,8 +113,13 @@ public class OrderBuilder {
             if (orderService == null)
                 throw new IllegalStateException("You must construct Order.Builder with an OrderService to use the place() method.");
             Order order = getOrder();
-            orderService.placeOrder(order);
-            return order;
+            try {
+                orderService.placeOrder(order);
+                return order;
+            } catch (Throwable e) {
+                return null;
+            }
+
         }
 
         /** The Order will be constructed but not placed with any OrderService. */

@@ -442,7 +442,7 @@ public class XchangeOrderService extends BaseOrderService {
     }
 
     @Override
-    protected void handleSpecificOrder(SpecificOrder specificOrder) {
+    protected void handleSpecificOrder(SpecificOrder specificOrder) throws Throwable {
         Order.OrderType orderType = null;
         com.xeiam.xchange.Exchange exchange = XchangeUtil.getExchangeForMarket(specificOrder.getMarket().getExchange());
         PollingTradeService tradeService = exchange.getPollingTradeService();
@@ -466,10 +466,11 @@ public class XchangeOrderService extends BaseOrderService {
                 specificOrder.setRemoteKey(tradeService.placeLimitOrder(limitOrder));
                 specificOrder.persit();
                 updateOrderState(specificOrder, OrderState.PLACED, false);
-            } catch (IOException e) {
-                log.error("Threw a Execption, full stack trace follows:", e);
+            } catch (Exception | Error e) {
+                log.error(this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place order " + specificOrder
+                        + ". Threw a Execption, full stack trace follows:", e);
 
-                e.printStackTrace();
+                throw e;
                 // todo retry until expiration or reject as invalid
             }
         } else {
@@ -479,12 +480,16 @@ public class XchangeOrderService extends BaseOrderService {
                 specificOrder.setRemoteKey(tradeService.placeMarketOrder(marketOrder));
                 specificOrder.persit();
                 updateOrderState(specificOrder, OrderState.PLACED, false);
-            } catch (IOException e) {
-                // todo retry until expiration or reject as invalid
-                log.warn("Could not place this order: " + specificOrder, e);
             } catch (NotYetImplementedForExchangeException e) {
                 log.warn("XChange adapter " + exchange + " does not support this order: " + specificOrder, e);
                 reject(specificOrder, "XChange adapter " + exchange + " does not support this order");
+                throw e;
+            } catch (Exception | Error e) {
+                log.error(this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place order " + specificOrder
+                        + ". Threw a Execption, full stack trace follows:", e);
+
+                throw e;
+                // todo retry until expiration or reject as invalid
             }
         }
 
@@ -1067,11 +1072,16 @@ public class XchangeOrderService extends BaseOrderService {
             if (tradeService.cancelOrder(order.getRemoteKey()))
                 deleted = true;
             else {
-                log.error("Unable to cancel order :" + order);
+                /// if (!pendingOrders.contains(order)) {
+                //TODO check if order is on exchange
+                log.error("Unable to cancel order as not present in exchange order book. Order:" + order);
+                // deleted = false;
+                // }
 
             }
         } catch (Error | Exception e) {
-            log.error("Unable to cancel order :" + order);
+            //TODO we need to handel this better, do we add them to a qeueue and then keep retrying in the event of an execption and reset the exchange after x attempts
+            log.error("Unable to cancel order :" + order + ". full stack trace" + e);
 
         } finally {
             return deleted;
