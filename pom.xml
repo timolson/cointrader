@@ -17,7 +17,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <xchange.version>4.0.0-SNAPSHOT</xchange.version>
+        <xchange.version>4.0.1-SNAPSHOT</xchange.version>
         <slf4j-api.version>1.7.5</slf4j-api.version>
         <hibernate.version>4.3.11.Final</hibernate.version>
         <antlr.version>4.2.2</antlr.version>
@@ -35,7 +35,11 @@
             <artifactId>slf4j-api</artifactId>
             <version>${slf4j-api.version}</version>
         </dependency>
-         
+         <dependency>
+    <groupId>com.google.inject.extensions</groupId>
+    <artifactId>guice-jmx</artifactId>
+    <version>2.0</version>
+</dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>log4j-over-slf4j</artifactId>
@@ -101,47 +105,47 @@
             <version>18.0</version>
         </dependency>
         <dependency>
-            <groupId>com.xeiam.xchange</groupId>
+            <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-core</artifactId>
             <version>${xchange.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.xeiam.xchange</groupId>
+            <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-bitfinex</artifactId>
             <version>${xchange.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.xeiam.xchange</groupId>
+            <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-bitstamp</artifactId>
             <version>${xchange.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.xeiam.xchange</groupId>
+            <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-btcchina</artifactId>
             <version>${xchange.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.xeiam.xchange</groupId>
+            <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-btce</artifactId>
             <version>${xchange.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.xeiam.xchange</groupId>
+            <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-cryptsy</artifactId>
             <version>${xchange.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.xeiam.xchange</groupId>
+            <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-coinbase</artifactId>
             <version>${xchange.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.xeiam.xchange</groupId>
+            <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-bter</artifactId>
             <version>${xchange.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.xeiam.xchange</groupId>
+            <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-campbx</artifactId>
             <version>${xchange.version}</version>
         </dependency>
@@ -228,12 +232,12 @@
             <version>2.12</version>
         </dependency>
         <dependency>
-        	<groupId>com.xeiam.xchange</groupId>
+        	<groupId>org.knowm.xchange</groupId>
         	<artifactId>xchange-bittrex</artifactId>
         	<version>${xchange.version}</version>
         </dependency>
         <dependency>
-        	<groupId>com.xeiam.xchange</groupId>
+        	<groupId>org.knowm.xchange</groupId>
         	<artifactId>xchange-okcoin</artifactId>
         	<version>${xchange.version}</version>
         </dependency>
