@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
 
 import javax.persistence.Embeddable;
 import javax.persistence.Transient;
@@ -65,7 +66,10 @@ public class DecimalAmount extends Amount {
     public Amount dividedBy(Amount o, RemainderHandler remainderHandler) {
 
         int scale = Math.max(o.asBigDecimal().scale(), mc.getPrecision());
-        return new DecimalAmount(bd.divide(o.asBigDecimal(), remainderHandler.getRoundingMode()).setScale(scale, remainderHandler.getRoundingMode()));
+        BigDecimal newbd = bd.divide(o.asBigDecimal(), scale, remainderHandler.getRoundingMode());
+        newbd = newbd.setScale(scale, remainderHandler.getRoundingMode());
+
+        return new DecimalAmount(newbd);
 
     }
 
@@ -114,8 +118,12 @@ public class DecimalAmount extends Amount {
 
     @Override
     public DiscreteAmount toIBasis(long newIBasis, RemainderHandler remainderHandler) {
-        BigDecimal oldAmount = bd;
-        long newCount = oldAmount.multiply(new BigDecimal(newIBasis), remainderHandler.getMathContext()).longValue();
+        BigDecimal oldAmount = bd.setScale((int) Math.log10(newIBasis), remainderHandler.getRoundingMode());
+        MathContext mc = new MathContext(Amount.mc.getPrecision(), remainderHandler.getRoundingMode());
+        // newIBasis
+        //BigDecimal newAmountBd = oldAmount.multiply(new BigDecimal(newIBasis), mc);
+        // BigDecimal.v
+        long newCount = oldAmount.multiply(new BigDecimal(newIBasis), mc).longValue();
         DiscreteAmount newAmount = new DiscreteAmount(newCount, newIBasis);
         BigDecimal remainder = oldAmount.subtract(newAmount.asBigDecimal(), remainderHandler.getMathContext());
         remainderHandler.handleRemainder(newAmount, remainder);

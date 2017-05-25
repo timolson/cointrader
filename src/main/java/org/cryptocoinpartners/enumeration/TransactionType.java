@@ -23,12 +23,31 @@ public enum TransactionType {
     REBALANCE("REBALANCE"), //8
     TRANSFER("TRANSFER"), //9
     PURCHASE("PURCHASE"), //10
-    REALISED_PROFIT_LOSS("REALISED_PROFIT_LOSS");//11
+    REALISED_PROFIT_LOSS("REALISED_PROFIT_LOSS"), //11
+    COMMISSION("COMMISSION"), //12
+    MARGIN("MARGIN");//13
 
     private final String enumValue;
 
     private TransactionType(String value) {
         this.enumValue = value;
+    }
+
+    public boolean isBookable() {
+        return this == TransactionType.BUY || this == TransactionType.SELL || this == TransactionType.CREDIT || this == TransactionType.DEBIT
+                || this == TransactionType.INTREST || this == TransactionType.FEES || this == TransactionType.REBALANCE || this == TransactionType.TRANSFER
+                || this == TransactionType.PURCHASE || this == TransactionType.REALISED_PROFIT_LOSS || this == TransactionType.COMMISSION
+                || this == TransactionType.MARGIN;
+
+    }
+
+    public boolean isDebit() {
+        return this == TransactionType.BUY || this == TransactionType.SELL || this == TransactionType.DEBIT || this == TransactionType.INTREST
+                || this == TransactionType.FEES || this == TransactionType.COMMISSION || this == TransactionType.MARGIN;
+    }
+
+    public boolean isCredit() {
+        return this == TransactionType.CREDIT;
     }
 
     @Transient
@@ -87,6 +106,8 @@ public enum TransactionType {
             TransactionType.values.put(TRANSFER.enumValue, TRANSFER); //9
             TransactionType.values.put(PURCHASE.enumValue, PURCHASE); //10
             TransactionType.values.put(REALISED_PROFIT_LOSS.enumValue, REALISED_PROFIT_LOSS); //11
+            TransactionType.values.put(COMMISSION.enumValue, COMMISSION); //12
+            TransactionType.values.put(MARGIN.enumValue, MARGIN); //13
         }
         synchronized (TransactionType.valueList) {
             TransactionType.valueList.add(BUY);
@@ -101,6 +122,8 @@ public enum TransactionType {
             TransactionType.valueList.add(TRANSFER);
             TransactionType.valueList.add(PURCHASE);
             TransactionType.valueList.add(REALISED_PROFIT_LOSS);
+            TransactionType.valueList.add(COMMISSION);
+            TransactionType.valueList.add(MARGIN);
             TransactionType.valueList = Collections.unmodifiableList(valueList);
         }
         synchronized (TransactionType.literals) {
@@ -116,6 +139,8 @@ public enum TransactionType {
             TransactionType.literals.add(TRANSFER.enumValue);
             TransactionType.literals.add(PURCHASE.enumValue);
             TransactionType.literals.add(REALISED_PROFIT_LOSS.enumValue);
+            TransactionType.literals.add(COMMISSION.enumValue);
+            TransactionType.literals.add(MARGIN.enumValue);
             TransactionType.literals = Collections.unmodifiableList(literals);
         }
         synchronized (TransactionType.names) {
@@ -131,6 +156,8 @@ public enum TransactionType {
             TransactionType.names.add("TRANSFER");
             TransactionType.names.add("PURCHASE");
             TransactionType.names.add("REALISED_PROFIT_LOSS");
+            TransactionType.names.add("COMMISSION");
+            TransactionType.names.add("MARGIN");
             TransactionType.names = Collections.unmodifiableList(names);
         }
     }

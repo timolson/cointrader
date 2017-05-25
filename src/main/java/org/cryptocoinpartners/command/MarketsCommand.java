@@ -7,6 +7,7 @@ import java.util.List;
 import javax.inject.Inject;
 
 import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.Tradeable;
 
 /**
  * @author Tim Olson
@@ -27,12 +28,16 @@ public class MarketsCommand extends CommandBase {
     }
 
     @Override
-    public void run() {
+    public Object call() {
         List<String> symbols = new ArrayList<>();
-        for (Market market : markets.findAll())
-            symbols.add(market.getSymbol());
+        for (Tradeable tradeable : markets.findAll())
+            if (!tradeable.isSynthetic()) {
+                Market market = (Market) tradeable;
+                symbols.add(market.getSymbol());
+            }
         Collections.sort(symbols);
         out.printList(symbols);
+        return true;
     }
 
 }

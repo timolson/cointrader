@@ -9,9 +9,9 @@ import javax.inject.Singleton;
 
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Book;
-import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Tick;
 import org.cryptocoinpartners.schema.Trade;
+import org.cryptocoinpartners.schema.Tradeable;
 import org.joda.time.Instant;
 import org.slf4j.Logger;
 
@@ -50,7 +50,7 @@ public class TickWindow {
         getAccumulatingTick(b.getMarket()).updateBook(b);
     }
 
-    private AccumulatingTick getAccumulatingTick(Market ml) {
+    private AccumulatingTick getAccumulatingTick(Tradeable ml) {
         AccumulatingTick at = accumulatingTickMap.get(ml.getId());
         if (at == null) {
             at = new AccumulatingTick(ml);
@@ -60,7 +60,7 @@ public class TickWindow {
     }
 
     private static class AccumulatingTick extends Tick {
-        private AccumulatingTick(Market ml) {
+        private AccumulatingTick(Tradeable ml) {
             super(ml, null, null, null, 0L, null);
         }
 

@@ -3,13 +3,14 @@ package org.cryptocoinpartners.schema;
 import java.math.BigDecimal;
 
 import javax.annotation.Nullable;
-import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.PostPersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.enumeration.PersistanceAction;
+import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.schema.dao.TradeDao;
 import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.Visitor;
@@ -28,13 +29,13 @@ import com.google.inject.assistedinject.AssistedInject;
  * @author Tim Olson
  */
 @Entity
-@Cacheable
+//@Cacheable(false)
 @Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived"), @Index(columnList = "market"), @Index(columnList = "market,time"),
         @Index(columnList = "market,remoteKey") })
 public class Trade extends PriceData {
 
     @Inject
-    protected TradeDao tradeDao;
+    protected transient TradeDao tradeDao;
     private static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
 
     // private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
@@ -53,20 +54,39 @@ public class Trade extends PriceData {
         return tradeDao;
     }
 
-    public static Trade fromDoubles(Market market, Instant time, @Nullable String remoteKey, double price, double volume) {
-        long priceCount = Math.round(price / market.getPriceBasis());
-        long volumeCount = Math.round(volume / market.getVolumeBasis());
-        return new Trade(market, time, remoteKey, priceCount, volumeCount);
+    @Override
+    @Transient
+    public void setDao(Dao dao) {
+        tradeDao = (TradeDao) dao;
+        // TODO Auto-generated method stub
+        //  return null;
     }
 
-    public static Trade fromDoubles(Market market, Instant time, Instant timeRecieved, @Nullable String remoteKey, double price, double volume) {
-        long priceCount = Math.round(price / market.getPriceBasis());
-        long volumeCount = Math.round(volume / market.getVolumeBasis());
-        return new Trade(market, time, timeRecieved, remoteKey, priceCount, volumeCount);
+    public static Trade fromDoubles(Tradeable market, Instant time, @Nullable String remoteKey, double price, double volume) {
+        long priceCount;
+        long volumeCount;
+        priceCount = Math.round(price / market.getPriceBasis());
+        volumeCount = Math.round(volume / market.getVolumeBasis());
+        return new Trade(market, time, remoteKey, priceCount, volumeCount);
+
+    }
+
+    public static Trade fromDoubles(Tradeable tradeable, Instant time, Instant timeRecieved, @Nullable String remoteKey, double price, double volume) {
+        long priceCount;
+        long volumeCount;
+        Market market = (Market) tradeable;
+        priceCount = Math.round(price / market.getPriceBasis());
+        volumeCount = Math.round(volume / market.getVolumeBasis());
+        return new Trade(market, time, remoteKey, priceCount, volumeCount);
+
     }
 
     @Override
-    public void persit() {
+    public synchronized void persit() {
+
+        this.setPeristanceAction(PersistanceAction.NEW);
+
+        this.setRevision(this.getRevision() + 1);
         tradeDao.persist(this);
     }
 
@@ -84,34 +104,40 @@ public class Trade extends PriceData {
      * @return 
      */
     @AssistedInject
-    public Trade(@Assisted Market market, @Assisted Instant time, @Assisted @Nullable String remoteKey, @Assisted("tradePrice") double price,
+    public Trade(@Assisted Tradeable market, @Assisted Instant time, @Assisted @Nullable String remoteKey, @Assisted("tradePrice") double price,
             @Assisted("tradeVolume") double volume) {
         this(market, time, remoteKey, Math.round(price / market.getPriceBasis()), Math.round(volume / market.getVolumeBasis()));
 
+        //   super(tradeable, time, remoteKey, BigDecimal.valueOf(price), BigDecimal.valueOf(volume));
+        //this(tradeable, time, remoteKey, BigDecimal.valueOf(price), BigDecimal.valueOf(volume));
+
     }
 
     @AssistedInject
-    public Trade(@Assisted Market market, @Assisted("tradeTime") Instant time, @Assisted("timeRecieved") Instant timeRecieved,
+    public Trade(@Assisted Tradeable market, @Assisted("tradeTime") Instant time, @Assisted("timeRecieved") Instant timeRecieved,
             @Assisted @Nullable String remoteKey, @Assisted("tradePrice") double price, @Assisted("tradeVolume") double volume) {
         this(market, time, timeRecieved, remoteKey, Math.round(price / market.getPriceBasis()), Math.round(volume / market.getVolumeBasis()));
+
+        // super(time, timeRecieved, remoteKey, tradeable, BigDecimal.valueOf(price), BigDecimal.valueOf(volume));
+
     }
 
     @AssistedInject
-    public Trade(@Assisted Market market, @Assisted Instant time, @Assisted @Nullable String remoteKey, @Assisted("tradePriceCount") long priceCount,
+    public Trade(@Assisted Tradeable market, @Assisted Instant time, @Assisted @Nullable String remoteKey, @Assisted("tradePriceCount") long priceCount,
             @Assisted("tradeVolumeCount") long volumeCount) {
         super(time, remoteKey, market, priceCount, volumeCount);
     }
 
     @AssistedInject
-    public Trade(@Assisted Market market, @Assisted("tradeTime") Instant time, @Assisted("tradeTimeRecieved") Instant timeRecieved,
+    public Trade(@Assisted Tradeable market, @Assisted("tradeTime") Instant time, @Assisted("tradeTimeRecieved") Instant timeRecieved,
             @Assisted @Nullable String remoteKey, @Assisted("tradePriceCount") long priceCount, @Assisted("tradeVolumeCount") long volumeCount) {
         super(time, timeRecieved, remoteKey, market, priceCount, volumeCount);
     }
 
     @AssistedInject
-    public Trade(@Assisted Market market, @Assisted Instant time, @Assisted @Nullable String remoteKey, @Assisted("tradePrice") BigDecimal price,
+    public Trade(@Assisted Tradeable tradeable, @Assisted Instant time, @Assisted @Nullable String remoteKey, @Assisted("tradePrice") BigDecimal price,
             @Assisted("tradeVolume") BigDecimal volume) {
-        super(time, remoteKey, market, price, volume);
+        super(time, remoteKey, tradeable, price, volume);
     }
 
     public static void find(Interval timeInterval, Visitor<Trade> visitor) {
@@ -122,8 +148,9 @@ public class Trade extends PriceData {
         EM.queryEach(Trade.class, visitor, "select t from Trade t");
     }
 
+    @Override
     @PostPersist
-    private void postPersist() {
+    public void postPersist() {
 
         detach();
 
@@ -146,7 +173,11 @@ public class Trade extends PriceData {
     }
 
     @Override
-    public void merge() {
+    public synchronized void merge() {
+
+        this.setPeristanceAction(PersistanceAction.MERGE);
+
+        this.setRevision(this.getRevision() + 1);
         tradeDao.merge(this);
         // TODO Auto-generated method stub
 
@@ -154,6 +185,12 @@ public class Trade extends PriceData {
 
     @Override
     public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void prePersist() {
         // TODO Auto-generated method stub
 
     }

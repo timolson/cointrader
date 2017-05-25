@@ -4,11 +4,13 @@ import java.util.Set;
 
 import javax.annotation.Nullable;
 
+import org.cryptocoinpartners.schema.Bar;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Offer;
 import org.cryptocoinpartners.schema.Trade;
+import org.cryptocoinpartners.schema.Tradeable;
 
 /**
  * QuoteService provides the latest MarketData for a given Listing or Market
@@ -20,7 +22,11 @@ public interface QuoteService {
 
     /** returns the most recent Trade of the specified Market */
     @Nullable
-    public Trade getLastTrade(Market market);
+    public Trade getLastTrade(Tradeable market);
+
+    /** returns the most recent Trade of the specified Market */
+    @Nullable
+    public Bar getLastBar(Tradeable market, double interval);
 
     /** returns the most recent trade of the specified Listing on any Exchange */
     @Nullable
@@ -28,7 +34,7 @@ public interface QuoteService {
 
     /** returns the most recent Book of the specified Market */
     @Nullable
-    public Book getLastBook(Market market);
+    public Book getLastBook(Tradeable market);
 
     /** returns the most recent trade of the specified Listing on any Exchange */
     @Nullable
@@ -47,10 +53,10 @@ public interface QuoteService {
     org.cryptocoinpartners.schema.Offer getBestAskForListing(Listing listing);
 
     public @Nullable
-    org.cryptocoinpartners.schema.Offer getLastBidForMarket(Market market);
+    org.cryptocoinpartners.schema.Offer getLastBidForMarket(Tradeable market);
 
     public @Nullable
-    org.cryptocoinpartners.schema.Offer getLastAskForMarket(Market market);
+    org.cryptocoinpartners.schema.Offer getLastAskForMarket(Tradeable market);
 
     Offer getImpliedBestAskForListing(Listing listing);
 

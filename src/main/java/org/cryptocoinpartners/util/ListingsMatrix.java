@@ -3,6 +3,7 @@ package org.cryptocoinpartners.util;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang.ObjectUtils;
@@ -69,7 +70,7 @@ public class ListingsMatrix {
      * @param rate TheListings rate between the new currency and the reference currency. It is 1 ccyToAdd = rate ccyReference. The Listings matrix will be completed using cross rate
      * coherent with the data provided.
      */
-    public void addAsset(Asset ccyToAdd, Asset ccyReference, long rate) {
+    public synchronized void addAsset(Asset ccyToAdd, Asset ccyReference, long rate) {
         ArgumentChecker.notNull(ccyToAdd, "Asset to add to the Listings matrix should not be null");
         ArgumentChecker.notNull(ccyReference, "Reference currency should not be null");
         ArgumentChecker.isTrue(!ccyToAdd.equals(ccyReference), "Currencies should be different");
@@ -191,12 +192,13 @@ public class ListingsMatrix {
         ArgumentChecker.isTrue(listings.get(ccyReference).get(ccyToUpdate) != null, "Asset to update not in the Listings matrix");
 
         if (rate != 0) {
+            //TODO we get an exepction here if we have two exchanges with balacnes.
+            Set<Asset> test = listings.keySet();
+            // Iterator<Asset> lit = listings.keySet().iterator();
+            for (Asset ccy : listings.keySet()) {
+                //  while (lit.hasNext()) {
 
-            Iterator<Asset> lit = listings.keySet().iterator();
-
-            while (lit.hasNext()) {
-
-                Asset ccy = lit.next();
+                //     Asset ccy = lit.next();
                 if (!ccyToUpdate.equals(ccy)) {
                     long inverseCrossRate = 0;
                     long crossRate = 0;

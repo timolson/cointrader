@@ -176,7 +176,7 @@ public class EM {
 
             else
                 for (EntityBase entity : entities)
-                    log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not found in database");
+                    log.info(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not found in database");
             return foundEntity;
 
         } catch (Exception | Error e) {
@@ -218,7 +218,7 @@ public class EM {
 
             else
 
-                log.error(id + " " + resultType.getClass().getSimpleName() + ": not found in database");
+                log.info(id + " " + resultType.getClass().getSimpleName() + ": not found in database");
             return foundEntity;
 
         } catch (Exception | Error e) {
@@ -252,7 +252,7 @@ public class EM {
 
             else
                 for (EntityBase entity : entities)
-                    log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not found in database");
+                    log.info(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not found in database");
             return foundEntity;
 
         } catch (Exception | Error e) {

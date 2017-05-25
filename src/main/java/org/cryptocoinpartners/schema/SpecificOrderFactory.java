@@ -10,6 +10,8 @@ public interface SpecificOrderFactory {
     //   generalOrder.getTime(), market, volume, generalOrder, generalOrder.getComment());
     SpecificOrder create(SpecificOrder specificOrder);
 
+    SpecificOrder create(org.knowm.xchange.dto.Order exchangeOrder, Market market, @Nullable Portfolio portfolio);
+
     //
     //    SpecificOrder create(Instant time, Market market, Amount volume, String comment);
     //

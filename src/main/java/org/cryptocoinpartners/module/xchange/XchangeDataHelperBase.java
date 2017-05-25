@@ -1,8 +1,8 @@
 package org.cryptocoinpartners.module.xchange;
 
-import com.xeiam.xchange.currency.CurrencyPair;
-import com.xeiam.xchange.dto.marketdata.OrderBook;
-import com.xeiam.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.dto.marketdata.Trades;
 
 public class XchangeDataHelperBase implements XchangeData.Helper {
     @Override

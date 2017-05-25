@@ -1,10 +1,14 @@
 package org.cryptocoinpartners.module;
 
+import org.cryptocoinpartners.schema.Balance;
+import org.cryptocoinpartners.schema.BaseStrategy;
 import org.cryptocoinpartners.schema.Currency;
 import org.cryptocoinpartners.schema.Exchange;
+import org.cryptocoinpartners.schema.Holding;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Prompt;
+import org.cryptocoinpartners.schema.SyntheticMarket;
 import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.IoUtil;
 
@@ -68,10 +72,13 @@ public class StaticInjectionModule extends AbstractModule {
         //        jpa.configure(binder());
 
         requestStaticInjection(Market.class);
+        requestStaticInjection(SyntheticMarket.class);
         requestStaticInjection(Exchange.class);
         requestStaticInjection(Listing.class);
+        requestStaticInjection(Balance.class);
         requestStaticInjection(Prompt.class);
         requestStaticInjection(Currency.class);
+        requestStaticInjection(Holding.class);
         // requestStaticInjection(FeesUtil.class);
         // requestStaticInjection(Portfolio.class);
         //requestStaticInjection(Transaction.class);
@@ -89,6 +96,7 @@ public class StaticInjectionModule extends AbstractModule {
         // requestStaticInjection(Bar.class);
         // requestStaticInjection(SaveMarketData.class);
         requestStaticInjection(IoUtil.class);
+        requestStaticInjection(BaseStrategy.class);
         // requestStaticInjection(Portfolio.class);
         //requestStaticInjection(Transaction.class);
         // requestStaticInjection(Fill.class);

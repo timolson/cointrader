@@ -2,7 +2,7 @@ package org.cryptocoinpartners.esper;
 
 import java.util.List;
 
-import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.Tradeable;
 
 import com.espertech.esper.client.EventType;
 import com.espertech.esper.core.context.util.AgentInstanceViewFactoryChainContext;
@@ -19,6 +19,7 @@ public class OHLCBarPlugInViewFactory extends ViewFactorySupport {
     private List<ExprNode> viewParameters;
     private ExprNode timestampExpression;
     private ExprNode valueExpression;
+    private ExprNode volumeExpression;
     private ExprNode marketExpression;
     private ExprNode intervalExpression;
 
@@ -39,8 +40,9 @@ public class OHLCBarPlugInViewFactory extends ViewFactorySupport {
 
         timestampExpression = validatedNodes[0];
         valueExpression = validatedNodes[1];
-        marketExpression = validatedNodes[2];
-        intervalExpression = validatedNodes[3];
+        volumeExpression = validatedNodes[2];
+        marketExpression = validatedNodes[3];
+        intervalExpression = validatedNodes[4];
 
         if ((timestampExpression.getExprEvaluator().getType() != long.class) && (timestampExpression.getExprEvaluator().getType() != Long.class)) {
             throw new ViewParameterException("View requires long-typed timestamp values in parameter 1");
@@ -48,17 +50,21 @@ public class OHLCBarPlugInViewFactory extends ViewFactorySupport {
         if ((valueExpression.getExprEvaluator().getType() != double.class) && (valueExpression.getExprEvaluator().getType() != Double.class)) {
             throw new ViewParameterException("View requires double-typed values for in parameter 2");
         }
-        if ((marketExpression.getExprEvaluator().getType() != Market.class) && (marketExpression.getExprEvaluator().getType() != Market.class)) {
-            throw new ViewParameterException("View requires market-typed values for in parameter 3");
+        if ((volumeExpression.getExprEvaluator().getType() != double.class) && (volumeExpression.getExprEvaluator().getType() != Double.class)) {
+            throw new ViewParameterException("View requires double-typed values for in parameter 3");
+        }
+        if ((marketExpression.getExprEvaluator().getType() != Tradeable.class) && (marketExpression.getExprEvaluator().getType() != Tradeable.class)) {
+            throw new ViewParameterException("View requires tradeable-typed values for in parameter 4");
         }
         if ((intervalExpression.getExprEvaluator().getType() != double.class) && (intervalExpression.getExprEvaluator().getType() != Double.class)) {
-            throw new ViewParameterException("View requires double-typed values for in parameter 4");
+            throw new ViewParameterException("View requires double-typed values for in parameter 5");
         }
     }
 
     @Override
     public View makeView(AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext) {
-        return new OHLCBarPlugInView(agentInstanceViewFactoryContext, timestampExpression, valueExpression, marketExpression, intervalExpression);
+        return new OHLCBarPlugInView(agentInstanceViewFactoryContext, timestampExpression, valueExpression, volumeExpression, marketExpression,
+                intervalExpression);
     }
 
     @Override

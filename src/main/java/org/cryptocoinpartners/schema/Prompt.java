@@ -2,6 +2,7 @@ package org.cryptocoinpartners.schema;
 
 import java.util.List;
 
+import javax.annotation.Nullable;
 import javax.persistence.Basic;
 import javax.persistence.Cacheable;
 import javax.persistence.Entity;
@@ -10,9 +11,11 @@ import javax.persistence.NoResultException;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FeeMethod;
+import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.schema.dao.PromptJpaDao;
 import org.cryptocoinpartners.util.EM;
+import org.cryptocoinpartners.util.Remainder;
 
 import com.google.inject.Inject;
 
@@ -23,7 +26,7 @@ import com.google.inject.Inject;
 @Cacheable
 public class Prompt extends EntityBase {
     @Inject
-    protected static PromptJpaDao promptDao;
+    protected transient static PromptJpaDao promptDao;
 
     public static Prompt forSymbol(String symbol) {
         return EM.queryOne(Prompt.class, "select c from Prompt c where symbol=?1", symbol);
@@ -38,8 +41,9 @@ public class Prompt extends EntityBase {
     }
 
     @Transient
-    public Double getMultiplier() {
-        return this.contractSize * this.tickSize;
+    public Amount getMultiplier(Market market, Amount entryPrice, Amount exitPrice) {
+
+        return (entryPrice.times(exitPrice, Remainder.ROUND_EVEN)).invert();
     }
 
     protected void setSymbol(String symbol) {
@@ -74,7 +78,14 @@ public class Prompt extends EntityBase {
     }
 
     @Basic(optional = true)
-    public double getContractSize() {
+    private double getContractSize() {
+        return this.contractSize;
+    }
+
+    @Transient
+    public double getContractSize(Market market) {
+        if (market.getBase().getSymbol().equals("LTC"))
+            return this.contractSize * 0.1;
         return this.contractSize;
     }
 
@@ -143,27 +154,59 @@ public class Prompt extends EntityBase {
         this.feeRate = feeRate;
     }
 
+    @Nullable
     protected void setTradedCurrency(Asset tradedCurrency) {
         this.tradedCurrency = tradedCurrency;
     }
 
     @ManyToOne(optional = true)
-    public Asset getTradedCurrency() {
+    private Asset getTradedCurrency() {
         return this.tradedCurrency;
+    }
+
+    @ManyToOne(optional = true)
+    public Asset getTradedCurrency(Market market) {
+        if (getTradedCurrency() == null || market.getBase().getSymbol().equals("LTC"))
+            return market.getListing().getBase();
+
+        else
+            return getTradedCurrency();
     }
 
     // used by Currencies
 
-    static Prompt forSymbolOrCreate(String symbol, double tickValue, double tickSize, String currency, double volumeBasis, int margin, FeeMethod marginMethod,
-            double feeRate, FeeMethod feeMethod, FeeMethod marginFeeMethod) {
+    static Prompt forSymbolOrCreate(String symbol, double tickValue, double tickSize, String currency, double volumeBasis, double priceBasis, int margin,
+            FeeMethod marginMethod, double feeRate, FeeMethod feeMethod, FeeMethod marginFeeMethod) {
         try {
             return forSymbol(symbol);
         } catch (NoResultException e) {
             Asset tradedCurrency = Currency.forSymbol(currency);
-            final Prompt prompt = new Prompt(symbol, tickValue, tickSize, tradedCurrency, volumeBasis, margin, marginMethod, feeRate, feeMethod,
+            final Prompt prompt = new Prompt(symbol, tickValue, tickSize, tradedCurrency, volumeBasis, priceBasis, margin, marginMethod, feeRate, feeMethod,
                     marginFeeMethod);
             prompt.setRevision(prompt.getRevision() + 1);
-            promptDao.persistEntities(prompt);
+            try {
+                promptDao.persistEntities(prompt);
+            } catch (Throwable e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
+            return prompt;
+        }
+    }
+
+    static Prompt forSymbolOrCreate(String symbol, double tickValue, double tickSize, double volumeBasis, double priceBasis, int margin,
+            FeeMethod marginMethod, double feeRate, FeeMethod feeMethod, FeeMethod marginFeeMethod) {
+        try {
+            return forSymbol(symbol);
+        } catch (NoResultException e) {
+            final Prompt prompt = new Prompt(symbol, tickValue, tickSize, volumeBasis, priceBasis, margin, marginMethod, feeRate, feeMethod, marginFeeMethod);
+            prompt.setRevision(prompt.getRevision() + 1);
+            try {
+                promptDao.persistEntities(prompt);
+            } catch (Throwable e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
             return prompt;
         }
     }
@@ -171,17 +214,18 @@ public class Prompt extends EntityBase {
     @ManyToOne(optional = false)
     private FeeMethod feeMethod;
 
-    private Prompt(String symbol, double tickValue, double tickSize, Asset tradedCurrency, double volumeBasis) {
+    private Prompt(String symbol, double tickValue, double tickSize, Asset tradedCurrency, double volumeBasis, double priceBasis) {
         this.symbol = symbol;
         this.tickValue = tickValue;
         this.tickSize = tickSize;
         this.contractSize = tickValue / tickSize;
         this.tradedCurrency = tradedCurrency;
         this.volumeBasis = volumeBasis;
+        this.priceBasis = priceBasis;
     }
 
-    private Prompt(String symbol, double tickValue, double tickSize, Asset tradedCurrency, double volumeBasis, int margin, FeeMethod marginMethod,
-            double feeRate, FeeMethod feeMethod, FeeMethod marginFeeMethod) {
+    private Prompt(String symbol, double tickValue, double tickSize, Asset tradedCurrency, double volumeBasis, double priceBasis, int margin,
+            FeeMethod marginMethod, double feeRate, FeeMethod feeMethod, FeeMethod marginFeeMethod) {
         this.symbol = symbol;
         this.tickValue = tickValue;
         this.tickSize = tickSize;
@@ -193,6 +237,22 @@ public class Prompt extends EntityBase {
         this.marginFeeMethod = marginFeeMethod;
         this.feeRate = feeRate;
         this.feeMethod = feeMethod;
+        this.priceBasis = priceBasis;
+    }
+
+    private Prompt(String symbol, double tickValue, double tickSize, double volumeBasis, double priceBasis, int margin, FeeMethod marginMethod, double feeRate,
+            FeeMethod feeMethod, FeeMethod marginFeeMethod) {
+        this.symbol = symbol;
+        this.tickValue = tickValue;
+        this.tickSize = tickSize;
+        this.contractSize = tickValue / tickSize;
+        this.volumeBasis = volumeBasis;
+        this.margin = margin;
+        this.marginMethod = marginMethod;
+        this.marginFeeMethod = marginFeeMethod;
+        this.feeRate = feeRate;
+        this.feeMethod = feeMethod;
+        this.priceBasis = priceBasis;
     }
 
     private String symbol;
@@ -206,9 +266,17 @@ public class Prompt extends EntityBase {
     private double feeRate;
 
     @Override
-    public void persit() {
+    public synchronized void persit() {
+
+        this.setPeristanceAction(PersistanceAction.NEW);
+
         this.setRevision(this.getRevision() + 1);
-        promptDao.persistEntities(this);
+        try {
+            promptDao.persistEntities(this);
+        } catch (Throwable e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
 
     }
 
@@ -230,13 +298,37 @@ public class Prompt extends EntityBase {
     }
 
     @Override
-    public void merge() {
+    @Transient
+    public void setDao(Dao dao) {
+        promptDao = (PromptJpaDao) dao;
+        // TODO Auto-generated method stub
+        //  return null;
+    }
+
+    @Override
+    public synchronized void merge() {
+
+        this.setPeristanceAction(PersistanceAction.MERGE);
+
+        this.setRevision(this.getRevision() + 1);
         promptDao.merge(this);
 
     }
 
     @Override
     public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void prePersist() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void postPersist() {
         // TODO Auto-generated method stub
 
     }

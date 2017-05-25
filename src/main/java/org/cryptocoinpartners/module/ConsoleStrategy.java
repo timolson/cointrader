@@ -95,7 +95,7 @@ public class ConsoleStrategy extends SimpleStatefulStrategy {
 
     @Override
     @Nullable
-    protected CommonOrderBuilder buildEntryOrder() {
+    protected CommonOrderBuilder buildEntryOrder(Market market) {
         // TODO Auto-generated method stub
         return null;
     }

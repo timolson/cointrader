@@ -67,21 +67,23 @@ public class SaveTicksCsv {
             if (t.getLastBook() == null)
                 return;
         }
+        if (!t.getMarket().isSynthetic()) {
+            final Market listing = (Market) t.getMarket();
 
-        final Market listing = t.getMarket();
-        final String exchange = listing.getExchange().getSymbol();
-        final Asset base = listing.getBase();
-        final Asset quote = listing.getQuote();
-        final String timeStr = timeFormat.format(t.getTime().toDate());
-        if (t.getPriceCount() != null) {
-            ArrayList<String> row = new ArrayList<>(Arrays.asList(listing.toString(), exchange, base.getSymbol(), quote.getSymbol(), timeStr,
-                    String.valueOf(t.getPriceAsDouble()), String.valueOf(t.getVolumeAsDouble())));
-            addBookToRow(t, row);
-            writer.writeNext(row.toArray(new String[row.size()]));
-            try {
-                writer.flush();
-            } catch (IOException e) {
-                log.warn(e.getMessage(), e);
+            final String exchange = listing.getExchange().getSymbol();
+            final Asset base = listing.getBase();
+            final Asset quote = listing.getQuote();
+            final String timeStr = timeFormat.format(t.getTime().toDate());
+            if (t.getPriceCount() != null) {
+                ArrayList<String> row = new ArrayList<>(Arrays.asList(listing.toString(), exchange, base.getSymbol(), quote.getSymbol(), timeStr,
+                        String.valueOf(t.getPriceAsDouble()), String.valueOf(t.getVolumeAsDouble())));
+                addBookToRow(t, row);
+                writer.writeNext(row.toArray(new String[row.size()]));
+                try {
+                    writer.flush();
+                } catch (IOException e) {
+                    log.warn(e.getMessage(), e);
+                }
             }
         }
     }

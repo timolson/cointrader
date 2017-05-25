@@ -13,6 +13,11 @@ import org.cryptocoinpartners.util.RemainderHandler;
 @SuppressWarnings("UnusedDeclaration")
 public class DiscreteAmount extends Amount {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 1169846665999381787L;
+
     /** helper for constructing an Amount with a double basis instead of long inverted basis.  a double basis like
      * 0.05 is easier for human configurers than the inverted basis of 20 */
     public static long invertBasis(double basis) {
@@ -109,6 +114,8 @@ public class DiscreteAmount extends Amount {
 
     @Override
     public Amount plus(Amount o) {
+        if (o == null)
+            System.out.println("test");
         if (o instanceof DiscreteAmount) {
             DiscreteAmount discreteOther = (DiscreteAmount) o;
             if (iBasis == discreteOther.iBasis)
@@ -143,8 +150,8 @@ public class DiscreteAmount extends Amount {
     @Override
     public Amount dividedBy(Amount o, RemainderHandler remainderHandler) {
         BigDecimal bdDivisor = o.asBigDecimal();
-        bdDivisor.setScale(Math.max(bdDivisor.scale(), mc.getPrecision()));
-        return new DecimalAmount(asBigDecimal().divide(bdDivisor, BigDecimal.ROUND_HALF_EVEN));
+
+        return new DecimalAmount(asBigDecimal().divide(bdDivisor.setScale(Math.max(bdDivisor.scale(), mc.getPrecision())), BigDecimal.ROUND_HALF_EVEN));
 
     }
 

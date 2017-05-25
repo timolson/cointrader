@@ -24,7 +24,8 @@ public interface ReplayFactory {
 
     Replay between(@Assisted("startTime") Instant start, @Assisted("endTime") Instant end, boolean orderByTimeReceived);
 
-    Replay between(@Assisted("startTime") Instant start, @Assisted("endTime") Instant end, boolean orderByTimeReceived, Semaphore semaphore);
+    Replay between(@Assisted("startTime") Instant start, @Assisted("endTime") Instant end, @Assisted("orderByTimeReceived") boolean orderByTimeReceived,
+            Semaphore semaphore, @Assisted("useRandomData") boolean useRandomData);
 
     Replay during(Interval interval, boolean orderByTimeReceived);
 

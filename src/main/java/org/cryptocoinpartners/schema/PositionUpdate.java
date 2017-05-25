@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.schema;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
 import javax.persistence.Transient;
@@ -16,8 +17,9 @@ import org.joda.time.format.DateTimeFormatter;
  */
 @Entity
 public class PositionUpdate extends Event {
-    protected static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
-    protected static final String SEPARATOR = ",";
+    protected transient static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+    protected transient static final String SEPARATOR = ",";
+    private double interval;
 
     @ManyToOne
     public Position getPosition() {
@@ -37,8 +39,28 @@ public class PositionUpdate extends Event {
         return lastType;
     }
 
+    @Column(name = "\"interval\"")
+    public double getInterval() {
+        return interval;
+    }
+
     public void setLastType(PositionType lastType) {
         this.lastType = lastType;
+    }
+
+    /*    public PositionUpdate(Position position, Market market, PositionType lastType, PositionType type) {
+            this.position = position;
+            this.market = market;
+            this.type = type;
+            this.lastType = lastType;
+        }*/
+
+    public PositionUpdate(Position position, Market market, double interval, PositionType lastType, PositionType type) {
+        this.position = position;
+        this.market = market;
+        this.type = type;
+        this.lastType = lastType;
+        this.interval = interval;
     }
 
     public PositionUpdate(Position position, Market market, PositionType lastType, PositionType type) {
@@ -46,6 +68,7 @@ public class PositionUpdate extends Event {
         this.market = market;
         this.type = type;
         this.lastType = lastType;
+
     }
 
     // JPA
@@ -58,6 +81,10 @@ public class PositionUpdate extends Event {
 
     protected void setMarket(Market market) {
         this.market = market;
+    }
+
+    protected void setInterval(double interval) {
+        this.interval = interval;
     }
 
     public void setType(PositionType type) {
@@ -92,7 +119,8 @@ public class PositionUpdate extends Event {
 
         return "PositionUpdate{ id=" + getId() + SEPARATOR + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Type=" + getType()
                 + SEPARATOR + "Last Type=" + (getLastType() == null ? "null" : getLastType()) + SEPARATOR + "market={"
-                + (getMarket() == null ? "null}" : getMarket() + "}") + SEPARATOR + "position=" + getPosition() + "}";
+                + (getMarket() == null ? "null}" : getMarket() + "}") + SEPARATOR + "Interval=" + (getInterval() == 0 ? "null" : getInterval()) + SEPARATOR
+                + "position=" + getPosition() + "}";
     }
 
     @Override
@@ -100,6 +128,13 @@ public class PositionUpdate extends Event {
     public Dao getDao() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    @Transient
+    public void setDao(Dao dao) {
+        // TODO Auto-generated method stub
+        //  return null;
     }
 
     @Override
@@ -112,6 +147,18 @@ public class PositionUpdate extends Event {
     public EntityBase refresh() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public void prePersist() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void postPersist() {
+        // TODO Auto-generated method stub
+
     }
 
 }

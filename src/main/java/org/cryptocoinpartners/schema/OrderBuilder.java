@@ -170,7 +170,8 @@ public class OrderBuilder {
         }
 
         public GeneralOrderBuilder withTargetPrice(String price) {
-            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
+            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LOSS)
+                    || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
                 order.setTargetPrice(DecimalAmount.of(price));
                 return this;
             }
@@ -178,7 +179,8 @@ public class OrderBuilder {
         }
 
         public GeneralOrderBuilder withTargetPrice(BigDecimal price) {
-            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
+            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LOSS)
+                    || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
                 order.setTargetPrice(DecimalAmount.of(price));
                 return this;
             }
@@ -187,7 +189,8 @@ public class OrderBuilder {
         }
 
         public GeneralOrderBuilder withStopPrice(String price) {
-            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
+            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LOSS)
+                    || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
                 order.setStopAmount(DecimalAmount.of(price));
                 return this;
             }
@@ -195,7 +198,8 @@ public class OrderBuilder {
         }
 
         public GeneralOrderBuilder withStopPrice(BigDecimal price) {
-            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
+            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LOSS)
+                    || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
                 order.setStopPrice(DecimalAmount.of(price));
                 return this;
             }
@@ -204,7 +208,8 @@ public class OrderBuilder {
         }
 
         public GeneralOrderBuilder withStopAmount(BigDecimal price) {
-            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
+            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LOSS)
+                    || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
                 order.setStopAmount(DecimalAmount.of(price));
                 return this;
             }
@@ -219,8 +224,9 @@ public class OrderBuilder {
         }
 
         public GeneralOrderBuilder withTrailingStopPrice(BigDecimal price, BigDecimal trailingStopPrice) {
-            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
-                order.setStopAmount(DecimalAmount.of(price));
+            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LOSS)
+                    || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
+                order.setTrailingStopAmount(DecimalAmount.of(price));
                 order.setTrailingStopPrice(DecimalAmount.of(trailingStopPrice));
                 return this;
             }
@@ -228,8 +234,9 @@ public class OrderBuilder {
         }
 
         public GeneralOrderBuilder withTrailingStopPrice(String price, String trailingStopPrice) {
-            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
-                order.setStopAmount(DecimalAmount.of(price));
+            if (order.fillType == (FillType.STOP_LIMIT) || order.fillType == (FillType.STOP_LOSS) || order.fillType == (FillType.TRAILING_STOP_LOSS)
+                    || order.fillType == (FillType.TRAILING_STOP_LIMIT)) {
+                order.setTrailingStopAmount(DecimalAmount.of(price));
                 order.setTrailingStopPrice(DecimalAmount.of(trailingStopPrice));
                 return this;
             }

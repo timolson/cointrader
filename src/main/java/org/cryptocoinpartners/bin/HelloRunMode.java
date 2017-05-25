@@ -4,6 +4,7 @@ import java.util.concurrent.Semaphore;
 
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.HelloWorld;
+import org.cryptocoinpartners.module.JMXManager;
 import org.cryptocoinpartners.schema.Panic;
 
 import com.beust.jcommander.Parameters;
@@ -19,6 +20,7 @@ public class HelloRunMode extends RunMode {
     public void run(Semaphore semaphore) {
         Context context = Context.create();
         context.attach(HelloWorld.class);
+        context.attach(JMXManager.class);
         context.publish(new Panic());
         if (semaphore != null)
             semaphore.release();

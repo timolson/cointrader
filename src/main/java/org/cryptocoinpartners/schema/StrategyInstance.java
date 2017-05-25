@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import javax.persistence.Cacheable;
 import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
 import javax.persistence.Transient;
@@ -14,6 +13,7 @@ import org.apache.commons.configuration.MapConfiguration;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.Strategy;
+import org.cryptocoinpartners.util.ConfigUtil;
 
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -27,7 +27,7 @@ import com.google.inject.Module;
  * @author Tim Olson
  */
 @Entity
-@Cacheable
+//@Cacheable
 public class StrategyInstance extends PortfolioManager implements Context.AttachListener {
 
     public StrategyInstance(String moduleName) {
@@ -111,6 +111,42 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
                     portfolio.merge();
                     binder.bind(Portfolio.class).toInstance(portfolio);
                 }
+                // set base currency
+                if (portfolio.getBaseAsset() == null) {
+                    Asset baseAsset = Asset.forSymbol(portfolio.getContext().getConfig().getString("base.symbol", "USD"));
+
+                    portfolio.setBaseAsset(baseAsset);
+                    portfolio.merge();
+                }
+                if (portfolio.getBaseNotionalBalanceCount() == 0) {
+
+                    DiscreteAmount baseNotionalBalance = new DiscreteAmount((long) (ConfigUtil.combined().getLong("base.notional.balance", 100000) / (portfolio
+                            .getBaseAsset().getBasis())), portfolio.getBaseAsset().getBasis());
+
+                    portfolio.setBaseNotionalBalanceCount(baseNotionalBalance.getCount());
+                    portfolio.getBaseNotionalBalance();
+                    portfolio.merge();
+                }
+                if (portfolio.getStartingBaseNotionalBalanceCount() == 0) {
+
+                    DiscreteAmount baseNotionalBalance = new DiscreteAmount((long) (ConfigUtil.combined().getLong("base.notional.balance", 100000) / (portfolio
+                            .getBaseAsset().getBasis())), portfolio.getBaseAsset().getBasis());
+
+                    portfolio.setStartingBaseNotionalBalanceCount(baseNotionalBalance.getCount());
+                    portfolio.getStartingBaseNotionalBalance();
+                    portfolio.merge();
+                }
+
+                /* if (portfolio.getBaseTradingBalanceCount() == 0) {
+
+                     DiscreteAmount baseTradingBalance = new DiscreteAmount((long) (ConfigUtil.combined().getLong("base.trading.balance", 10000) / (portfolio
+                             .getBaseAsset().getBasis())), portfolio.getBaseAsset().getBasis());
+
+                     portfolio.setBaseTradingBalanceCount(baseTradingBalance.getCount());
+                     portfolio.getBaseTradingBalance();
+                     portfolio.merge();
+                 }
+                */
                 StrategyInstance.this.setPortfolio(portfolio);
 
                 //  portfolio = context.getInjector().getInstance(Portfolio.class);

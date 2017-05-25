@@ -3,6 +3,9 @@ package org.cryptocoinpartners.schema;
 import javax.persistence.Basic;
 import javax.persistence.Cacheable;
 import javax.persistence.Entity;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
+import javax.persistence.NoResultException;
 import javax.persistence.Transient;
 
 import org.slf4j.Logger;
@@ -14,12 +17,20 @@ import org.slf4j.LoggerFactory;
  * @author Tim Olson
  */
 @Entity
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+//@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @Cacheable
 public abstract class Asset extends EntityBase {
 
     public static Asset forSymbol(String symbol) {
         // only Currency is supported
-        return Currency.forSymbol(symbol);
+
+        try {
+            return Currency.forSymbol(symbol);
+        } catch (NoResultException e) {
+            return null;
+        }
+
     }
 
     @Basic(optional = false)

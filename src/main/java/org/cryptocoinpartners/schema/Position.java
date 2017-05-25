@@ -1,13 +1,16 @@
 package org.cryptocoinpartners.schema;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.Nullable;
 import javax.persistence.Cacheable;
+import javax.persistence.CascadeType;
+import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedAttributeNode;
@@ -15,15 +18,20 @@ import javax.persistence.NamedEntityGraph;
 import javax.persistence.NamedEntityGraphs;
 import javax.persistence.NamedSubgraph;
 import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 import javax.persistence.OrderBy;
+import javax.persistence.PreRemove;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.schema.dao.PositionDao;
 import org.cryptocoinpartners.util.Remainder;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
@@ -45,14 +53,29 @@ import com.google.inject.assistedinject.AssistedInject;
 // @NamedAttributeNode("body")
 })
 public class Position extends Holding {
-    @Inject
-    protected PositionDao positionDao;
 
-    protected Portfolio portfolio;
-    protected static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
+    @Inject
+    protected transient PositionDao positionDao;
+
+    private Amount shortAvgPrice;
+    private Amount shortVolume;
+    private Amount longVolume;
+    private Amount openVolume;
+    private Amount shortCumVolume;
+    private Amount longCumVolume;
+    private Amount longAvgPrice;
+    private Amount longAvgStopPrice;
+    private Amount shortAvgStopPrice;
+    private Amount originalLongAvgStopPrice;
+    private Amount originalShortAvgStopPrice;
+
+    private int exitCount = 1;
+    protected transient static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.position");
+
+    protected transient static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
 
     // private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
-    protected static final String SEPARATOR = ",";
+    protected transient static final String SEPARATOR = ",";
 
     //    public Position(Portfolio portfolio, Exchange exchange, Market market, Asset asset, Amount volume, Amount price) {
     //
@@ -71,15 +94,19 @@ public class Position extends Holding {
     //    }
 
     @AssistedInject
-    public Position(@Assisted Fill fill) {
-        this.fills = new CopyOnWriteArrayList<Fill>();
+    public Position(@Assisted Fill fill, @Assisted Market market) {
 
+        this.getId();
+
+        this.fills = new ArrayList<Fill>();
         fill.setPosition(this);
-
         addFill(fill);
+        setPortfolio(fill.getPortfolio());
+
+        getPortfolio().addPosition(this);
 
         this.exchange = fill.getMarket().getExchange();
-        this.market = fill.getMarket();
+        this.market = market;
         // this.volume = fill.getVolume();
         //this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.ROUND_EVEN).getCount();
         //this.longVolume = volume.isPositive() ? volume : this.longVolume;
@@ -92,16 +119,16 @@ public class Position extends Holding {
         //this.longAvgStopPrice = fill.getStopPrice() != null && fill.isLong() ? fill.getStopPrice() : DecimalAmount.ZERO;
         this.asset = fill.getMarket().getListing().getBase();
         // this.id = getId();
-        this.portfolio = fill.getPortfolio();
         //   
-        fill.getPortfolio().addPosition(this);
 
     }
 
     @AssistedInject
-    public Position(@Assisted Collection<Fill> fills) {
-        this.fills = new CopyOnWriteArrayList<Fill>();
+    public Position(@Assisted Collection<Fill> fills, @Assisted Market market) {
+        this.getId();
 
+        this.fills = new ArrayList<Fill>();
+        this.market = market;
         this.addFill(fills);
         int index = 0;
         if (!fills.isEmpty()) {
@@ -133,6 +160,17 @@ public class Position extends Holding {
         return (getVolume() != null && getVolume().isPositive());
     }
 
+    @Override
+    @OneToOne(optional = true, fetch = FetchType.EAGER)
+    public Asset getAsset() {
+        return asset;
+    }
+
+    @Override
+    public void setAsset(Asset asset) {
+        this.asset = asset;
+    }
+
     @Transient
     public boolean isShort() {
 
@@ -150,6 +188,30 @@ public class Position extends Holding {
         return market;
     }
 
+    public synchronized void setExitCount(int exitCount) {
+        this.exitCount = exitCount;
+    }
+
+    @Column(columnDefinition = "integer DEFAULT 0", nullable = false)
+    public int getExitCount() {
+        //  if (version == null)
+        //    return 0;
+        return exitCount;
+    }
+
+    @Override
+    @ManyToOne
+    @JoinColumn(name = "exchange")
+    public Exchange getExchange() {
+
+        return exchange;
+    }
+
+    @Override
+    public void setExchange(Exchange exchange) {
+        this.exchange = exchange;
+    }
+
     // @Transient
     // @Inject
     // public PositionJpaDao getDao(PositionJpaDao localPositionDao) {
@@ -160,19 +222,10 @@ public class Position extends Holding {
 
     //  }
 
-    public @ManyToOne
-    @JoinColumn(name = "portfolio")
-    Portfolio getPortfolio() {
-
-        return portfolio;
-    }
-
-    public void setPortfolio(Portfolio portfolio) {
-        this.portfolio = portfolio;
-    }
+    // @Override
 
     @Transient
-    public Amount getMarginAmount() {
+    public synchronized Amount getMarginAmount() {
 
         Amount marginAmount = DecimalAmount.ZERO;
         if (isOpen() && marginAmount != null) {
@@ -183,7 +236,7 @@ public class Position extends Holding {
     }
 
     @Transient
-    public Amount getVolume() {
+    public synchronized Amount getVolume() {
 
         // if (volume == null)
         //   volume = new DiscreteAmount(volumeCount, market.getVolumeBasis());
@@ -210,7 +263,12 @@ public class Position extends Holding {
         //	volume = new DiscreteAmount(volumeCount, market.getVolumeBasis());
         //return volume;
 
-        return (getVolume().isNegative()) ? getShortAvgPrice() : getLongAvgPrice();
+        Amount avgPrice = (getVolume().isNegative()) ? getShortAvgPrice() : getLongAvgPrice();
+
+        if (avgPrice == null)
+            return DecimalAmount.ZERO;
+        else
+            return avgPrice;
         // return ((getLongAvgPrice().times(getLongVolume(), Remainder.ROUND_EVEN)).plus(getShortAvgPrice().times(getShortVolume(), Remainder.ROUND_EVEN)))
         //       .dividedBy(getLongVolume().plus(getShortVolume()), Remainder.ROUND_EVEN);
 
@@ -222,7 +280,25 @@ public class Position extends Holding {
         //  if (volume == null)
         //  volume = new DiscreteAmount(volumeCount, market.getVolumeBasis());
         //return volume;
-        return (getVolume().isNegative()) ? getShortAvgStopPrice() : getLongAvgStopPrice();
+        Amount avgStopPrice = (getVolume().isNegative()) ? getShortAvgStopPrice() : getLongAvgStopPrice();
+        if (avgStopPrice == null)
+            return DecimalAmount.ZERO;
+        else
+            return avgStopPrice;
+
+    }
+
+    @Transient
+    public Amount getOriginalAvgStopPrice() {
+
+        //  if (volume == null)
+        //  volume = new DiscreteAmount(volumeCount, market.getVolumeBasis());
+        //return volume;
+        Amount avgStopPrice = (getVolume().isNegative()) ? getOriginalShortAvgStopPrice() : getOriginalLongAvgStopPrice();
+        if (avgStopPrice == null)
+            return DecimalAmount.ZERO;
+        else
+            return avgStopPrice;
 
     }
 
@@ -230,8 +306,8 @@ public class Position extends Holding {
     public Amount getOpenVolume() {
         if (getMarket() == null)
             return DecimalAmount.ZERO;
-        // if (longVolume == null)
-        Amount openVolume = new DiscreteAmount(getOpenVolumeCount(), getMarket().getVolumeBasis());
+        if (openVolume == null)
+            openVolume = new DiscreteAmount(getOpenVolumeCount(), getMarket().getVolumeBasis());
         return openVolume;
 
     }
@@ -240,8 +316,8 @@ public class Position extends Holding {
     public Amount getLongVolume() {
         if (getMarket() == null)
             return DecimalAmount.ZERO;
-        // if (longVolume == null)
-        Amount longVolume = new DiscreteAmount(getLongVolumeCount(), getMarket().getVolumeBasis());
+        if (longVolume == null)
+            longVolume = new DiscreteAmount(getLongVolumeCount(), getMarket().getVolumeBasis());
         return longVolume;
 
     }
@@ -250,29 +326,37 @@ public class Position extends Holding {
     public Amount getShortVolume() {
         if (getMarket() == null)
             return DecimalAmount.ZERO;
-        //  if (shortVolume == null)
-        Amount shortVolume = new DiscreteAmount(getShortVolumeCount(), getMarket().getVolumeBasis());
+        if (shortVolume == null)
+            shortVolume = new DiscreteAmount(getShortVolumeCount(), getMarket().getVolumeBasis());
         return shortVolume;
     }
 
     @Transient
     public synchronized Amount getLongAvgPrice() {
         // if (longAvgPrice == null) {
-        Amount longCumVolume = DecimalAmount.ZERO;
-        Amount longAvgPrice = DecimalAmount.ZERO;
+        // Amount longCumVolume = DecimalAmount.ZERO;
+        // Amount longAvgPrice = DecimalAmount.ZERO;
+        if (longAvgPrice != null)
+            //&& (getLongVolume() != null && getLongVolume().isZero()) && !longAvgPrice.isZero())
+            return longAvgPrice;
+        longCumVolume = DecimalAmount.ZERO;
+        longAvgPrice = DecimalAmount.ZERO;
         Iterator<Fill> itf = getFills().iterator();
         while (itf.hasNext()) {
             //  for (Fill pos : getFills()) {
             Fill pos = itf.next();
-            if (pos.isLong() && !(longCumVolume.plus(pos.getOpenVolume()).isZero())) {
+            if (pos.isLong() && pos.getPrice() != null && !pos.getPrice().isZero() && !(longCumVolume.plus(pos.getOpenVolume()).isZero())) {
                 longAvgPrice = longAvgPrice == null ? DecimalAmount.ZERO : ((longAvgPrice.times(longCumVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume()
-                        .times(pos.getPrice(), Remainder.ROUND_EVEN))).dividedBy(longCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+                        .times(pos.getPrice(), Remainder.ROUND_EVEN))).divide(longCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
                 longCumVolume = longCumVolume.plus(pos.getOpenVolume());
 
             }
         }
 
-        return longAvgPrice;
+        if (longAvgPrice == null)
+            return DecimalAmount.ZERO;
+        else
+            return longAvgPrice;
 
     }
 
@@ -292,37 +376,86 @@ public class Position extends Holding {
     @Transient
     public synchronized Amount getShortAvgPrice() {
         //   if (shortAvgPrice == null) {
-        Amount shortCumVolume = DecimalAmount.ZERO;
-        Amount shortAvgPrice = DecimalAmount.ZERO;
-
+        //Amount shortCumVolume = DecimalAmount.ZERO;
+        // Amount shortAvgPrice = DecimalAmount.ZERO;
+        if (shortAvgStopPrice != null)
+            //&& ((getShortVolume() != null && getShortVolume().isZero()) || (shortAvgStopPrice != null && !shortAvgStopPrice.isZero())))
+            return shortAvgPrice;
+        shortCumVolume = DecimalAmount.ZERO;
+        shortAvgPrice = DecimalAmount.ZERO;
         Iterator<Fill> itf = getFills().iterator();
+
         while (itf.hasNext()) {
             //  for (Fill pos : getFills()) {
             Fill pos = itf.next();
 
-            if (pos.isShort() && !(shortCumVolume.plus(pos.getOpenVolume()).isZero())) {
-                if (pos.getOpenVolume() == null)
-                    System.out.println("douggie");
+            if (pos.isShort() && pos.getPrice() != null && !pos.getPrice().isZero() && !(shortCumVolume.plus(pos.getOpenVolume()).isZero())) {
 
                 shortAvgPrice = shortAvgPrice == null ? DecimalAmount.ZERO : ((shortAvgPrice.times(shortCumVolume, Remainder.ROUND_EVEN)).plus(pos
-                        .getOpenVolume().times(pos.getPrice(), Remainder.ROUND_EVEN)))
-                        .dividedBy(shortCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+                        .getOpenVolume().times(pos.getPrice(), Remainder.ROUND_EVEN))).divide(shortCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
                 shortCumVolume = shortCumVolume.plus(pos.getOpenVolume());
 
             }
         }
-        // }
 
-        return shortAvgPrice;
+        // }
+        if (shortAvgPrice == null)
+            return DecimalAmount.ZERO;
+        else
+            return shortAvgPrice;
 
     }
 
     @Transient
-    public Amount getLongAvgStopPrice() {
+    public synchronized Amount getOriginalLongAvgStopPrice() {
         //  if (longAvgStopPrice == null) {
-        Amount longCumVolume = DecimalAmount.ZERO;
-        Amount longAvgStopPrice = DecimalAmount.ZERO;
+        //    Amount longCumVolume = DecimalAmount.ZERO;
+        //  Amount longAvgStopPrice = DecimalAmount.ZERO;
+        if (originalLongAvgStopPrice != null)
+            return longAvgStopPrice;
+        //  synchronized (this) {
+        longCumVolume = DecimalAmount.ZERO;
+        originalLongAvgStopPrice = DecimalAmount.ZERO;
+        Iterator<Fill> itf = getFills().iterator();
+        while (itf.hasNext()) {
+            //  for (Fill pos : getFills()) {
+            Fill pos = itf.next();
+            if (pos.isLong()) {
+                Amount parentStopPrice = null;
+                if (pos.getOrder() != null && pos.getOrder().getParentOrder() != null && pos.getOrder().getParentOrder().getStopAmount() != null)
 
+                    parentStopPrice = pos.getPrice().minus(pos.getOrder().getParentOrder().getStopAmount());
+                //  Amount stopPrice = (pos.getStopPrice() == null) ? parentStopPrice : pos.getStopPrice();
+                Amount stopPrice = pos.getOriginalStopPrice();
+                if (stopPrice == null)
+                    continue;
+                if (stopPrice != null && !stopPrice.isZero() && (!longCumVolume.plus(pos.getOpenVolume()).isZero()))
+                    originalLongAvgStopPrice = ((originalLongAvgStopPrice.times(longCumVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(stopPrice,
+                            Remainder.ROUND_EVEN))).divide(longCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+
+                longCumVolume = longCumVolume.plus(pos.getOpenVolume());
+            }
+
+        }
+        // }
+        //   }
+        if (originalLongAvgStopPrice == null)
+            return DecimalAmount.ZERO;
+        else
+
+            return originalLongAvgStopPrice;
+    }
+
+    @Transient
+    public synchronized Amount getLongAvgStopPrice() {
+        //  if (longAvgStopPrice == null) {
+        //    Amount longCumVolume = DecimalAmount.ZERO;
+        //  Amount longAvgStopPrice = DecimalAmount.ZERO;
+        if (longAvgStopPrice != null)
+            //&& ((getLongVolume() != null && getLongVolume().isZero()) || (longAvgStopPrice != null && !longAvgStopPrice.isZero())))
+            return longAvgStopPrice;
+        longCumVolume = DecimalAmount.ZERO;
+        longAvgStopPrice = DecimalAmount.ZERO;
         Iterator<Fill> itf = getFills().iterator();
         while (itf.hasNext()) {
             //  for (Fill pos : getFills()) {
@@ -336,28 +469,39 @@ public class Position extends Holding {
                 Amount stopPrice = pos.getStopPrice();
                 if (stopPrice == null)
                     continue;
-                if (stopPrice != null)
+                if (stopPrice != null && !stopPrice.isZero() && (!longCumVolume.plus(pos.getOpenVolume()).isZero()))
                     longAvgStopPrice = ((longAvgStopPrice.times(longCumVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(stopPrice,
-                            Remainder.ROUND_EVEN))).dividedBy(longCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+                            Remainder.ROUND_EVEN))).divide(longCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
 
                 longCumVolume = longCumVolume.plus(pos.getOpenVolume());
             }
 
         }
+
         //   }
-        return longAvgStopPrice;
+        if (longAvgStopPrice == null)
+            return DecimalAmount.ZERO;
+        else
+
+            return longAvgStopPrice;
     }
 
-    protected void setMarket(Market market) {
+    public synchronized void setMarket(Market market) {
         this.market = market;
+        this.exchange = market.getExchange();
     }
 
     @Transient
-    public Amount getShortAvgStopPrice() {
+    public synchronized Amount getShortAvgStopPrice() {
         //   if (shortAvgStopPrice == null) {
-        Amount shortAvgStopPrice = DecimalAmount.ZERO;
-        Amount shortCumVolume = DecimalAmount.ZERO;
+        //  Amount shortAvgStopPrice = DecimalAmount.ZERO;
+        //Amount shortCumVolume = DecimalAmount.ZERO;
         // if (shortAvgStopPrice == null)
+        if (shortAvgStopPrice != null)
+            //        && ((getShortVolume() != null && getShortVolume().isZero()) || (shortAvgStopPrice != null && !shortAvgStopPrice.isZero())))
+            return shortAvgStopPrice;
+        shortCumVolume = DecimalAmount.ZERO;
+        shortAvgStopPrice = DecimalAmount.ZERO;
         Iterator<Fill> itf = getFills().iterator();
         while (itf.hasNext()) {
             //  for (Fill pos : getFills()) {
@@ -372,18 +516,65 @@ public class Position extends Holding {
                 Amount stopPrice = pos.getStopPrice();
                 if (stopPrice == null)
                     continue;
-                if (stopPrice != null)
+                if (stopPrice != null && !stopPrice.isZero() && (!shortCumVolume.plus(pos.getOpenVolume()).isZero()))
 
                     shortAvgStopPrice = ((shortAvgStopPrice.times(shortCumVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(stopPrice,
-                            Remainder.ROUND_EVEN))).dividedBy(shortCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+                            Remainder.ROUND_EVEN))).divide(shortCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
 
                 shortCumVolume = shortCumVolume.plus(pos.getOpenVolume());
             }
 
         }
-        //}
 
-        return shortAvgStopPrice;
+        //}
+        if (shortAvgStopPrice == null)
+            return DecimalAmount.ZERO;
+        else
+            return shortAvgStopPrice;
+
+    }
+
+    @Transient
+    public synchronized Amount getOriginalShortAvgStopPrice() {
+        //   if (shortAvgStopPrice == null) {
+        //  Amount shortAvgStopPrice = DecimalAmount.ZERO;
+        //Amount shortCumVolume = DecimalAmount.ZERO;
+        // if (shortAvgStopPrice == null)
+        if (originalShortAvgStopPrice != null)
+            //        && ((getShortVolume() != null && getShortVolume().isZero()) || (shortAvgStopPrice != null && !shortAvgStopPrice.isZero())))
+            return originalShortAvgStopPrice;
+        shortCumVolume = DecimalAmount.ZERO;
+        originalShortAvgStopPrice = DecimalAmount.ZERO;
+        Iterator<Fill> itf = getFills().iterator();
+        while (itf.hasNext()) {
+            //  for (Fill pos : getFills()) {
+            Fill pos = itf.next();
+
+            if (pos.isShort()) {
+                Amount parentStopPrice = null;
+                if (pos.getOrder() != null && pos.getOrder().getParentOrder() != null && pos.getOrder().getParentOrder().getStopAmount() != null)
+
+                    parentStopPrice = pos.getPrice().plus(pos.getOrder().getParentOrder().getStopAmount());
+                // Amount stopPrice = (pos.getStopPrice() == null) ? parentStopPrice : pos.getStopPrice();
+                Amount stopPrice = pos.getOriginalStopPrice();
+                if (stopPrice == null)
+                    continue;
+                if (stopPrice != null && !stopPrice.isZero() && (!shortCumVolume.plus(pos.getOpenVolume()).isZero()))
+
+                    originalShortAvgStopPrice = ((originalShortAvgStopPrice.times(shortCumVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(
+                            stopPrice, Remainder.ROUND_EVEN))).divide(shortCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+
+                shortCumVolume = shortCumVolume.plus(pos.getOpenVolume());
+            }
+
+        }
+
+        //}
+        if (originalShortAvgStopPrice == null)
+            return DecimalAmount.ZERO;
+        else
+            return originalShortAvgStopPrice;
+
     }
 
     /** If the SpecificOrder is not null, then this Position is being held in reserve as payment for that Order */
@@ -401,22 +592,84 @@ public class Position extends Holding {
                 + (getShortVolume() != null ? (SEPARATOR + ", Short Qty=" + getShortVolume()) : "")
                 + (getShortAvgPrice() != null ? (SEPARATOR + ", Short Avg Price=" + getShortAvgPrice()) : "")
                 + (getShortAvgStopPrice() != null ? (SEPARATOR + ", Short Avg Stop Price=" + getShortAvgStopPrice()) : "")
+                + (getOriginalShortAvgStopPrice() != null ? (SEPARATOR + ", Original Short Avg Stop Price=" + getOriginalShortAvgStopPrice()) : "")
                 + (getLongVolume() != null ? (SEPARATOR + "Long Qty=" + getLongVolume()) : "")
                 + (getLongAvgPrice() != null ? (SEPARATOR + "Long Avg Price=" + getLongAvgPrice()) : "")
-                + (getLongAvgStopPrice() != null ? (SEPARATOR + "Long Avg Stop Price=" + getLongAvgStopPrice()) : "") + ", Net Qty=" + getVolume().toString()
-                + " Vol Count=" + getVolumeCount() + ",  Entry Date=" + ", Instrument=" + asset;
+                + (getLongAvgStopPrice() != null ? (SEPARATOR + "Long Avg Stop Price=" + getLongAvgStopPrice()) : "")
+                + (getOriginalLongAvgStopPrice() != null ? (SEPARATOR + "Original Long Avg Stop Price=" + getOriginalLongAvgStopPrice()) : "") + ", Net Qty="
+                + getVolume().toString() + " Vol Count=" + getVolumeCount() + " Vol Count=" + getVolumeCount() + ", Open Volume=" + getOpenVolume().toString()
+                + ",  Entry Date=" + ", Instrument=" + asset;
     }
 
     //JPA
     public Position() {
     }
 
+    @Transient
+    protected synchronized void setVolumeCount(long volumeCount) {
+
+        this.volumeCount = volumeCount;
+        shortAvgPrice = null;
+        longAvgPrice = null;
+        longAvgStopPrice = null;
+        originalLongAvgStopPrice = null;
+        shortAvgStopPrice = null;
+        originalShortAvgStopPrice = null;
+
+        longVolume = null;
+        shortVolume = null;
+        openVolume = null;
+    }
+
+    @Transient
+    protected synchronized void setOpenVolumeCount(long openVolumeCount) {
+        this.openVolumeCount = openVolumeCount;
+        shortAvgPrice = null;
+        longAvgPrice = null;
+        longAvgStopPrice = null;
+        originalLongAvgStopPrice = null;
+        shortAvgStopPrice = null;
+        originalShortAvgStopPrice = null;
+        longVolume = null;
+        shortVolume = null;
+        openVolume = null;
+    }
+
+    @Transient
+    protected synchronized void setLongVolumeCount(long longVolumeCount) {
+        this.longVolumeCount = longVolumeCount;
+        shortAvgPrice = null;
+        longAvgPrice = null;
+        longAvgStopPrice = null;
+        originalLongAvgStopPrice = null;
+        shortAvgStopPrice = null;
+        originalShortAvgStopPrice = null;
+        longVolume = null;
+        shortVolume = null;
+        openVolume = null;
+
+    }
+
+    @Transient
+    protected synchronized void setShortVolumeCount(long shortVolumeCount) {
+        this.shortVolumeCount = shortVolumeCount;
+        shortAvgPrice = null;
+        longAvgPrice = null;
+        longAvgStopPrice = null;
+        originalLongAvgStopPrice = null;
+        shortAvgStopPrice = null;
+        originalShortAvgStopPrice = null;
+        longVolume = null;
+        shortVolume = null;
+        openVolume = null;
+    }
+
     @Nullable
     @Transient
-    protected long getVolumeCount() {
-        long volumeCount = 0;
+    protected synchronized long getVolumeCount() {
         //    reset();
-        if (hasFills()) {
+
+        if (hasFills() && volumeCount == 0) {
             Iterator<Fill> itf = getFills().iterator();
             while (itf.hasNext()) {
                 //  for (Fill pos : getFills()) {
@@ -431,53 +684,57 @@ public class Position extends Holding {
 
     @Nullable
     @Transient
-    protected long getOpenVolumeCount() {
-        long volumeCount = 0;
+    protected synchronized long getOpenVolumeCount() {
         //    reset();
-        if (hasFills()) {
+        if (hasFills() && openVolumeCount == 0) {
             Iterator<Fill> itf = getFills().iterator();
             while (itf.hasNext()) {
+
                 //  for (Fill pos : getFills()) {
                 Fill fill = itf.next();
-                if (fill.getPositionEffect() == null || fill.getPositionEffect() == PositionEffect.OPEN)
-                    volumeCount += fill.getOpenVolumeCount();
+
+                // if (fill.getPositionEffect() == null || fill.getPositionEffect() == PositionEffect.OPEN)
+                openVolumeCount += fill.getOpenVolumeCount();
+
             }
         }
 
-        return volumeCount;
+        return openVolumeCount;
     }
 
     @Nullable
     @Transient
-    protected long getLongVolumeCount() {
+    protected synchronized long getLongVolumeCount() {
         //  reset();
         //System.out.println(getFills().toString());
 
-        Iterator<Fill> itf = getFills().iterator();
-        long longVolumeCount = 0;
-        while (itf.hasNext()) {
-            //  for (Fill pos : getFills()) {
-            Fill fill = itf.next();
-            if (fill.getPositionEffect() != null
-                    && ((fill.getPositionEffect() == PositionEffect.OPEN && fill.isLong()) || (fill.getPositionEffect() == PositionEffect.CLOSE && fill
-                            .isShort()))) {
-                longVolumeCount += fill.getOpenVolumeCount();
-            } else if ((fill.getPositionEffect() == null || fill.getPositionEffect() == PositionEffect.OPEN) && fill.isLong())
-                longVolumeCount += fill.getOpenVolumeCount();
-        }
-        long vol = this.getVolumeCount();
-        // if (vol > 0 && vol != longVolumeCount)
-        //System.out.println("issue with long volume cacl");
+        if (hasFills() && longVolumeCount == 0) {
+            Iterator<Fill> itf = getFills().iterator();
+            while (itf.hasNext()) {
+                //  for (Fill pos : getFills()) {
+                Fill fill = itf.next();
 
+                if (fill.getPositionEffect() != null
+                        && ((fill.getPositionEffect() == PositionEffect.OPEN && fill.isLong()) || (fill.getPositionEffect() == PositionEffect.CLOSE && fill
+                                .isShort()))) {
+                    longVolumeCount += fill.getOpenVolumeCount();
+                } else if ((fill.getPositionEffect() == null || fill.getPositionEffect() == PositionEffect.OPEN) && fill.isLong())
+                    longVolumeCount += fill.getOpenVolumeCount();
+
+                long vol = this.getVolumeCount();
+                // if (vol > 0 && vol != longVolumeCount)
+                //System.out.println("issue with long volume cacl");
+
+            }
+        }
         return longVolumeCount;
     }
 
     @Nullable
     @Transient
-    protected long getShortVolumeCount() {
-        long shortVolumeCount = 0;
+    protected synchronized long getShortVolumeCount() {
         //  reset();
-        if (hasFills()) {
+        if (hasFills() && shortVolumeCount == 0) {
             Iterator<Fill> itf = getFills().iterator();
             while (itf.hasNext()) {
                 //  for (Fill pos : getFills()) {
@@ -490,9 +747,11 @@ public class Position extends Holding {
 
                 } else if ((fill.getPositionEffect() == null || fill.getPositionEffect() == PositionEffect.OPEN) && fill.isShort())
                     shortVolumeCount += fill.getOpenVolumeCount();
+
             }
         }
-        long vol = this.getVolumeCount();
+
+        // long vol = this.getVolumeCount();
         //System.out.println(getFills());
         // if (vol < 0 && vol != shortVolumeCount)
         //      System.out.println("issue with short volume cacl");
@@ -514,13 +773,18 @@ public class Position extends Holding {
     }
 
     @Override
-    public void merge() {
+    public synchronized void merge() {
+
+        this.setPeristanceAction(PersistanceAction.MERGE);
+
+        this.setRevision(this.getRevision() + 1);
         try {
             positionDao.merge(this);
             //if (duplicate == null || duplicate.isEmpty())
         } catch (Exception | Error ex) {
 
-            System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":merge, full stack trace follows:" + ex);
+            log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
+            throw ex;
             // ex.printStackTrace();
 
         }
@@ -529,11 +793,20 @@ public class Position extends Holding {
     @Override
     public synchronized void delete() {
         try {
+            log.debug("Position - delete : Delete of Position " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+            if (this.getPortfolio() != null)
+                if (this.getPortfolio().removePosition(this)) {
+
+                    log.trace("removed this");
+                }
+            // this.getPortfolio().merge();
             positionDao.delete(this);
             //if (duplicate == null || duplicate.isEmpty())
         } catch (Exception | Error ex) {
+            log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":remove, full stack trace follows:", ex);
+            throw ex;
 
-            System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":remove, full stack trace follows:" + ex);
+            //  System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":remove, full stack trace follows:" + ex);
             // ex.printStackTrace();
 
         }
@@ -546,11 +819,12 @@ public class Position extends Holding {
             //if (duplicate == null || duplicate.isEmpty())
         } catch (Exception | Error ex) {
 
-            System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":refresh, full stack trace follows:" + ex);
+            log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":refresh, full stack trace follows:", ex);
+            throw ex;
             // ex.printStackTrace();
 
         }
-        return null;
+        // return null;
     }
 
     @Override
@@ -560,22 +834,24 @@ public class Position extends Holding {
     }
 
     @Override
-    public void persit() {
+    @Transient
+    public void setDao(Dao dao) {
+        positionDao = (PositionDao) dao;
+        // TODO Auto-generated method stub
+        //  return null;
+    }
 
-        //  List<Fill> duplicate = fillDao.queryList(Fill.class, "select f from Fill f where f=?1", this);
+    @Override
+    public synchronized void persit() {
 
-        //   synchronized (persistanceLock) {
-        // List<Position> duplicate = positionDao.queryList(Position.class, "select p from Position p where p=?1", this);
-
-        // if (this.hasFills()) {
-        //   for (Fill fill : this.getFills())
-
-        //     PersistUtil.merge(fill);
-        // }
-
-        // if (duplicate == null || duplicate.isEmpty())
         try {
+            log.debug("Position - Persist : Persit of Position " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+
+            this.setPeristanceAction(PersistanceAction.NEW);
+            this.setRevision(this.getRevision() + 1);
+
             positionDao.persist(this);
+
             //if (duplicate == null || duplicate.isEmpty())
         } catch (Exception | Error ex) {
 
@@ -603,6 +879,14 @@ public class Position extends Holding {
 
     }
 
+    @PreRemove
+    public void preRemove() {
+        setFills(null);
+
+        setPortfolio(null);
+        //   synchronized (lock) {
+    }
+
     //protected void Merge() {
     //     synchronized (persistanceLock) {
     // if (this.hasFills()) {
@@ -618,8 +902,27 @@ public class Position extends Holding {
         //   synchronized (lock) {
         if (getFills().contains(fill))
             return false;
-        else
-            return (getFills().add(fill));
+        else {
+            if (getFills().add(fill)) {
+                shortAvgPrice = null;
+                longAvgPrice = null;
+                longAvgStopPrice = null;
+                originalLongAvgStopPrice = null;
+                shortAvgStopPrice = null;
+                originalShortAvgStopPrice = null;
+                longVolume = null;
+                shortVolume = null;
+                openVolume = null;
+                longVolumeCount = 0;
+                volumeCount = 0;
+                openVolumeCount = 0;
+                shortVolumeCount = 0;
+
+                return true;
+            }
+            //  return (getFills().add(fill));
+        }
+        return false;
         //TODO We should do a check to make sure the fill is the samme attributes as position
         //}
         //this.exchange = fill.getMarket().getExchange();
@@ -633,7 +936,22 @@ public class Position extends Holding {
 
     public synchronized void addFill(Collection<Fill> fills) {
         //   synchronized (lock) {
-        getFills().addAll(fills);
+        if (getFills().addAll(fills)) {
+            shortAvgPrice = null;
+            longAvgPrice = null;
+            longAvgStopPrice = null;
+            originalLongAvgStopPrice = null;
+            shortAvgStopPrice = null;
+            originalShortAvgStopPrice = null;
+            longVolume = null;
+            shortVolume = null;
+            openVolume = null;
+            longVolumeCount = 0;
+            volumeCount = 0;
+            openVolumeCount = 0;
+            shortVolumeCount = 0;
+
+        }
 
         //TODO We should do a check to make sure the fill is the samme attributes as position
         //}
@@ -649,8 +967,25 @@ public class Position extends Holding {
     public synchronized void removeFills(Collection<Fill> removedFills) {
         //   synchronized (lock) {
         if (getFills().removeAll(removedFills))
-            for (Fill removedFill : removedFills)
-                removedFill.setPosition(null);
+            shortAvgPrice = null;
+        longAvgPrice = null;
+        longAvgStopPrice = null;
+        originalLongAvgStopPrice = null;
+        shortAvgStopPrice = null;
+        originalShortAvgStopPrice = null;
+        longVolume = null;
+        shortVolume = null;
+        openVolume = null;
+        longVolumeCount = 0;
+        volumeCount = 0;
+        openVolumeCount = 0;
+        shortVolumeCount = 0;
+        for (Fill removedFill : removedFills) {
+
+            removedFill.setPosition(null);
+            removedFill.setOpenVolumeCount(0);
+            removedFill.merge();
+        }
         //   removeFill(removedFill);
         //ODO We should do a check to make sure the fill is the samme attributes as position
         //}
@@ -666,8 +1001,24 @@ public class Position extends Holding {
     public synchronized void removeAllFills() {
         //   synchronized (lock) {
         // if (this.fills.removeAll(removedFills))
-        for (Fill removedFill : getFills())
+        for (Fill removedFill : getFills()) {
             removedFill.setPosition(null);
+            removedFill.setOpenVolumeCount(0);
+            // removedFill.merge();
+        }
+        shortAvgPrice = null;
+        longAvgPrice = null;
+        longAvgStopPrice = null;
+        originalLongAvgStopPrice = null;
+        shortAvgStopPrice = null;
+        originalShortAvgStopPrice = null;
+        longVolume = null;
+        shortVolume = null;
+        openVolume = null;
+        longVolumeCount = 0;
+        volumeCount = 0;
+        openVolumeCount = 0;
+        shortVolumeCount = 0;
         getFills().clear();
         //   removeFill(removedFill);
         //ODO We should do a check to make sure the fill is the samme attributes as position
@@ -683,9 +1034,25 @@ public class Position extends Holding {
 
     public synchronized void removeFill(Fill fill) {
         //   synchronized (lock) {
-        System.out.println("removing fill: " + fill + " from position: " + this);
-        if (getFills().remove(fill))
+        log.debug("removing fill: " + fill + " from position: " + this);
+        if (getFills().remove(fill)) {
+            shortAvgPrice = null;
+            longAvgPrice = null;
+            longAvgStopPrice = null;
+            originalLongAvgStopPrice = null;
+            shortAvgStopPrice = null;
+            originalShortAvgStopPrice = null;
+            longVolume = null;
+            shortVolume = null;
+            openVolume = null;
+            longVolumeCount = 0;
+            volumeCount = 0;
+            openVolumeCount = 0;
+            shortVolumeCount = 0;
             fill.setPosition(null);
+            fill.setOpenVolumeCount(0);
+            //  fill.merge();
+        }
 
         //TODO We should do a check to make sure the fill is the samme attributes as position
         //}
@@ -714,6 +1081,19 @@ public class Position extends Holding {
 
     //  public void removeFill(Fill fill) {
     //  synchronized (lock) {
+    @Nullable
+    @ManyToOne(optional = true, cascade = CascadeType.PERSIST)
+    @JoinColumn(name = "portfolio")
+    public Portfolio getPortfolio() {
+        if (portfolio == null)
+            if (fills != null && !fills.isEmpty())
+                return fills.get(0).getPortfolio();
+        return portfolio;
+    }
+
+    public void setPortfolio(Portfolio portfolio) {
+        this.portfolio = portfolio;
+    }
 
     //this.fills.remove(fill);
     //fill.setPosition(null);
@@ -730,10 +1110,10 @@ public class Position extends Holding {
 
     @Transient
     public boolean hasFills() {
-        return !getFills().isEmpty();
+        return (getFills() != null && !getFills().isEmpty());
     }
 
-    protected void setFills(List<Fill> fills) {
+    protected synchronized void setFills(List<Fill> fills) {
         // reset();
         this.fills = fills;
 
@@ -742,7 +1122,12 @@ public class Position extends Holding {
     // private Amount longVolume = DecimalAmount.ZERO;
     //private Amount shortVolume = DecimalAmount.ZERO;
     //private Amount volume = DecimalAmount.ZERO;
-    private Market market;
+    private volatile Market market;
+    long longVolumeCount = 0;
+    long volumeCount = 0;
+    long openVolumeCount = 0;
+    long shortVolumeCount = 0;
+
     //private Amount longAvgPrice = DecimalAmount.ZERO;
     //private Amount shortAvgPrice = DecimalAmount.ZERO;
     //private Amount longAvgStopPrice = DecimalAmount.ZERO;
@@ -752,9 +1137,107 @@ public class Position extends Holding {
     //private long shortVolumeCount;
     //private long volumeCount;
     //private SpecificOrder order;
-    private List<Fill> fills;
+    private volatile List<Fill> fills;
+    protected volatile Portfolio portfolio;
 
     private static Object lock = new Object();
     private static Object persistanceLock = new Object();
+
+    @Override
+    public void prePersist() {
+        if (getDao() != null) {
+
+            EntityBase dbPortfolio = null;
+            EntityBase dbMarket = null;
+            EntityBase dbExchange = null;
+            /*            if (getPortfolio() != null) {
+                            try {
+                                dbPortfolio = getDao().find(getPortfolio().getClass(), getPortfolio().getId());
+
+                                if (dbPortfolio != null && dbPortfolio.getVersion() != getPortfolio().getVersion()) {
+                                    getPortfolio().setVersion(dbPortfolio.getVersion());
+                                    if (getPortfolio().getRevision() > dbPortfolio.getRevision()) {
+                                        //  getPortfolio().setPeristanceAction(PersistanceAction.MERGE);
+                                        getDao().merge(getPortfolio());
+                                    }
+                                } else {
+                                    getPortfolio().setPeristanceAction(PersistanceAction.NEW);
+                                    getDao().persist(getPortfolio());
+                                }
+                            } catch (Exception | Error ex) {
+                                if (dbPortfolio != null)
+                                    if (getPortfolio().getRevision() > dbPortfolio.getRevision()) {
+                                        //     getPortfolio().setPeristanceAction(PersistanceAction.MERGE);
+                                        getDao().merge(getPortfolio());
+                                    } else {
+                                        //   getPortfolio().setPeristanceAction(PersistanceAction.NEW);
+                                        getDao().persist(getPortfolio());
+                                    }
+                            }
+
+                        }
+            */
+            if (getMarket() != null) {
+                getDao().merge(getMarket());
+
+                /*                try {
+                                    dbMarket = getDao().find(getMarket().getClass(), getMarket().getId());
+                                    if (dbMarket != null && dbMarket.getVersion() != getMarket().getVersion()) {
+                                        getMarket().setVersion(dbMarket.getVersion());
+                                        if (getMarket().getRevision() > dbMarket.getRevision()) {
+                                            getMarket().setPeristanceAction(PersistanceAction.MERGE);
+                                            getDao().merge(getMarket());
+                                        }
+                                    } else if (dbMarket == null) {
+                                        getMarket().setPeristanceAction(PersistanceAction.NEW);
+                                        getDao().persist(getMarket());
+                                    }
+                                } catch (Exception | Error ex) {
+                                    if (dbMarket != null)
+                                        if (getMarket().getRevision() > dbMarket.getRevision()) {
+                                            getMarket().setPeristanceAction(PersistanceAction.MERGE);
+                                            getDao().merge(getMarket());
+                                        } else {
+                                            getMarket().setPeristanceAction(PersistanceAction.NEW);
+                                            getDao().persist(getMarket());
+                                        }
+                                }*/
+            }
+
+            if (getExchange() != null) {
+                getDao().merge(getExchange());
+                /*                try {
+                                    dbExchange = getDao().find(getExchange().getClass(), getExchange().getId());
+                                    if (dbExchange != null && dbExchange.getVersion() != getExchange().getVersion()) {
+                                        getExchange().setVersion(dbExchange.getVersion());
+                                        if (getExchange().getRevision() > dbExchange.getRevision()) {
+                                            getExchange().setPeristanceAction(PersistanceAction.MERGE);
+                                            getDao().merge(getExchange());
+                                        }
+                                    } else if (dbExchange == null) {
+                                        getExchange().setPeristanceAction(PersistanceAction.NEW);
+                                        getDao().persist(getExchange());
+                                    }
+                                } catch (Exception | Error ex) {
+                                    if (dbExchange != null)
+                                        if (getExchange().getRevision() > dbExchange.getRevision()) {
+                                            getExchange().setPeristanceAction(PersistanceAction.MERGE);
+                                            getDao().merge(getExchange());
+                                        } else {
+                                            getExchange().setPeristanceAction(PersistanceAction.NEW);
+                                            getDao().persist(getExchange());
+                                        }
+                                }*/
+            }
+
+        }
+
+    }
+
+    @Override
+    public void postPersist() {
+        // TODO Auto-generated method stub
+
+    }
 
 }

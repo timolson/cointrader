@@ -5,9 +5,12 @@ import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.Nullable;
-import javax.persistence.Cacheable;
+import javax.persistence.Column;
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
+import javax.persistence.Index;
 import javax.persistence.ManyToOne;
+import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FillType;
@@ -27,11 +30,16 @@ import com.google.inject.assistedinject.AssistedInject;
  */
 @SuppressWarnings("UnusedDeclaration")
 @Entity
-@Cacheable
+@DiscriminatorValue(value = "GeneralOrder")
+// @Cacheable
+@Table(name = "GeneralOrder", indexes = { @Index(columnList = "fillType"), @Index(columnList = "portfolio"), @Index(columnList = "market"),
+        @Index(columnList = "parentFill"), @Index(columnList = "parentOrder"), @Index(columnList = "listing"), @Index(columnList = "version"),
+        @Index(columnList = "revision") })
 public class GeneralOrder extends Order {
     @AssistedInject
     public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Listing listing, @Assisted BigDecimal volume) {
         super(time);
+        this.getId();
         this.children = new CopyOnWriteArrayList<Order>();
 
         this.fills = new CopyOnWriteArrayList<Fill>();
@@ -44,10 +52,61 @@ public class GeneralOrder extends Order {
         this.positionEffect = PositionEffect.OPEN;
     }
 
+    // So we need a filed that tells us to trigger on open quanity?
+    @AssistedInject
+    public GeneralOrder(@Assisted GeneralOrder generalOrder) {
+        super(generalOrder.getTime());
+
+        this.getId();
+        this.children = new CopyOnWriteArrayList<Order>();
+        this.orderGroup = generalOrder.getOrderGroup();
+
+        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
+        this.transactions = new CopyOnWriteArrayList<Transaction>();
+        super.setPortfolio(generalOrder.getPortfolio());
+        this.listing = generalOrder.getListing();
+        this.market = generalOrder.getMarket();
+
+        this.volume = generalOrder.getVolume();
+        this.fillType = generalOrder.getFillType();
+        this.positionEffect = generalOrder.getPositionEffect();
+        if (generalOrder.getParentOrder() != null) {
+            generalOrder.getParentOrder().addChildOrder(this);
+            this.setParentOrder(generalOrder.getParentOrder());
+        }
+        this.limitPrice = generalOrder.getLimitPrice();
+        this.marketPrice = generalOrder.getMarketPrice();
+        this.stopAmount = generalOrder.getStopAmount();
+        this.stopPercentage = generalOrder.getStopPercentage();
+        this.triggerInterval = generalOrder.getTriggerInterval();
+        this.stopPrice = generalOrder.getStopPrice();
+        this.lastBestPrice = generalOrder.getLastBestPrice();
+
+        this.targetAmount = generalOrder.getTargetAmount();
+        this.targetPrice = generalOrder.getTargetPrice();
+        this.trailingStopAmount = generalOrder.getTrailingStopAmount();
+        this.trailingStopPrice = generalOrder.getTrailingStopPrice();
+        this.usePosition = generalOrder.getUsePosition();
+
+        this.timeToLive = generalOrder.getTimeToLive();
+        this.marginType = generalOrder.getMarginType();
+        this.comment = generalOrder.getComment();
+        this.expiration = generalOrder.getExpiration();
+        this.executionInstruction = generalOrder.getExecutionInstruction();
+        if (generalOrder.getParentFill() != null) {
+
+            generalOrder.getParentFill().addChildOrder(this);
+            this.setParentFill(generalOrder.getParentFill());
+        }
+
+    }
+
     @AssistedInject
     public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Order parentOrder, @Assisted Listing listing,
             @Assisted BigDecimal volume) {
         super(time);
+        this.getId();
 
         this.children = new CopyOnWriteArrayList<Order>();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
@@ -66,6 +125,7 @@ public class GeneralOrder extends Order {
     @AssistedInject
     public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted BigDecimal volume, @Assisted FillType type) {
         super(time);
+        this.getId();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
         this.children = new CopyOnWriteArrayList<Order>();
@@ -83,6 +143,7 @@ public class GeneralOrder extends Order {
     @AssistedInject
     public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Listing listing, @Assisted BigDecimal volume, @Assisted FillType type) {
         super(time);
+        this.getId();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
         this.children = new CopyOnWriteArrayList<Order>();
@@ -100,6 +161,7 @@ public class GeneralOrder extends Order {
     public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Order parentOrder, @Assisted Market market,
             @Assisted BigDecimal volume, @Assisted FillType type) {
         super(time);
+        this.getId();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
         super.setPortfolio(portfolio);
@@ -119,6 +181,7 @@ public class GeneralOrder extends Order {
     @AssistedInject
     public GeneralOrder(@Assisted Instant time, @Assisted Fill parentFill, @Assisted Market market, @Assisted BigDecimal volume, @Assisted FillType type) {
         super(time);
+        this.getId();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
         super.setPortfolio(parentFill.getPortfolio());
@@ -138,6 +201,7 @@ public class GeneralOrder extends Order {
     @AssistedInject
     public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Listing listing, @Assisted String volume) {
         super(time);
+        this.getId();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
         super.setPortfolio(portfolio);
@@ -201,6 +265,7 @@ public class GeneralOrder extends Order {
         return market;
     }
 
+    @Column(precision = 18, scale = 6)
     public BigDecimal getVolumeDecimal() {
 
         if (volume == null)
@@ -209,6 +274,7 @@ public class GeneralOrder extends Order {
 
     }
 
+    @Column(precision = 18, scale = 6)
     public BigDecimal getLimitPriceDecimal() {
         if (limitPrice == null)
             return null;
@@ -216,6 +282,7 @@ public class GeneralOrder extends Order {
 
     }
 
+    @Column(precision = 18, scale = 6)
     public BigDecimal getStopAmountDecimal() {
         if (stopAmount == null)
             return null;
@@ -223,6 +290,7 @@ public class GeneralOrder extends Order {
 
     }
 
+    @Column(precision = 18, scale = 6)
     public BigDecimal getTargetAmountDecimal() {
         if (targetAmount == null)
             return null;
@@ -230,6 +298,7 @@ public class GeneralOrder extends Order {
 
     }
 
+    @Column(precision = 18, scale = 6)
     public BigDecimal getStopPriceDecimal() {
         if (stopPrice == null)
             return null;
@@ -237,6 +306,15 @@ public class GeneralOrder extends Order {
 
     }
 
+    @Column(precision = 18, scale = 6)
+    public BigDecimal getLastBestPriceDecimal() {
+        if (lastBestPrice == null)
+            return null;
+        return lastBestPrice.asBigDecimal();
+
+    }
+
+    @Column(precision = 18, scale = 6)
     public BigDecimal getTargetPriceDecimal() {
         if (targetPrice == null)
             return null;
@@ -244,6 +322,7 @@ public class GeneralOrder extends Order {
 
     }
 
+    @Column(precision = 18, scale = 6)
     public BigDecimal getTrailingStopPriceDecimal() {
         if (trailingStopPrice == null)
             return null;
@@ -275,6 +354,22 @@ public class GeneralOrder extends Order {
     }
 
     @Override
+    public double getStopPercentage() {
+        return stopPercentage;
+    }
+
+    @Override
+    public double getTriggerInterval() {
+        return triggerInterval;
+    }
+
+    @Override
+    @Transient
+    public DecimalAmount getTrailingStopAmount() {
+        return trailingStopAmount;
+    }
+
+    @Override
     @Transient
     public DecimalAmount getTargetAmount() {
         return targetAmount;
@@ -284,6 +379,12 @@ public class GeneralOrder extends Order {
     @Transient
     public DecimalAmount getStopPrice() {
         return stopPrice;
+    }
+
+    @Override
+    @Transient
+    public DecimalAmount getLastBestPrice() {
+        return lastBestPrice;
     }
 
     @Override
@@ -301,7 +402,9 @@ public class GeneralOrder extends Order {
     @Override
     @Transient
     public Amount getUnfilledVolume() {
+        //TODO chache the unfille volume and reset when any child order get a fill, whne any child order is added, when any chile order is removed, 
         Amount filled = DecimalAmount.ZERO;
+        Amount unfilled = DecimalAmount.ZERO;
         if (volume.isZero())
             return DecimalAmount.ZERO;
         for (Fill fill : getFills())
@@ -316,7 +419,8 @@ public class GeneralOrder extends Order {
             if (!volume.isZero() && (fill.getVolume().isPositive() && volume.isPositive()) || (fill.getVolume().isNegative() && volume.isNegative()))
                 filled = filled.plus(fill.getVolume());
         }
-        Amount unfilled = (volume.isNegative()) ? (volume.abs().minus(filled.abs())).negate() : volume.abs().minus(filled.abs());
+        unfilled = (volume.isNegative()) ? (volume.abs().minus(filled.abs())).negate() : volume.abs().minus(filled.abs());
+
         return unfilled;
 
     }
@@ -324,7 +428,7 @@ public class GeneralOrder extends Order {
     @Override
     @Transient
     public boolean isFilled() {
-        return getUnfilledVolume().equals(BigDecimal.ZERO);
+        return getUnfilledVolume().equals(DecimalAmount.ZERO);
     }
 
     @Override
@@ -344,27 +448,42 @@ public class GeneralOrder extends Order {
 
     @Override
     public String toString() {
-        String s = "GeneralOrder{" + "id=" + getId() + ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + ", parentFill="
-                + (getParentFill() == null ? "null" : getParentFill().getId()) + ", listing=" + listing + ", volume=" + volume + ", unfilled volume="
-                + (getUnfilledVolume() == null ? "null" : getUnfilledVolume());
+        String s = "GeneralOrder{" + "id=" + getId() + ",time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + ", parentOrder="
+                + (getParentOrder() == null ? "null" : getParentOrder().getId()) + ", parentFill="
+                + (getParentFill() == null ? "null" : getParentFill().getId()) + ", listing=" + listing + ", volume=" + volume;
+        //+ ", unfilled volume="+ (getUnfilledVolume() == null ? "null" : getUnfilledVolume());
         if (limitPrice != null && limitPrice.asBigDecimal() != null)
             s += ", limitPrice=" + limitPrice;
         if (stopAmount != null && stopAmount.asBigDecimal() != null)
-            s += ", stopPrice=" + stopAmount;
+            s += ", stopAmount=" + stopAmount;
+        if (stopPercentage != 0)
+            s += ", stopPercentage=" + stopPercentage;
+        if (triggerInterval != 0)
+            s += ", triggerInterval=" + triggerInterval;
+        if (trailingStopAmount != null && trailingStopAmount.asBigDecimal() != null)
+            s += ", trailingStopAmount=" + trailingStopAmount;
         if (trailingStopPrice != null && trailingStopPrice.asBigDecimal() != null)
             s += ", trailingStopPrice=" + trailingStopPrice;
         if (comment != null)
             s += ", comment=" + comment;
         if (positionEffect != null)
             s += ", position effect=" + positionEffect;
+        if (getExpiryTime() != null)
+            s += ", ExpiryTime=" + getExpiryTime();
+        if (getTimeToLive() != 0)
+            s += ", TimeToLive=" + getTimeToLive();
         if (fillType != null)
             s += ", type=" + fillType;
         if (executionInstruction != null)
             s += ", execution instruction=" + executionInstruction;
         if (stopPrice != null)
             s += ", stop price=" + stopPrice;
+        if (lastBestPrice != null)
+            s += ", last best price=" + lastBestPrice;
         if (targetPrice != null)
             s += ", target price=" + targetPrice;
+        if (usePosition)
+            s += ", use position=" + usePosition;
         if (hasFills())
             s += ", averageFillPrice=" + getAverageFillPrice();
         s += '}';
@@ -407,7 +526,7 @@ public class GeneralOrder extends Order {
     }
 
     @Override
-    public void setTargetPrice(DecimalAmount targetPrice) {
+    public synchronized void setTargetPrice(DecimalAmount targetPrice) {
         this.targetPrice = targetPrice;
         if (getParentFill() != null && targetPrice != null)
             getParentFill().setTargetPriceCount(targetPrice.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
@@ -429,6 +548,30 @@ public class GeneralOrder extends Order {
     }
 
     @Override
+    public void setStopPercentage(double stopPercentage) {
+        this.stopPercentage = stopPercentage;
+        if (getParentFill() != null && stopPercentage != 0)
+            this.setStopAmount((DecimalAmount) getLimitPrice().times(stopPercentage, Remainder.ROUND_EVEN));
+        // getParentFill().setStopAmountCount(stopAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+        //getParentFill().set//StopAmountCount(stopAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+
+    }
+
+    @Override
+    public void setTriggerInterval(double triggerInterval) {
+        this.triggerInterval = triggerInterval;
+
+    }
+
+    @Override
+    public void setTrailingStopAmount(DecimalAmount trailingStopAmount) {
+        this.trailingStopAmount = trailingStopAmount;
+        if (getParentFill() != null && trailingStopAmount != null)
+            getParentFill().setTrailingStopAmountCount(trailingStopAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+
+    }
+
+    @Override
     public void setTargetAmount(DecimalAmount targetAmount) {
         this.targetAmount = targetAmount;
         if (getParentFill() != null && targetAmount != null)
@@ -437,12 +580,23 @@ public class GeneralOrder extends Order {
     }
 
     @Override
-    public void setStopPrice(DecimalAmount stopPrice) {
+    public synchronized void setStopPrice(DecimalAmount stopPrice) {
         if (stopPrice != null) {
             this.stopPrice = stopPrice;
             if (getParentFill() != null)
 
                 getParentFill().setStopPriceCount(stopPrice.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+        }
+
+    }
+
+    @Override
+    public synchronized void setLastBestPrice(DecimalAmount lastBestPrice) {
+        if (lastBestPrice != null) {
+            this.lastBestPrice = lastBestPrice;
+            if (getParentFill() != null)
+
+                getParentFill().setLastBestPriceCount(lastBestPrice.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
         }
 
     }
@@ -465,6 +619,12 @@ public class GeneralOrder extends Order {
         }
     }
 
+    public void setLastBestPriceDecimal(BigDecimal lastBestPrice) {
+        if (lastBestPrice != null) {
+            this.lastBestPrice = DecimalAmount.of(lastBestPrice);
+        }
+    }
+
     @Override
     public void setTrailingStopPrice(DecimalAmount trailingStopPrice) {
         this.trailingStopPrice = trailingStopPrice;
@@ -476,32 +636,44 @@ public class GeneralOrder extends Order {
         }
     }
 
-    protected void setListing(Listing listing) {
+    public void setListing(Listing listing) {
         this.listing = listing;
         this.market = null;
     }
 
     @Override
-    public void setMarket(Market market) {
+    public synchronized void setMarket(Market market) {
         this.market = market;
         if (market != null)
             this.listing = market.getListing();
     }
 
     private Listing listing;
-    private Market market;
+    private volatile Market market;
     private DecimalAmount volume;
     private DecimalAmount limitPrice;
     private DecimalAmount marketPrice;
     private DecimalAmount stopAmount;
-    private DecimalAmount stopPrice;
+    private double stopPercentage;
+    private double triggerInterval;
+    private DecimalAmount trailingStopAmount;
+    private volatile DecimalAmount stopPrice;
+    private volatile DecimalAmount lastBestPrice;
     private DecimalAmount targetAmount;
-    private DecimalAmount targetPrice;
+    private volatile DecimalAmount targetPrice;
     private DecimalAmount trailingStopPrice;
     private Amount forcastedFees;
 
+    // private Amount unfilled;
+
     @Override
     public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void postPersist() {
         // TODO Auto-generated method stub
 
     }

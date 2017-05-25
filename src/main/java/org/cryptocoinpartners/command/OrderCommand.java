@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 import javax.inject.Inject;
 
+import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.schema.DiscreteAmount;
@@ -43,20 +44,20 @@ public abstract class OrderCommand extends AntlrCommandBase {
     }
 
     @Override
-    public void run() {
+    public Object call() {
         //  PortfolioManager strategy = context.getInjector().getInstance(PortfolioManager.class);
         for (Portfolio port : portfolioService.getPortfolios())
             portfolio = port;
         if (market != null)
-            placeSpecificOrder();
+            return (placeSpecificOrder());
         else
-            placeGeneralOrder();
+            return (placeGeneralOrder());
 
     }
 
-    protected void placeSpecificOrder() {
+    public Boolean placeSpecificOrder() {
         //FillType.STOP_LOSS
-        volume = isSell ? volume.negate() : volume;
+        volume = (isSell && volume.compareTo(BigDecimal.ZERO) > 0) ? volume.negate() : volume;
         GeneralOrder order = generalOrderFactory.create(context.getTime(), portfolio, market, volume, FillType.MARKET);
         if (limit != null) {
             long limitCount = DiscreteAmount.roundedCountForBasis(limit, market.getPriceBasis());
@@ -69,39 +70,55 @@ public abstract class OrderCommand extends AntlrCommandBase {
 
         try {
             orderService.placeOrder(order);
+            return true;
         } catch (Throwable e) {
-            // TODO Auto-generated catch block
-            out.println("Unable to place order " + order + ". Stack Trace " + e);
 
+            // TODO Auto-generated catch block
+            out.println("Unable to place order " + order + ". Stack Trace " + e.getStackTrace().toString());
+            return false;
         }
 
     }
 
-    protected void placeGeneralOrder() {
+    public boolean placeGeneralOrder() {
         volume = isSell ? volume.negate() : volume;
         // GeneralOrder longOrder = generalOrderFactory.create(context.getTime(), portfolio, market, orderDiscrete.asBigDecimal(), FillType.STOP_LOSS);
 
         GeneralOrder order = generalOrderFactory.create(context.getTime(), portfolio, listing, volume, FillType.MARKET);
 
-        //
-        // GeneralOrder order = generalOrderFactory.create(context.getTime(), portfolio, listing, volume);
         if (limit != null) {
-            order.withLimitPrice(limit);
             order.withFillType(FillType.LIMIT);
+
+            order.withLimitPrice(limit);
         }
+
         if (stop != null) {
+            order.withFillType(FillType.STOP_LOSS);
             order.withStopAmount(stop);
-            order.withFillType(FillType.STOP_LIMIT);
+        }
+
+        if (target != null) {
+            order.withFillType(FillType.STOP_LOSS);
+            order.withTargetAmount(target);
+        }
+        if (comment != null) {
+            order.withComment(comment);
         }
         if (positionEffect != null)
             order.withPositionEffect(positionEffect);
 
+        if (timeToLive != 0)
+            order.withTimeToLive(timeToLive);
+        if (execInst != null)
+            order.withExecutionInstruction(execInst);
+
         try {
             orderService.placeOrder(order);
+            return true;
         } catch (Throwable e) {
             // TODO Auto-generated catch block
-            out.println("Unable to place order " + order + ". Stack Trace " + e);
-
+            out.println("Unable to place order " + order + ". Stack Trace " + e.getStackTrace().toString());
+            return false;
         }
 
     }
@@ -114,7 +131,7 @@ public abstract class OrderCommand extends AntlrCommandBase {
         positionEffect = null;
     }
 
-    protected OrderCommand(boolean isSell) {
+    public OrderCommand(boolean isSell) {
         super("org.cryptocoinpartners.command.Order");
         this.isSell = isSell;
     }
@@ -148,7 +165,16 @@ public abstract class OrderCommand extends AntlrCommandBase {
 
     public void setMarket(Market market) {
         this.market = market;
-        this.listing = null;
+        this.listing = market.getListing();
+    }
+
+    public Portfolio getPortfolio() {
+        return portfolio;
+    }
+
+    public void setPortfolio(Portfolio portfolio) {
+        this.portfolio = portfolio;
+
     }
 
     public Listing getListing() {
@@ -174,6 +200,10 @@ public abstract class OrderCommand extends AntlrCommandBase {
 
     public void setPositionEffect(PositionEffect positionEffect) {
         this.positionEffect = positionEffect;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
     }
 
     public BigDecimal getStop() {
@@ -207,5 +237,10 @@ public abstract class OrderCommand extends AntlrCommandBase {
     private BigDecimal limit;
     private PositionEffect positionEffect;
     private BigDecimal stop;
+    private BigDecimal target;
+    private String comment;
+    private ExecutionInstruction execInst;
+    private long timeToLive;
+
     private boolean isSell;
 }

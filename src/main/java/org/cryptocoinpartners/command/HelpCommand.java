@@ -2,7 +2,6 @@ package org.cryptocoinpartners.command;
 
 import org.apache.commons.lang.StringUtils;
 
-
 /**
  * @author Tim Olson
  */
@@ -16,10 +15,8 @@ public class HelpCommand extends CommandBase {
 
     @Override
     public String getExtraHelp() {
-        return "Without a command-name, help lists all available commands.  If a command-name is specified, " +
-                       "detailed help is given for that command.";
+        return "Without a command-name, help lists all available commands.  If a command-name is specified, " + "detailed help is given for that command.";
     }
-
 
     @Override
     public void parse(String commandArguments) {
@@ -27,15 +24,14 @@ public class HelpCommand extends CommandBase {
     }
 
     @Override
-    public void run() {
-        if( StringUtils.isBlank(commandName) ) {
+    public Object call() {
+        if (StringUtils.isBlank(commandName)) {
             out.println("Type \"help {command}\" for more detailed information.");
             out.println("Available commands:");
             out.printList(CommandBase.allCommandNames());
-        }
-        else {
-            Command command = CommandBase.commandForName(commandName,context);
-            if( command == null )
+        } else {
+            Command command = CommandBase.commandForName(commandName, context);
+            if (command == null)
                 unknownCommand();
             else {
                 out.println();
@@ -45,14 +41,13 @@ public class HelpCommand extends CommandBase {
                 out.println();
             }
         }
+        return true;
     }
-
 
     private void unknownCommand() {
-        out.println("Unknown command "+commandName+".  Available commands:");
+        out.println("Unknown command " + commandName + ".  Available commands:");
         out.printList(CommandBase.allCommandNames());
     }
-
 
     private String commandName;
 }

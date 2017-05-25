@@ -7,5 +7,8 @@ package org.cryptocoinpartners.command;
 public class WatchCommand extends WatchCommandBase {
 
     @Override
-    public void run() { notifications.watch(listing); }
+    public Object call() {
+        notifications.watch(listing);
+        return true;
+    }
 }

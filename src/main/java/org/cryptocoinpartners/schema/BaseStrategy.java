@@ -1,5 +1,8 @@
 package org.cryptocoinpartners.schema;
 
+import java.util.Collection;
+import java.util.HashMap;
+
 import javax.inject.Inject;
 import javax.persistence.Transient;
 
@@ -9,6 +12,7 @@ import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.service.Strategy;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A Strategy represents a configurable approach to trading, but not a specific trading algorithm.  StrategyPortfolioManager
@@ -20,16 +24,34 @@ import org.slf4j.Logger;
  */
 public class BaseStrategy implements Strategy {
 
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.baseStrategy");
+    static HashMap<Tradeable, Double> marketAllocations = new HashMap<Tradeable, Double>();
+
     @Override
     public void setPortfolio(Portfolio portfolio) {
         // portfolioService
         //    this.portfolio = portfolio;
         this.portfolio = portfolio;
+        // 
+        if (getMarkets() != null) {
+            for (Tradeable market : getMarkets())
+                portfolio.addMarket(market);
+
+            portfolio.merge();
+
+        }
+
+        //  if (getMarket() != null && getMarket().getExchange() != null && (getMarket().getExchange().getBalances() == null)
+        //        || getMarket().getExchange().getBalances().isEmpty())
+
+        //  getMarket().getExchange().loadBalances(portfolio);
+
         SubscribePortfolio portfolioSubcribeEvent = new SubscribePortfolio(portfolio);
         portfolio.getContext().publish(portfolioSubcribeEvent);
-        Asset baseAsset = Asset.forSymbol(portfolio.getContext().getConfig().getString("base.symbol", "USD"));
-        portfolio.setBaseAsset(baseAsset);
-        portfolio.merge();
+        originalBaseNotionalBalance = portfolio.getBaseNotionalBalance();
+        // originalNotionalBalanceUSD
+        startingOriginalBaseNotionalBalance = portfolio.getBaseNotionalBalance();
+
         // PersistUtil.insert(portfolio);
         //  order = new OrderBuilder(portfolio, orderService);
         log = portfolio.getLogger();
@@ -69,6 +91,81 @@ public class BaseStrategy implements Strategy {
         return this.portfolio;
     }
 
+    @Transient
+    public static Collection<Tradeable> getMarkets() {
+
+        return getMarketAllocations().keySet();
+
+    }
+
+    @Transient
+    public static HashMap<Tradeable, Double> getMarketAllocations() {
+
+        return marketAllocations;
+
+    }
+
+    @Transient
+    public static Double getMarketAllocation(Tradeable market) {
+
+        return marketAllocations.get(market);
+
+    }
+
+    @Transient
+    public static Tradeable getMarket(Tradeable market) {
+        for (Tradeable strategyMarket : getMarkets())
+            if (market.equals(strategyMarket))
+
+                return strategyMarket;
+        return null;
+
+    }
+
+    @Transient
+    public boolean hasMarkets() {
+        return (getMarkets() != null && !getMarkets().isEmpty());
+    }
+
+    public synchronized Tradeable addMarket(Tradeable market, Double allocation) {
+        //   synchronized (lock) {
+        if (!getMarkets().contains(market)) {
+            getMarketAllocations().put(market, allocation);
+
+        }
+        if (market != null)
+            return getMarket(market);
+        else
+            return null;
+    }
+
+    public synchronized void addMarket(Collection<Market> markets) {
+        getMarkets().addAll(markets);
+
+    }
+
+    public synchronized void removeMarkets(Collection<Market> removedMarkets) {
+        if (getMarkets().removeAll(removedMarkets))
+            getMarketAllocations().remove(removedMarkets);
+    }
+
+    public synchronized void removeAllMarkets() {
+
+        getMarkets().clear();
+        getMarketAllocations().clear();
+
+    }
+
+    public synchronized void removeMarket(Market market) {
+        log.info("removing market: " + market + " from portfolio: " + this);
+        if (getMarkets().remove(market)) {
+            getMarketAllocations().remove(market);
+
+            log.info("removed market: " + market + " from portfolio: " + this);
+        }
+
+    }
+
     /** This tracks the assets you have for trading */
 
     /** This is what you use to place orders:
@@ -77,6 +174,8 @@ public class BaseStrategy implements Strategy {
      * </pre>
      */
     protected static OrderBuilder order;
+    public static Amount originalBaseNotionalBalance;
+    public static Amount startingOriginalBaseNotionalBalance;
 
     /** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
     @Inject
@@ -98,8 +197,13 @@ public class BaseStrategy implements Strategy {
     @Inject
     protected transient TransactionFactory transactionFactory;
 
-    // @Inject
-    protected static Logger log;
+    @Inject
+    protected transient ExchangeFactory exchangeFactory;
+
+    @Inject
+    protected transient static TradeFactory tradeFactory;
+
+    //   @Inject
 
     @Override
     public void init() {

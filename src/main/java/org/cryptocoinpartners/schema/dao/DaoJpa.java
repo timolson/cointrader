@@ -30,8 +30,11 @@ import com.google.inject.Provider;
 import com.google.inject.persist.Transactional;
 import com.google.inject.persist.UnitOfWork;
 
-public abstract class DaoJpa implements Dao {
-    protected Class entityClass;
+public abstract class DaoJpa implements Dao, java.io.Serializable {
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -3999121207747846784L;
     protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
     private static final int defaultBatchSize = 20;
     private static int retry;
@@ -39,13 +42,13 @@ public abstract class DaoJpa implements Dao {
         retry = ConfigUtil.combined().getInt("db.persist.retry");
     }
     @Inject
-    protected Provider<EntityManager> entityManager;
+    protected transient Provider<EntityManager> entityManager;
 
     @Inject
-    protected ApplicationInitializer application;
+    protected transient ApplicationInitializer application;
 
     @Inject
-    private UnitOfWork unitOfWork;
+    private transient UnitOfWork unitOfWork;
 
     //protected EntityManager entityManager;
 
@@ -335,7 +338,7 @@ public abstract class DaoJpa implements Dao {
     //  @Transactional
     //  @Inject
     @Override
-    public void persistEntities(EntityBase... entities) {
+    public void persistEntities(EntityBase... entities) throws Throwable {
         int attempt = 0;
         boolean persisted = false;
         for (EntityBase entity : entities) {
@@ -344,6 +347,9 @@ public abstract class DaoJpa implements Dao {
                 if (entity.getRevision() > revision) {
                     insert(entity);
                     persisted = true;
+                } else {
+                    log.trace("DapJpa - persistEntities: " + entity.getClass().getSimpleName() + " not peristed as entity revision " + entity.getRevision()
+                            + " is not greater than peristed revision " + revision + ". Entity " + entity.getId());
                 }
 
             } catch (OptimisticLockException | StaleObjectStateException ole) {
@@ -351,16 +357,20 @@ public abstract class DaoJpa implements Dao {
                 entity.setAttempt(attempt);
 
                 if (attempt >= retry) {
-                    log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ole);
+                    log.error(" " + this.getClass().getSimpleName() + ":persist attempt:" + entity.getAttempt() + " for " + entity + " " + retry
+                            + ", full stack trace follows:", ole);
 
                     entity.setAttempt(0);
 
                     throw ole;
                 } else {
-                    log.debug("Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " already persisted. Persist attempt "
-                            + entity.getAttempt() + " of " + retry);
+                    log.trace(this.getClass().getSimpleName() + ":persist Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId()
+                            + " already persisted. Persist attempt " + entity.getAttempt() + " of " + retry);
 
                     entity.setAttempt(0);
+                    entity.setPeristanceAction(PersistanceAction.NEW);
+                    application.getInsertQueue().add(entity);
+                    //      persist(false, entity);
                 }
 
             } catch (LockTimeoutException lte) {
@@ -369,18 +379,23 @@ public abstract class DaoJpa implements Dao {
                 entity.setAttempt(attempt);
 
                 if (attempt >= retry) {
-                    log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", lte);
+                    log.error(" " + this.getClass().getSimpleName() + ":persist attempt:" + entity.getAttempt() + " for " + entity + " " + retry
+                            + ", full stack trace follows:", lte);
+
+                    //    log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", lte);
                     entity.setAttempt(0);
                     throw lte;
                 } else {
-                    log.error("Record locked version of " + entity.getClass().getSimpleName() + " id: " + entity.getId()
+                    log.info("Record locked version of " + entity.getClass().getSimpleName() + " id: " + entity.getId()
                             + " already persisted. Persist attempt " + entity.getAttempt() + " of " + retry);
                     //               entity.setRevision(0);
-                    persist(false, entity);
+                    entity.setPeristanceAction(PersistanceAction.NEW);
+                    application.getInsertQueue().add(entity);
+                    //  persist(false, entity);
 
                 }
 
-            } catch (Exception | Error ex) {
+            } catch (Throwable ex) {
                 if (ex.getCause() != null && (ex.getCause() instanceof TransientPropertyValueException || ex.getCause() instanceof IllegalStateException)) {
                     //.setVersion(entity.getVersion() + 1);
                     attempt = entity.getAttempt() + 1;
@@ -389,17 +404,21 @@ public abstract class DaoJpa implements Dao {
 
                     if (attempt >= retry) {
                         //log.error(" " + this.getClass().getSimpleName() + ":persist, Parent object not persisted for, attempting last ditch merge.");
-                        log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ex);
-
+                        log.error(" " + this.getClass().getSimpleName() + ":persist attempt:" + entity.getAttempt() + " for " + entity + " " + retry
+                                + ", full stack trace follows:", ex);
                         entity.setAttempt(0);
                         // merge(entities);
 
                         throw ex;
                     } else {
-                        log.error("Parent object not persisted for  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + ". Persist attempt "
+                        log.debug("Parent object not persisted for  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + ". Persist attempt "
                                 + entity.getAttempt() + " of " + retry);
                         //                   entity.setRevision(0);
-                        persist(false, entity);
+                        entity.prePersist();
+                        entity.setPeristanceAction(PersistanceAction.NEW);
+                        application.getInsertQueue().add(entity);
+                        //    persist(false, entity);
+                        //  persist(false, entity);
                         // attempt++;
                         // continue;
                     }
@@ -412,7 +431,9 @@ public abstract class DaoJpa implements Dao {
                     //dbEntity = entity;
 
                     if (attempt >= retry) {
-                        log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ex);
+                        log.error(" " + this.getClass().getSimpleName() + ":persist attempt:" + entity.getAttempt() + " for " + entity + " " + retry
+                                + ", full stack trace follows:", ex);
+                        //   log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ex);
                         entity.setAttempt(0);
                         throw ex;
                     } else {
@@ -422,7 +443,9 @@ public abstract class DaoJpa implements Dao {
 
                         // entity.setAttempt(0);
                         //                      entity.setRevision(0);
-                        merge(false, entity);
+                        entity.setPeristanceAction(PersistanceAction.MERGE);
+                        application.getMergeQueue().add(entity);
+                        // merge(false, entity);
                     }
 
                 } else if (ex.getCause() != null && ex.getCause() instanceof PersistentObjectException) {
@@ -434,7 +457,8 @@ public abstract class DaoJpa implements Dao {
                     //   update(entity);
 
                     if (attempt >= retry) {
-                        log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ex);
+                        log.error(" " + this.getClass().getSimpleName() + ":persist attempt:" + entity.getAttempt() + " for " + entity + " " + retry
+                                + ", full stack trace follows:", ex);
                         entity.setAttempt(0);
                         throw ex;
                     } else {
@@ -445,7 +469,9 @@ public abstract class DaoJpa implements Dao {
                         // entity.setAttempt(0);
                         //                        entity.setAttempt(0);
                         //                     entity.setRevision(0);
-                        merge(false, entities);
+                        entity.setPeristanceAction(PersistanceAction.MERGE);
+                        application.getMergeQueue().add(entity);
+                        //   merge(false, entity);
                     }
 
                 } else if (ex.getCause() != null && ex.getCause() instanceof OptimisticLockException) {
@@ -457,14 +483,18 @@ public abstract class DaoJpa implements Dao {
                     //dbEntity = entity;
 
                     if (attempt >= retry) {
-                        log.error(" " + this.getClass().getSimpleName() + ":persist attempt:" + entity.getAttempt() + " of " + retry
+                        log.error(" " + this.getClass().getSimpleName() + ":persist attempt:" + entity.getAttempt() + " for " + entity + " " + retry
                                 + ", full stack trace follows:", ex);
                         entity.setAttempt(0);
                         throw ex;
                     } else {
+                        //entity.setAttempt(0);
                         log.debug(" " + this.getClass().getSimpleName() + " " + entity.getClass().getSimpleName() + ":" + entity.getId()
                                 + " :persist, primary key for version " + entity.getVersion() + "  already present in db with version " + dbEntity.getVersion()
                                 + ". Persist attempt " + entity.getAttempt() + " of " + retry);
+                        entity.setPeristanceAction(PersistanceAction.MERGE);
+                        application.getMergeQueue().add(entity);
+                        // merge(false, entity);
 
                     }
 
@@ -473,7 +503,9 @@ public abstract class DaoJpa implements Dao {
                 }
 
                 else {
-                    log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ex);
+                    log.error(" " + this.getClass().getSimpleName() + ":persist attempt:" + entity.getAttempt() + " for " + entity + " " + retry
+                            + ", full stack trace follows:", ex);
+                    //  log.error(" " + this.getClass().getSimpleName() + ":persist, full stack trace follows:", ex);
 
                     entity.setAttempt(0);
                     throw ex;
@@ -481,11 +513,15 @@ public abstract class DaoJpa implements Dao {
                 //break;
 
             } finally {
-                if (persisted) {
-                    entity.setAttempt(0);
 
-                    log.trace(" " + this.getClass().getSimpleName() + ":persist. Succefully persisted " + entity.getClass().getSimpleName() + " " + entity);
-                }
+                if (persisted)
+
+                    if (persisted) {
+                        entity.setAttempt(0);
+
+                        log.trace(" " + this.getClass().getSimpleName() + ":persist. Succefully persisted " + entity.getClass().getSimpleName() + " "
+                                + entity.getId());
+                    }
 
             }
             // break;
@@ -501,6 +537,12 @@ public abstract class DaoJpa implements Dao {
     //  @Override
     @Override
     public void persist(EntityBase... entities) {
+        for (EntityBase entity : entities)
+            log.trace("DaoJpa - Persist : Persit of " + entity.getClass().getSimpleName() + " " + entity.getId() + " called from class "
+                    + Thread.currentThread().getStackTrace()[2]);
+        //let's clone the object as it could update and cause issues 
+        //  SerializationUtils.clone(Object);
+
         persist(true, entities);
 
     }
@@ -510,19 +552,24 @@ public abstract class DaoJpa implements Dao {
         try {
             for (EntityBase entity : entities) {
                 //    entity.getDao().persistEntities(entity);
+                // synchronized (entity) {
                 if (entity != null) {
                     entity.setPeristanceAction(PersistanceAction.NEW);
-                    if (increment)
-                        entity.setRevision(entity.getRevision() + 1);
-                    application.getInsertQueue().put(entity);
+                    //      if (increment)
+                    // entity.getDao().persistEntities(entity);
+                    //  SerializationUtils.clone(entity);
+                    EntityBase entityClone = entity.clone();
+                    entityClone.setDao(entity.getDao());
+                    application.getInsertQueue().add(entityClone);
                     //  } else {
                     //    application.getInsertQueue().addFirst(entity);
                     //}
                     log.trace("persisting " + entity.getClass().getSimpleName() + " id:" + entity.getId());
                 }
+                // }
             }
 
-        } catch (Error | Exception e) {
+        } catch (Throwable e) {
             log.error("Unable to resubmit insert request in " + this.getClass().getSimpleName() + "insert, full stack trace follows:", e);
             //  e.printStackTrace();
 
@@ -534,6 +581,10 @@ public abstract class DaoJpa implements Dao {
 
     @Override
     public void delete(EntityBase... entities) {
+        for (EntityBase entity : entities)
+            log.trace("DaoJpa - Delete : delete of " + entity.getClass().getSimpleName() + " " + entity.getId() + " called from class "
+                    + Thread.currentThread().getStackTrace()[2]);
+
         delete(true, entities);
 
     }
@@ -542,16 +593,24 @@ public abstract class DaoJpa implements Dao {
 
         try {
             for (EntityBase entity : entities) {
+                //   synchronized (entity) {
                 //    entity.getDao().persistEntities(entity);
                 if (entity != null) {
                     entity.setPeristanceAction(PersistanceAction.DELETE);
-                    if (increment)
-                        entity.setRevision(entity.getRevision() + 1);
+                    //  if (increment)
+                    // entity.setRevision(entity.getRevision() + 1);
                     entity.setStartTime(entity.getDelay());
+                    //   entity.getDao().deleteEntities(entity);
+                    EntityBase entityClone = entity.clone();
 
-                    application.getInsertQueue().put(entity);
+                    // EntityBase entityClone = SerializationUtils.clone(entity);
+                    entityClone.setDao(entity.getDao());
+
+                    application.getMergeQueue().add(entityClone);
+
                     log.debug("deleting " + entity.getClass().getSimpleName() + " id:" + entity.getId());
                 }
+                //  }
             }
 
         } catch (Error | Exception e) {
@@ -629,7 +688,11 @@ public abstract class DaoJpa implements Dao {
 
     @Override
     public void merge(EntityBase... entities) {
-        merge(true, entities);
+        for (EntityBase entity : entities)
+            log.trace("DaoJpa - Merge : Merge of " + entity.getClass().getSimpleName() + " " + entity.getId() + " called from class "
+                    + Thread.currentThread().getStackTrace()[2]);
+
+        merge(false, entities);
     }
 
     // @Override
@@ -637,12 +700,21 @@ public abstract class DaoJpa implements Dao {
 
         try {
             for (EntityBase entity : entities) {
+                // synchronized (entity) {
                 if (entity != null) {
                     entity.setPeristanceAction(PersistanceAction.MERGE);
-                    if (increment)
-                        entity.setRevision(entity.getRevision() + 1);
+                    // if (increment)
+                    //  entity.setRevision(entity.getRevision() + 1);
                     //    entity.getDao().mergeEntities(entity);
-                    application.getInsertQueue().put(entity);
+                    // we should only add to quuee to front of queue
+                    //   EntityBase entityClone = SerializationUtils.clone(entity);
+                    // entityClone.setDao(entity.getDao());
+                    EntityBase entityClone = entity.clone();
+                    entityClone.setDao(entity.getDao());
+                    application.getMergeQueue().add(entityClone);
+                    //  .add(c);
+                    // entity.getDao().mergeEntities(entity);
+                    //  application.getMergeQueue().put(entity);
 
                     // }
 
@@ -650,10 +722,12 @@ public abstract class DaoJpa implements Dao {
                     //   application.getInsertQueue().addFirst(entity);
                     //}
 
-                    log.debug("merging " + entity.getClass().getSimpleName() + " id:" + entity.getId());
+                    log.trace("merging " + entity.getClass().getSimpleName() + " id:" + entity.getId());
                 }
+                // }
             }
-        } catch (Error | Exception e) {
+        } catch (Throwable e) {
+
             log.error("Unable to resubmit merge request in " + this.getClass().getSimpleName() + " merge, full stack trace follows:", e);
             // e.printStackTrace();
 
@@ -664,10 +738,13 @@ public abstract class DaoJpa implements Dao {
     }
 
     @Transactional
-    public void insert(EntityBase entity) {
+    public void insert(EntityBase entity) throws Throwable {
+
         // try {
         //entityManager.get().lock(entity, LockModeType.PESSIMISTIC_WRITE);
-        entityManager.get().persist(entity);
+        synchronized (entity) {
+            entityManager.get().persist(entity);
+        }
         //entityManager.get().flush();
         //} catch (Error | Exception ex) {
         //   log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":getReference, full stack trace follows:", ex);
@@ -683,30 +760,49 @@ public abstract class DaoJpa implements Dao {
 
     @Transactional
     public EntityBase restore(EntityBase entity) {
-        EntityBase localEntity = null;
-        //  try {
+        //EntityBase localEntity = entity;
         // localEntity = entity;
-        Object dBEntity;
-        if (!entityManager.get().contains(entity))
-            //  try {
-            localEntity = entityManager.get().find(entity.getClass(), entity.getId());
+        ///  Object dBEntity;
+        // if (!entityManager.get().contains(entity)) {
+        //  try {
+        EntityBase localEntity = entityManager.get().find(entity.getClass(), entity.getId());
+        if (localEntity != null) {
+            // entityManager.get().refresh(localEntity);
+            //   entityManager.get().persist(localEntity);
 
-        if (localEntity != null)
+            // localEntity
+            // EntityBase newEntity = entityManager.get().merge(localEntity);
+            // newEntity.setVersion(entity.getVersion());
+            // EntityBase newEntityDecrement = entityManager.get().merge(localEntity);
+            entity.setVersion(localEntity.getVersion());
             entityManager.get().merge(entity);
+        }
+
+        else {
+            entityManager.get().persist(entity);
+
+        }
+
+        //   find(entity.getClass(), entity.getId());
+        //  entityManager.get().merge(entity);
+
+        // }
+
+        // entityManager.get().refresh(entity);
+
         // localEntity = entityManager.get().merge(entity);
 
         //return null;
-        // localEntity = entityManager.get().find(entity.getClass(), entity.getId());
 
         // entityManager.get().refresh(localEntity);
-        if (localEntity != null)
-            return localEntity;
-        else
-            return entity;
+        //   EntityBase returnEntity = 
+        return entityManager.get().find(entity.getClass(), entity.getId());
 
-        //} catch (Error | Exception ex) {
-        //  throw ex;
-        // }
+        // } catch (Error | Exception ex) {
+        //      return null;
+        // throw ex;
+        //     }
+        // return entity;
 
         // TODO Auto-generated method stub
 
@@ -716,7 +812,14 @@ public abstract class DaoJpa implements Dao {
     public void update(EntityBase entity) {
         // try {
         // entityManager.get().lock(entity, LockModeType.PESSIMISTIC_WRITE);
-        entityManager.get().merge(entity);
+
+        //   entity.getUpdateLock();
+
+        synchronized (entity) {
+            entityManager.get().merge(entity);
+
+        }
+
         // } catch (Error | Exception ex) {
         //   throw ex;
         // }
@@ -752,10 +855,23 @@ public abstract class DaoJpa implements Dao {
         try {
             for (EntityBase entity : entities) {
                 long revision = entity.findRevisionById();
+                // long version = entity.findVersionById();
+
                 if (entity.getRevision() >= revision) {
-                    attempt = entity.getAttempt();
+                    //    attempt = entity.getAttempt();
+                    //
+                    //  EntityBase dbEntity = restore(entity);
+                    //.getClass(), entity.getId());
+
+                    // long dbVersion = target.findVersionById();
+                    //   if (dbEntity != null)
+                    //     entity.setVersion(dbEntity.getVersion());
+                    // refresh(entity);
                     remove(entity);
                     deleted = true;
+                } else {
+                    log.trace("DapJpa - deleteEntities: " + entity.getClass().getSimpleName() + " not peristed as entity revision " + entity.getRevision()
+                            + " is not greater than peristed revision " + revision + ". Entity " + entity.getId());
                 }
 
             }
@@ -763,23 +879,66 @@ public abstract class DaoJpa implements Dao {
             for (EntityBase entity : entities) {
                 attempt = entity.getAttempt() + 1;
                 entity.setAttempt(attempt);
-                entity.merge();
-                log.error("Entity  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " not found in database to delete. Delete attempt "
-                        + entity.getAttempt() + " of " + retry);
-                if (attempt >= retry) {
-                    // log.error(
-                    //       " " + this.getClass().getSimpleName() + ":delete attempt:" + entity.getAttempt() + " of " + retry + ", full stack trace follows:",
-                    //      enf);
-                    entity.setAttempt(0);
-                    //throw enf;
-                } else {
-                    entity.setStartTime(entity.getDelay());
 
-                    delete(false, entity);
+                if (attempt >= retry) {
+                    log.error(this.getClass().getSimpleName() + ":delete attempt:" + entity.getAttempt() + " for " + entity + " " + retry
+                            + ", full stack trace follows:", enf);
+                    entity.setAttempt(0);
+                    throw enf;
+                } else {
+
+                    EntityBase dbEntity = null;
+                    dbEntity = restore(entity);
+
+                    if (dbEntity != null) {
+                        delete(false, dbEntity);
+                        deleted = true;
+                    }
+                    //      .setPeristanceAction(PersistanceAction.MERGE);
+                    // merge(false, entity);
+                    //    EntityBase dbEntity = restore(entity);
+
+                    // find(entity.getClass(), entity.getId());
+
+                    // long dbVersion = target.findVersionById();
+                    //  if (dbEntity != null)
+                    ///    entity.setVersion(dbEntity.getVersion());
+                    // entity.merge();
+                    log.debug("Entity  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " not found in database to delete. Delete attempt "
+                            + entity.getAttempt() + " of " + retry);
                 }
             }
 
+        } catch (IllegalArgumentException ie) {
+            for (EntityBase entity : entities) {
+                attempt = entity.getAttempt() + 1;
+                entity.setAttempt(attempt);
+                if (attempt >= retry) {
+                    log.error(
+                            " " + this.getClass().getSimpleName() + ":delete attempt:" + entity.getAttempt() + " of " + retry + ", full stack trace follows:",
+                            ie);
+
+                    entity.setAttempt(0);
+                    throw ie;
+                }
+            }
+            for (EntityBase entity : entities) {
+                // entity.setAttempt(0);
+                //      entity.setVersion(entity.getVersion() + 1);
+
+                // entity.setStartTime(entity.getDelay());
+                merge(false, entity);
+                delete(false, entity);
+                deleted = true;
+                log.info(this.getClass().getSimpleName() + ":delete - Detached instance of " + entity.getClass().getSimpleName() + " id: " + entity.getId()
+                        + " already in database. Delete attempt " + entity.getAttempt() + " of " + retry);
+            }
+
+            //for (EntityBase entity : entities)
+            //  delete(false, entities);
+
         } catch (OptimisticLockException | StaleObjectStateException ole) {
+
             //     unitOfWork.end();
             for (EntityBase entity : entities) {
                 attempt = entity.getAttempt() + 1;
@@ -793,16 +952,39 @@ public abstract class DaoJpa implements Dao {
                     entity.setAttempt(0);
                     throw ole;
                 }
-            }
-            for (EntityBase entity : entities) {
-                entity.setVersion(entity.getVersion() + 1);
-                entity.setStartTime(entity.getDelay());
 
-                log.error("Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " already in database. Delete attempt "
-                        + entity.getAttempt() + " of " + retry);
+                EntityBase dbEntity = null;
+                try {
+                    dbEntity = restore(entity);
+                    if (dbEntity != null) {
+                        dbEntity.setPeristanceAction(PersistanceAction.DELETE);
+                        try {
+                            remove(dbEntity);
+                        } catch (Exception | Error ex) {
+                            delete(false, dbEntity);
+                        }
+
+                    } else {
+                        //   entity.setVersion(dbEntity.getVersion());
+                        entity.setPeristanceAction(PersistanceAction.DELETE);
+                        delete(false, entity);
+                        // deleted = true;
+                    }
+
+                } catch (Exception | Error ex) {
+
+                    //
+                    entity.setPeristanceAction(PersistanceAction.DELETE);
+                    delete(false, entity);
+                    // deleted = true;
+                }
+
+                log.trace(this.getClass().getSimpleName() + ":delete - Later version of " + entity.getClass().getSimpleName() + " id: " + entity
+                        + " already merged. Delete attempt " + entity.getAttempt() + " of " + retry);
+
             }
 
-            delete(false, entities);
+            //  delete(false, entities);
 
         } catch (Exception | Error ex) {
 
@@ -828,7 +1010,7 @@ public abstract class DaoJpa implements Dao {
                     attempt = entity.getAttempt() + 1;
                     entity.setAttempt(attempt);
 
-                    log.error("Parent object not persisted for  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + ". Delete attempt "
+                    log.info("Parent object not persisted for  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + ". Delete attempt "
                             + entity.getAttempt() + " of " + retry);
                 }
                 if (attempt >= retry) {
@@ -858,12 +1040,12 @@ public abstract class DaoJpa implements Dao {
 
                 }
                 if (attempt >= retry) {
-                    log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
+                    // log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
                     for (EntityBase entity : entities) {
                         entity.setAttempt(0);
 
                     }
-                    throw ex;
+                    // throw ex;
                 } else {
                     for (EntityBase entity : entities) {
                         // entity.setAttempt(entity.getAttempt() + 1);
@@ -910,17 +1092,42 @@ public abstract class DaoJpa implements Dao {
                     }
                 }
                 for (EntityBase entity : entities) {
-
-                    entity.setVersion(entity.getVersion() + 1);
+                    entity.setAttempt(0);
+                    //      entity.setVersion(entity.getVersion() + 1);
 
                     entity.setStartTime(entity.getDelay());
 
-                    log.error("Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " already in database. Delete attempt "
-                            + entity.getAttempt() + " of " + retry);
+                    log.trace(this.getClass().getSimpleName() + ":delete - Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId()
+                            + " already in database. Delete attempt " + entity.getAttempt() + " of " + retry);
                 }
 
                 //for (EntityBase entity : entities)
-                delete(false, entities);
+                //  delete(false, entities);
+            } else if (ex.getCause() != null && ex.getCause() instanceof IllegalArgumentException) {
+                for (EntityBase entity : entities) {
+                    attempt = entity.getAttempt() + 1;
+                    entity.setAttempt(attempt);
+                    if (attempt >= retry) {
+                        log.error(" " + this.getClass().getSimpleName() + ":delete attempt:" + entity.getAttempt() + " of " + retry
+                                + ", full stack trace follows:", ex);
+
+                        entity.setAttempt(0);
+                        throw ex;
+                    }
+                }
+                for (EntityBase entity : entities) {
+                    // entity.setAttempt(0);
+                    //      entity.setVersion(entity.getVersion() + 1);
+
+                    // entity.setStartTime(entity.getDelay());
+                    merge(false, entity);
+                    delete(false, entity);
+                    log.info(this.getClass().getSimpleName() + ":delete - Detached instance of " + entity.getClass().getSimpleName() + " id: " + entity.getId()
+                            + " already in database. Delete attempt " + entity.getAttempt() + " of " + retry);
+                }
+
+                //for (EntityBase entity : entities)
+                //  delete(false, entities);
             } else {
                 log.error(" " + this.getClass().getSimpleName() + ":delete, full stack trace follows:", ex);
                 for (EntityBase entity : entities) {
@@ -936,7 +1143,7 @@ public abstract class DaoJpa implements Dao {
             if (deleted)
                 for (EntityBase entity : entities) {
                     entity.setAttempt(0);
-                    log.trace(this.getClass().getSimpleName() + ":delete. Succefully deleted " + entity.getClass().getSimpleName() + " " + entity);
+                    log.trace(this.getClass().getSimpleName() + ":delete. Succefully deleted " + entity.getClass().getSimpleName() + " " + entity.getId());
                 }
 
         }
@@ -949,16 +1156,18 @@ public abstract class DaoJpa implements Dao {
     }
 
     @Override
-    public void mergeEntities(EntityBase... entities) {
-
+    public synchronized void mergeEntities(EntityBase... entities) {
         int attempt = 0;
         boolean merged = false;
         try {
             for (EntityBase entity : entities) {
                 long revision = entity.findRevisionById();
-                if (entity.getRevision() >= revision) {
+                if (entity.getRevision() > revision) {
                     update(entity);
                     merged = true;
+                } else {
+                    log.trace("DapJpa - mergeEntities: " + entity.getClass().getSimpleName() + " not peristed as entity revision " + entity.getRevision()
+                            + " is not greater than peristed revision " + revision + ". Entity " + entity.getId());
                 }
 
             }
@@ -966,12 +1175,17 @@ public abstract class DaoJpa implements Dao {
             for (EntityBase entity : entities) {
                 attempt = entity.getAttempt() + 1;
                 entity.setAttempt(attempt);
+
+                //  attempt = entity.getAttempt() + 1;
+                //   entity.setAttempt(0);
                 //  entity.setStartTime(entity.getDelay() * 2);f
 
-                log.error(this.getClass().getSimpleName() + "Entity  " + entity.getClass().getSimpleName() + " id: " + entity.getId()
+                log.info(this.getClass().getSimpleName() + "Entity  " + entity.getClass().getSimpleName() + " id: " + entity.getId()
                         + " not found in database, persisting. Merge attempt " + entity.getAttempt() + " of " + retry);
                 if (attempt >= retry) {
-                    log.error(this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " of " + retry + ", full stack trace follows:", enf);
+                    log.error(" " + this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " " + entity.getClass().getSimpleName()
+                            + " for " + entity + " " + retry + ", full stack trace follows:", enf);
+
                     entity.setAttempt(0);
                     throw enf;
                 } else {
@@ -981,35 +1195,128 @@ public abstract class DaoJpa implements Dao {
                     //     log.error(" " + this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " of " + retry
                     //           + ", unable to restore entity " + entity.getClass().getSimpleName() + " id " + entity.getId());
                     // }
+                    entity.prePersist();
+                    entity.setPeristanceAction(PersistanceAction.MERGE);
+                    application.getMergeQueue().add(entity);
+                    //   persist(false, entity);
+                    //  EntityBase dbEntity = null;
+                    /*                   try {
+                                           dbEntity = restore(entity);
+                                       } catch (Exception | Error ex) {
+                                           // entity.setPeristanceAction(PersistanceAction.MERGE);
+                                           merge(false, entity);
+                                           return;
+                                       }
+                                       if (dbEntity != null)
+                                           merge(false, entity);
+                                       else
+                                           persist(false, entity);*/
+                    //  entity.setPeristanceAction(PersistanceAction.NEW);
+                    //persist(false, entity);
+                    //merge(false, entity);
+                    //      return;
+
+                    //  log.error("error", ex);
+                    //   }
+                    //find(entity.getClass(), entity.getId());
+
+                    // long dbVersion = target.findVersionById();
+                    //   if (dbEntity != null)
+                    //        entity.setVersion(dbEntity.getVersion());
                     // entity.refresh();
+                    //if (dbEntity != null) {
+                    //  dbEntity.setPeristanceAction(PersistanceAction.MERGE);
+                    //  merge(false, dbEntity);
+                    // }
 
                     //  entity.setAttempt(0);
                     // well it may be in db put not in persistance context
                     //entity.setRevision(0);
-                    persist(false, entity);
+                    // entity.setPeristanceAction(PersistanceAction.NEW);
+                    //// persist(false, entity);
                 }
             }
         } catch (OptimisticLockException | StaleObjectStateException ole) {
+
             //     unitOfWork.end();
             for (EntityBase entity : entities) {
                 attempt = entity.getAttempt() + 1;
                 entity.setAttempt(attempt);
                 if (attempt >= retry) {
-                    log.error(" " + this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " of " + retry + ", full stack trace follows:",
-                            ole);
+                    log.error(this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " for " + entity + " " + retry
+                            + ", full stack trace follows:", ole);
                     entity.setAttempt(0);
                     throw ole;
                 } else {
+                    EntityBase dbEntity = null;
+                    try {
+                        dbEntity = restore(entity);
+                        if (dbEntity != null)
+                            entity.setVersion(dbEntity.getVersion());
+                        entity.setPeristanceAction(PersistanceAction.MERGE);
+                        application.getMergeQueue().add(entity);
+
+                        //   merge(false, entity);
+
+                    } catch (Exception | Error ex) {
+
+                        //
+                        entity.setPeristanceAction(PersistanceAction.MERGE);
+                        application.getMergeQueue().add(entity);
+                        //    merge(false, entity);
+                    }
+                    //     return;
+
+                    //  log.error("error", ex);
+                    //   }
+                    //     EntityBase dbEntity = restore(entity);
+                    //find(entity.getClass(), entity.getId());
+
+                    // long dbVersion = target.findVersionById();
+                    //  if (dbEntity != null)
+                    //  entity.setVersion(dbEntity.getVersion());
+                    //
                     //}
-                    //for (EntityBase entity : entities) {
-                    entity.setVersion(entity.getVersion() + 1);
+                    // for (EntityBase entity : entities) {
+                    //  EntityBase dbEntity = find(entity.getClass(), entity.getId());
 
-                    //  entity.setStartTime(entity.getDelay() * 2);
+                    //   dbEntity.setVersion(0);
+                    //  if (dbEntity instanceof Fill) {
+                    //        Fill dbfill = (Fill) dbEntity;
+                    ///        Fill fill = (Fill) entity;
+                    //.setOpenVolumeCount(fill.getOpenVolumeCount());
 
-                    log.error("Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " already merged. Merge attempt "
-                            + entity.getAttempt() + " of " + retry);
+                    //       merge(false, dbEntity);
+                    //   }
+
+                    // update(dbEntity);
+                    // EntityBase dbEntity = entity.refresh();
+                    // if (dbEntity != null) {
+                    //      entity.setVersion(dbEntity.getVersion());
+                    //      merge(dbEntity);
+                    //  } //else
+                    // entity.setVersion(entity.getVersion() + 1);
+                    /* if (attempt >= retry) {
+                         log.error(this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " of " + retry + ", unable to merge "
+                                 + entity.getClass().getSimpleName() + " with id " + entity.getId());
+                         entity.setAttempt(0);
+                         //  throw ole;
+                     } else {
+                         //}
+                         //for (EntityBase entity : entities) {
+                         entity.setVersion(Math.max(entity.findVersionById() + 1, entity.getVersion() + 1));
+
+                    *///  entity.setStartTime(entity.getDelay() * 2);
+                      //   entity.setAttempt(0);
+                    log.trace(this.getClass().getSimpleName() + ":merge - Later version of " + entity.getClass().getSimpleName() + " id: " + entity
+                            + " already merged. Merge attempt " + entity.getAttempt() + " of " + retry);
                     //  entity.setRevision(0);
-                    merge(false, entities);
+                    //   merge(false, entity);
+                    // mergeEntities(entities);
+                    //update(entity);
+                    //       entity.setPeristanceAction(PersistanceAction.MERGE);
+                    // merge(entity);
+                    // merge(false, entity);
                 }
             }
 
@@ -1020,17 +1327,23 @@ public abstract class DaoJpa implements Dao {
                     attempt = entity.getAttempt() + 1;
                     entity.setAttempt(attempt);
 
-                    log.error("Parent object not persisted for  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + ". Merge attempt "
+                    log.info("Parent object not persisted for  " + entity.getClass().getSimpleName() + " id: " + entity.getId() + ". Merge attempt "
                             + entity.getAttempt() + " of " + retry);
 
                     if (attempt >= retry) {
-                        log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
+                        log.error(" " + this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " for " + entity + " " + retry
+                                + ", full stack trace follows:", ex);
+
+                        //log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
                         entity.setAttempt(0);
                         throw ex;
                     } else {
 
                         // entity.setRevision(0);
-                        merge(false, entities);
+                        entity.setPeristanceAction(PersistanceAction.MERGE);
+
+                        application.getMergeQueue().add(entity);
+                        //     merge(false, entities);
 
                     }
                 }
@@ -1043,13 +1356,19 @@ public abstract class DaoJpa implements Dao {
                             + " :merge, duplicate primary key already in db. Persist attempt " + entity.getAttempt() + " of " + retry);
 
                     if (attempt >= retry) {
-                        log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
+                        log.error(" " + this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " for " + entity + " " + retry
+                                + ", full stack trace follows:", ex);
+
+                        //  log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
                         entity.setAttempt(0);
 
                         throw ex;
                     } else {
                         //      entity.setRevision(0);
-                        merge(false, entities);
+                        entity.setPeristanceAction(PersistanceAction.MERGE);
+
+                        application.getMergeQueue().add(entity);
+                        //    merge(false, entities);
                     }
                 }
 
@@ -1062,12 +1381,18 @@ public abstract class DaoJpa implements Dao {
                             + " :merge, issue with accessing proerpties, retrying merge. Persist attempt " + entity.getAttempt() + " of " + retry);
 
                     if (attempt >= retry) {
-                        log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
+                        log.error(" " + this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " for " + entity + " " + retry
+                                + ", full stack trace follows:", ex);
+
+                        // log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
                         entity.setAttempt(0);
                         throw ex;
                     } else {
                         //     entity.setRevision(0);
-                        merge(false, entities);
+                        entity.setPeristanceAction(PersistanceAction.MERGE);
+
+                        application.getMergeQueue().add(entity);
+                        //  merge(false, entities);
                     }
                 }
             } else if (ex.getCause() != null && ex.getCause() instanceof OptimisticLockException) {
@@ -1075,24 +1400,56 @@ public abstract class DaoJpa implements Dao {
                     attempt = entity.getAttempt() + 1;
                     entity.setAttempt(attempt);
                     if (attempt >= retry) {
-                        log.error(" " + this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " of " + retry
+                        log.error(" " + this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " for " + entity + " " + retry
                                 + ", full stack trace follows:", ex);
+
                         entity.setAttempt(0);
                         throw ex;
                     } else {
+                        EntityBase dbEntity = null;
+                        try {
+                            dbEntity = restore(entity);
+                        } catch (Exception | Error ex1) {
+                            entity.setPeristanceAction(PersistanceAction.MERGE);
+                            application.getMergeQueue().add(entity);
+                            //   merge(false, entity);
+                            return;
+
+                            //  log.error("error", ex);
+                        }
                         // }
                         // for (EntityBase entity : entities) {
-                        entity.setVersion(entity.getVersion() + 1);
+                        // 
+                        // EntityBase dbEntity = restore(entity);
+                        //find(entity.getClass(), entity.getId());
+
+                        // long dbVersion = target.findVersionById();
+                        //   if (dbEntity != null)
+                        //   entity.setVersion(entity.getVersion() + 1);
+
+                        //      EntityBase dbEntity = find(entity.getClass(), entity.getId());
+                        //     if (dbEntity != null)
+                        //   dbEntity.setVersion(0);
+                        // merge(false, dbEntity);
+                        entity.setVersion(dbEntity.getVersion());
+                        //  update(dbEntity);
 
                         // entity.setStartTime(entity.getDelay() * 2);
-
-                        log.error("Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " already merged. Merge attempt "
-                                + entity.getAttempt() + " of " + retry);
+                        //  entity.setAttempt(0);
+                        log.trace(this.getClass().getSimpleName() + ":merge - Later version of " + entity.getClass().getSimpleName() + " id: " + entity
+                                + " caused by already merged. Merge attempt " + entity.getAttempt() + " of " + retry);
                         //           entity.setRevision(0);
-                        merge(false, entities);
+                        //  entity.setPeristanceAction(PersistanceAction.MERGE);
+
+                        //    merge(false, entity);
+                        // mergeEntities(entities);
+                        //
+                        // update(entity);
+                        //persist(false, entities);
                     }
                 }
             } else {
+
                 log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
                 for (EntityBase entity : entities)
                     entity.setAttempt(0);
@@ -1137,18 +1494,44 @@ public abstract class DaoJpa implements Dao {
         //   System.out.println("delete() entity not managed: " + entity);
         // utx.begin();
 
-        EntityBase target = entity;
+        //   EntityBase target = entity;
         //  em.remove(target);
         //    utx.commit();
 
         //  EntityBase localEntity;
-        if (!entityManager.get().contains(entity))
-            target = entityManager.get().merge(entity);
+        synchronized (entity) {
+            //    if (!entityManager.get().contains(entity))
+            //      try {
 
-        ///  entityManager.get().refresh(entity);
+            //        target = entityManager.get().merge(entity);
 
-        //   if (localEntity != null)
-        entityManager.get().remove(target);
+            //  } catch (OptimisticLockException | StaleObjectStateException ole) {
+            //    EntityBase dbEntity = null;
+            //   try {
+            //     dbEntity = restore(entity);
+            //  } catch (Exception | Error ex) {
+            //     entity.setPeristanceAction(PersistanceAction.MERGE);
+
+            //    merge(false, entity);
+            //     return;
+
+            //  log.error("error", ex);
+
+            //  EntityBase dbEntity = restore(entity);
+
+            // long dbVersion = target.findVersionById();
+            //   if (dbEntity != null)
+            //      entity.setVersion(dbEntity.getVersion());
+            //  target = entityManager.get().merge(entity);
+            //  }
+
+            ///  entityManager.get().refresh(entity);
+
+            //   if (localEntity != null)
+            // entityManager.get().refresh(target);
+            entityManager.get().remove(entityManager.get().contains(entity) ? entity : entityManager.get().merge(entity));
+            // entityManager.get().remove(entity);
+        }
     }
 
     @Override
@@ -1164,9 +1547,23 @@ public abstract class DaoJpa implements Dao {
     }
 
     @Override
-    public <T> int findRevisionById(Class<T> resultType, UUID id) throws NoResultException {
+    public <T> Long findRevisionById(Class<T> resultType, UUID id) throws NoResultException {
         try {
-            return queryOne(Integer.class, "select revision from " + resultType.getSimpleName() + " x where x.id = ?1", id);
+            Integer revision = queryOne(Integer.class, "select revision from " + resultType.getSimpleName() + " x where x.id = ?1", id);
+            return revision.longValue();
+        } catch (Exception | Error ex) {
+            //log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":findById, full stack trace follows:", ex);
+            throw ex;
+            //break;
+
+        }
+    }
+
+    @Override
+    public <T> Long findVersionById(Class<T> resultType, UUID id) throws NoResultException {
+        try {
+            Long version = queryOne(Long.class, "select version from " + resultType.getSimpleName() + " x where x.id = ?1", id);
+            return version.longValue();
         } catch (Exception | Error ex) {
             //log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":findById, full stack trace follows:", ex);
             throw ex;

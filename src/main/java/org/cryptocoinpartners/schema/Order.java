@@ -5,13 +5,14 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.Nullable;
 import javax.persistence.Basic;
 import javax.persistence.Cacheable;
 import javax.persistence.Column;
+import javax.persistence.DiscriminatorColumn;
 import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.Inheritance;
@@ -32,6 +33,7 @@ import javax.persistence.Transient;
 import org.apache.commons.lang.NotImplementedException;
 import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.FillType;
+import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.schema.dao.Dao;
@@ -39,6 +41,7 @@ import org.cryptocoinpartners.schema.dao.FillJpaDao;
 import org.cryptocoinpartners.schema.dao.OrderDao;
 import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.FeesUtil;
+import org.cryptocoinpartners.util.Remainder;
 import org.hibernate.Hibernate;
 import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
@@ -57,11 +60,14 @@ import com.google.inject.Inject;
  */
 
 @Entity
+//@MappedSuperclass
 @Cacheable
-@Table(name = "\"Order\"", indexes = { @Index(columnList = "fillType"), @Index(columnList = "portfolio"), @Index(columnList = "market"),
-        @Index(columnList = "parentFill"), @Index(columnList = "parentOrder") })
+@Table(name = "\"Order\"", indexes = { @Index(columnList = "Order_Type"), @Index(columnList = "fillType"), @Index(columnList = "portfolio"),
+        @Index(columnList = "market"), @Index(columnList = "parentFill"), @Index(columnList = "parentOrder"), @Index(columnList = "version"),
+        @Index(columnList = "revision") })
 //, @Index(columnList = "portfolio") })
 // This is required because ORDER is a SQL keyword and must be escaped
+@DiscriminatorColumn(name = "Order_Type")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @SuppressWarnings({ "JpaDataSourceORMInspection", "UnusedDeclaration" })
 @NamedQueries({ @NamedQuery(name = "Order.findOrder", query = "select o from Order o where id =?1") })
@@ -78,13 +84,14 @@ import com.google.inject.Inject;
 })
 public abstract class Order extends Event {
     @Inject
-    protected OrderDao orderDao;
+    protected transient OrderDao orderDao;
     @Inject
-    protected FillJpaDao fillDao;
+    protected transient FillJpaDao fillDao;
+    protected Integer stopAdjustmentCount = 0;
     protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.order");
 
     protected static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
-    private static Object lock = new Object();
+    private transient static Object lock = new Object();
     // private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
     protected static final String SEPARATOR = ",";
 
@@ -106,6 +113,10 @@ public abstract class Order extends Event {
     @JoinColumn(name = "parentFill")
     public Fill getParentFill() {
         return parentFill;
+    }
+
+    public double getOrderGroup() {
+        return orderGroup;
     }
 
     @Transient
@@ -180,12 +191,32 @@ public abstract class Order extends Event {
     @Nullable
     @Column(insertable = false, updatable = false)
     @Transient
+    public abstract double getStopPercentage();
+
+    @Nullable
+    @Column(insertable = false, updatable = false)
+    @Transient
+    public abstract double getTriggerInterval();
+
+    @Nullable
+    @Column(insertable = false, updatable = false)
+    @Transient
+    public abstract Amount getTrailingStopAmount();
+
+    @Nullable
+    @Column(insertable = false, updatable = false)
+    @Transient
     public abstract Amount getTargetAmount();
 
     @Nullable
     @Column(insertable = false, updatable = false)
     @Transient
     public abstract Amount getStopPrice();
+
+    @Nullable
+    @Column(insertable = false, updatable = false)
+    @Transient
+    public abstract Amount getLastBestPrice();
 
     @Nullable
     @Column(insertable = false, updatable = false)
@@ -206,9 +237,29 @@ public abstract class Order extends Event {
 
     public abstract void setStopAmount(DecimalAmount stopAmount);
 
+    @Nullable
+    public Integer getStopAdjustmentCount() {
+        if (stopAdjustmentCount == null || stopAdjustmentCount == 0)
+            stopAdjustmentCount = 1;
+        return stopAdjustmentCount;
+    }
+
+    public void setStopAdjustmentCount(Integer adjustmentCount) {
+        this.stopAdjustmentCount = adjustmentCount;
+
+    }
+
+    public abstract void setStopPercentage(double percentage);
+
+    public abstract void setTriggerInterval(double triggerInterval);
+
+    public abstract void setTrailingStopAmount(DecimalAmount stopAmount);
+
     public abstract void setTargetAmount(DecimalAmount targetAmount);
 
     public abstract void setStopPrice(DecimalAmount stopPrice);
+
+    public abstract void setLastBestPrice(DecimalAmount lastBestPrice);
 
     public abstract void setTargetPrice(DecimalAmount targetPrice);
 
@@ -225,10 +276,19 @@ public abstract class Order extends Event {
     }
 
     public void setParentOrder(Order order) {
-        this.parentOrder = order;
+        if (order == null || (order != null && !order.equals(this)))
+            this.parentOrder = order;
     }
 
-    public void setParentFill(Fill fill) {
+    public synchronized void setParentFill(Fill fill) {
+        if (fill != null) {
+            log.trace("Order:setParentFill setting parent fill to " + fill.getId() + " / " + System.identityHashCode(fill) + " for order " + getId() + " / "
+                    + System.identityHashCode(this) + ". Calling class " + Thread.currentThread().getStackTrace()[2]);
+            //   for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
+            //     log.error(ste.toString());
+            //}
+        }
+
         this.parentFill = fill;
     }
 
@@ -250,6 +310,10 @@ public abstract class Order extends Event {
 
     public String getComment() {
         return comment;
+    }
+
+    public boolean getUsePosition() {
+        return usePosition;
     }
 
     public enum MarginType {
@@ -302,9 +366,110 @@ public abstract class Order extends Event {
 
     void getAllFillsByParentOrder(Order parentOrder, List allChildren) {
         for (Order child : parentOrder.getOrderChildren()) {
-            allChildren.addAll(child.getFills());
+            if (child.getFills() != null)
+                allChildren.addAll(child.getFills());
             getAllFillsByParentOrder(child, allChildren);
         }
+    }
+
+    void getAllOrdersByParentOrder(Order parentOrder, List allChildren) {
+        for (Order child : parentOrder.getOrderChildren()) {
+            // allChildren.addAll(child.getFills());
+            allChildren.add(child);
+            getAllOrdersByParentOrder(child, allChildren);
+        }
+    }
+
+    @Transient
+    public static Amount getOpenAvgPrice(Collection<SpecificOrder> orders) {
+
+        Amount cumVolume = DecimalAmount.ZERO;
+        Amount avgPrice = DecimalAmount.ZERO;
+
+        for (Order order : orders) {
+            //  for (Fill pos : getFills()) {
+
+            avgPrice = avgPrice == null ? DecimalAmount.ZERO : ((avgPrice.times(cumVolume, Remainder.ROUND_EVEN)).plus(order.getUnfilledVolume().times(
+                    order.getLimitPrice(), Remainder.ROUND_EVEN))).divide(cumVolume.plus(order.getUnfilledVolume()), Remainder.ROUND_EVEN);
+            cumVolume = cumVolume.plus(order.getUnfilledVolume());
+
+        }
+
+        return avgPrice;
+    }
+
+    @Transient
+    public static Amount getOpenVolume(Collection<SpecificOrder> orders, Market market) {
+        //  if (longAvgStopPrice == null) {
+        //    Amount longCumVolume = DecimalAmount.ZERO;
+        //  Amount longAvgStopPrice = DecimalAmount.ZERO;
+        Amount cumVolume;
+        if (market == null || market.getVolumeBasis() == 0)
+            cumVolume = DecimalAmount.ZERO;
+        else
+
+            cumVolume = new DiscreteAmount(0, market.getVolumeBasis());
+
+        //= null;
+        //        new DiscreteAmount(0,getMarket().getVolumeBasis());
+
+        for (Order order : orders) {
+            cumVolume = cumVolume.plus(order.getUnfilledVolume());
+            //market=order.getMarket();
+        }
+        return cumVolume;
+    }
+
+    @Transient
+    public static Amount getOrderOpenVolume(Collection<Order> orders, Market market) {
+        //  if (longAvgStopPrice == null) {
+        //    Amount longCumVolume = DecimalAmount.ZERO;
+        //  Amount longAvgStopPrice = DecimalAmount.ZERO;
+        Amount cumVolume;
+        if (market == null || market.getVolumeBasis() == 0)
+            cumVolume = DecimalAmount.ZERO;
+        else
+
+            cumVolume = new DiscreteAmount(0, market.getVolumeBasis());
+
+        //= null;
+        //        new DiscreteAmount(0,getMarket().getVolumeBasis());
+
+        for (Order order : orders) {
+            cumVolume = cumVolume.plus(order.getUnfilledVolume());
+            //market=order.getMarket();
+        }
+        return cumVolume;
+    }
+
+    @Transient
+    public static Amount getOpenAvgStopPrice(Collection<SpecificOrder> orders) {
+        //  if (longAvgStopPrice == null) {
+        //    Amount longCumVolume = DecimalAmount.ZERO;
+        //  Amount longAvgStopPrice = DecimalAmount.ZERO;
+
+        Amount cumVolume = DecimalAmount.ZERO;
+        Amount avgStopPrice = DecimalAmount.ZERO;
+
+        for (Order order : orders) {
+            Amount parentStopPrice = null;
+            Amount stopPrice;
+            if (order.getStopPrice() == null && order.getParentOrder() != null && order.getParentOrder().getStopAmount() != null)
+
+                stopPrice = order.getLimitPrice().minus(order.getParentOrder().getStopAmount());
+            //  Amount stopPrice = (pos.getStopPrice() == null) ? parentStopPrice : pos.getStopPrice();
+            else
+                stopPrice = order.getStopPrice();
+            if (stopPrice == null)
+                continue;
+            if (stopPrice != null)
+                avgStopPrice = ((avgStopPrice.times(cumVolume, Remainder.ROUND_EVEN)).plus(order.getUnfilledVolume().times(stopPrice, Remainder.ROUND_EVEN)))
+                        .divide(cumVolume.plus(order.getUnfilledVolume()), Remainder.ROUND_EVEN);
+
+            cumVolume = cumVolume.plus(order.getUnfilledVolume());
+        }
+
+        return avgStopPrice;
     }
 
     public void loadAllChildOrdersByParentOrder(Order parentOrder, Map<Order, Order> orders, Map<Fill, Fill> fills) {
@@ -347,7 +512,7 @@ public abstract class Order extends Event {
             orderWithChildren = EM.namedQueryZeroOne(Order.class, "Order.findOrder", withChildrenHints, parentOrder.getId());
             orderWithTransactions = EM.namedQueryZeroOne(Order.class, "Order.findOrder", withTransHints, parentOrder.getId());
         } catch (Error | Exception ex) {
-            log.error("Order:loadAllChildOrdersByParentOrdere unable to get order for orderID: " + parentOrder.getId());
+            log.error("Order:loadAllChildOrdersByParentOrdere unable to get order for orderID: " + parentOrder.getId() + ". Full stack trace ", ex);
             return;
         }
 
@@ -360,13 +525,16 @@ public abstract class Order extends Event {
 
                 if (!fills.containsKey(fill)) {
                     fills.put(fill, fill);
+                    log.debug("Order loadAllChildOrdersByParentOrder loading all child order for fill" + fill.getId() + " for order " + orderWithFills.getId()
+                            + ". Calling class " + Thread.currentThread().getStackTrace()[2]);
                     fill.loadAllChildOrdersByFill(fill, orders, fills);
 
                 } else
                     orderWithFills.getFills().set(index, fills.get(fill));
                 index++;
             }
-
+            log.debug("Order:loadAllChildOrdersByParentOrder - Setting fills for order" + parentOrder.getId() + "/" + System.identityHashCode(parentOrder)
+                    + " to fills from " + orderWithFills.getId() + "/" + System.identityHashCode(orderWithFills));
             parentOrder.setFills(orderWithFills.getFills());
         } else
             parentOrder.setFills(new CopyOnWriteArrayList<Fill>());
@@ -404,34 +572,50 @@ public abstract class Order extends Event {
                     continue;
                 if (!orders.containsKey(order)) {
                     orders.put(order, order);
-                    System.out.println("loading child orders for: " + order.getId());
+                    log.debug("Order:loadAllChildOrdersByParentOrder - Loading child orders for: " + order.getId());
                     order.loadAllChildOrdersByParentOrder(order, orders, fills);
                 } else
                     orderWithChildren.getOrderChildren().set(index, orders.get(order));
                 index++;
             }
+            log.debug("Order:loadAllChildOrdersByParentOrder - setting orderchildren to " + System.identityHashCode(orderWithChildren.getOrderChildren())
+                    + "for order " + parentOrder.getId() + " /" + System.identityHashCode(parentOrder));
 
             parentOrder.setOrderChildren(orderWithChildren.getOrderChildren());
-        } else
+        } else {
+            log.debug("Order:loadAllChildOrdersByParentOrder - setting orderchildren to new array list for order " + parentOrder.getId() + " /"
+                    + System.identityHashCode(parentOrder));
+
             parentOrder.setOrderChildren(new CopyOnWriteArrayList<Order>());
-        if (orders.containsKey(getParentOrder()))
-            setParentOrder(orders.get(getParentOrder()));
-        if (fills.containsKey(getParentFill()))
+        }
+        if (orders.containsKey(parentOrder)) {
+            log.debug("Order:loadAllChildOrdersByParentOrder - order " + parentOrder.getId() + " / " + System.identityHashCode(parentOrder)
+                    + " parent order to " + orders.get(parentOrder).getId() + " / " + System.identityHashCode(orders.get(parentOrder)));
+
+            setParentOrder(orders.get(parentOrder));
+        }
+        if (fills.containsKey(getParentFill())) {
+            log.debug("Order:loadAllChildOrdersByParentOrder - order " + parentOrder.getId() + " / " + System.identityHashCode(parentOrder)
+                    + " setting parent fill to  order to " + fills.get(getParentFill()).getId() + " / " + System.identityHashCode(fills.get(getParentFill())));
+
             setParentFill(fills.get(getParentFill()));
+        }
     }
 
-    void getAllGeneralOrderByParentOrder(Order paretnOrder, Collection allChildren) {
+    void getAllGeneralOrderByParentOrder(Order paretnOrder, Set<Order> allChildren) {
         for (Order child : paretnOrder.getOrderChildren()) {
             if (child instanceof GeneralOrder)
-                allChildren.add(child);
+                if (!allChildren.contains(child))
+                    allChildren.add(child);
             getAllGeneralOrderByParentOrder(child, allChildren);
         }
     }
 
-    void getAllSpecificOrderByParentOrder(Order parentOrder, Collection allChildren) {
+    void getAllSpecificOrderByParentOrder(Order parentOrder, Set<Order> allChildren) {
         for (Order child : parentOrder.getOrderChildren()) {
             if (child instanceof SpecificOrder)
-                allChildren.add(child);
+                if (!allChildren.contains(child))
+                    allChildren.add(child);
             getAllSpecificOrderByParentOrder(child, allChildren);
         }
     }
@@ -460,7 +644,9 @@ public abstract class Order extends Event {
     }
 
     public Order withTargetPrice(String price) {
-        if (this.fillType == (FillType.STOP_LIMIT) || this.fillType == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LIMIT)) {
+        if (this.fillType == (FillType.STOP_LIMIT) || this.fillType == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LIMIT)
+                || this.fillType == (FillType.TRAILING_STOP_LOSS) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
             this.setTargetPrice(DecimalAmount.of(price));
             return this;
         }
@@ -477,14 +663,16 @@ public abstract class Order extends Event {
         if (fill != null) {
             fill.addChildOrder(this);
             this.setParentFill(fill);
-
         }
+
         return this;
 
     }
 
     public Order withTargetPrice(BigDecimal price) {
-        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || getFillType() == (FillType.TRAILING_STOP_LIMIT)) {
+        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
             this.setTargetPrice(DecimalAmount.of(price));
             return this;
         }
@@ -493,16 +681,35 @@ public abstract class Order extends Event {
     }
 
     public Order withStopPrice(String price) {
-        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || getFillType() == (FillType.TRAILING_STOP_LIMIT)) {
-            this.setStopAmount(DecimalAmount.of(price));
+        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
+            this.setStopPrice(DecimalAmount.of(price));
+            this.stopAdjustmentCount++;
+
             return this;
         }
         throw new NotImplementedException();
     }
 
     public Order withStopPrice(BigDecimal price) {
-        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || getFillType() == (FillType.TRAILING_STOP_LIMIT)) {
+        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
             this.setStopPrice(DecimalAmount.of(price));
+            this.stopAdjustmentCount++;
+
+            return this;
+        }
+
+        throw new NotImplementedException();
+    }
+
+    public Order withTrailingStopAmount(BigDecimal price) {
+        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
+            this.setTrailingStopAmount(DecimalAmount.of(price));
             return this;
         }
 
@@ -510,12 +717,55 @@ public abstract class Order extends Event {
     }
 
     public Order withStopAmount(BigDecimal price) {
-        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || getFillType() == (FillType.TRAILING_STOP_LIMIT)) {
+
+        if ((getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT))) {
+            if (price.compareTo(BigDecimal.ZERO) == 0)
+                return this;
             this.setStopAmount(DecimalAmount.of(price));
+            this.setStopPercentage(0.0);
             return this;
         }
 
         throw new NotImplementedException();
+    }
+
+    public Order withLastBestPrice(BigDecimal bestLastPrice) {
+
+        if (bestLastPrice.compareTo(BigDecimal.ZERO) == 0)
+            return this;
+        this.setLastBestPrice(DecimalAmount.of(bestLastPrice));
+        return this;
+
+    }
+
+    public Order withStopPercentage(double stopPercentage) {
+
+        if ((getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT))) {
+            if (stopPercentage == 0)
+                return this;
+            this.setStopPercentage(stopPercentage);
+            this.setStopAmount(DecimalAmount.of(getLimitPrice().times(stopPercentage, Remainder.ROUND_EVEN)));
+            return this;
+        }
+
+        throw new NotImplementedException();
+
+    }
+
+    public Order withTriggerInterval(double triggerInterval) {
+
+        if ((getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT))) {
+            if (triggerInterval == 0)
+                return this;
+            this.setTriggerInterval(triggerInterval);
+            return this;
+        }
+
+        throw new NotImplementedException();
+
     }
 
     public Order withTargetAmount(BigDecimal price) {
@@ -531,8 +781,10 @@ public abstract class Order extends Event {
     }
 
     public Order withTrailingStopPrice(BigDecimal price, BigDecimal trailingStopPrice) {
-        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || getFillType() == (FillType.TRAILING_STOP_LIMIT)) {
-            this.setStopAmount(DecimalAmount.of(price));
+        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
+            this.setTrailingStopAmount(DecimalAmount.of(price));
             this.setTrailingStopPrice(DecimalAmount.of(trailingStopPrice));
             return this;
         }
@@ -540,8 +792,10 @@ public abstract class Order extends Event {
     }
 
     public Order withTrailingStopPrice(String price, String trailingStopPrice) {
-        if (this.fillType == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || getFillType() == (FillType.TRAILING_STOP_LIMIT)) {
-            this.setStopAmount(DecimalAmount.of(price));
+        if (this.fillType == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
+                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
+            this.setTrailingStopAmount(DecimalAmount.of(price));
             this.setTrailingStopPrice(DecimalAmount.of(trailingStopPrice));
             return this;
         }
@@ -550,6 +804,23 @@ public abstract class Order extends Event {
 
     public Order withComment(String comment) {
         this.setComment(comment);
+        return this;
+    }
+
+    public Order withUsePosition(boolean usePosition) {
+        this.setUsePosition(usePosition);
+        return this;
+    }
+
+    public Order withParentOrder(Order parentOrder) {
+        parentOrder.addChildOrder(this);
+        this.setParentOrder(parentOrder);
+
+        return this;
+    }
+
+    public Order withOrderGroup(double orderGroup) {
+        this.setOrderGroup(orderGroup);
         return this;
     }
 
@@ -587,9 +858,15 @@ public abstract class Order extends Event {
     }
 
     @Override
-    public synchronized void merge() {
+    public void merge() {
         //   synchronized (persistanceLock) {
         try {
+
+            this.setPeristanceAction(PersistanceAction.MERGE);
+
+            this.setRevision(this.getRevision() + 1);
+            log.trace("Order - Merge : Merge of Order " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+
             orderDao.merge(this);
             //if (duplicate == null || duplicate.isEmpty())
         } catch (Exception | Error ex) {
@@ -614,72 +891,109 @@ public abstract class Order extends Event {
         // return null;
     }
 
+    @Override
     @PostPersist
-    private void postPersist() {
+    public void postPersist() {
         //   detach();
 
     }
 
     //  @PrePersist
-    private void prePersist() {
+    //  @Override
+    // public void prePersist() {
+
+    // }
+
+    @Override
+    public void prePersist() {
         if (getDao() != null) {
 
-            Portfolio orderPortfolio = null;
-            Order orderParent = null;
-            Fill fillParent = null;
-            UUID parentOrderId = null;
-            if (getPortfolio() != null) {
-                orderPortfolio = (getDao().find(Portfolio.class, getPortfolio().getId()));
+            EntityBase dbPortfolio = null;
+            EntityBase dbParent = null;
+            EntityBase dbParentFill = null;
+            /*            if (getPortfolio() != null) {
+                            try {
+                                dbPortfolio = getDao().find(getPortfolio().getClass(), getPortfolio().getId());
+                                if (dbPortfolio != null) {
+                                    getPortfolio().setVersion(dbPortfolio.getVersion());
+                                    if (getPortfolio().getRevision() > dbPortfolio.getRevision()) {
+                                        getPortfolio().setPeristanceAction(PersistanceAction.MERGE);
+                                        getDao().merge(getPortfolio());
+                                    }
+                                } else {
+                                    getPortfolio().setPeristanceAction(PersistanceAction.NEW);
+                                    getDao().persist(getPortfolio());
+                                }
+                            } catch (Exception | Error ex) {
+                                if (dbPortfolio != null)
+                                    if (getPortfolio().getRevision() > dbPortfolio.getRevision()) {
+                                        getPortfolio().setPeristanceAction(PersistanceAction.MERGE);
+                                        getDao().merge(getPortfolio());
+                                    } else {
+                                        getPortfolio().setPeristanceAction(PersistanceAction.NEW);
+                                        getDao().persist(getPortfolio());
+                                    }
+                            }
 
-                //  positionId = (fillDao.queryZeroOne(UUID.class, "select p.id from Position p where p.id=?1", position.getId()));
-                if (orderPortfolio == null)
-                    getDao().persist(getPortfolio());
-                //    portfolio.merge();
-            }
-
-            //   if (parentOrder != null) {
-            //     orderParent = (orderDao.find(Order.class, parentOrder.getId()));
-
-            //  positionId = (fillDao.queryZeroOne(UUID.class, "select p.id from Position p where p.id=?1", position.getId()));
-            //   if (orderParent == null)
-            //     orderDao.persist(orderParent);
-            // }
-
+                        }
+            */
             if (getParentFill() != null) {
-                fillParent = (getDao().find(Fill.class, getParentFill().getId()));
+                getDao().merge(getParentFill());
+                /*    
+                    try {
+                        dbParentFill = getDao().find(getParentFill().getClass(), getParentFill().getId());
 
-                //  positionId = (fillDao.queryZeroOne(UUID.class, "select p.id from Position p where p.id=?1", position.getId()));
-                if (fillParent == null)
-                    getDao().persist(getParentFill());
-                //       parentFill.merge();
+                        if (dbParentFill != null) {
+                            getParentFill().setVersion(dbParentFill.getVersion());
+                            if (getParentFill().getRevision() > dbParentFill.getRevision()) {
+                                getParentFill().setPeristanceAction(PersistanceAction.MERGE);
+                                getDao().merge(getParentFill());
+                            }
+                        } else if (dbParentFill == null) {
+                            getParentFill().setPeristanceAction(PersistanceAction.NEW);
+                            getDao().persist(getParentFill());
+                        }
+                    } catch (Exception | Error ex) {
+                        if (dbParentFill != null)
+                            if (getParentFill().getRevision() > dbParentFill.getRevision()) {
+                                getParentFill().setPeristanceAction(PersistanceAction.MERGE);
+                                getDao().merge(getParentFill());
+                            } else {
+                                getParentFill().setPeristanceAction(PersistanceAction.NEW);
+                                getDao().persist(getParentFill());
+                            }
+                    }*/
             }
 
             if (getParentOrder() != null) {
-                orderParent = (getDao().find(Order.class, getParentOrder().getId()));
+                getDao().merge(getParentOrder());
+                /*                try {
+                                    dbParent = getDao().find(getParentOrder().getClass(), getParentOrder().getId());
 
-                //  positionId = (fillDao.queryZeroOne(UUID.class, "select p.id from Position p where p.id=?1", position.getId()));
-                if (orderParent == null)
-                    getDao().persist(getParentOrder());
-                //       parentFill.merge();
+                                    if (dbParent != null) {
+                                        getParentOrder().setVersion(dbParent.getVersion());
+                                        if (getParentOrder().getRevision() > dbParent.getRevision()) {
+                                            getParentOrder().setPeristanceAction(PersistanceAction.MERGE);
+                                            getDao().merge(getParentOrder());
+                                        }
+                                    } else if (dbParent == null) {
+                                        getParentOrder().setPeristanceAction(PersistanceAction.NEW);
+                                        getDao().persist(getParentOrder());
+                                    }
+                                } catch (Exception | Error ex) {
+                                    if (dbParent != null)
+                                        if (getParentOrder().getRevision() > dbParent.getRevision()) {
+                                            getParentOrder().setPeristanceAction(PersistanceAction.MERGE);
+                                            getDao().merge(getParentOrder());
+                                        } else {
+                                            getParentOrder().setPeristanceAction(PersistanceAction.NEW);
+                                            getDao().persist(getParentOrder());
+                                        }
+                                }*/
             }
+
         }
 
-        //        if (portfolio != null) {
-        //            portfolioId = (orderDao == null) ? (EM.queryZeroOne(UUID.class, "select p.id from Portfolio p where p.id=?1", portfolio.getId())) : (orderDao
-        //                    .queryZeroOne(UUID.class, "select p.id from Portfolio p where p.id=?1", portfolio.getId()));
-        //            if (portfolioId == null)
-        //                portfolio.persit();
-        //        }
-        //
-        //        if (parentOrder != null) {
-        //            parentOrderId = (orderDao == null) ? (EM.queryZeroOne(UUID.class, "select o.id from Order o where o.id=?1", parentOrder.getId())) : (orderDao
-        //                    .queryZeroOne(UUID.class, "select o.id from Order o where o.id=?1", parentOrder.getId()));
-        //
-        //            if (parentOrderId == null)
-        //                parentOrder.persit();
-        //        }
-
-        //detach();
     }
 
     @Override
@@ -694,12 +1008,20 @@ public abstract class Order extends Event {
     }
 
     @Override
+    @Transient
+    public void setDao(Dao dao) {
+        orderDao = (OrderDao) dao;
+        // TODO Auto-generated method stub
+        //  return null;
+    }
+
+    @Override
     public EntityBase refresh() {
         return orderDao.refresh(this);
     }
 
     @Override
-    public synchronized void persit() {
+    public void persit() {
         //   synchronized (persistanceLock) {
         //  if (this.hasFills()) {
         //    for (Fill fill : this.getFills())
@@ -721,8 +1043,13 @@ public abstract class Order extends Event {
         //List<Order> duplicate = null;
         //  EntityBase entity = PersistUtil.find(this);
         try {
+            log.debug("Order - Persist : Persit of Order " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+
+            this.setPeristanceAction(PersistanceAction.NEW);
+            this.setRevision(this.getRevision() + 1);
 
             orderDao.persist(this);
+
             //if (duplicate == null || duplicate.isEmpty())
         } catch (Exception | Error ex) {
 
@@ -799,7 +1126,7 @@ public abstract class Order extends Event {
 
     @Nullable
     @OneToMany(mappedBy = "parentOrder")
-    //, fetch = FetchType.EAGER)
+    //, fetch = CascadeType.EAGER)
     //(orphanRemoval = true, cascade = CascadeType.REMOVE)
     //
     @OrderBy
@@ -811,9 +1138,11 @@ public abstract class Order extends Event {
         //  }
     }
 
-    public synchronized void addFill(Fill fill) {
-        if (!getFills().contains(fill))
-            getFills().add(fill);
+    public void addFill(Fill fill) {
+        synchronized (getFills()) {
+            if (!getFills().contains(fill))
+                getFills().add(fill);
+        }
     }
 
     public synchronized void addOrderUpdate(OrderUpdate orderUpdate) {
@@ -827,7 +1156,7 @@ public abstract class Order extends Event {
     }
 
     public synchronized void addChildOrder(Order order) {
-        if (!getOrderChildren().contains(order))
+        if (!getOrderChildren().contains(order) && order != null && !order.equals(this))
 
             getOrderChildren().add(order);
     }
@@ -886,8 +1215,16 @@ public abstract class Order extends Event {
         this.fillType = fillType;
     }
 
+    public void setOrderGroup(double orderGroup) {
+        this.orderGroup = orderGroup;
+    }
+
     public void setComment(String comment) {
         this.comment = comment;
+    }
+
+    public void setUsePosition(boolean usePosition) {
+        this.usePosition = usePosition;
     }
 
     protected void setMarginType(MarginType marginType) {
@@ -969,7 +1306,9 @@ public abstract class Order extends Event {
     protected ExecutionInstruction executionInstruction;
     protected boolean force; // allow this order to override various types of panic
     protected boolean emulation; // ("allow order type emulation" [default, true] or "only use exchange's native functionality")
+    protected boolean usePosition = false;
     protected Order parentOrder;
     protected Fill parentFill;
+    protected double orderGroup;
 
 }

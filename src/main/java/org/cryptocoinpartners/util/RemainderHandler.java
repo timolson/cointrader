@@ -17,9 +17,10 @@ public abstract class RemainderHandler {
     public void handleRemainder(Amount result, BigDecimal remainder) {
     }
 
-    public RoundingMode getRoundingMode() {
-        return RoundingMode.HALF_EVEN;
-    }
+    public abstract RoundingMode getRoundingMode();
+
+    //     return RoundingMode.HALF_EVEN;
+    // }
 
     public MathContext getMathContext() {
         return new MathContext(Amount.mc.getPrecision(), getRoundingMode());

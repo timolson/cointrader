@@ -4,7 +4,6 @@ import org.apache.commons.lang.StringUtils;
 import org.cryptocoinpartners.module.SaveTicksCsv;
 import org.cryptocoinpartners.util.IoUtil;
 
-
 /**
  * @author Tim Olson
  */
@@ -18,16 +17,18 @@ public class CsvCommand extends AntlrCommandBase {
 
     @Override
     public String getExtraHelp() {
-        return "Writes a csv file with columns "+ StringUtils.join(SaveTicksCsv.headers,", ") + ".  If start_date or end_date are specified, the data set is limited, otherwise everything in the database is output.  tick_duration is currently ignored and only 1-minute tick invervals are written.";
+        return "Writes a csv file with columns "
+                + StringUtils.join(SaveTicksCsv.headers, ", ")
+                + ".  If start_date or end_date are specified, the data set is limited, otherwise everything in the database is output.  tick_duration is currently ignored and only 1-minute tick invervals are written.";
     }
 
     @Override
-    public void run() {
+    public Object call() {
         out.println("Dumping ticks...");
-        IoUtil.dumpTicks(filename,startDate,endDate,false);
-        out.println("Wrote file "+filename);
+        IoUtil.dumpTicks(filename, startDate, endDate, false);
+        out.println("Wrote file " + filename);
+        return true;
     }
-
 
     String filename;
     String startDate;

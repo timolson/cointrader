@@ -1,9 +1,8 @@
 package org.cryptocoinpartners.command;
 
+import org.cryptocoinpartners.report.Report;
 import org.cryptocoinpartners.report.TableOutput;
 import org.cryptocoinpartners.util.IoUtil;
-import org.cryptocoinpartners.report.Report;
-
 
 /**
  * @author Tim Olson
@@ -11,18 +10,17 @@ import org.cryptocoinpartners.report.Report;
 public abstract class ReportCommand extends CommandBase {
 
     @Override
-    public void run() {
+    public Object call() {
         IoUtil.outputAscii(runReport(getReport()));
+        return true;
     }
-
 
     protected TableOutput runReport(Report report) {
         return report.runReport();
     }
 
-
     protected abstract Report getReport();
 
-
-    protected ReportCommand() { }
+    protected ReportCommand() {
+    }
 }

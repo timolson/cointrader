@@ -25,7 +25,7 @@ public class FillsCommand extends CommandBase {
     @Override
     public void parse(String commandArguments) {
         try {
-            market = market.forSymbol(commandArguments);
+            market = (Market) market.forSymbol(commandArguments);
 
             //   listing = Listing.forSymbol(commandArguments);
         } catch (IllegalArgumentException e) {
@@ -43,10 +43,11 @@ public class FillsCommand extends CommandBase {
     }
 
     @Override
-    public void run() {
+    public Object call() {
         for (Portfolio portfolio : portfolioService.getPortfolios())
 
             out.printList(orderService.getFills(market, portfolio));
+        return true;
     }
 
     @Inject

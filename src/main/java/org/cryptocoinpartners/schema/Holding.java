@@ -3,8 +3,12 @@ package org.cryptocoinpartners.schema;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.MappedSuperclass;
 import javax.persistence.OneToOne;
 import javax.persistence.Transient;
 
@@ -18,32 +22,54 @@ import com.google.inject.Inject;
  *
  * @author Tim Olson
  */
-@MappedSuperclass
-public class Holding extends EntityBase {
+@Entity
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+//@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+//@Cacheable
+public abstract class Holding extends EntityBase {
     @Inject
-    protected HoldingDao holdingDao;
+    protected transient HoldingDao holdingDao;
+    @Inject
+    protected transient static BalanceFactory balanceFactory;
 
-    public static Holding forSymbol(String symbol) {
-        Matcher matcher = Pattern.compile("(\\w+):(\\w+)").matcher(symbol);
-        if (!matcher.matches())
-            throw new IllegalArgumentException("Could not parse Holding symbol " + symbol);
-        return new Holding(Exchange.forSymbol(matcher.group(1)), Asset.forSymbol(matcher.group(2)));
-    }
+    //private Amount volume;
+    // private long volumeCount;
 
     public Holding(Exchange exchange, Asset asset) {
         this.exchange = exchange;
         this.asset = asset;
     }
 
-    @ManyToOne(optional = true)
-    public Exchange getExchange() {
-        return exchange;
+    public static Holding forSymbol(String symbol) {
+        Matcher matcher = Pattern.compile("(\\w+):(\\w+)").matcher(symbol);
+        if (!matcher.matches())
+            throw new IllegalArgumentException("Could not parse Holding symbol " + symbol);
+        return balanceFactory.create(Exchange.forSymbol(matcher.group(1)), Asset.forSymbol(matcher.group(2)));
     }
 
-    @OneToOne(optional = true)
-    public Asset getAsset() {
-        return asset;
-    }
+    //  @ManyToOne
+    /* @ManyToOne(optional = true)
+     //(cascade = { CascadeType.MERGE })
+     @JoinColumn(name = "portfolio")
+     public Portfolio getPortfolio() {
+         return portfolio;
+     }
+
+     public synchronized void setPortfolio(Portfolio portfolio) {
+         this.portfolio = portfolio;
+     }*/
+
+    @ManyToOne(optional = true)
+    @JoinColumn(insertable = false, updatable = false)
+    public abstract Exchange getExchange();
+
+    public abstract void setExchange(Exchange exchange);
+
+    @OneToOne(optional = true, fetch = FetchType.EAGER)
+    @JoinColumn(insertable = false, updatable = false)
+    public abstract Asset getAsset();
+
+    public abstract void setAsset(Asset asset);
 
     @Override
     public String toString() {
@@ -52,14 +78,6 @@ public class Holding extends EntityBase {
 
     // JPA
     protected Holding() {
-    }
-
-    protected void setExchange(Exchange exchange) {
-        this.exchange = exchange;
-    }
-
-    protected void setAsset(Asset asset) {
-        this.asset = asset;
     }
 
     protected Exchange exchange;

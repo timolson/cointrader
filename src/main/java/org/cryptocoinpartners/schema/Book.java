@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import javax.annotation.Nullable;
-import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.Lob;
@@ -28,11 +27,11 @@ import javax.persistence.Transient;
 
 import jline.internal.Log;
 
+import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.schema.dao.BookDao;
+import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.Visitor;
-import org.hibernate.annotations.Cache;
-import org.hibernate.annotations.CacheConcurrencyStrategy;
 import org.joda.time.Instant;
 import org.joda.time.Interval;
 
@@ -47,8 +46,8 @@ import com.google.inject.assistedinject.AssistedInject;
  */
 @SuppressWarnings("UnusedDeclaration")
 @Entity
-@Cacheable
-@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE, region = "book")
+//@Cacheable(false)
+//@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE, region = "book")
 @Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived") })
 public class Book extends MarketData implements Spread {
 
@@ -91,7 +90,7 @@ public class Book extends MarketData implements Spread {
     @Override
     @Transient
     public Offer getBestBid() {
-        if (getBids().isEmpty())
+        if ((getBids() == null || getBids().isEmpty()))
             return new Offer(getMarket(), getTime(), getTimeReceived(), 0L, 0L);
         return getBids().get(0);
     }
@@ -99,21 +98,31 @@ public class Book extends MarketData implements Spread {
     @Override
     @Transient
     public Offer getBestBidByVolume(DiscreteAmount volume) {
-        long remainingVolume = volume.getCount();
+        long remainingVolume = Math.abs(volume.getCount());
 
-        for (Offer bid : getBids()) {
-            if (bid.getVolumeCount() >= remainingVolume)
-                return bid;
-            else
-                remainingVolume = Math.max(remainingVolume - bid.getVolumeCount(), 0);
+        Offer bid = getBestBid();
+
+        if (getBids() != null && !getBids().isEmpty()) {
+
+            bid = getBids().get(getBids().size() - 1);
+
+            for (Offer bookBid : getBids()) {
+                if (bookBid.getVolumeCount() >= remainingVolume) {
+                    bid = bookBid;
+                    break;
+                } else
+                    remainingVolume = Math.max(remainingVolume - bid.getVolumeCount(), 0);
+            }
         }
-        return new Offer(getMarket(), getTime(), getTimeReceived(), 0L, 0L);
+
+        return bid;
+
     }
 
     @Override
     @Transient
     public Offer getBestAsk() {
-        if (getAsks().isEmpty()) {
+        if ((getAsks() == null || getAsks().isEmpty())) {
             return new Offer(getMarket(), getTime(), getTimeReceived(), Long.MAX_VALUE, 0L);
         }
         return getAsks().get(0);
@@ -122,22 +131,27 @@ public class Book extends MarketData implements Spread {
     @Override
     @Transient
     public Offer getBestAskByVolume(DiscreteAmount volume) {
-        long remainingVolume = volume.getCount();
-
-        for (Offer ask : getAsks()) {
-            if (ask.getVolumeCount() <= remainingVolume)
-                return ask;
-            else
-                remainingVolume = Math.min(remainingVolume - ask.getVolumeCount(), 0);
+        long remainingVolume = Math.abs(volume.getCount()) * -1;
+        // what about not enough volume on book!
+        Offer ask = getBestAsk();
+        if (getAsks() != null && !getAsks().isEmpty()) {
+            ask = getAsks().get(getAsks().size() - 1);
+            for (Offer bookAsk : getAsks()) {
+                if (bookAsk.getVolumeCount() <= remainingVolume) {
+                    ask = bookAsk;
+                    break;
+                } else
+                    remainingVolume = Math.min(remainingVolume - ask.getVolumeCount(), 0);
+            }
         }
-        return new Offer(getMarket(), getTime(), getTimeReceived(), 0L, 0L);
+        return ask;
     }
 
     @Nullable
     @Transient
     public DiscreteAmount getBidPrice() {
         if (getBids().isEmpty())
-            return new DiscreteAmount(0, getMarket().getPriceBasis());
+            return new DiscreteAmount(0, (getMarket()).getPriceBasis());
         return getBids().get(0).getPrice();
     }
 
@@ -203,6 +217,14 @@ public class Book extends MarketData implements Spread {
         return bookDao;
     }
 
+    @Override
+    @Transient
+    public void setDao(Dao dao) {
+        bookDao = (BookDao) dao;
+        // TODO Auto-generated method stub
+        //  return null;
+    }
+
     /** saved to the db for query convenience */
     @Nullable
     public Double getAskPriceAsDouble() {
@@ -250,7 +272,7 @@ public class Book extends MarketData implements Spread {
     }
 
     @AssistedInject
-    Book(@Assisted Instant time, @Assisted Market market) {
+    Book(@Assisted Instant time, @Assisted Tradeable market) {
         //  this.bookDao = bookDao;
         // Book();
         this.id = getId();
@@ -264,7 +286,7 @@ public class Book extends MarketData implements Spread {
     }
 
     @AssistedInject
-    Book(@Assisted Instant time, @Assisted String remoteKey, @Assisted Market market) {
+    Book(@Assisted Instant time, @Assisted String remoteKey, @Assisted Tradeable market) {
         // Book();
         //this.bookDao = bookDao;
 
@@ -278,7 +300,7 @@ public class Book extends MarketData implements Spread {
     }
 
     @AssistedInject
-    Book(@Assisted("bookTime") Instant time, @Assisted("bookTimeReceived") Instant timeReceived, @Assisted String remoteKey, @Assisted Market market) {
+    Book(@Assisted("bookTime") Instant time, @Assisted("bookTimeReceived") Instant timeReceived, @Assisted String remoteKey, @Assisted Tradeable market) {
         this.id = getId();
         this.bids = new ArrayList<>();
         this.asks = new ArrayList<>();
@@ -289,8 +311,8 @@ public class Book extends MarketData implements Spread {
     }
 
     public Book addBid(BigDecimal price, BigDecimal volume) {
-        Market market = this.getMarket();
         //   synchronized (lock) {
+        Tradeable market = this.getMarket();
         this.bids.add(Offer.bid(market, this.getTime(), this.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
                 DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
         return this;
@@ -307,10 +329,10 @@ public class Book extends MarketData implements Spread {
     }
 
     public Book addAsk(BigDecimal price, BigDecimal volume) {
-        Market market = this.getMarket();
-        //   synchronized (lock) {
+        Tradeable market = this.getMarket();
         this.asks.add(Offer.ask(market, this.getTime(), this.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
                 DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
+
         return this;
 
         //   }
@@ -373,20 +395,22 @@ public class Book extends MarketData implements Spread {
         }
 
         public Builder addBid(BigDecimal price, BigDecimal volume) {
-            Market market = book.getMarket();
+
+            Tradeable market = book.getMarket();
             //   synchronized (lock) {
             book.bids.add(Offer.bid(market, book.getTime(), book.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
                     DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
-            //   }
+
             return this;
         }
 
         public Builder addAsk(BigDecimal price, BigDecimal volume) {
-            Market market = book.getMarket();
+            Tradeable market = book.getMarket();
             // synchronized (lock) {
             book.asks.add(Offer.ask(market, book.getTime(), book.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
                     DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis())));
             //  }
+
             return this;
         }
 
@@ -582,8 +606,9 @@ public class Book extends MarketData implements Spread {
 
     }
 
+    @Override
     @PrePersist
-    private void prePersist() {
+    public void prePersist() {
 
         //  if (parent != null)
         //    if (parent.find() == null)
@@ -630,8 +655,9 @@ public class Book extends MarketData implements Spread {
         return false;
     }
 
+    @Override
     @PostPersist
-    private void postPersist() {
+    public void postPersist() {
         if (this.parent != null)
             parent.detach();
 
@@ -726,7 +752,9 @@ public class Book extends MarketData implements Spread {
             for (int i = 0; i < size; i++) {
                 long price = in.readLong();
                 long volume = in.readLong();
+
                 result.add(new Offer(getMarket(), getTime(), getTimeReceived(), price, volume));
+
             }
             in.close();
             bin.close();
@@ -861,12 +889,14 @@ public class Book extends MarketData implements Spread {
     }
 
     @Override
-    public void persit() {
+    public synchronized void persit() {
         try {
             //  if (parent != null)
             //    if (parent.find() == null)
             //      parent.persit();
+            this.setPeristanceAction(PersistanceAction.NEW);
 
+            this.setRevision(this.getRevision() + 1);
             bookDao.persist(this);
 
         } catch (javax.persistence.PersistenceException pex) {
@@ -898,7 +928,7 @@ public class Book extends MarketData implements Spread {
     // @Inject
     // private FillJpaDao fillDao;
     @Inject
-    protected BookDao bookDao;
+    protected transient BookDao bookDao;
     private List<Offer> bids;
     private List<Offer> asks;
     private List<Book> children;
@@ -912,7 +942,10 @@ public class Book extends MarketData implements Spread {
     //private Collection<Book> children;
 
     @Override
-    public void merge() {
+    public synchronized void merge() {
+        this.setPeristanceAction(PersistanceAction.MERGE);
+
+        this.setRevision(this.getRevision() + 1);
         bookDao.merge(this);
 
     }

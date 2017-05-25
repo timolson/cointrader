@@ -2,6 +2,8 @@ package org.cryptocoinpartners.schema;
 
 import javax.annotation.Nullable;
 import javax.persistence.Basic;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;
 
@@ -9,6 +11,8 @@ import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
 
 @MappedSuperclass
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+//@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public abstract class RemoteEvent extends Event {
 
     /**

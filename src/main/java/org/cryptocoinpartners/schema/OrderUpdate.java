@@ -18,8 +18,10 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.OrderState;
+import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.schema.dao.OrderUpdateDao;
+import org.joda.time.Instant;
 
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
@@ -36,7 +38,9 @@ import com.google.inject.assistedinject.AssistedInject;
 //@IdClass(OrderUpdateId.class)
 //@Table(indexes = { @Index(columnList = "state") })
 //@IdClass(OrderUpdateID.class)
-@Table(indexes = { @Index(columnList = "sequence"), @Index(columnList = "state"), @Index(columnList = "`order`") })
+//@Table(name = "\"Order\"",
+@Table(name = "order_update", indexes = { @Index(columnList = "id"), @Index(columnList = "sequence"), @Index(columnList = "state"),
+        @Index(columnList = "`order`") })
 //@NamedQueries({ @NamedQuery(name = "orderUpdate.findTriggerOrders", query = "select ou from OrderUpdate ou where  ou.sequence = (select max(ouu.sequence) from OrderUpdate ouu where ouu.order = ou.order) and state=?1") })
 //
 //@NamedEntityGraphs({
@@ -45,8 +49,9 @@ import com.google.inject.assistedinject.AssistedInject;
 // @NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "order"))
 //,@NamedSubgraph(name = "order", attributeNodes = @NamedAttributeNode("order")) 
 //})
-@NamedQueries({ @NamedQuery(name = "orderUpdate.findOrders", query = "select ou from OrderUpdate ou where  ou.state = (select max(ouu.state) from OrderUpdate ouu where ouu.order = ou.order) and state in (?1)") })
-//
+@NamedQueries({
+        @NamedQuery(name = "orderUpdate.findOrdersByState", query = "select ou from OrderUpdate ou where  ou.state = (select max(ouu.state) from OrderUpdate ouu where ouu.order = ou.order) and state in (?1) and  ou.order.portfolio =?2"),
+        @NamedQuery(name = "orderUpdate.findStateByOrder", query = "select ou from OrderUpdate ou where  ou.state = (select max(ouu.state) from OrderUpdate ouu where ouu.order = ou.order) and order in (?1)") })
 @NamedEntityGraphs({
 // @NamedEntityGraph(name = "orderUpdateWithTransactions", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithTransactions") }, subgraphs = { @NamedSubgraph(name = "orderWithTransactions", attributeNodes = { @NamedAttributeNode("transactions") }) }),
 // @NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithFills") }, subgraphs = { @NamedSubgraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
@@ -82,24 +87,36 @@ public class OrderUpdate extends Event {
         return sequence;
     }
 
-    //  @PrePersist
-    private void prePersist() {
-        if (orderUpdateDao != null) {
-            Order parentOrder = null;
+    // @PrePersist
+    @Override
+    public void prePersist() {
+        if (getDao() != null) {
 
-            if (getOrder() != null) {
-                // parentOrder = ;
-
-                // orderId = (fillDao.queryZeroOne(UUID.class, "select o.id from Order o where o.id=?1", order.getId()));
-
-                parentOrder = orderUpdateDao.find(getOrder().getClass(), getOrder().getId());
-                if (parentOrder == null)
-                    orderUpdateDao.persist(getOrder());
-                //  order.merge();
+            EntityBase dbOrder = null;
+            try {
+                dbOrder = getDao().find(getOrder().getClass(), getOrder().getId());
+                if (dbOrder != null) {
+                    getOrder().setVersion(dbOrder.getVersion());
+                    if (getOrder().getRevision() > dbOrder.getRevision()) {
+                        getOrder().setPeristanceAction(PersistanceAction.MERGE);
+                        getDao().merge(getOrder());
+                    }
+                } else {
+                    getOrder().setPeristanceAction(PersistanceAction.NEW);
+                    getDao().persist(getOrder());
+                }
+            } catch (Exception | Error ex) {
+                if (dbOrder != null)
+                    if (getOrder().getRevision() > dbOrder.getRevision()) {
+                        getOrder().setPeristanceAction(PersistanceAction.MERGE);
+                        getDao().merge(getOrder());
+                    } else {
+                        getOrder().setPeristanceAction(PersistanceAction.NEW);
+                        getDao().persist(getOrder());
+                    }
             }
-        }
 
-        //detach();
+        }
     }
 
     //@Id
@@ -114,8 +131,9 @@ public class OrderUpdate extends Event {
     // @ManyToOne
     // @JoinColumn(name = "`order`")
     //  @Transient
+    //Ordres added to state mape before placned on exchange.
     public @ManyToOne
-    //(cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+    //(cascade = { CascadeType.MERGE })
     @JoinColumn(name = "`order`")
     Order getOrder() {
         return order;
@@ -130,7 +148,9 @@ public class OrderUpdate extends Event {
     }
 
     @AssistedInject
-    public OrderUpdate(@Assisted Order order, @Assisted("orderUpdateLastState") OrderState lastState, @Assisted("orderUpdateState") OrderState state) {
+    public OrderUpdate(@Assisted Instant time, @Assisted Order order, @Assisted("orderUpdateLastState") OrderState lastState,
+            @Assisted("orderUpdateState") OrderState state) {
+        super(time);
         this.order = order;
         this.lastState = lastState;
         this.state = state;
@@ -144,6 +164,10 @@ public class OrderUpdate extends Event {
     @Override
     public synchronized void persit() {
         //  try {
+
+        this.setPeristanceAction(PersistanceAction.NEW);
+
+        this.setRevision(this.getRevision() + 1);
         orderUpdateDao.persist(this);
         //if (duplicate == null || duplicate.isEmpty())
         //  } catch (Exception | Error ex) {
@@ -196,7 +220,7 @@ public class OrderUpdate extends Event {
     }
 
     @Inject
-    protected OrderUpdateDao orderUpdateDao;
+    protected transient OrderUpdateDao orderUpdateDao;
 
     private Order order;
     private Long sequence;
@@ -212,6 +236,10 @@ public class OrderUpdate extends Event {
 
     @Override
     public synchronized void merge() {
+
+        this.setPeristanceAction(PersistanceAction.MERGE);
+
+        this.setRevision(this.getRevision() + 1);
         orderUpdateDao.merge(this);
         // TODO Auto-generated method stub
 
@@ -224,7 +252,21 @@ public class OrderUpdate extends Event {
     }
 
     @Override
+    @Transient
+    public void setDao(Dao dao) {
+        orderUpdateDao = (OrderUpdateDao) dao;
+        // TODO Auto-generated method stub
+        //  return null;
+    }
+
+    @Override
     public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void postPersist() {
         // TODO Auto-generated method stub
 
     }

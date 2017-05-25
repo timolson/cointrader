@@ -7,9 +7,9 @@ public interface PositionFactory {
     //SpecificOrder create(Instant time, Market market, BigDecimal volume, String comment);
     //   generalOrder.getTime(), market, volume, generalOrder, generalOrder.getComment());
 
-    Position create(Collection<Fill> fills);
+    Position create(Collection<Fill> fills, Market market);
 
-    Position create(Fill fill);
+    Position create(Fill fill, Market market);
 
     //
     //    SpecificOrder create(Instant time, Market market, long volumeCount);

@@ -1,13 +1,15 @@
 package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.Nullable;
 import javax.persistence.Basic;
-import javax.persistence.Cacheable;
+import javax.persistence.DiscriminatorValue;
 import javax.persistence.Embedded;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
@@ -16,16 +18,20 @@ import javax.persistence.Transient;
 import jline.internal.Log;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.cryptocoinpartners.enumeration.ExecutionInstruction;
+import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.TransactionType;
+import org.cryptocoinpartners.schema.Market.MarketAmountBuilder;
 import org.cryptocoinpartners.util.Remainder;
 import org.cryptocoinpartners.util.XchangeUtil;
 import org.hibernate.annotations.Type;
 import org.joda.time.Instant;
+import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.trade.LimitOrder;
 
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
-import com.xeiam.xchange.dto.trade.LimitOrder;
 
 /**
  * SpecificOrders are bound to a Market and express their prices and volumes in DiscreteAmounts with the correct
@@ -36,16 +42,18 @@ import com.xeiam.xchange.dto.trade.LimitOrder;
  */
 @SuppressWarnings("UnusedDeclaration")
 @Entity
-@Cacheable
+@DiscriminatorValue(value = "SpecificOrder")
+// @Cacheable
 public class SpecificOrder extends Order {
     @AssistedInject
     public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted long volumeCount) {
         super(time);
+        this.getId();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
         this.children = new CopyOnWriteArrayList<Order>();
 
-        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.fills = Collections.synchronizedList(new ArrayList<Fill>());
         this.externalFills = new CopyOnWriteArrayList<Fill>();
         this.transactions = new CopyOnWriteArrayList<Transaction>();
 
@@ -62,11 +70,12 @@ public class SpecificOrder extends Order {
     public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted long volumeCount,
             @Assisted @Nullable String comment) {
         super(time);
+        this.getId();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
         this.children = new CopyOnWriteArrayList<Order>();
 
-        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.fills = Collections.synchronizedList(new ArrayList<Fill>());
         this.externalFills = new CopyOnWriteArrayList<Fill>();
         this.transactions = new CopyOnWriteArrayList<Transaction>();
         this.remoteKey = getId().toString();
@@ -83,11 +92,12 @@ public class SpecificOrder extends Order {
     public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted long volumeCount,
             @Assisted Order parentOrder, @Assisted @Nullable String comment) {
         super(time);
+        this.getId();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
         this.children = new CopyOnWriteArrayList<Order>();
-
-        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.usePosition = parentOrder.getUsePosition();
+        this.fills = Collections.synchronizedList(new ArrayList<Fill>());
         this.externalFills = new CopyOnWriteArrayList<Fill>();
         this.transactions = new CopyOnWriteArrayList<Transaction>();
         this.remoteKey = getId().toString();
@@ -106,11 +116,12 @@ public class SpecificOrder extends Order {
     @AssistedInject
     public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted long volumeCount, @Assisted Order parentOrder) {
         super(time);
+        this.getId();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
-
+        this.usePosition = parentOrder.getUsePosition();
         this.children = new CopyOnWriteArrayList<Order>();
 
-        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.fills = Collections.synchronizedList(new ArrayList<Fill>());
         this.externalFills = new CopyOnWriteArrayList<Fill>();
         this.transactions = new CopyOnWriteArrayList<Transaction>();
         this.remoteKey = getId().toString();
@@ -128,11 +139,12 @@ public class SpecificOrder extends Order {
     public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted Amount volume,
             @Assisted @Nullable String comment) {
         super(time);
+        this.getId();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
         this.children = new CopyOnWriteArrayList<Order>();
 
-        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.fills = Collections.synchronizedList(new ArrayList<Fill>());
         this.externalFills = new CopyOnWriteArrayList<Fill>();
         this.transactions = new CopyOnWriteArrayList<Transaction>();
         this.remoteKey = getId().toString();
@@ -148,14 +160,15 @@ public class SpecificOrder extends Order {
     }
 
     @AssistedInject
-    public SpecificOrder(@Assisted LimitOrder limitOrder, @Assisted com.xeiam.xchange.Exchange xchangeExchange, @Assisted Portfolio portfolio,
+    public SpecificOrder(@Assisted LimitOrder limitOrder, @Assisted org.knowm.xchange.Exchange xchangeExchange, @Assisted Portfolio portfolio,
             @Assisted Date date) {
         super(new Instant(date.getTime()));
+        this.getId();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
         this.children = new CopyOnWriteArrayList<Order>();
 
-        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.fills = Collections.synchronizedList(new ArrayList<Fill>());
         this.externalFills = new CopyOnWriteArrayList<Fill>();
         this.transactions = new CopyOnWriteArrayList<Transaction>();
         // currencyPair
@@ -183,12 +196,13 @@ public class SpecificOrder extends Order {
     public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted Amount volume, @Assisted Order parentOrder,
             @Assisted @Nullable String comment) {
         super(time);
+        this.getId();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
-
+        this.usePosition = parentOrder.getUsePosition();
         this.children = new CopyOnWriteArrayList<Order>();
         this.externalFills = new CopyOnWriteArrayList<Fill>();
 
-        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.fills = Collections.synchronizedList(new ArrayList<Fill>());
         this.transactions = new CopyOnWriteArrayList<Transaction>();
         this.market = market;
         // setMarket(market);
@@ -212,14 +226,16 @@ public class SpecificOrder extends Order {
     public SpecificOrder(@Assisted SpecificOrder specficOrder) {
 
         super(specficOrder.getTime());
+        this.getId();
         this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
-
+        this.usePosition = specficOrder.getUsePosition();
         this.children = new CopyOnWriteArrayList<Order>();
 
-        this.fills = new CopyOnWriteArrayList<Fill>();
+        this.fills = Collections.synchronizedList(new ArrayList<Fill>());
         this.externalFills = new CopyOnWriteArrayList<Fill>();
         this.transactions = new CopyOnWriteArrayList<Transaction>();
         this.market = specficOrder.getMarket();
+        this.orderGroup = specficOrder.getOrderGroup();
         this.remoteKey = getId().toString();
         if (!specficOrder.getFills().isEmpty())
             this.volumeCount = specficOrder.getUnfilledVolumeCount();
@@ -231,12 +247,52 @@ public class SpecificOrder extends Order {
             specficOrder.getParentOrder().addChildOrder(this);
             this.setParentOrder(specficOrder.getParentOrder());
         }
+        if (specficOrder.getParentFill() != null) {
+            specficOrder.getParentFill().addChildOrder(this);
+            this.setParentFill(specficOrder.getParentFill());
+        }
         super.setPortfolio(specficOrder.getPortfolio());
         this.placementCount = 1;
         this.positionEffect = specficOrder.getPositionEffect();
         this.limitPriceCount = specficOrder.getLimitPriceCount();
         this.fillType = specficOrder.getFillType();
         this.executionInstruction = specficOrder.getExecutionInstruction();
+    }
+
+    @AssistedInject
+    public SpecificOrder(@Assisted org.knowm.xchange.dto.Order exchangeOrder, @Assisted Market market, @Assisted @Nullable Portfolio portfolio) {
+
+        super(new Instant(exchangeOrder.getTimestamp()));
+        this.getId();
+        this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
+
+        this.children = new CopyOnWriteArrayList<Order>();
+
+        this.fills = Collections.synchronizedList(new ArrayList<Fill>());
+        this.externalFills = new ArrayList<Fill>();
+        this.transactions = new CopyOnWriteArrayList<Transaction>();
+        this.market = market;
+        this.remoteKey = exchangeOrder.getId();
+
+        this.volumeCount = DiscreteAmount.roundedCountForBasis(
+                (exchangeOrder.getType() != null && (exchangeOrder.getType() == OrderType.ASK || exchangeOrder.getType() == OrderType.EXIT_BID) ? exchangeOrder
+                        .getTradableAmount().negate() : exchangeOrder.getTradableAmount()), market.getVolumeBasis());
+
+        super.setPortfolio(portfolio);
+        this.placementCount = 1;
+        this.positionEffect = (exchangeOrder.getType() != null
+                && (exchangeOrder.getType() == OrderType.EXIT_BID || exchangeOrder.getType() == OrderType.EXIT_ASK) ? PositionEffect.CLOSE
+                : PositionEffect.OPEN);
+        LimitOrder limitXchangeOrder;
+        if (exchangeOrder instanceof org.knowm.xchange.dto.trade.LimitOrder) {
+            limitXchangeOrder = (LimitOrder) exchangeOrder;
+            this.limitPriceCount = DiscreteAmount.roundedCountForBasis(limitXchangeOrder.getLimitPrice(), market.getPriceBasis());
+            this.fillType = FillType.LIMIT;
+        } else {
+            this.fillType = FillType.MARKET;
+        }
+
+        this.executionInstruction = ExecutionInstruction.TAKER;
     }
 
     public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted double volume,
@@ -280,14 +336,15 @@ public class SpecificOrder extends Order {
     }
 
     @Override
+    @Nullable
     @Embedded
     public DiscreteAmount getVolume() {
 
-        if (volume == null)
+        if (volume == null && amount() != null)
 
             volume = amount().fromVolumeCount(volumeCount);
-        if (volume == null)
-            System.out.println("volume is null");
+        //  if (volume == null)
+        //    System.out.println("volume is null");
         return volume;
     }
 
@@ -299,25 +356,31 @@ public class SpecificOrder extends Order {
     @Nullable
     @Embedded
     public DiscreteAmount getLimitPrice() {
-        if (limitPriceCount == 0)
-            return null;
-        if (limitPrice == null)
+        //   if (limitPriceCount == 0)
+        //     return null;
+        if (limitPrice == null && amount() != null)
             limitPrice = amount().fromPriceCount(limitPriceCount);
         return limitPrice;
+    }
+
+    @Nullable
+    public long getLimitPriceCount() {
+        return limitPriceCount;
+
     }
 
     @Override
     @Nullable
     @Embedded
     public DiscreteAmount getMarketPrice() {
-        if (marketPriceCount == 0)
-            return null;
-        if (marketPrice == null)
+        //     if (marketPriceCount == 0)
+        //       return null;
+        if (marketPrice == null && amount() != null)
             marketPrice = amount().fromPriceCount(marketPriceCount);
         return marketPrice;
     }
 
-    protected void setLimitPrice(DiscreteAmount limitPrice) {
+    protected synchronized void setLimitPrice(DiscreteAmount limitPrice) {
         this.limitPrice = limitPrice;
     }
 
@@ -333,6 +396,24 @@ public class SpecificOrder extends Order {
 
     @Override
     @Transient
+    public double getStopPercentage() {
+        return 0.0;
+    }
+
+    @Override
+    @Transient
+    public double getTriggerInterval() {
+        return 0.0;
+    }
+
+    @Override
+    @Transient
+    public DiscreteAmount getTrailingStopAmount() {
+        return null;
+    }
+
+    @Override
+    @Transient
     public DiscreteAmount getTargetAmount() {
         return null;
     }
@@ -340,12 +421,22 @@ public class SpecificOrder extends Order {
     @Override
     @Transient
     public TransactionType getTransactionType() {
-        return null;
+        if (isBid())
+            return TransactionType.BUY;
+        else
+            return TransactionType.SELL;
+        // return null;
     }
 
     @Override
     @Transient
     public DiscreteAmount getStopPrice() {
+        return null;
+    }
+
+    @Override
+    @Transient
+    public DiscreteAmount getLastBestPrice() {
         return null;
     }
 
@@ -365,20 +456,28 @@ public class SpecificOrder extends Order {
     @Override
     @Transient
     public DiscreteAmount getUnfilledVolume() {
-        return new DiscreteAmount(getUnfilledVolumeCount(), market.getVolumeBasis());
+
+        DiscreteAmount unfilled = new DiscreteAmount(getUnfilledVolumeCount(), market.getVolumeBasis());
+
+        return unfilled;
     }
 
     @Transient
-    public long getUnfilledVolumeCount() {
-        long filled = 0;
+    public synchronized long getUnfilledVolumeCount() {
+        long unfilledCount = volumeCount;
+
         List<Fill> fills = getFills();
         if (fills == null || fills.isEmpty())
             return volumeCount;
-        for (Fill fill : fills)
-            filled += fill.getVolumeCount();
 
-        long unfilled = (volumeCount < 0) ? (Math.abs(volumeCount) - Math.abs(filled)) * -1 : Math.abs(volumeCount) - Math.abs(filled);
-        return unfilled;
+        long filled = 0;
+        synchronized (fills) {
+            for (Fill fill : fills)
+                filled += fill.getVolumeCount();
+        }
+        unfilledCount = (volumeCount < 0) ? (Math.abs(volumeCount) - Math.abs(filled)) * -1 : Math.abs(volumeCount) - Math.abs(filled);
+
+        return unfilledCount;
     }
 
     @Transient
@@ -392,9 +491,10 @@ public class SpecificOrder extends Order {
         List<Fill> fills = getExternalFills();
         if (fills == null || fills.isEmpty())
             return volumeCount;
-        for (Fill fill : fills)
-            filled += fill.getVolumeCount();
-
+        synchronized (fills) {
+            for (Fill fill : fills)
+                filled += fill.getVolumeCount();
+        }
         long unfilled = (volumeCount < 0) ? (Math.abs(volumeCount) - Math.abs(filled)) * -1 : Math.abs(volumeCount) - Math.abs(filled);
         return unfilled;
     }
@@ -405,8 +505,10 @@ public class SpecificOrder extends Order {
         List<Fill> fills = getFills();
         if (fills == null || fills.isEmpty())
             return volumeCount;
-        for (Fill fill : fills)
-            filled += fill.getOpenVolumeCount();
+        synchronized (fills) {
+            for (Fill fill : fills)
+                filled += fill.getOpenVolumeCount();
+        }
         return filled;
     }
 
@@ -435,13 +537,17 @@ public class SpecificOrder extends Order {
     @Override
     public String toString() {
 
-        return "SpecificOrder{ id=" + getId() + SEPARATOR + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "remote key="
-                + getRemoteKey() + SEPARATOR + "parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + SEPARATOR + "parentFill={"
+        return "SpecificOrder{ id=" + getId() + " (" + this.hashCode() + ")" + SEPARATOR + "version=" + getVersion() + SEPARATOR + "revision=" + getRevision()
+                + SEPARATOR + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "remote key=" + getRemoteKey() + SEPARATOR
+                + "parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId()) + SEPARATOR + "parentFill={"
                 + (getParentFill() == null ? "null}" : getParentFill() + "}") + SEPARATOR + "portfolio=" + getPortfolio() + SEPARATOR + "market=" + market
                 + SEPARATOR + "unfilled volume=" + getUnfilledVolume() + SEPARATOR + "volumeCount=" + getVolume()
-                + (limitPriceCount != 0 ? (SEPARATOR + "limitPriceCount=" + getLimitPrice()) : "") + (SEPARATOR + "PlacementCount=" + getPlacementCount())
-                + (getComment() == null ? "" : (SEPARATOR + "Comment=" + getComment()))
+                + (limitPriceCount != 0 ? (SEPARATOR + "limitPrice=" + getLimitPrice()) : "limitPrice=null")
+                + (SEPARATOR + "PlacementCount=" + getPlacementCount()) + (getComment() == null ? "" : (SEPARATOR + "Comment=" + getComment()))
                 + (getFillType() == null ? "" : (SEPARATOR + "Order Type=" + getFillType()))
+                + (getExpiryTime() == null ? "" : (SEPARATOR + "expirty time=" + getExpiryTime()))
+                + (getTimeToLive() != 0 ? (SEPARATOR + "time to live=" + getTimeToLive()) : "")
+                + (getUsePosition() ? "" : (SEPARATOR + "Use Position=" + getUsePosition()))
                 + (getPositionEffect() == null ? "" : (SEPARATOR + "Position Effect=" + getPositionEffect()))
                 + (getExecutionInstruction() == null ? "" : (SEPARATOR + "Execution Instruction=" + getExecutionInstruction()))
                 + (hasFills() ? (SEPARATOR + "averageFillPrice=" + getAverageFillPrice()) : "") + "}";
@@ -450,11 +556,6 @@ public class SpecificOrder extends Order {
     // JPA
     protected long getVolumeCount() {
         return volumeCount;
-    }
-
-    /** 0 if no limit is set */
-    protected long getLimitPriceCount() {
-        return limitPriceCount;
     }
 
     protected long getMarketPriceCount() {
@@ -477,7 +578,7 @@ public class SpecificOrder extends Order {
     }
 
     @Override
-    public void setMarket(Market market) {
+    public synchronized void setMarket(Market market) {
         this.market = market;
     }
 
@@ -486,7 +587,7 @@ public class SpecificOrder extends Order {
         volume = null;
     }
 
-    public void setLimitPriceCount(long limitPriceCount) {
+    public synchronized void setLimitPriceCount(long limitPriceCount) {
         this.limitPriceCount = limitPriceCount;
         limitPrice = null;
     }
@@ -497,32 +598,32 @@ public class SpecificOrder extends Order {
     }
 
     @Override
-    public Order withLimitPrice(String price) {
+    public synchronized Order withLimitPrice(String price) {
         this.setLimitPriceCount(DecimalAmount.of(price).toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount());
         return this;
     }
 
     @Override
-    public Order withLimitPrice(DiscreteAmount price) {
+    public synchronized Order withLimitPrice(DiscreteAmount price) {
         this.setLimitPriceCount(price.getCount());
         return this;
     }
 
     @Override
-    public Order withLimitPrice(BigDecimal price) {
+    public synchronized Order withLimitPrice(BigDecimal price) {
         this.setLimitPriceCount(DecimalAmount.of(price).toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount());
 
         return this;
     }
 
     @Override
-    public Order withMarketPrice(String price) {
+    public synchronized Order withMarketPrice(String price) {
         this.setMarketPriceCount(DecimalAmount.of(price).toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount());
         return this;
     }
 
     @Override
-    public Order withMarketPrice(DiscreteAmount price) {
+    public synchronized Order withMarketPrice(DiscreteAmount price) {
         this.setMarketPriceCount(price.getCount());
         return this;
     }
@@ -546,6 +647,24 @@ public class SpecificOrder extends Order {
     }
 
     @Override
+    public void setStopPercentage(double stopPercentage) {
+        throw new NotImplementedException();
+
+    }
+
+    @Override
+    public void setTriggerInterval(double triggerInterval) {
+        throw new NotImplementedException();
+
+    }
+
+    @Override
+    public void setTrailingStopAmount(DecimalAmount stopAmount) {
+        throw new NotImplementedException();
+
+    }
+
+    @Override
     public void setTargetAmount(DecimalAmount targetAmount) {
         throw new NotImplementedException();
 
@@ -553,6 +672,12 @@ public class SpecificOrder extends Order {
 
     @Override
     public void setStopPrice(DecimalAmount stopPrice) {
+        throw new NotImplementedException();
+
+    }
+
+    @Override
+    public void setLastBestPrice(DecimalAmount lastBestPrice) {
         throw new NotImplementedException();
 
     }
@@ -574,7 +699,7 @@ public class SpecificOrder extends Order {
         return remoteKey;
     }
 
-    public void setRemoteKey(@Nullable String remoteKey) {
+    public synchronized void setRemoteKey(@Nullable String remoteKey) {
         this.remoteKey = remoteKey;
     }
 
@@ -586,6 +711,7 @@ public class SpecificOrder extends Order {
 
     public void addExternalFill(Fill fill) {
         this.externalFills.add(fill);
+
     }
 
     @Transient
@@ -605,17 +731,18 @@ public class SpecificOrder extends Order {
             this.timestampReceived = timeReceived.getMillis();
     }
 
-    private Market.MarketAmountBuilder amount() {
+    private MarketAmountBuilder amount() {
         if (getMarket() == null)
-            Log.debug("test");
+            return null;
         if (amountBuilder == null)
             amountBuilder = getMarket().buildAmount();
-        if (amountBuilder == null)
-            Log.debug("test");
-        return amountBuilder;
+        if (amountBuilder != null)
+
+            return amountBuilder;
+        return null;
     }
 
-    private Market market;
+    private volatile Market market;
 
     private DiscreteAmount volume;
     private DiscreteAmount limitPrice;
@@ -624,13 +751,13 @@ public class SpecificOrder extends Order {
     private long volumeCount;
     private long limitPriceCount;
     private long marketPriceCount;
-    private String remoteKey;
+    private volatile String remoteKey;
     private Instant timeReceived;
     private long timestampReceived;
     protected List<Fill> externalFills;
     private static Object lock = new Object();
 
-    private Market.MarketAmountBuilder amountBuilder;
+    private transient Market.MarketAmountBuilder amountBuilder;
 
     @Override
     public void delete() {

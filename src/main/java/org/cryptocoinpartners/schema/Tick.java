@@ -46,7 +46,7 @@ public class Tick extends PriceData implements Spread {
         return lastBook == null ? null : lastBook.getBestAsk();
     }
 
-    public Tick(Market market, Instant startInstant, Instant endInstant, @Nullable Long lastPriceCount, @Nullable Long volumeCount, Book lastBook) {
+    public Tick(Tradeable market, Instant startInstant, Instant endInstant, @Nullable Long lastPriceCount, @Nullable Long volumeCount, Book lastBook) {
         super(endInstant, null, market, lastPriceCount, volumeCount);
         this.startInstant = startInstant;
         this.lastBook = lastBook;
@@ -110,6 +110,13 @@ public class Tick extends PriceData implements Spread {
     }
 
     @Override
+    @Transient
+    public void setDao(Dao dao) {
+        // TODO Auto-generated method stub
+        //  return null;
+    }
+
+    @Override
     public void delete() {
         // TODO Auto-generated method stub
 
@@ -119,5 +126,17 @@ public class Tick extends PriceData implements Spread {
     public EntityBase refresh() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public void prePersist() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void postPersist() {
+        // TODO Auto-generated method stub
+
     }
 }

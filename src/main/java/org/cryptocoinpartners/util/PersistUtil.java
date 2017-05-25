@@ -816,7 +816,7 @@ public class PersistUtil {
         // }
     }
 
-    private static void ensureSingletonsExist() {
+    public static void ensureSingletonsExist() {
         // Touch the singleton holders
         Currencies.BTC.getSymbol(); // this should load all the singletons in Currencies
         Exchanges.BITFINEX.getSymbol(); // this should load all the singletons in Exchanges

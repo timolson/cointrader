@@ -19,19 +19,17 @@ import org.cryptocoinpartners.command.Command;
 import org.cryptocoinpartners.command.CommandBase;
 import org.cryptocoinpartners.command.ConsoleWriter;
 import org.cryptocoinpartners.command.ParseError;
-import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.module.BasicPortfolioService;
 import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
+import org.cryptocoinpartners.module.JMXManager;
 import org.cryptocoinpartners.module.MockOrderService;
 import org.cryptocoinpartners.module.xchange.XchangeAccountService;
 import org.cryptocoinpartners.module.xchange.XchangeData;
 import org.cryptocoinpartners.module.xchange.XchangeOrderService;
-import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Holding;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.StrategyInstance;
-import org.cryptocoinpartners.schema.Transaction;
 import org.cryptocoinpartners.service.OrderService;
 
 import com.beust.jcommander.Parameter;
@@ -52,7 +50,7 @@ public class ConsoleRunMode extends RunMode {
         try {
             init();
             //noinspection InfiniteLoopStatement
-            while (true) {
+            while (!Thread.currentThread().isInterrupted()) {
                 console.println();
                 String line = console.readLine();
                 if (StringUtils.isEmpty(line))
@@ -91,7 +89,7 @@ public class ConsoleRunMode extends RunMode {
                     continue;
                 }
                 try {
-                    command.run();
+                    command.call();
                 } catch (Throwable e) {
                     log.warn("Could not run command " + commandName, e);
                     internalError();
@@ -131,6 +129,7 @@ public class ConsoleRunMode extends RunMode {
         //  context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
         OrderService orderService = context.getInjector().getInstance(OrderService.class);
         context.attach(XchangeData.class);
+        context.attach(JMXManager.class);
         orderService.setTradingEnabled(true);
         Terminal terminal = TerminalFactory.get();
         try {
@@ -169,13 +168,13 @@ public class ConsoleRunMode extends RunMode {
         for (int i = 0; i < positions.size() - 1;) {
             Holding holding = Holding.forSymbol(positions.get(i++));
             //  Long str = (positions.get(i++));
-            DiscreteAmount amount = new DiscreteAmount(Long.parseLong(positions.get(i++)), holding.getAsset().getBasis());
-            DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
-            Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
-            context.setPublishTime(initialCredit);
-            initialCredit.persit();
+            //  DiscreteAmount amount = new DiscreteAmount(Long.parseLong(positions.get(i++)), holding.getAsset().getBasis());
+            // DiscreteAmount price = new DiscreteAmount(0, holding.getAsset().getBasis());
+            //  Transaction initialCredit = new Transaction(portfolio, holding.getExchange(), holding.getAsset(), TransactionType.CREDIT, amount, price);
+            //  context.setPublishTime(initialCredit);
+            //   initialCredit.persit();
 
-            context.publish(initialCredit);
+            //   context.publish(initialCredit);
 
             strategyInstance.getStrategy().init();
 

@@ -8,6 +8,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -227,18 +229,27 @@ public class Context {
         handlePublish(e);
     }
 
+    // time on the book is the time filed, now this is older than the current clock time
+    // so something must have incremented the clock.
+
     private void handlePublish(Event e) {
         Instant now;
         if (timeProvider != null) {
             now = timeProvider.nextTime(e);
             if (now != null)
-                advanceTime(now);
+                try {
+                    advanceTime(now);
+                } catch (Error | Exception ex) {
+                    log.warn(this.getClass().getSimpleName() + " - HandlePublish(): Unable to publish " + e.getClass().getSimpleName() + " " + e + " due to"
+                            + ex);
+                    return;
+                }
             else
                 now = new Instant(epRuntime.getCurrentTime());
         } else
             now = new Instant(epRuntime.getCurrentTime());
         e.publishedAt(now);
-        log.trace("publishg event: " + e);
+
         epRuntime.sendEvent(e);
         //   epRuntime.route(e);
     }
@@ -335,19 +346,57 @@ public class Context {
 
     private void subscribe(Object listener, Class<?> cls) {
         String classname = null;
+        List<String> filesToLoad = new ArrayList<String>();
         for (Method method : cls.getDeclaredMethods()) {
             if (classname == null || !classname.equals(method.getDeclaringClass().getSimpleName())) {
                 // we have a new class so let's try to load the epl files
+
+                // we need to load the supers in order,.
+
                 classname = method.getDeclaringClass().getSimpleName();
-                loadStatements(classname);
+                //  loadedModules.
+                boolean test = loadedModules.contains(classname);
+                if (!loadedModules.contains(classname)) {
+                    //    test = loadedModules.(classname);
+                    // loadStatements(classname);
+                    filesToLoad.add(classname);
+                    //loadedModules.add(classname);
+                }
+                //iterate over super clases
+                Class childClass = method.getDeclaringClass();
+                Class superclass = method.getDeclaringClass().getSuperclass();
+                //   classList.add(childClass.getSimpleName());
+                while (superclass != null) {
+                    if (superclass != null && superclass.getSimpleName() != null && !superclass.getSimpleName().equals("Object")
+                            && !superclass.getSimpleName().equals(method.getDeclaringClass().getSimpleName())
+                            && !loadedModules.contains(superclass.getSimpleName())) {
+                        filesToLoad.add(superclass.getSimpleName());
+                        // loadStatements(superclass.getSimpleName());
+                        //loadedModules.add(superclass.getSimpleName());
+                    }
+                    childClass = superclass;
+                    superclass = childClass.getSuperclass();
+
+                }
             }
+
+            Collections.reverse(filesToLoad);
+            for (String fileToLoad : filesToLoad) {
+                if (!loadedModules.contains(fileToLoad)) {
+                    loadStatements(fileToLoad);
+                    loadedModules.add(fileToLoad);
+                }
+            }
+
             When when = method.getAnnotation(When.class);
             if (when != null) {
                 String statement = when.value();
                 log.debug("subscribing " + method + " with statement \"" + statement + "\"");
                 subscribe(listener, method, statement);
+
             }
         }
+
     }
 
     public void subscribe(Object listener, Method method, String statement) {
@@ -386,9 +435,9 @@ public class Context {
                         e.printStackTrace();
                     }
                 }
-                log.debug("deployed module " + filename);
+                log.info("deployed module " + filename);
             } catch (DeploymentException e) {
-                log.error("error deploying module " + source, e);
+                log.error("unable to deploy module " + source, e);
             }
         } catch (FileNotFoundException ignored) {
             // it is not neccessary for every module to have an EPL file
@@ -616,17 +665,18 @@ public class Context {
         private final String statement;
     }
 
-    protected static Logger log = LoggerFactory.getLogger(Context.class);
-    protected static ExecutorService contextService = Executors.newFixedThreadPool(1);
+    protected transient static Logger log = LoggerFactory.getLogger(Context.class);
+    protected transient static ExecutorService contextService = Executors.newFixedThreadPool(1);
 
-    private Configuration config;
-    private Injector injector;
-    private TimeProvider timeProvider;
-    private Instant lastTime = null;
-    private EPServiceProvider epService;
-    private EPRuntime epRuntime;
-    private EPAdministrator epAdministrator;
-    private final com.espertech.esper.client.Configuration epConfig = new com.espertech.esper.client.Configuration();
+    private transient Configuration config;
+    private transient Injector injector;
+    private transient TimeProvider timeProvider;
+    private transient Instant lastTime = null;
+    private transient EPServiceProvider epService;
+    private transient EPRuntime epRuntime;
+    private transient EPAdministrator epAdministrator;
+    private transient final com.espertech.esper.client.Configuration epConfig = new com.espertech.esper.client.Configuration();
+    private transient HashSet<String> loadedModules = new HashSet<String>();
 
     private void privateDestroy() {
         epService.destroy();

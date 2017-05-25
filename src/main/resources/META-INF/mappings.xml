@@ -6,7 +6,7 @@ http://java.sun.com/xml/ns/persistence/orm_1_0.xsd"
     version="1.0">
   <!--  <description>My First JPA XML Application</description>
     <package>entity</package>  -->
-    <entity class="org.cryptocoinpartners.schema.Portfolio" name="Portfolio">        
+    <!--    <entity class="org.cryptocoinpartners.schema.Portfolio" name="Portfolio">   -->     
     <!--     <table name="EMPLOYEETABLE"/>
         <attributes>
             <id name="empId">
@@ -18,5 +18,5 @@ http://java.sun.com/xml/ns/persistence/orm_1_0.xsd"
             <basic name="empSalary">
             </basic>
         </attributes> -->
-   </entity>
+ <!--   </entity> -->   
 </entity-mappings>

@@ -1,45 +1,75 @@
 package org.cryptocoinpartners.schema;
 
-import java.io.Serializable;
 import java.util.UUID;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.persistence.Column;
 import javax.persistence.Id;
-import javax.persistence.Inheritance;
-import javax.persistence.InheritanceType;
 import javax.persistence.MappedSuperclass;
-import javax.persistence.PostPersist;
 import javax.persistence.Transient;
 import javax.persistence.Version;
 
 import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.util.ConfigUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Tim Olson
  */
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+// @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @MappedSuperclass
-public abstract class EntityBase implements Serializable, Comparable<EntityBase> {
+public abstract class EntityBase implements java.io.Serializable, Cloneable, Comparable<EntityBase> {
 
     /**
      * 
      */
     private static final long serialVersionUID = -7893439827939854533L;
+    protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.entityBase");
+
     static long delay;
     private long startTime;
     private int attempt;
     private int revision;
     private PersistanceAction persistanceAction;
+    //Only 1 thread at a time can upda
+    private final transient Semaphore updateLock = new Semaphore(1);
 
     @Transient
     public long getDelay() {
         if (delay == 0)
             return ConfigUtil.combined().getInt("db.writer.delay");
         return delay;
+    }
+
+    @Override
+    public EntityBase clone() throws CloneNotSupportedException {
+        return (EntityBase) super.clone();
+    }
+
+    @Transient
+    public void getUpdateLock() throws InterruptedException {
+        log.debug(this.getClass().getSimpleName() + " : getUpdateLock - attempting to get update lock for id " + getId() + " called from class "
+                + Thread.currentThread().getStackTrace()[2]);
+        updateLock.acquire();
+        log.debug(this.getClass().getSimpleName() + " : getUpdateLock - acquired  update lock for id " + getId() + " called from class "
+                + Thread.currentThread().getStackTrace()[2]);
+
+    }
+
+    @Transient
+    public void releaseUpdateLock() {
+        // Log.debug(messages)
+        log.debug(this.getClass().getSimpleName() + " : releaseUpdateLock - attempting to release update lock for id " + getId() + " called from class "
+                + Thread.currentThread().getStackTrace()[2]);
+
+        updateLock.release();
+        log.debug(this.getClass().getSimpleName() + " : getUpdateLock - released update lock for id " + getId() + " called from class "
+                + Thread.currentThread().getStackTrace()[2]);
+
     }
 
     @Transient
@@ -97,7 +127,7 @@ public abstract class EntityBase implements Serializable, Comparable<EntityBase>
         return attempt;
     }
 
-    public void setAttempt(int attempt) {
+    public synchronized void setAttempt(int attempt) {
         this.attempt = attempt;
     }
 
@@ -108,22 +138,22 @@ public abstract class EntityBase implements Serializable, Comparable<EntityBase>
         return persistanceAction;
     }
 
-    public void setPeristanceAction(PersistanceAction persistanceAction) {
+    public synchronized void setPeristanceAction(PersistanceAction persistanceAction) {
         this.persistanceAction = persistanceAction;
     }
 
     @Transient
-    public void setStartTime(long delay) {
+    public synchronized void setStartTime(long delay) {
         this.delay = delay;
         this.startTime = System.currentTimeMillis() + delay;
 
     }
 
-    public void setVersion(long version) {
+    public synchronized void setVersion(long version) {
         this.version = version;
     }
 
-    public void setRevision(int revision) {
+    public synchronized void setRevision(int revision) {
         this.revision = revision;
     }
 
@@ -139,7 +169,7 @@ public abstract class EntityBase implements Serializable, Comparable<EntityBase>
         return retryCount;
     }
 
-    public void setRetryCount(Integer retryCount) {
+    public synchronized void setRetryCount(Integer retryCount) {
         this.retryCount = retryCount;
     }
 
@@ -164,33 +194,41 @@ public abstract class EntityBase implements Serializable, Comparable<EntityBase>
 
     @Override
     public int hashCode() {
-        ensureId();
-        return id.hashCode();
+        // ensureId();
+        //return Objects.hashCode(this.getId());
+
+        return getId().toString().hashCode();
     }
 
     // JPA
     protected EntityBase() {
         startTime = System.currentTimeMillis();
+        //  ensureId();
 
     }
 
-    protected void setId(UUID id) {
+    protected synchronized void setId(UUID id) {
         if (this.id == null)
             this.id = id;
     }
 
-    @PostPersist
-    private void postPersist() {
-        //  setVersion(getVersion() + 1);
-    }
+    public abstract void postPersist();
 
     public abstract void persit();
 
     public abstract EntityBase refresh();
 
-    public int findRevisionById() {
+    public long findRevisionById() {
         try {
             return getDao().findRevisionById(this.getClass(), this.getId());
+        } catch (NullPointerException npe) {
+            return 0;
+        }
+    }
+
+    public long findVersionById() {
+        try {
+            return getDao().findVersionById(this.getClass(), this.getId());
         } catch (NullPointerException npe) {
             return 0;
         }
@@ -200,6 +238,9 @@ public abstract class EntityBase implements Serializable, Comparable<EntityBase>
 
     @Transient
     public abstract Dao getDao();
+
+    @Transient
+    public abstract void setDao(Dao dao);
 
     public abstract void detach();
 
@@ -217,5 +258,7 @@ public abstract class EntityBase implements Serializable, Comparable<EntityBase>
     protected UUID id;
     protected long version;
     protected Integer retryCount;
+
+    public abstract void prePersist();
 
 }

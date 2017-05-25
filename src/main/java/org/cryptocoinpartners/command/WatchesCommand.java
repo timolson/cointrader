@@ -1,10 +1,8 @@
 package org.cryptocoinpartners.command;
 
-
-import org.cryptocoinpartners.bin.ConsoleNotifications;
-
 import javax.inject.Inject;
 
+import org.cryptocoinpartners.bin.ConsoleNotifications;
 
 /**
  * @author Tim Olson
@@ -13,16 +11,16 @@ import javax.inject.Inject;
 public class WatchesCommand extends CommandBase {
 
     @Override
-    public void run() {
+    public Object call() {
         out.println("Watching:");
         out.printList(notifications.getWatchList());
+        return true;
     }
 
     @Override
     public String getExtraHelp() {
         return "Displays all listings which are currently being watched";
     }
-
 
     @Inject
     protected ConsoleNotifications notifications;

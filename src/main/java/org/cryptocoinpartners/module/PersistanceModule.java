@@ -1,8 +1,14 @@
 package org.cryptocoinpartners.module;
 
+import java.lang.management.ManagementFactory;
+
+import javax.management.MBeanServer;
+
+import org.cryptocoinpartners.schema.BalanceFactory;
 import org.cryptocoinpartners.schema.BarFactory;
 import org.cryptocoinpartners.schema.BookFactory;
 import org.cryptocoinpartners.schema.CurrencyFactory;
+import org.cryptocoinpartners.schema.ExchangeFactory;
 import org.cryptocoinpartners.schema.FillFactory;
 import org.cryptocoinpartners.schema.GeneralOrderFactory;
 import org.cryptocoinpartners.schema.MarketFactory;
@@ -10,8 +16,11 @@ import org.cryptocoinpartners.schema.OrderUpdateFactory;
 import org.cryptocoinpartners.schema.PositionFactory;
 import org.cryptocoinpartners.schema.ReplayFactory;
 import org.cryptocoinpartners.schema.SpecificOrderFactory;
+import org.cryptocoinpartners.schema.SyntheticMarketFactory;
 import org.cryptocoinpartners.schema.TradeFactory;
 import org.cryptocoinpartners.schema.TransactionFactory;
+import org.cryptocoinpartners.schema.dao.BalanceDao;
+import org.cryptocoinpartners.schema.dao.BalanceJpaDao;
 import org.cryptocoinpartners.schema.dao.BarDao;
 import org.cryptocoinpartners.schema.dao.BarJpaDao;
 import org.cryptocoinpartners.schema.dao.BookDao;
@@ -26,8 +35,6 @@ import org.cryptocoinpartners.schema.dao.HoldingDao;
 import org.cryptocoinpartners.schema.dao.HoldingJpaDao;
 import org.cryptocoinpartners.schema.dao.ListingDao;
 import org.cryptocoinpartners.schema.dao.ListingJpaDao;
-import org.cryptocoinpartners.schema.dao.MarketDao;
-import org.cryptocoinpartners.schema.dao.MarketJpaDao;
 import org.cryptocoinpartners.schema.dao.OrderDao;
 import org.cryptocoinpartners.schema.dao.OrderJpaDao;
 import org.cryptocoinpartners.schema.dao.OrderUpdateDao;
@@ -42,6 +49,8 @@ import org.cryptocoinpartners.schema.dao.ReportDao;
 import org.cryptocoinpartners.schema.dao.ReportJpaDao;
 import org.cryptocoinpartners.schema.dao.TradeDao;
 import org.cryptocoinpartners.schema.dao.TradeJpaDao;
+import org.cryptocoinpartners.schema.dao.TradeableDao;
+import org.cryptocoinpartners.schema.dao.TradeableJpaDao;
 import org.cryptocoinpartners.schema.dao.TransactionDao;
 import org.cryptocoinpartners.schema.dao.TransactionJpaDao;
 
@@ -117,16 +126,20 @@ public class PersistanceModule extends AbstractModule {
         */
 
         //bind(Dao.class).to(DaoJpa.class);
-        bind(PortfolioDao.class).to(PortfolioJpaDao.class);
+        bind(MBeanServer.class).toInstance(ManagementFactory.getPlatformMBeanServer());
+        //   bind(JMXManagerMBean.class).to(JMXManager.class).asEagerSingleton();
 
+        bind(PortfolioDao.class).to(PortfolioJpaDao.class);
         bind(BookDao.class).to(BookJpaDao.class);
         bind(BarDao.class).to(BarJpaDao.class);
         bind(CurrencyDao.class).to(CurrencyJpaDao.class);
         bind(ExchangeDao.class).to(ExchangeJpaDao.class);
         bind(FillDao.class).to(FillJpaDao.class);
         bind(ListingDao.class).to(ListingJpaDao.class);
-        bind(MarketDao.class).to(MarketJpaDao.class);
+        //  bind(MarketDao.class).to(MarketJpaDao.class);
+        bind(TradeableDao.class).to(TradeableJpaDao.class);
         bind(HoldingDao.class).to(HoldingJpaDao.class);
+        bind(BalanceDao.class).to(BalanceJpaDao.class);
         //bind(MarketDataDao.class).to(MarketDataJpaDao.class);
         bind(OrderDao.class).to(OrderJpaDao.class);
         bind(PositionDao.class).to(PositionJpaDao.class);
@@ -144,9 +157,11 @@ public class PersistanceModule extends AbstractModule {
         // install(new FactoryModuleBuilder().build(PortfolioFactory.class));
         install(new FactoryModuleBuilder().build(CurrencyFactory.class));
         install(new FactoryModuleBuilder().build(MarketFactory.class));
+        install(new FactoryModuleBuilder().build(SyntheticMarketFactory.class));
         install(new FactoryModuleBuilder().build(GeneralOrderFactory.class));
         install(new FactoryModuleBuilder().build(SpecificOrderFactory.class));
         install(new FactoryModuleBuilder().build(FillFactory.class));
+        install(new FactoryModuleBuilder().build(ExchangeFactory.class));
         install(new FactoryModuleBuilder().build(PositionFactory.class));
         install(new FactoryModuleBuilder().build(OrderUpdateFactory.class));
         install(new FactoryModuleBuilder().build(TransactionFactory.class));
@@ -154,12 +169,11 @@ public class PersistanceModule extends AbstractModule {
         install(new FactoryModuleBuilder().build(BookFactory.class));
         install(new FactoryModuleBuilder().build(TradeFactory.class));
         install(new FactoryModuleBuilder().build(BarFactory.class));
-
+        install(new FactoryModuleBuilder().build(BalanceFactory.class));
         // .build(SpecificOrderFactory.class));
         // install(new FactoryModuleBuilder().implement(Serializable.class, GeneralOrder.class).build(GeneralOrderFactory.class));
 
     }
-
     //    @Provides
     //    @Singleton
     //    public EntityManagerFactory provideEntityManagerFactory() {

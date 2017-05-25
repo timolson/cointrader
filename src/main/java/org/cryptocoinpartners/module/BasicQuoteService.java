@@ -1,21 +1,23 @@
 package org.cryptocoinpartners.module;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 import javax.inject.Singleton;
 
 import org.cryptocoinpartners.esper.annotation.When;
+import org.cryptocoinpartners.schema.Bar;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.Exchanges;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Offer;
 import org.cryptocoinpartners.schema.Trade;
+import org.cryptocoinpartners.schema.Tradeable;
 import org.cryptocoinpartners.service.QuoteService;
 import org.cryptocoinpartners.util.ListingsMatrix;
 import org.joda.time.Instant;
@@ -34,27 +36,97 @@ import com.google.inject.Inject;
 public class BasicQuoteService implements QuoteService {
 
     @Override
-    public Trade getLastTrade(Market market) {
+    public Trade getLastTrade(Tradeable market) {
+        if (market == null)
+            return null;
+        /*if (XchangeData.exists()) {
+            XchangeData xchangeData = context.getInjector().getInstance(XchangeData.class);
+            try {
+
+                for (Trade trade : xchangeData.getTrades(market, market.getExchange()))
+                    recordTrade(trade);
+            } catch (Throwable e) {
+                // TODO Auto-generated catch block
+                log.error(this.getClass().getSimpleName() + ": getLastTrade - Unable to retrive latest trades for market", e);
+            }
+        }*/
         return lastTradeByMarket.get(market.getSymbol());
     }
 
     @Override
+    public Bar getLastBar(Tradeable market, double interval) {
+        if (market == null)
+            return null;
+        /*if (XchangeData.exists()) {
+            XchangeData xchangeData = context.getInjector().getInstance(XchangeData.class);
+            try {
+
+                for (Trade trade : xchangeData.getTrades(market, market.getExchange()))
+                    recordTrade(trade);
+            } catch (Throwable e) {
+                // TODO Auto-generated catch block
+                log.error(this.getClass().getSimpleName() + ": getLastTrade - Unable to retrive latest trades for market", e);
+            }
+        }*/
+        return lastBarByMarket.get(market.getSymbol()).get(interval);
+    }
+
+    @Override
     public Trade getLastTrade(Listing listing) {
+        if (listing == null)
+            return null;
+
+        /*        if (XchangeData.exists()) {
+                    XchangeData xchangeData = context.getInjector().getInstance(XchangeData.class);
+                    try {
+                        for (Market market : getMarketsForListing(listing))
+                            for (Trade trade : xchangeData.getTrades(market, market.getExchange()))
+                                recordTrade(trade);
+                    } catch (Throwable e) {
+                        // TODO Auto-generated catch block
+                        log.error(this.getClass().getSimpleName() + ": getLastTrade - Unable to retrive latest trades for market", e);
+                    }
+                }*/
         return lastTradeByListing.get(listing.getSymbol());
     }
 
     @Override
-    public Book getLastBook(Market market) {
+    public Book getLastBook(Tradeable market) {
+        if (market == null)
+            return null;
+        /*        if (XchangeData.exists()) {
+                    XchangeData xchangeData = context.getInjector().getInstance(XchangeData.class);
+                    try {
+                        recordBook(xchangeData.getBook(market, market.getExchange()));
+                    } catch (Exception e) {
+                        // TODO Auto-generated catch block
+                        log.error(this.getClass().getSimpleName() + ": getLastBidForMarket - Unable to retrive latest book for market", e);
+                    }
+                }*/
         return lastBookByMarket.get(market.getSymbol());
     }
 
     @Override
     public Book getLastBook(Listing listing) {
+        if (listing == null)
+            return null;
+        /*        if (XchangeData.exists()) {
+                    XchangeData xchangeData = context.getInjector().getInstance(XchangeData.class);
+                    try {
+                        for (Market market : getMarketsForListing(listing))
+                            recordBook(xchangeData.getBook(market, market.getExchange()));
+                    } catch (Exception e) {
+                        // TODO Auto-generated catch block
+                        log.error(this.getClass().getSimpleName() + ": getLastBidForMarket - Unable to retrive latest book for market", e);
+                    }
+                }*/
         return lastBookByListing.get(listing.getSymbol());
     }
 
     @Override
     public Set<Market> getMarketsForListing(Listing listing) {
+        if (listing == null)
+            return null;
         Set<Market> result = marketsByListing.get(listing.getSymbol());
         return result == null ? Collections.<Market> emptySet() : result;
     }
@@ -81,10 +153,22 @@ public class BasicQuoteService implements QuoteService {
 
     @Override
     public @Nullable
-    Offer getLastBidForMarket(Market market) {
+    Offer getLastBidForMarket(Tradeable market) {
+        if (market == null)
+            return null;
         Offer bestBid = null;
         Offer testBestBid = null;
+        /*        if (XchangeData.exists()) {
+                    XchangeData xchangeData = context.getInjector().getInstance(XchangeData.class);
+                    try {
+                        recordBook(xchangeData.getBook(market, market.getExchange()));
+                    } catch (Exception e) {
+                        // TODO Auto-generated catch block
+                        log.error(this.getClass().getSimpleName() + ": getLastBidForMarket - Unable to retrive latest book for market", e);
+                    }
+                }*/
 
+        //XchangeData xchangeData = context.getInjector().getInstance(XchangeData.class);
         // for( Market market : marketsByListing.get(listing.getSymbol()) ) {
         Book book = lastBookByMarket.get(market.getSymbol());
         if (book != null)
@@ -124,8 +208,11 @@ public class BasicQuoteService implements QuoteService {
     }
 
     @Override
+    //TODO keep a map of markets so we don't hit the db each time.
     public @Nullable
     Offer getImpliedBestAskForListing(Listing listing) {
+        if (listing == null)
+            return null;
         try {
             long bestImpliedAsk = impliedAskMatrix.getRate(listing.getBase(), listing.getQuote());
             Market market = context.getInjector().getInstance(Market.class).findOrCreate(Exchanges.SELF, listing);
@@ -139,6 +226,8 @@ public class BasicQuoteService implements QuoteService {
     @Override
     public @Nullable
     Offer getImpliedBestBidForListing(Listing listing) {
+        if (listing == null)
+            return null;
         try {
             long bestImpliedBid = impliedBidMatrix.getRate(listing.getBase(), listing.getQuote());
             Market market = context.getInjector().getInstance(Market.class).findOrCreate(Exchanges.SELF, listing);
@@ -152,9 +241,20 @@ public class BasicQuoteService implements QuoteService {
 
     @Override
     public @Nullable
-    Offer getLastAskForMarket(Market market) {
+    Offer getLastAskForMarket(Tradeable market) {
+        if (market == null)
+            return null;
         Offer bestAsk = null;
         Offer testBestAsk = null;
+        /*        if (XchangeData.exists()) {
+                    XchangeData xchangeData = context.getInjector().getInstance(XchangeData.class);
+                    try {
+                        recordBook(xchangeData.getBook(market, market.getExchange()));
+                    } catch (Exception e) {
+                        // TODO Auto-generated catch block
+                        log.error(this.getClass().getSimpleName() + ": getLastAskForMarket - Unable to retrive latest book for market", e);
+                    }
+                }*/
         Book book = lastBookByMarket.get(market.getSymbol());
         if (book != null)
             testBestAsk = book.getBestAsk();
@@ -167,15 +267,39 @@ public class BasicQuoteService implements QuoteService {
     }
 
     //@Priority(10)
-    @When("@Priority(10) select * from Book")
-    private void recordBook(Book b) {
-        Market market = b.getMarket();
-        handleMarket(market);
+    @When("@Priority(9) select * from Book(Book.bidVolumeAsDouble>0, Book.askVolumeAsDouble<0)")
+    private synchronized void recordBook(Book b) {
+        Tradeable market = b.getMarket();
+        if (!market.isSynthetic()) {
+            Market marketToHandel = (Market) market;
 
-        String listingSymbol = market.getListing().getSymbol();
-        Book lastBookForListing = lastBookByListing.get(listingSymbol);
-        if (lastBookForListing == null || lastBookForListing.getTime().isBefore(b.getTime()))
-            lastBookByListing.put(listingSymbol, b);
+            handleMarket(marketToHandel);
+
+            String listingSymbol = marketToHandel.getListing().getSymbol();
+            Book lastBookForListing = lastBookByListing.get(listingSymbol);
+            if (lastBookForListing == null || lastBookForListing.getTime().isBefore(b.getTime()))
+                lastBookByListing.put(listingSymbol, b);
+            try {
+                impliedBidMatrix.updateRates(marketToHandel.getBase(), marketToHandel.getQuote(), b.getBidPrice().getCount());
+            } catch (java.lang.IllegalArgumentException e) {
+                try {
+                    impliedBidMatrix.addAsset(marketToHandel.getBase(), marketToHandel.getQuote(), b.getBidPrice().getCount());
+                } catch (java.lang.IllegalArgumentException e2) {
+                }
+            }
+            try {
+                impliedAskMatrix.updateRates(marketToHandel.getBase(), marketToHandel.getQuote(), b.getAskPrice().getCount());
+            } catch (java.lang.IllegalArgumentException e) {
+                try {
+                    impliedAskMatrix.addAsset(marketToHandel.getBase(), marketToHandel.getQuote(), b.getAskPrice().getCount());
+                } catch (java.lang.IllegalArgumentException e2) {
+                    log.error("Threw a Execption, full stack trace follows:", e2);
+
+                }
+
+            }
+
+        }
 
         String marketSymbol = market.getSymbol();
         Book lastBookForMarket = lastBookByMarket.get(marketSymbol);
@@ -188,63 +312,77 @@ public class BasicQuoteService implements QuoteService {
         if (bestBid != null && (lastBestBidBook == null || bestBid.getPrice().compareTo(lastBestBidBook.getBestBid().getPrice()) > 0))
 
             bestBidByMarket.put(marketSymbol, b);
-        try {
-            impliedBidMatrix.updateRates(market.getBase(), market.getQuote(), b.getBidPrice().getCount());
-        } catch (java.lang.IllegalArgumentException e) {
-            try {
-                impliedBidMatrix.addAsset(market.getBase(), market.getQuote(), b.getBidPrice().getCount());
-            } catch (java.lang.IllegalArgumentException e2) {
-                //              //we not recived enouhg trades to create a link to other currecny
-                //              BigDecimal inverseRateBD = (((BigDecimal.valueOf(1 / (bestBid.getMarket().getQuote().getBasis()))).divide(
-                //                      BigDecimal.valueOf(bestBid.getPriceCount()), bestBid.getMarket().getBase().getScale(), RoundingMode.HALF_EVEN)).divide(BigDecimal
-                //                      .valueOf(bestBid.getMarket().getBase().getBasis())));
-                //              long inverseCrossRate = inverseRateBD.longValue();
-                //              impliedBidMatrix.addAsset(bestBid.getMarket().getQuote(), bestBid.getMarket().getBase(), inverseCrossRate);
-            }
-        }
 
         Offer bestAsk = b.getBestAsk();
         Book lastBestAskBook = bestAskByMarket.get(marketSymbol);
         //noinspection ConstantConditions
         if (bestAsk != null && (lastBestAskBook == null || bestAsk.getPrice().compareTo(lastBestAskBook.getBestAsk().getPrice()) < 0))
             bestAskByMarket.put(marketSymbol, b);
-        try {
-            impliedAskMatrix.updateRates(market.getBase(), market.getQuote(), b.getAskPrice().getCount());
-        } catch (java.lang.IllegalArgumentException e) {
-            try {
-                impliedAskMatrix.addAsset(market.getBase(), market.getQuote(), b.getAskPrice().getCount());
-            } catch (java.lang.IllegalArgumentException e2) {
-                log.error("Threw a Execption, full stack trace follows:", e2);
-
-                e2.printStackTrace();
-                //we not recived enouhg trades to create a link to other currecny
-                //we not recived enouhg trades to create a link to other currecny
-                //              BigDecimal inverseRateBD = (((BigDecimal.valueOf(1 / (bestAsk.getMarket().getQuote().getBasis()))).divide(
-                //                      BigDecimal.valueOf(bestAsk.getPriceCount()), bestAsk.getMarket().getBase().getScale(), RoundingMode.HALF_EVEN)).divide(BigDecimal
-                //                      .valueOf(bestAsk.getMarket().getBase().getBasis())));
-                //              long inverseCrossRate = inverseRateBD.longValue();
-                //              impliedBidMatrix.addAsset(bestAsk.getMarket().getQuote(), bestAsk.getMarket().getBase(), inverseCrossRate);
-
-            }
-
-        }
 
     }
 
-    @When("@Priority(5) select * from Trade")
-    private void recordTrade(Trade t) {
-        Market market = t.getMarket();
-        handleMarket(market);
+    @When("@Priority(9) select * from Trade (Trade.volumeCount!=0)")
+    private synchronized void recordTrade(Trade t) {
+        Tradeable market = t.getMarket();
+        if (!market.isSynthetic()) {
+            Market marketToHandle = (Market) market;
 
-        String listingSymbol = market.getListing().getSymbol();
-        Trade lastTradeForListing = lastTradeByListing.get(listingSymbol);
-        if (lastTradeForListing == null || lastTradeForListing.getTime().isBefore(t.getTime()))
-            lastTradeByListing.put(listingSymbol, t);
+            handleMarket(marketToHandle);
+
+            String listingSymbol = marketToHandle.getListing().getSymbol();
+            Trade lastTradeForListing = lastTradeByListing.get(listingSymbol);
+            if (lastTradeForListing == null || lastTradeForListing.getTime().isBefore(t.getTime()))
+                lastTradeByListing.put(listingSymbol, t);
+        }
 
         String marketSymbol = market.getSymbol();
         Trade lastTradeForMarket = lastTradeByMarket.get(marketSymbol);
         if (lastTradeForMarket == null || lastTradeForMarket.getTime().isBefore(t.getTime()))
             lastTradeByMarket.put(marketSymbol, t);
+    }
+
+    @When("@Priority(9) select * from LastBarWindow group by market,interval")
+    private synchronized void recordBar(Bar b) {
+        Tradeable market = b.getMarket();
+        double interval = b.getInterval();
+
+        if (!market.isSynthetic()) {
+            Market marketToHandle = (Market) b.getMarket();
+            handleMarket(marketToHandle);
+
+            String listingSymbol = marketToHandle.getListing().getSymbol();
+            Bar lastBarForListing = lastBarByListing.get(listingSymbol) == null || lastBarByListing.get(listingSymbol).isEmpty() ? null : lastBarByListing.get(
+                    listingSymbol).get(interval);
+
+            if (lastBarForListing == null || lastBarForListing.getTime().isBefore(b.getTime())) {
+                ConcurrentHashMap<Double, Bar> barInterval = new ConcurrentHashMap<Double, Bar>();
+                if (lastBarByListing.get(listingSymbol) == null) {
+                    barInterval.put(interval, b);
+
+                    lastBarByListing.put(listingSymbol, barInterval);
+                } else
+                    lastBarByListing.get(listingSymbol).put(interval, b);
+
+            }
+        }
+
+        String marketSymbol = market.getSymbol();
+        Bar lastBarForMarket = lastBarByMarket.get(marketSymbol) == null || lastBarByMarket.get(marketSymbol).isEmpty() ? null : lastBarByMarket.get(
+                marketSymbol).get(interval);
+
+        // Bar lastBarForMarket = lastBarByMarket.get(marketSymbol).get(interval);
+        if (lastBarForMarket == null || lastBarForMarket.getTime().isBefore(b.getTime())) {
+
+            ConcurrentHashMap<Double, Bar> barInterval = new ConcurrentHashMap<Double, Bar>();
+            if (lastBarByMarket.get(marketSymbol) == null) {
+                barInterval.put(interval, b);
+
+                lastBarByMarket.put(marketSymbol, barInterval);
+            } else
+                lastBarByMarket.get(marketSymbol).put(interval, b);
+
+        }
+
     }
 
     private void handleMarket(Market market) {
@@ -257,6 +395,7 @@ public class BasicQuoteService implements QuoteService {
             marketsByListing.put(listingSymbol, markets);
         } else
             markets.add(market);
+
     }
 
     private final ListingsMatrix impliedBidMatrix = new ListingsMatrix();
@@ -265,12 +404,15 @@ public class BasicQuoteService implements QuoteService {
     @Inject
     protected Context context;
 
-    private final Map<String, Trade> lastTradeByListing = new HashMap<>();
-    private final Map<String, Book> lastBookByListing = new HashMap<>();
-    private final Map<String, Trade> lastTradeByMarket = new HashMap<>();
-    private final Map<String, Book> lastBookByMarket = new HashMap<>();
-    private final Map<String, Book> bestBidByMarket = new HashMap<>();
-    private final Map<String, Book> bestAskByMarket = new HashMap<>();
-    private final Map<String, Set<Market>> marketsByListing = new HashMap<>();
+    private final Map<String, Trade> lastTradeByListing = new ConcurrentHashMap<>();
+    private final Map<String, Book> lastBookByListing = new ConcurrentHashMap<>();
+    private final Map<String, Trade> lastTradeByMarket = new ConcurrentHashMap<>();
+    private final Map<String, ConcurrentHashMap<Double, Bar>> lastBarByMarket = new ConcurrentHashMap<String, ConcurrentHashMap<Double, Bar>>();
+    private final Map<String, ConcurrentHashMap<Double, Bar>> lastBarByListing = new ConcurrentHashMap<String, ConcurrentHashMap<Double, Bar>>();
+
+    private final Map<String, Book> lastBookByMarket = new ConcurrentHashMap<>();
+    private final Map<String, Book> bestBidByMarket = new ConcurrentHashMap<>();
+    private final Map<String, Book> bestAskByMarket = new ConcurrentHashMap<>();
+    private final Map<String, Set<Market>> marketsByListing = new ConcurrentHashMap<>();
 
 }

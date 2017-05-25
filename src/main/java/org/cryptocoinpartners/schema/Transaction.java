@@ -2,7 +2,6 @@ package org.cryptocoinpartners.schema;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
-import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
@@ -10,6 +9,7 @@ import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.enumeration.TransactionType;
 import org.cryptocoinpartners.schema.dao.Dao;
@@ -30,7 +30,7 @@ import com.google.inject.assistedinject.AssistedInject;
  * @author Tim Olson
  */
 @Entity
-@Cacheable
+// @Cacheable
 @Table(indexes = { @Index(columnList = "type") })
 public class Transaction extends Event {
 
@@ -42,12 +42,13 @@ public class Transaction extends Event {
     private static final String SEPARATOR = ",";
 
     @Inject
-    protected TransactionDao transactionDao;
+    protected transient TransactionDao transactionDao;
 
     @AssistedInject
     public Transaction(@Assisted Portfolio portfolio, @Assisted Exchange exchange, @Assisted Asset currency, @Assisted TransactionType type,
             @Assisted("transactionAmount") Amount amount, @Assisted("transactionPrice") Amount price) {
         // this.id = getId();
+        this.getId();
         this.version = getVersion();
         this.setAmount(amount);
         this.amountCount = amount.toBasis(currency.getBasis(), Remainder.ROUND_EVEN).getCount();
@@ -58,12 +59,37 @@ public class Transaction extends Event {
         this.setPortfolio(portfolio);
         this.setExchange(exchange);
         this.setPortfolioName(portfolio);
+
+        if (getCurrency() != null && !getCurrency().equals(portfolio.getBaseAsset())) {
+            if (getPortfolio() != null && getPortfolio().getQuoteService() != null) {
+                Listing listing = Listing.forPair(getCurrency(), portfolio.getBaseAsset());
+                Offer rate = portfolio.getQuoteService().getImpliedBestAskForListing(listing);
+                //  DiscreteAmount fxRate = rate.getPrice();
+                if (rate != null)
+                    this.baseRateCount = rate.getPriceCount();
+            }
+
+        } else if (getCurrency() != null && getCurrency().equals(portfolio.getBaseAsset()))
+            this.baseRateCount = 1;
+
+        if (getCommissionCurrency() != null && !getCommissionCurrency().equals(portfolio.getBaseAsset())) {
+            if (!getCurrency().equals(getCommissionCurrency()) && getPortfolio() != null && getPortfolio().getQuoteService() != null) {
+                Listing commListing = Listing.forPair(getCommissionCurrency(), portfolio.getBaseAsset());
+                Offer commRate = portfolio.getQuoteService().getImpliedBestAskForListing(commListing);
+                if (commRate != null)
+                    this.baseCommissionRateCount = commRate.getPriceCount();
+            } else if (getCurrency().equals(getCommissionCurrency()))
+                this.baseCommissionRateCount = getBaseRateCount();
+        } else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
+            this.baseCommissionRateCount = 1;
+
     }
 
     @AssistedInject
     public Transaction(@Assisted Fill fill, @Assisted Portfolio portfolio, @Assisted Exchange exchange, @Assisted Asset currency,
             @Assisted TransactionType type, @Assisted("transactionAmount") Amount amount, @Assisted("transactionPrice") Amount price) {
         // this.id = getId();
+        this.getId();
         this.version = getVersion();
         fill.addTransaction(this);
         this.setAmount(amount);
@@ -76,10 +102,33 @@ public class Transaction extends Event {
         this.setExchange(exchange);
         this.setPortfolioName(portfolio);
         this.fill = fill;
+        if (getCurrency() != null && !getCurrency().equals(portfolio.getBaseAsset())) {
+            if (getPortfolio() != null && getPortfolio().getQuoteService() != null) {
+                Listing listing = Listing.forPair(getCurrency(), portfolio.getBaseAsset());
+                Offer rate = portfolio.getQuoteService().getImpliedBestAskForListing(listing);
+                //  DiscreteAmount fxRate = rate.getPrice();
+                if (rate != null)
+                    this.baseRateCount = rate.getPriceCount();
+            }
+
+        } else if (getCurrency() != null && getCurrency().equals(portfolio.getBaseAsset()))
+            this.baseRateCount = 1;
+
+        if (getCommissionCurrency() != null && !getCommissionCurrency().equals(portfolio.getBaseAsset())) {
+            if (!getCurrency().equals(getCommissionCurrency()) && getPortfolio() != null && getPortfolio().getQuoteService() != null) {
+                Listing commListing = Listing.forPair(getCommissionCurrency(), portfolio.getBaseAsset());
+                Offer commRate = portfolio.getQuoteService().getImpliedBestAskForListing(commListing);
+                if (commRate != null)
+                    this.baseCommissionRateCount = commRate.getPriceCount();
+            } else if (getCurrency().equals(getCommissionCurrency()))
+                this.baseCommissionRateCount = getBaseRateCount();
+        } else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
+            this.baseCommissionRateCount = 1;
     }
 
     public Transaction(Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount) {
         //   this.id = getId();
+        this.getId();
         this.version = getVersion();
         this.setAmount(amount);
         this.amountCount = amount.toBasis(currency.getBasis(), Remainder.ROUND_EVEN).getCount();
@@ -88,11 +137,34 @@ public class Transaction extends Event {
         this.setPortfolio(portfolio);
         this.setExchange(exchange);
         this.setPortfolioName(portfolio);
+        if (getCurrency() != null && !getCurrency().equals(portfolio.getBaseAsset())) {
+            if (getPortfolio() != null && getPortfolio().getQuoteService() != null) {
+                Listing listing = Listing.forPair(getCurrency(), portfolio.getBaseAsset());
+                Offer rate = portfolio.getQuoteService().getImpliedBestAskForListing(listing);
+                //  DiscreteAmount fxRate = rate.getPrice();
+                if (rate != null)
+                    this.baseRateCount = rate.getPriceCount();
+            }
+
+        } else if (getCurrency() != null && getCurrency().equals(portfolio.getBaseAsset()))
+            this.baseRateCount = 1;
+
+        if (getCommissionCurrency() != null && !getCommissionCurrency().equals(portfolio.getBaseAsset())) {
+            if (!getCurrency().equals(getCommissionCurrency()) && getPortfolio() != null && getPortfolio().getQuoteService() != null) {
+                Listing commListing = Listing.forPair(getCommissionCurrency(), portfolio.getBaseAsset());
+                Offer commRate = portfolio.getQuoteService().getImpliedBestAskForListing(commListing);
+                if (commRate != null)
+                    this.baseCommissionRateCount = commRate.getPriceCount();
+            } else if (getCurrency().equals(getCommissionCurrency()))
+                this.baseCommissionRateCount = getBaseRateCount();
+        } else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
+            this.baseCommissionRateCount = 1;
     }
 
     @AssistedInject
     public Transaction(@Assisted Fill fill, @Assisted Instant creationTime) {
         //  this.id = getId();
+        this.getId();
         this.version = getVersion();
         Portfolio portfolio = fill.getOrder().getPortfolio();
         TransactionType transactionType = null;
@@ -105,7 +177,8 @@ public class Transaction extends Event {
             transactionType = TransactionType.REBALANCE;
         }
         this.time = creationTime;
-        this.asset = fill.getMarket().getTradedCurrency();
+        this.asset = (fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? fill.getMarket().getBase() : fill.getMarket().getTradedCurrency(
+                fill.getMarket());
         this.currency = fill.getMarket().getBase();
         fill.addTransaction(this);
         this.setPositionEffect(fill.getOrder().getPositionEffect());
@@ -117,7 +190,12 @@ public class Transaction extends Event {
         this.setPortfolioName(portfolio);
         this.setCommission(fill.getCommission());
         this.setMargin(fill.getMargin());
-        this.setCommissionCurrency(fill.getMarket().getTradedCurrency());
+        //BTC/USD, ETH(base)/BTC(quote)
+        if (getAsset().equals(fill.getMarket().getQuote()))
+            this.setCommissionCurrency(fill.getMarket().getBase());
+
+        else
+            this.setCommissionCurrency(getAsset());
         this.assetAmount = this.getCommission().plus(this.getMargin());
 
         this.amount = this.getCommission().plus(this.getMargin());
@@ -125,19 +203,45 @@ public class Transaction extends Event {
         this.setMarket(fill.getMarket());
         this.setExchange(fill.getMarket().getExchange());
         this.fill = fill;
+        if (getCurrency() != null && !getCurrency().equals(portfolio.getBaseAsset())) {
+            if (getPortfolio() != null && getPortfolio().getQuoteService() != null) {
+                Listing listing = Listing.forPair(getCurrency(), portfolio.getBaseAsset());
+                Offer rate = portfolio.getQuoteService().getImpliedBestAskForListing(listing);
+                //  DiscreteAmount fxRate = rate.getPrice();
+                if (rate != null)
+                    this.baseRateCount = rate.getPriceCount();
+            }
+
+        } else if (getCurrency() != null && getCurrency().equals(portfolio.getBaseAsset()))
+            this.baseRateCount = 1;
+
+        if (getCommissionCurrency() != null && !getCommissionCurrency().equals(portfolio.getBaseAsset())) {
+            if (!getCurrency().equals(getCommissionCurrency()) && getPortfolio() != null && getPortfolio().getQuoteService() != null) {
+                Listing commListing = Listing.forPair(getCommissionCurrency(), portfolio.getBaseAsset());
+                Offer commRate = portfolio.getQuoteService().getImpliedBestAskForListing(commListing);
+                if (commRate != null)
+                    this.baseCommissionRateCount = commRate.getPriceCount();
+            } else if (getCurrency().equals(getCommissionCurrency()))
+                this.baseCommissionRateCount = getBaseRateCount();
+        } else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
+            this.baseCommissionRateCount = 1;
 
     }
 
     @AssistedInject
     public Transaction(@Assisted Order order, @Assisted Instant creationTime) {
         // this.id = getId();
+        this.getId();
         this.version = getVersion();
         Portfolio portfolio = order.getPortfolio();
 
         TransactionType transactionType = order.getVolume().isPositive() ? TransactionType.BUY_RESERVATION : TransactionType.SELL_RESERVATION;
         order.addTransaction(this);
         this.time = creationTime;
-        this.asset = order.getMarket().getTradedCurrency();
+        this.asset = (order.getMarket().getTradedCurrency(order.getMarket()) == null) ? order.getMarket().getBase() : order.getMarket().getTradedCurrency(
+                order.getMarket());
+
+        //  this.asset = order.getMarket().getTradedCurrency(order.getMarket());
 
         this.currency = order.getMarket().getBase();
         this.setPrice(order.getLimitPrice());
@@ -146,7 +250,11 @@ public class Transaction extends Event {
         this.setPositionEffect(order.getPositionEffect());
         this.setCommission(order.getForcastedCommission());
         this.setMargin(order.getForcastedMargin());
-        this.setCommissionCurrency(order.getMarket().getTradedCurrency());
+        if (getAsset().equals(order.getMarket().getQuote()))
+            this.setCommissionCurrency(order.getMarket().getBase());
+
+        else
+            this.setCommissionCurrency(getAsset());
         //if traded=quote, then do this, if traded== base then just volume
         this.amount = this.getCommission().plus(this.getMargin());
         this.assetAmount = this.getCommission().plus(this.getMargin());
@@ -155,6 +263,28 @@ public class Transaction extends Event {
         // this.time = order.getTime();
         this.setExchange(order.getMarket().getExchange());
         this.order = order;
+        if (getCurrency() != null && !getCurrency().equals(portfolio.getBaseAsset())) {
+            if (getPortfolio() != null && getPortfolio().getQuoteService() != null) {
+                Listing listing = Listing.forPair(getCurrency(), portfolio.getBaseAsset());
+                Offer rate = portfolio.getQuoteService().getImpliedBestAskForListing(listing);
+                //  DiscreteAmount fxRate = rate.getPrice();
+                if (rate != null)
+                    this.baseRateCount = rate.getPriceCount();
+            }
+
+        } else if (getCurrency() != null && getCurrency().equals(portfolio.getBaseAsset()))
+            this.baseRateCount = 1;
+
+        if (getCommissionCurrency() != null && !getCommissionCurrency().equals(portfolio.getBaseAsset())) {
+            if (!getCurrency().equals(getCommissionCurrency()) && getPortfolio() != null && getPortfolio().getQuoteService() != null) {
+                Listing commListing = Listing.forPair(getCommissionCurrency(), portfolio.getBaseAsset());
+                Offer commRate = portfolio.getQuoteService().getImpliedBestAskForListing(commListing);
+                if (commRate != null)
+                    this.baseCommissionRateCount = commRate.getPriceCount();
+            } else if (getCurrency().equals(getCommissionCurrency()))
+                this.baseCommissionRateCount = getBaseRateCount();
+        } else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
+            this.baseCommissionRateCount = 1;
 
     }
 
@@ -230,13 +360,34 @@ public class Transaction extends Event {
         return priceCount;
     }
 
+    public @Nullable
+    Long getBaseRateCount() {
+        return baseRateCount;
+    }
+
     public Long getAmountCount() {
         return amountCount;
     }
 
-    public @Nullable
-    Long getCommissionCount() {
+    public long getCommissionCount() {
+        // this.asset = (order.getMarket().getTradedCurrency(order.getMarket())==null) ? order.getMarket().getBase():order.getMarket().getTradedCurrency(order.getMarket());
+
+        if (commissionCount == 0 && getCommission() != null)
+            commissionCount = DiscreteAmount.roundedCountForBasis(getCommission().asBigDecimal(), getAsset().getBasis());
         return commissionCount;
+    }
+
+    @Nullable
+    public long getBaseCommissionRateCount() {
+
+        return baseCommissionRateCount;
+    }
+
+    public long getMarginCount() {
+
+        if (marginCount == 0 && getMargin() != null)
+            marginCount = DiscreteAmount.roundedCountForBasis(getMargin().asBigDecimal(), getAsset().getBasis());
+        return marginCount;
     }
 
     @Nullable
@@ -286,73 +437,95 @@ public class Transaction extends Event {
     }
 
     // @PrePersist
-    private void prePersist() {
+    @Override
+    public void prePersist() {
+    };
+
+    public void prePersist1() {
 
         if (getDao() != null) {
 
-            Portfolio transactionPortfolio = null;
-            Order transactionOrder = null;
-            Fill transactionFill = null;
+            EntityBase dbPortfolio = null;
+            EntityBase dbOrder = null;
+            EntityBase dbFill = null;
+            /*            if (getPortfolio() != null) {
+                            try {
+                                dbPortfolio = getDao().findById(getPortfolio().getClass(), getPortfolio().getId());
+                                if (dbPortfolio != null) {
+                                    getPortfolio().setVersion(dbPortfolio.getVersion());
+                                    if (getPortfolio().getRevision() > dbPortfolio.getRevision()) {
+                                        getPortfolio().setPeristanceAction(PersistanceAction.MERGE);
+                                        getDao().merge(getPortfolio());
+                                    }
+                                } else {
+                                    getPortfolio().setPeristanceAction(PersistanceAction.NEW);
+                                    getDao().persist(getPortfolio());
+                                }
+                            } catch (Exception | Error ex) {
+                                if (dbPortfolio != null)
+                                    if (getPortfolio().getRevision() > dbPortfolio.getRevision()) {
+                                        getPortfolio().setPeristanceAction(PersistanceAction.MERGE);
+                                        getDao().merge(getPortfolio());
+                                    } else {
+                                        getPortfolio().setPeristanceAction(PersistanceAction.NEW);
+                                        getDao().persist(getPortfolio());
+                                    }
+                            }
 
-            //UUID parentOrderId = null;
-            //  if (portfolio != null) {
-            // transactionPortfolio = (transactionDao.find(Portfolio.class, portfolio.getId()));
-
-            //  positionId = (fillDao.queryZeroOne(UUID.class, "select p.id from Position p where p.id=?1", position.getId()));
-            //    if (!transactionDao.contains(getPortfolio()))
-            //      transactionDao.persist(getPortfolio());
-            //  portfolio.merge();
-            //}
-
-            if (getOrder() != null) {
-                //  transactionOrder = (transactionDao.find(Order.class, order.getId()));
-
-                //  positionId = (fillDao.queryZeroOne(UUID.class, "select p.id from Position p where p.id=?1", position.getId()));
-                //    if (transactionOrder == null)
-                //    transactionDao.persist(order);
-                //    order.merge();
-                transactionOrder = (getDao().find(getOrder().getClass(), getOrder().getId()));
-
-                if (transactionOrder == null)
-                    getDao().persist(getOrder());
-            }
+                        }*/
 
             if (getFill() != null) {
-                //transactionFill = (transactionDao.find(Fill.class, fill.getId()));
-                transactionFill = (getDao().find(getFill().getClass(), getFill().getId()));
-                //  positionId = (fillDao.queryZeroOne(UUID.class, "select p.id from Position p where p.id=?1", position.getId()));
-                if (transactionFill == null)
-                    getDao().persist(getFill());
+                try {
+                    dbFill = getFill().getDao().findById(getFill().getClass(), getFill().getId());
+                    if (dbFill != null) {
+                        getFill().setVersion(dbFill.getVersion());
+                        if (getFill().getRevision() > dbFill.getRevision()) {
+                            getFill().setPeristanceAction(PersistanceAction.MERGE);
+                            getDao().merge(getFill());
+                        }
+                    } else if (dbFill == null) {
+                        getFill().setPeristanceAction(PersistanceAction.NEW);
+                        getDao().persist(getFill());
+                    }
+                } catch (Exception | Error ex) {
+                    if (dbFill != null)
+                        if (getFill().getRevision() > dbFill.getRevision()) {
+                            getFill().setPeristanceAction(PersistanceAction.MERGE);
+                            getDao().merge(getFill());
+                        } else {
+                            getFill().setPeristanceAction(PersistanceAction.NEW);
+                            getDao().persist(getFill());
+                        }
+                }
             }
+
+            if (getOrder() != null) {
+                try {
+                    dbOrder = getDao().findById(getOrder().getClass(), getOrder().getId());
+                    if (dbOrder != null) {
+                        getOrder().setVersion(dbOrder.getVersion());
+                        if (getOrder().getRevision() > dbOrder.getRevision()) {
+                            getOrder().setPeristanceAction(PersistanceAction.MERGE);
+                            getDao().merge(getOrder());
+                        }
+                    } else if (dbOrder == null) {
+                        getOrder().setPeristanceAction(PersistanceAction.NEW);
+                        getDao().persist(getOrder());
+                    }
+                } catch (Exception | Error ex) {
+                    if (dbOrder != null)
+                        if (getOrder().getRevision() > dbOrder.getRevision()) {
+                            getOrder().setPeristanceAction(PersistanceAction.MERGE);
+                            getDao().merge(getOrder());
+                        } else {
+                            getOrder().setPeristanceAction(PersistanceAction.NEW);
+                            getDao().persist(getOrder());
+                        }
+                }
+            }
+
         }
 
-        //        
-        //        UUID portfolioId = null;
-        //        UUID orderId = null;
-        //        UUID fillId = null;
-        //        if (portfolio != null) {
-        //            portfolioId = (transactionDao == null) ? (EM.queryZeroOne(UUID.class, "select p.id from Portfolio p where p.id=?1", portfolio.getId()))
-        //                    : (transactionDao.queryZeroOne(UUID.class, "select p.id from Portfolio p where p.id=?1", portfolio.getId()));
-        //            if (portfolioId == null)
-        //                portfolio.persit();
-        //        }
-        //
-        //        if (order != null) {
-        //            orderId = (transactionDao == null) ? (EM.queryZeroOne(UUID.class, "select o.id from Order o where o.id=?1", order.getId())) : (transactionDao
-        //                    .queryZeroOne(UUID.class, "select o.id from Order o where o.id=?1", order.getId()));
-        //
-        //            if (orderId == null)
-        //                order.persit();
-        //        }
-        //        if (fill != null) {
-        //            fillId = (transactionDao == null) ? (EM.queryZeroOne(UUID.class, "select f.id from Fill f where f.id=?1", fill.getId())) : (transactionDao
-        //                    .queryZeroOne(UUID.class, "select f.id from Fill f where f.id=?1", fill.getId()));
-        //
-        //            if (fillId == null)
-        //                fill.persit();
-        //        }
-
-        //detach();
     }
 
     public @ManyToOne(optional = true)
@@ -364,11 +537,11 @@ public class Transaction extends Event {
 
     @Override
     public synchronized void merge() {
+
+        this.setPeristanceAction(PersistanceAction.MERGE);
+
+        this.setRevision(this.getRevision() + 1);
         try {
-            if (fill != null)
-                fill.find();
-            if (order != null)
-                order.find();
             transactionDao.merge(this);
             //if (duplicate == null || duplicate.isEmpty())
         } catch (Exception | Error ex) {
@@ -387,6 +560,10 @@ public class Transaction extends Event {
 
     @Override
     public synchronized void persit() {
+
+        this.setPeristanceAction(PersistanceAction.NEW);
+
+        this.setRevision(this.getRevision() + 1);
         //  
         //
         // List<Transaction> duplicate = transactionDao.queryList(Transaction.class, "select t from  Transaction t where t=?1", this);
@@ -487,22 +664,36 @@ public class Transaction extends Event {
     }
 
     protected void setCommission(Amount commission) {
+
         this.commission = commission;
+
     }
 
     protected void setMargin(Amount margin) {
         this.margin = margin;
     }
 
-    protected void setCommissionCount(Long commissionCount) {
+    protected void setCommissionCount(long commissionCount) {
         this.commissionCount = commissionCount;
     }
 
-    protected void setPriceCount(Long priceCount) {
+    protected void setBaseCommissionRateCount(long baseCommissionRateCount) {
+        this.baseCommissionRateCount = baseCommissionRateCount;
+    }
+
+    protected void setMarginCount(long marginCount) {
+        this.marginCount = marginCount;
+    }
+
+    protected void setBaseRateCount(long baseRateCount) {
+        this.baseRateCount = baseRateCount;
+    }
+
+    protected void setPriceCount(long priceCount) {
         this.priceCount = priceCount;
     }
 
-    protected void setAmountCount(Long amountCount) {
+    protected void setAmountCount(long amountCount) {
         this.amountCount = amountCount;
     }
 
@@ -550,11 +741,13 @@ public class Transaction extends Event {
     private Asset asset;
     private Amount amount;
     private Amount assetAmount;
-    private Long commissionCount;
+    private long commissionCount;
     private long amountCount;
+    private long marginCount;
     private String portfolioName;
-
     private long priceCount;
+    private long baseRateCount;
+    private long baseCommissionRateCount;
     private Amount commission;
     private Amount margin;
     private Exchange exchange;
@@ -570,6 +763,14 @@ public class Transaction extends Event {
     }
 
     @Override
+    @Transient
+    public void setDao(Dao dao) {
+        transactionDao = (TransactionDao) dao;
+        // TODO Auto-generated method stub
+        //  return null;
+    }
+
+    @Override
     public void detach() {
 
         transactionDao.detach(this);
@@ -578,6 +779,12 @@ public class Transaction extends Event {
 
     @Override
     public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void postPersist() {
         // TODO Auto-generated method stub
 
     }

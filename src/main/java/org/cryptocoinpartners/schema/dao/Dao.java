@@ -17,9 +17,9 @@ public interface Dao {
 
     void merge(EntityBase... entities);
 
-    void persistEntities(EntityBase... entities);
+    void persistEntities(EntityBase... entities) throws Throwable;
 
-    void mergeEntities(EntityBase... entities);
+    void mergeEntities(EntityBase... entities) throws Throwable;
 
     void deleteEntities(EntityBase... entities);
 
@@ -45,7 +45,9 @@ public interface Dao {
 
     void queryEach(Visitor<Object[]> handler, int batchSize, String queryStr, Object... params);
 
-    <T> int findRevisionById(Class<T> resultType, UUID id) throws NoResultException;
+    <T> Long findRevisionById(Class<T> resultType, UUID id) throws NoResultException;
+
+    <T> Long findVersionById(Class<T> resultType, UUID id) throws NoResultException;
 
     // T queryZeroOne(Class<T> resultType, String queryStr, Object[] params);
 

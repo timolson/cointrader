@@ -12,6 +12,7 @@ import org.joda.time.Instant;
  * @author Tim Olson
  */
 @MappedSuperclass
+//@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public abstract class Event extends Temporal implements Serializable {
 
     /**

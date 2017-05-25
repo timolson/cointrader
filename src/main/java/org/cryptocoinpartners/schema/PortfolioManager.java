@@ -7,7 +7,6 @@ import java.util.concurrent.Executors;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import javax.persistence.Cacheable;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
@@ -35,7 +34,7 @@ import org.slf4j.LoggerFactory;
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @Singleton
-@Cacheable
+//@Cacheable
 public class PortfolioManager extends EntityBase implements Context.AttachListener {
 
     // private BasicPortfolioService portfolioService;
@@ -60,7 +59,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         return portfolioService;
     }
 
-    @When("@Priority(6) select * from OrderUpdate where state.open=true`")
+    @When("@Priority(6) select * from OrderUpdate where state.open=true")
     private void updateReservation(OrderUpdate update) {
 
         //removes the reservation from the transactions
@@ -163,8 +162,8 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     @When("@Priority(8) select * from Transaction")
     public void handleTransaction(Transaction transaction) {
         //
-        // updatePortfolio(transaction);
-        service.submit(new handleTransactionRunnable(transaction));
+        updatePortfolio(transaction);
+        // service.submit(new handleTransactionRunnable(transaction));
 
     }
 
@@ -173,6 +172,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         //	Transaction tans = new Transaction(this, position.getExchange(), position.getAsset(), TransactionType.CREDIT, position.getVolume(),
         //		position.getAvgPrice());
         //context.route(transaction);
+        //TODO need to ensure transacations are not duplicated, i.e. we should use a set.
         log.info("transaction: " + transaction + " Recieved.");
         if (transaction.getPortfolio().equals(portfolio)) {
 
@@ -186,8 +186,46 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 
             Amount price = transaction.getPrice();
             Exchange exchange = transaction.getExchange();
+
             // Add transaction to approraite portfolio
             portfolio.addTransaction(transaction);
+            if (transaction.getExchange() != null &&
+
+            (transaction.getType().isBookable())) {
+                long currentBalanceCount = (transaction.getExchange().getBalances().isEmpty() || transaction.getExchange().getBalances()
+                        .get(transaction.getCurrency()) == null) ? 0 : transaction.getExchange().getBalances().get(transaction.getCurrency()).getAmountCount();
+                if ((transaction.getExchange().getBalances().isEmpty() || transaction.getExchange().getBalances().get(transaction.getCurrency()) == null)) {
+                    Balance updateBalance;
+                    if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL) {
+                        updateBalance = balanceFactory.create(transaction.getExchange(), transaction.getCommissionCurrency(),
+                                currentBalanceCount + transaction.getCommissionCount());
+
+                    } else {
+
+                        updateBalance = (transaction.getType().isDebit() ? balanceFactory.create(transaction.getExchange(), transaction.getCurrency(),
+                                (currentBalanceCount - transaction.getAmountCount())) : balanceFactory.create(transaction.getExchange(),
+                                transaction.getCurrency(), (currentBalanceCount + transaction.getAmountCount())));
+                    }
+                    updateBalance.persit();
+
+                    transaction.getExchange().getBalances().put(transaction.getCurrency(), updateBalance);
+                } else {
+                    Balance updateBalance;
+                    long updateBalanceCount;
+                    if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL) {
+                        updateBalance = transaction.getExchange().getBalances().get(transaction.getCommissionCurrency());
+                        updateBalanceCount = updateBalance.getAmountCount() + transaction.getCommissionCount();
+                    } else {
+                        updateBalance = transaction.getExchange().getBalances().get(transaction.getCurrency());
+                        updateBalanceCount = updateBalance.getAmountCount() + transaction.getAmountCount();
+                    }
+                    updateBalance.setAmountCount(updateBalanceCount);
+                    updateBalance.merge();
+                }
+
+                // transaction.getExchange().merge();
+            }
+
             //  portfolioService.
             Position position;
             // update postion
@@ -249,9 +287,19 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
             PortfolioService portfolioService = portfolio.context.getInjector().getInstance(PortfolioService.class);
             //      ..getManager().getPortfolioService();
             //portfolio.getPositions();
-            log.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Portfolio: " + portfolio + " Total Value (" + portfolio.getBaseAsset()
+            log.info("Date: "
+                    + (Timestamp != null ? (FORMAT.print(Timestamp)) : "")
+                    + " Portfolio: "
+                    + portfolio
+                    + " Total Cash Value ("
+                    + portfolio.getBaseAsset()
                     + "):"
                     + portfolioService.getBaseCashBalance(portfolio.getBaseAsset()).plus(portfolioService.getBaseUnrealisedPnL(portfolio.getBaseAsset()))
+                    + ", Total Notional Value ("
+                    + portfolio.getBaseAsset()
+                    + "):"
+                    + portfolio.getStartingBaseNotionalBalance().plus(portfolioService.getBaseCashBalance(portfolio.getBaseAsset()))
+                            .plus(portfolioService.getBaseUnrealisedPnL(portfolio.getBaseAsset())).minus(portfolio.getStartingBaseCashBalance())
                     + " (Cash Balance:" + portfolioService.getBaseCashBalance(portfolio.getBaseAsset()) + " Realised PnL (M2M):"
                     + portfolioService.getBaseRealisedPnL(portfolio.getBaseAsset()) + " Open Trade Equity:"
                     + portfolioService.getBaseUnrealisedPnL(portfolio.getBaseAsset()) + " MarketValue:"
@@ -299,6 +347,8 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     protected QuoteService quotes;
     @Inject
     protected PortfolioService portfolioService;
+    @Inject
+    protected BalanceFactory balanceFactory;
 
     protected Portfolio portfolio;
     private static ExecutorService service = Executors.newFixedThreadPool(1);
@@ -329,6 +379,13 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     }
 
     @Override
+    @Transient
+    public void setDao(Dao dao) {
+        // TODO Auto-generated method stub
+        //  return null;
+    }
+
+    @Override
     public void delete() {
         // TODO Auto-generated method stub
 
@@ -338,6 +395,18 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     public EntityBase refresh() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public void prePersist() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void postPersist() {
+        // TODO Auto-generated method stub
+
     }
 
 }

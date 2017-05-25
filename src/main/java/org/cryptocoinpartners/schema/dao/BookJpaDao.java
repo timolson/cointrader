@@ -6,6 +6,11 @@ import org.joda.time.Interval;
 
 public class BookJpaDao extends DaoJpa implements BookDao {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = 8420958344070346740L;
+
     @Override
     public void find(Interval timeInterval, Visitor<Book> visitor) {
         queryEach(Book.class, visitor, "select b from Book b where time > ?1 and time < ?2", timeInterval.getStartMillis(), timeInterval.getEndMillis());

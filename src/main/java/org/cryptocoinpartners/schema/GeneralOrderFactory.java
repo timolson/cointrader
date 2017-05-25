@@ -21,4 +21,6 @@ public interface GeneralOrderFactory {
 
     GeneralOrder create(Instant time, Portfolio portfolio, Listing listing, String volume);
 
+    GeneralOrder create(GeneralOrder generalOrder);
+
 }

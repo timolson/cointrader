@@ -13,6 +13,7 @@ import org.joda.time.Instant;
  * @author Tim Olson
  */
 @MappedSuperclass
+//@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public abstract class Temporal extends EntityBase {
 
     public Temporal(Instant time) {
@@ -39,10 +40,10 @@ public abstract class Temporal extends EntityBase {
     //  @Transient
     // @AttributeOverride(name = "timestamp", column = @Column(name = "version")) we need ot set this to last update time.
     public long getTimestamp() {
-        if (time == null)
+        if (getTime() == null)
             return 0L;
         else
-            return time.getMillis();
+            return getTime().getMillis();
         // return timestamp;
     }
 

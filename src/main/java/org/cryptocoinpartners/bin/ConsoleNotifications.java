@@ -14,6 +14,7 @@ import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderUpdate;
+import org.cryptocoinpartners.schema.SyntheticMarket;
 import org.cryptocoinpartners.schema.Trade;
 
 /**
@@ -45,19 +46,40 @@ public class ConsoleNotifications {
 
     @When("select * from Book")
     private void watchBook(Book b) {
-        Market market = b.getMarket();
-        if (watching(market.getListing())) {
-            out.println(String.format("book: %s\t%s (%s) - %s (%s)", market, b.getBidPrice(), b.getBidVolume(), b.getAskPrice(), b.getAskVolume()));
-            out.flush();
+        if (!b.getMarket().isSynthetic()) {
+            Market market = (Market) b.getMarket();
+
+            if (watching(market.getListing())) {
+                out.println(String.format("book: %s\t%s (%s) - %s (%s)", market, b.getBidPrice(), b.getBidVolume(), b.getAskPrice(), b.getAskVolume()));
+                out.flush();
+            }
+        } else {
+            SyntheticMarket market = (SyntheticMarket) b.getMarket();
+            for (Market childMarket : market.getMarkets()) {
+                if (watching(childMarket.getListing())) {
+                    out.println(String.format("book: %s\t%s (%s) - %s (%s)", market, b.getBidPrice(), b.getBidVolume(), b.getAskPrice(), b.getAskVolume()));
+                    out.flush();
+                }
+            }
         }
     }
 
     @When("select * from Trade")
     private void watchTrade(Trade t) {
-        Market market = t.getMarket();
-        if (watching(market.getListing())) {
-            out.println(String.format("trade: %s\t%s (%s)", market, t.getPrice(), t.getVolume()));
-            out.flush();
+        if (!t.getMarket().isSynthetic()) {
+            Market market = (Market) t.getMarket();
+            if (watching(market.getListing())) {
+                out.println(String.format("trade: %s\t%s (%s)", market, t.getPrice(), t.getVolume()));
+                out.flush();
+            }
+        } else {
+            SyntheticMarket market = (SyntheticMarket) t.getMarket();
+            for (Market childMarket : market.getMarkets()) {
+                if (watching(childMarket.getListing())) {
+                    out.println(String.format("trade: %s\t%s (%s)", market, t.getPrice(), t.getVolume()));
+                    out.flush();
+                }
+            }
         }
     }
 

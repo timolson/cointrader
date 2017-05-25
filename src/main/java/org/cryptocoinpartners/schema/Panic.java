@@ -3,6 +3,8 @@ package org.cryptocoinpartners.schema;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.persistence.Transient;
+
 import org.cryptocoinpartners.schema.dao.Dao;
 
 /**
@@ -50,6 +52,13 @@ public class Panic extends Event {
     }
 
     @Override
+    @Transient
+    public void setDao(Dao dao) {
+        // TODO Auto-generated method stub
+        //  return null;
+    }
+
+    @Override
     public void delete() {
         // TODO Auto-generated method stub
 
@@ -59,6 +68,18 @@ public class Panic extends Event {
     public EntityBase refresh() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public void prePersist() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void postPersist() {
+        // TODO Auto-generated method stub
+
     }
 
 }

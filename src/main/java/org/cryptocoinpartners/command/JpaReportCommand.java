@@ -4,7 +4,6 @@ import org.cryptocoinpartners.report.AdHocJpaReport;
 import org.cryptocoinpartners.report.Report;
 import org.cryptocoinpartners.report.TableOutput;
 
-
 /**
  * @author Tim Olson
  */
@@ -22,7 +21,6 @@ public class JpaReportCommand extends ReportCommand {
         return "Runs the specified ad-hoc query against the database and prints the result as a table";
     }
 
-
     @Override
     public void parse(String commandArguments) {
         queryStr = commandArguments;
@@ -35,23 +33,20 @@ public class JpaReportCommand extends ReportCommand {
         return jpaReport;
     }
 
-
     @Override
-    public void run() {
-        super.run();
+    public Object call() {
+        return (super.call());
     }
 
     @Override
     protected TableOutput runReport(Report report) {
         try {
             return super.runReport(report);
-        }
-        catch( IllegalArgumentException e ) {
+        } catch (IllegalArgumentException e) {
             out.println(e.getMessage());
             return null;
         }
     }
-
 
     private String queryStr;
 }

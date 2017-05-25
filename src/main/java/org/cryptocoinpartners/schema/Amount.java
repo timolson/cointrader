@@ -1,6 +1,5 @@
 package org.cryptocoinpartners.schema;
 
-import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.MathContext;
 
@@ -24,7 +23,7 @@ import org.slf4j.LoggerFactory;
  * @author Tim Olson
  */
 @MappedSuperclass
-public abstract class Amount implements Comparable<Amount>, Serializable {
+public abstract class Amount implements Comparable<Amount>, java.io.Serializable {
 
     /**
      * 
@@ -100,9 +99,16 @@ public abstract class Amount implements Comparable<Amount>, Serializable {
     }
 
     @Transient
+    public DecimalAmount divide(Amount o, RemainderHandler remainderHandler) {
+        return divide(o.asBigDecimal(), remainderHandler);
+    }
+
+    @Transient
     public DecimalAmount divide(BigDecimal o, RemainderHandler remainderHandler) {
-        o.setScale(Math.min(o.scale(), mc.getPrecision()));
-        BigDecimal division = asBigDecimal().divide(o, remainderHandler.getRoundingMode());
+        // o.setScale(mc.getPrecision(), remainderHandler.getRoundingMode());
+        // this.asBigDecimal().setScale(mc.getPrecision(), remainderHandler.getRoundingMode());
+
+        BigDecimal division = asBigDecimal().divide(o, mc.getPrecision(), remainderHandler.getRoundingMode());
         DecimalAmount result = DecimalAmount.of(division);
         return result;
     }

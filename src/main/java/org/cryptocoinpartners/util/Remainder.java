@@ -1,11 +1,9 @@
 package org.cryptocoinpartners.util;
 
-
-import org.cryptocoinpartners.schema.Amount;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+import org.cryptocoinpartners.schema.Amount;
 
 /**
  * This is a grouping of DiscreteAmount.RemainderHandlers for convenience
@@ -14,39 +12,56 @@ import java.math.RoundingMode;
  */
 public class Remainder {
 
-
     public static final RemainderHandler DISCARD = new RemainderHandler() {
-        public RoundingMode getRoundingMode() { return RoundingMode.FLOOR; }
-    };
-
-
-    public static final RemainderHandler TO_HOUSE = new RemainderHandler() {
-        public void handleRemainder(Amount result, BigDecimal remainder) {
-            // todo
-        }
-        public RoundingMode getRoundingMode() { return RoundingMode.FLOOR; }
-    };
-
-
-    public static final RemainderHandler ROUND_EVEN = new RemainderHandler() {
-        public RoundingMode getRoundingMode() {
-            return RoundingMode.HALF_EVEN;
-        }
-    };
-
-
-    public static final RemainderHandler ROUND_CEILING = new RemainderHandler() {
-        public RoundingMode getRoundingMode() {
-            return RoundingMode.CEILING;
-        }
-    };
-
-
-    public static final RemainderHandler ROUND_FLOOR = new RemainderHandler() {
+        @Override
         public RoundingMode getRoundingMode() {
             return RoundingMode.FLOOR;
         }
     };
 
+    public static final RemainderHandler TO_HOUSE = new RemainderHandler() {
+        @Override
+        public void handleRemainder(Amount result, BigDecimal remainder) {
+            // todo
+        }
+
+        @Override
+        public RoundingMode getRoundingMode() {
+            return RoundingMode.FLOOR;
+        }
+    };
+
+    public static final RemainderHandler ROUND_EVEN = new RemainderHandler() {
+        @Override
+        public RoundingMode getRoundingMode() {
+            return RoundingMode.HALF_EVEN;
+        }
+    };
+    public static final RemainderHandler ROUND_DOWN = new RemainderHandler() {
+        @Override
+        public RoundingMode getRoundingMode() {
+            return RoundingMode.HALF_DOWN;
+        }
+    };
+
+    public static final RemainderHandler ROUND_UP = new RemainderHandler() {
+        @Override
+        public RoundingMode getRoundingMode() {
+            return RoundingMode.HALF_UP;
+        }
+    };
+    public static final RemainderHandler ROUND_CEILING = new RemainderHandler() {
+        @Override
+        public RoundingMode getRoundingMode() {
+            return RoundingMode.CEILING;
+        }
+    };
+
+    public static final RemainderHandler ROUND_FLOOR = new RemainderHandler() {
+        @Override
+        public RoundingMode getRoundingMode() {
+            return RoundingMode.FLOOR;
+        }
+    };
 
 }

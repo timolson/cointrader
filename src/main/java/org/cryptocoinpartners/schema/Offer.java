@@ -1,5 +1,7 @@
 package org.cryptocoinpartners.schema;
 
+import java.math.BigDecimal;
+
 import javax.persistence.Entity;
 import javax.persistence.Transient;
 
@@ -15,17 +17,31 @@ import org.joda.time.Instant;
 public class Offer extends PriceData {
 
     /** same as new Offer() */
-    public static Offer bid(Market market, Instant time, Instant timeReceived, Long priceCount, Long volumeCount) {
+    public static Offer bid(Tradeable market, Instant time, Instant timeReceived, Long priceCount, Long volumeCount) {
         return new Offer(market, time, timeReceived, priceCount, volumeCount);
     }
 
     /** same as new Offer() except the volumeCount is negated */
-    public static Offer ask(Market market, Instant time, Instant timeReceived, Long priceCount, Long volumeCount) {
+    public static Offer ask(Tradeable market, Instant time, Instant timeReceived, Long priceCount, Long volumeCount) {
         return new Offer(market, time, timeReceived, priceCount, -volumeCount);
     }
 
-    public Offer(Market market, Instant time, Instant timeReceived, Long priceCount, Long volumeCount) {
+    public static Offer bid(Tradeable market, Instant time, Instant timeReceived, BigDecimal price, BigDecimal volume) {
+        return new Offer(market, time, timeReceived, price, volume);
+    }
+
+    public static Offer ask(Tradeable market, Instant time, Instant timeReceived, BigDecimal price, BigDecimal volume) {
+        return new Offer(market, time, timeReceived, price, volume.negate());
+    }
+
+    public Offer(Tradeable market, Instant time, Instant timeReceived, Long priceCount, Long volumeCount) {
+
         super(time, timeReceived, null, market, priceCount, volumeCount);
+    }
+
+    public Offer(Tradeable market, Instant time, Instant timeReceived, BigDecimal price, BigDecimal volume) {
+
+        super(time, timeReceived, null, market, price, volume);
     }
 
     @Override
@@ -69,6 +85,13 @@ public class Offer extends PriceData {
     }
 
     @Override
+    @Transient
+    public void setDao(Dao dao) {
+        // TODO Auto-generated method stub
+        //  return null;
+    }
+
+    @Override
     public void delete() {
         // TODO Auto-generated method stub
 
@@ -78,6 +101,18 @@ public class Offer extends PriceData {
     public EntityBase refresh() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public void prePersist() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void postPersist() {
+        // TODO Auto-generated method stub
+
     }
 
 }

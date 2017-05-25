@@ -3,13 +3,11 @@ package org.cryptocoinpartners.command;
 import org.cryptocoinpartners.report.DataSummaryReport;
 import org.cryptocoinpartners.report.Report;
 
-
 /**
  * @author Tim Olson
  */
 @SuppressWarnings("UnusedDeclaration")
 public class DataCommand extends ReportCommand {
-
 
     @Override
     public String getUsageHelp() {
@@ -22,8 +20,8 @@ public class DataCommand extends ReportCommand {
     }
 
     @Override
-    public void run() {
-        super.run();
+    public Object call() {
+        return (super.call());
     }
 
     @Override

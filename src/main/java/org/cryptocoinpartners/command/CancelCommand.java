@@ -5,6 +5,7 @@ import java.util.UUID;
 
 import javax.inject.Inject;
 
+import org.cryptocoinpartners.schema.GeneralOrder;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Order;
@@ -45,17 +46,25 @@ public class CancelCommand extends CommandBase {
     }
 
     @Override
-    public void run() {
-        SpecificOrder cancelledOrder = null;
+    public Object call() {
+        Order cancelledOrder = null;
+
         // so we need to get pending order by id
         //for (Portfolio portfolio : portfolioService.getPortfolios())
-        for (Order order : orderService.getOrderStateMap().keySet())
-            if (order instanceof SpecificOrder)
-                if (order.getId().equals(id)) {
-                    cancelledOrder = (SpecificOrder) order;
-                    orderService.handleCancelSpecificOrder(cancelledOrder);
-                }
+        for (Order order : orderService.getOrderStateMap().keySet()) {
+            if (order.getId().equals(id)) {
+                cancelledOrder = order;
+                break;
+            }
 
+        }
+        if (cancelledOrder != null && cancelledOrder instanceof SpecificOrder)
+
+            return (orderService.handleCancelSpecificOrder((SpecificOrder) cancelledOrder));
+        else if (cancelledOrder != null && cancelledOrder instanceof GeneralOrder)
+            return (orderService.handleCancelGeneralOrder((GeneralOrder) cancelledOrder));
+        else
+            return false;
     }
 
     @Inject

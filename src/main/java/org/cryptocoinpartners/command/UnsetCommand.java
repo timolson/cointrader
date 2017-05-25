@@ -1,15 +1,15 @@
 package org.cryptocoinpartners.command;
 
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.lang.StringUtils;
-import org.cryptocoinpartners.util.ConfigUtil;
-
-import javax.inject.Inject;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.Map;
 import java.util.Properties;
 
+import javax.inject.Inject;
+
+import org.apache.commons.configuration.Configuration;
+import org.apache.commons.lang.StringUtils;
+import org.cryptocoinpartners.util.ConfigUtil;
 
 /**
  * @author Tim Olson
@@ -33,34 +33,32 @@ public class UnsetCommand extends CommandBase {
     }
 
     @Override
-    public void run() {
-        if( StringUtils.isBlank(arg) )
+    public Object call() {
+        if (StringUtils.isBlank(arg))
             dumpConfig();
         else
             setProperty();
+        return true;
     }
 
     private void setProperty() {
         Properties props = new Properties();
         try {
             props.load(new StringReader(arg));
-        }
-        catch( IOException e ) {
+        } catch (IOException e) {
             out.println("Could not parse property setting.");
         }
-        for( Map.Entry<Object, Object> entry : props.entrySet() ) {
+        for (Map.Entry<Object, Object> entry : props.entrySet()) {
             String key = entry.getKey().toString();
             String value = entry.getValue().toString();
             config.setProperty(key, value);
-            out.println("Set "+key);
+            out.println("Set " + key);
         }
     }
-
 
     private void dumpConfig() {
         out.println(ConfigUtil.asString(config));
     }
-
 
     @Inject
     private Configuration config;

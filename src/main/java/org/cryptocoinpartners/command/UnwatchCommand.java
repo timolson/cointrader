@@ -7,5 +7,8 @@ package org.cryptocoinpartners.command;
 public class UnwatchCommand extends WatchCommandBase {
 
     @Override
-    public void run() { notifications.unwatch(listing); }
+    public Object call() {
+        notifications.unwatch(listing);
+        return true;
+    }
 }

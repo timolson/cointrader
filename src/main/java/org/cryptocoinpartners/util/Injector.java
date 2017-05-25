@@ -50,6 +50,7 @@ public class Injector {
     private com.google.inject.Injector ic() {
         if (injectorWithConfig == null) {
             injectorWithConfig = injector.createChildInjector(new Module() {
+
                 @Override
                 public void configure(Binder binder) {
                     binder.bind(Injector.class).toProvider(new Provider<Injector>() {
@@ -57,6 +58,7 @@ public class Injector {
                         public Injector get() {
                             return Injector.this;
                         }
+
                     });
                     binder.bind(Configuration.class).toProvider(new Provider<Configuration>() {
                         @Override
@@ -64,7 +66,9 @@ public class Injector {
                             return config;
                         }
                     });
+
                 }
+
             });
         }
         return injectorWithConfig;
@@ -72,6 +76,14 @@ public class Injector {
 
     public Configuration getConfig() {
         return config;
+    }
+
+    public com.google.inject.Injector getInjector() {
+        return injector;
+    }
+
+    public com.google.inject.Injector getInjectorWithConfig() {
+        return injectorWithConfig;
     }
 
     public void setConfig(Configuration config) {
@@ -105,9 +117,12 @@ public class Injector {
         properties.put("hibernate.connection.password", ConfigUtil.combined().getString("db.password"));
         properties.put("hibernate.ejb.naming_strategy", "org.hibernate.cfg.ImprovedNamingStrategy");
 
-        properties.put("hibernate.connection.autocommit", "true");
-        properties.put("org.hibernate.flushMode", "AUTO");
+        properties.put("hibernate.connection.autocommit", "false");
+        properties.put("hibernate.flushMode", "COMMIT");
         properties.put("hibernate.connection.release_mode", "auto");
+        // properties.put("hibernate.jdbc.batch_size", "30");
+        // properties.put("hibernate.order_inserts", "true");
+        // properties.put("hibernate.order_updates", "true");
 
         properties.put("hibernate.connection.provider_class", "org.hibernate.connection.C3P0ConnectionProvider");
         properties.put("hibernate.cache.region.factory_class", "org.hibernate.cache.ehcache.EhCacheRegionFactory");
@@ -115,24 +130,25 @@ public class Injector {
         properties.put("hibernate.cache.use_second_level_cache", "true");
 
         properties.put("hibernate.cache.use_query_cache", "true");
-        properties.put("hibernate.cache.use_structured_entries ", "true");
+        properties.put("hibernate.cache.use_structured_entries ", "false");
         properties.put("net.sf.ehcache.configurationResourceName", "META-INF/ehcache.xml");
 
-        properties.put("hibernate.c3p0.min_size", "10");
+        properties.put("hibernate.c3p0.min_size", "1");
         properties.put("hibernate.c3p0.max_size", ConfigUtil.combined().getString("db.pool.size"));
         properties.put("hibernate.c3p0.acquire_increment", ConfigUtil.combined().getString("db.pool.growth"));
+        properties.put("hibernate.c3p0.max_statements", "50");
 
         properties.put("hibernate.showSql", "true");
         properties.put("hibernate.format_sql", "true");
         properties.put("hibernate.use_sql_comments", "true");
-
-        // properties.put("hibernate.c3p0.debugUnreturnedConnectionStackTraces", "true");
-        //properties.put("hibernate.c3p0.unreturnedConnectionTimeout", "4000");
+        properties.put("hibernate.c3p0.debugUnreturnedConnectionStackTraces", "true");
+        properties.put("hibernate.c3p0.unreturnedConnectionTimeout", "60");
         // properties.put("hibernate.c3p0.idle_test_period", "300");
         //  properties.put("hibernate.c3p0.max_statements", "0");
         // properties.put("hibernate.c3p0.maxIdleTimeExcessConnections", "2");
         // properties.put("hibernate.c3p0.timeout", "300");
         properties.put("hibernate.c3p0.maxIdleTime", "21600");
+        properties.put("hibernate.c3p0.idle_test_period", ConfigUtil.combined().getString("db.idle.test.period", "60"));
 
         //properties.put("hibernate.c3p0.checkoutTimeout", "500");
         properties.put("hibernate.c3p0.preferredTestQuery", "SELECT 1 from exchange");
@@ -140,14 +156,19 @@ public class Injector {
         final String testConnection = ConfigUtil.combined().getString("db.test.connection", "false");
         properties.put("hibernate.c3p0.testConnectionOnCheckout", testConnection);
         // properties.put("hibernate.c3p0.testConnectionOnCheckin", testConnection);
-        properties.put("hibernate.c3p0.acquireRetryDelay", ConfigUtil.combined().getString("db.acquire_retry_delay", "1000"));
+        properties.put("hibernate.c3p0.acquireRetryDelay", ConfigUtil.combined().getString("db.acquire_retry_delay", "5000"));
         properties.put("hibernate.c3p0.acquireRetryAttempts", ConfigUtil.combined().getString("db.acquire_retry_attempts", "30"));
         properties.put("hibernate.c3p0.breakAfterAcquireFailure", ConfigUtil.combined().getString("db.break_after_acquire_failure", "false"));
         properties.put("hibernate.c3p0.checkoutTimeout", ConfigUtil.combined().getString("db.checkout_timeout", "5000"));
-        properties.put("hibernate.c3p0.idleConnectionTestPeriod", ConfigUtil.combined().getString("db.idle_connection_test_period", "10800"));
+        properties.put("hibernate.c3p0.idleConnectionTestPeriod", ConfigUtil.combined().getString("db.idle_connection_test_period", "60"));
         properties.put("hibernate.c3p0.numHelperThreads", ConfigUtil.combined().getString("db.num_helper_threads", "10"));
+        properties.put("hibernate.c3p0.unreturnedConnectionTimeout", ConfigUtil.combined().getString("db.unreturned_connection_timeout", "0"));
+        properties.put("hibernate.c3p0.statementCacheNumDeferredCloseThreads",
+                ConfigUtil.combined().getString("db.statement_cache_num_deferred_close_threads", "1"));
+        properties.put("hibernate.c3p0.maxAdministrativeTaskTime", ConfigUtil.combined().getString("db.max_administrative_task_time", "60"));
+
         properties.put("hibernate.c3p0.debugUnreturnedConnectionStackTraces",
-                ConfigUtil.combined().getString("db.debug_unreturned_connection_stack_traces", "false"));
+                ConfigUtil.combined().getString("db.debug_unreturned_connection_stack_traces", "true"));
         //  properties.put("hibernate.c3p0.max_statements", "0");", "false"));. debug_unreturned_connection_stack_traces
         //  properties.put("hibernate.c3p0.max_statements", "0");
         //  properties.put("hibernate.c3p0.maxStatementsPerConnection", "100");
@@ -157,7 +178,7 @@ public class Injector {
         properties.put("javax.persistence.sharedCache.mode", "ENABLE_SELECTIVE");
         properties.put("javax.persistence.query.timeout", ConfigUtil.combined().getString("db.query_timeout", "5000"));
 
-        // properties.put("javax.persistence.LockModeType", "OPTIMISTIC");
+        properties.put("javax.persistence.LockModeType", "OPTIMISTIC");
 
         // root = new Injector(Guice.createInjector(new LogInjector(), new PersistanceModule()), ConfigUtil.combined());
         //  new JpaPersistModule("org.cryptocoinpartners.schema")

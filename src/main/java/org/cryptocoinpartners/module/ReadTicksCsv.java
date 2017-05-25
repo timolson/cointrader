@@ -22,14 +22,13 @@ import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.schema.TradeFactory;
 import org.joda.time.Instant;
+import org.knowm.xchange.currency.CurrencyPair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import au.com.bytecode.opencsv.CSVReader;
 import au.com.bytecode.opencsv.bean.ColumnPositionMappingStrategy;
 import au.com.bytecode.opencsv.bean.CsvToBean;
-
-import com.xeiam.xchange.currency.CurrencyPair;
 
 @SuppressWarnings("UnusedDeclaration")
 @Singleton
@@ -50,7 +49,7 @@ public class ReadTicksCsv {
     private final SaveMarketData dbPersistance = new SaveMarketData();;
 
     @Inject
-    public ReadTicksCsv(Context context, Configuration config, TradeFactory tradefactory, BookFactory bookFactory) {
+    public ReadTicksCsv(Context context, Configuration config, TradeFactory tradeFactory, BookFactory bookFactory) {
         final String filename = config.getString("readtickscsv.filename");
         if (!StringUtils.isNotBlank(filename))
             throw new ConfigurationError("You must set the property readtickscsv.filename");
@@ -106,7 +105,8 @@ public class ReadTicksCsv {
                 if (market == null)
                     market = market.findOrCreate(exchange, listing);
 
-                Trade trade = tradefactory.fromDoubles(market, instant, instant, csvtrade.getTime().toString(), csvtrade.getLast(), csvtrade.getVol());
+                Trade trade = tradeFactory.create(market, instant, csvtrade.getTime().toString(), BigDecimal.valueOf(csvtrade.getLast()),
+                        BigDecimal.valueOf(csvtrade.getVol()));
                 Book book = bookFactory.create(instant, instant, csvtrade.getTime().toString(), market);
                 book.addBid(BigDecimal.valueOf(csvtrade.getBidprice1()), BigDecimal.valueOf(csvtrade.getBidvol1()));
                 book.addAsk(BigDecimal.valueOf(csvtrade.getAskprice1()), BigDecimal.valueOf(csvtrade.getAskvol1()));

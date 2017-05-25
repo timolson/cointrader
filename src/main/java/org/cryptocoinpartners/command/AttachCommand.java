@@ -1,10 +1,9 @@
 package org.cryptocoinpartners.command;
 
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-
 import javax.inject.Inject;
 
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
 
 /**
  * @author Tim Olson
@@ -28,20 +27,21 @@ public class AttachCommand extends CommandBase {
     }
 
     @Override
-    public void run() {
-        if( StringUtils.isBlank(args) ) {
+    public Object call() {
+
+        if (StringUtils.isBlank(args)) {
             out.println("You must supply a base class name for the module class");
-            return;
+            return false;
         }
         try {
             context.attach(args);
-        }
-        catch( Exception e ) {
+            return true;
+        } catch (Exception e) {
             out.println(e.getMessage());
-            log.warn("Could not load module \""+args+"\"",e);
+            log.warn("Could not load module \"" + args + "\"", e);
+            return false;
         }
     }
-
 
     @Inject
     Logger log;

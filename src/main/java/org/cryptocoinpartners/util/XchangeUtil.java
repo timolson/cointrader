@@ -10,12 +10,12 @@ import java.util.regex.Pattern;
 import org.apache.commons.configuration.CombinedConfiguration;
 import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Listing;
+import org.knowm.xchange.ExchangeFactory;
+import org.knowm.xchange.ExchangeSpecification;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.okcoin.FuturesContract;
 
 import com.google.common.collect.HashBiMap;
-import com.xeiam.xchange.ExchangeFactory;
-import com.xeiam.xchange.ExchangeSpecification;
-import com.xeiam.xchange.currency.CurrencyPair;
-import com.xeiam.xchange.okcoin.FuturesContract;
 
 /**
  * @author Tim Olson
@@ -31,14 +31,14 @@ public class XchangeUtil {
         return exchangeTags;
     }
 
-    public static com.xeiam.xchange.Exchange getExchangeForMarket(Exchange coinTraderExchange) {
-        com.xeiam.xchange.Exchange xchangeExchange = exchangesByMarket.get(coinTraderExchange);
+    public static org.knowm.xchange.Exchange getExchangeForMarket(Exchange coinTraderExchange) {
+        org.knowm.xchange.Exchange xchangeExchange = exchangesByMarket.get(coinTraderExchange);
         if (xchangeExchange == null)
             throw new Error("Could not get XChange Exchange for Coin Trader Exchange " + coinTraderExchange);
         return xchangeExchange;
     }
 
-    public static Exchange getExchangeForMarket(com.xeiam.xchange.Exchange xeiamExchange) {
+    public static Exchange getExchangeForMarket(org.knowm.xchange.Exchange xeiamExchange) {
         Exchange coinTraderExchange = exchangesByMarket.inverse().get(xeiamExchange);
         if (coinTraderExchange == null)
             throw new Error("Could not get XChange Exchange for Coin Trader Exchange " + coinTraderExchange);
@@ -46,10 +46,10 @@ public class XchangeUtil {
 
     }
 
-    public static synchronized com.xeiam.xchange.Exchange resetExchange(Exchange coinTraderExchange) {
+    public static synchronized org.knowm.xchange.Exchange resetExchange(Exchange coinTraderExchange) {
         ExchangeSpecification spec = getExchangeForMarket(coinTraderExchange).getExchangeSpecification();
         if (spec != null) {
-            com.xeiam.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
+            org.knowm.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
             exchangesByMarket.put(coinTraderExchange, exchange);
             return exchange;
         } else
@@ -68,7 +68,7 @@ public class XchangeUtil {
         return FuturesContract.valueOfIgnoreCase(FuturesContract.class, listing.getPrompt().getSymbol());
     }
 
-    private static HashBiMap<Exchange, com.xeiam.xchange.Exchange> exchangesByMarket;
+    private static HashBiMap<Exchange, org.knowm.xchange.Exchange> exchangesByMarket;
     private static Set<String> exchangeTags;
 
     static {
@@ -116,7 +116,7 @@ public class XchangeUtil {
                     Listing listing = Listing.forSymbol(listingSymbol.toUpperCase());
                     if (listing.getPrompt() != null)
                         spec.setExchangeSpecificParametersItem("Futures_Contract_String", listing.getPrompt().getSymbol());
-                    com.xeiam.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
+                    org.knowm.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
                     exchangesByMarket.put(getExchangeForTag(exchangeTag), exchange);
                 }
             }

@@ -3,8 +3,9 @@
     xmlns="http://www.espertech.com/schema/esper"
     xsi:schemaLocation="http://www.espertech.com/schema/esper/esper-configuration-4-0.xsd">
     <plugin-aggregation-function name="talib" function-class="org.cryptocoinpartners.esper.GenericTALibFunction"/>  
+    <plugin-aggregation-function name="groupedTalib" function-class="org.cryptocoinpartners.esper.GenericTALibGroupingFunction"/>  
        <plugin-view factory-class="org.cryptocoinpartners.esper.OHLCBarPlugInViewFactory" name="ohlcbar" namespace="custom"/>  
-      
+       
 	<auto-import import-name="org.cryptocoinpartners.esper.annotation.*"/>
 		<auto-import import-name="java.lang.*"/>
 	<auto-import import-name="java.math.*"/>

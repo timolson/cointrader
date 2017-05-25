@@ -1,6 +1,5 @@
 package org.cryptocoinpartners.schema;
 
-
 public class Currencies {
     /**
      * 
@@ -88,6 +87,14 @@ public class Currencies {
     public static final Currency YAC = crypto("YAC", 1e-8);
     public static final Currency ZCC = crypto("ZCC", 1e-8);
     public static final Currency ZET = crypto("ZET", 1e-8);
+    public static final Currency ETH = crypto("ETH", 1e-8);
+    public static final Currency RADS = crypto("RADS", 1e-8);
+    public static final Currency XMR = crypto("XMR", 1e-8);
+    public static final Currency MAID = crypto("MAID", 1e-8);
+    public static final Currency DASH = crypto("DASH", 1e-8);
+    public static final Currency FCT = crypto("FCT", 1e-8);
+    public static final Currency DGB = crypto("DGB", 1e-8);
+    public static final Currency USDT = crypto("USDT", 1e-8);
 
     /* these need currency basis research
     public static final Currency FORTY_TWO = crypto("42");

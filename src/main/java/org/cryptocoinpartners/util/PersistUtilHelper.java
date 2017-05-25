@@ -43,8 +43,6 @@ public class PersistUtilHelper {
 
     public static <T> TypedQuery<T> createQuery(String qlString, Class<T> resultClass) {
         //getEntityManager().clear();
-        Map<String, Object> myproperties = getEntityManager().getProperties();
-        Map<String, Object> props = new HashMap<String, Object>();
         // props.put("javax.persistence.cache.retrieveMode", "BYPASS");
 
         //getEntityManager().setProperty("javax.persistence.cache.storeMode", "BYPASS");
@@ -103,7 +101,9 @@ public class PersistUtilHelper {
 
         while (it.hasNext()) {
             EntityManager em = (EntityManager) it.next();
-            if (em != null || em.isOpen())
+            if (em == null)
+                return;
+            else if (em.isOpen())
                 em.detach(entity);
         }
     }
@@ -113,7 +113,9 @@ public class PersistUtilHelper {
 
         while (it.hasNext()) {
             EntityManager em = (EntityManager) it.next();
-            if (em != null || em.isOpen())
+            if (em == null)
+                return;
+            else if (em.isOpen())
                 em.getEntityManagerFactory().getCache().evict(entity.getClass(), ((EntityBase) entity).getId());
             //em.getEntityManagerFactory().createEntityManager(SynchronizationType.)
 
@@ -125,7 +127,9 @@ public class PersistUtilHelper {
 
         while (it.hasNext()) {
             EntityManager em = (EntityManager) it.next();
-            if (em != null || em.isOpen())
+            if (em == null)
+                return;
+            else if (em.isOpen())
                 if (em.find(entity.getClass(), ((EntityBase) entity).getId()) != null)
                     em.merge(entity);
         }
@@ -140,7 +144,9 @@ public class PersistUtilHelper {
             Object rootEntity = null;
             Map<String, Object> props = new HashMap<String, Object>();
 
-            if (em != null || em.isOpen())
+            if (em == null)
+                return;
+            else if (em.isOpen())
                 em.refresh(entity);
             parent = em.find(entity.getClass(), ((EntityBase) entity).getId(), props);
 
@@ -168,7 +174,9 @@ public class PersistUtilHelper {
             Map<String, Object> props = new HashMap<String, Object>();
             Object parent;
             //Object Object;
-            if (em != null || em.isOpen())
+            if (em == null)
+                return;
+            else if (em.isOpen())
                 parent = em.find(entity.getClass(), ((EntityBase) entity).getId(), props);
 
             rootEntity = em.getReference(entity.getClass(), ((EntityBase) entity).getId());

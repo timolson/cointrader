@@ -12,6 +12,7 @@ import org.cryptocoinpartners.schema.Asset;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Listing;
+import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.Position;
 
@@ -35,8 +36,6 @@ public interface PortfolioService {
     @Nullable
     public Collection<Position> getPositions(Exchange exchange);
 
-    public DiscreteAmount getLastTrade();
-
     @Transient
     public Amount getCashBalance(Asset quoteAsset);
 
@@ -45,6 +44,9 @@ public interface PortfolioService {
 
     @Transient
     public Amount getMarketValue(Position postion);
+
+    @Transient
+    public Amount getMarketValue(Position postion, Asset quoteAsset);
 
     @Transient
     public Amount getMarketValue(Asset quoteAsset);
@@ -77,7 +79,11 @@ public interface PortfolioService {
 
     ConcurrentHashMap<Asset, Amount> getUnrealisedPnLs();
 
-    Amount getUnrealisedPnL(Position postion);
+    Amount getUnrealisedPnL(Position postion, Amount markToMarketPrice);
+
+    Amount getBaseUnrealisedPnL(Position postion, Asset quoteAsset);
+
+    Amount getBaseUnrealisedPnL(Position postion, Asset quoteAsset, DiscreteAmount marketPrice);
 
     Amount getUnrealisedPnL(Asset quoteAsset);
 
@@ -87,20 +93,38 @@ public interface PortfolioService {
 
     Amount getAvailableBalance(Asset quoteAsset);
 
+    Amount getAvailableBalance(Asset quoteAsset, Exchange exchange);
+
     Amount getBaseCashBalance(Asset quoteAsset);
 
     Amount getBaseUnrealisedPnL(Asset quoteAsset);
 
     Amount getBaseRealisedPnL(Asset quoteAsset);
 
+    Amount getBaseRealisedPnL(Asset quoteAsset, Market market);
+
     Amount getBaseMarketValue(Asset quoteAsset);
 
     Amount getAvailableBaseBalance(Asset quoteAsset);
+
+    Amount getAvailableBaseBalance(Asset quoteAsset, Exchange exchange);
 
     DiscreteAmount getNetPosition(Asset base, Exchange exchange);
 
     void resetBalances();
 
     void init();
+
+    void reset();
+
+    void loadBalances();
+
+    ConcurrentHashMap<Asset, Amount> getUnrealisedPnLs(Market market);
+
+    Amount getBaseUnrealisedPnL(Asset quoteAsset, Market market);
+
+    ConcurrentHashMap<Asset, Amount> getRealisedPnLs(Market market);
+
+    ConcurrentHashMap<Asset, Amount> getUnrealisedPnLs(Exchange exchange);
 
 }

@@ -1,7 +1,9 @@
 package org.cryptocoinpartners.schema;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.persistence.Cacheable;
 import javax.persistence.Entity;
@@ -16,6 +18,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FeeMethod;
+import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.schema.dao.ListingDao;
 import org.cryptocoinpartners.util.EM;
@@ -36,7 +39,8 @@ import com.google.inject.Inject;
 //@UniqueConstraint(columnNames = { "base", "quote" }) })
 public class Listing extends EntityBase {
     @Inject
-    protected static ListingDao listingDao;
+    protected transient static ListingDao listingDao;
+    protected static Set<Listing> listings = new HashSet<Listing>();
 
     @ManyToOne(optional = false)
     //@Column(unique = true)
@@ -45,7 +49,8 @@ public class Listing extends EntityBase {
     }
 
     @PostPersist
-    private void postPersist() {
+    @Override
+    public void postPersist() {
         //  PersistUtil.clear();
         //  PersistUtil.refresh(this);
         //PersistUtil.merge(this);
@@ -68,6 +73,11 @@ public class Listing extends EntityBase {
     /** will create the listing if it doesn't exist */
     public static Listing forPair(Asset base, Asset quote) {
 
+        for (Listing listing : listings) {
+            if (listing.getBase().equals(base) && listing.getQuote().equals(quote))
+                return listing;
+        }
+        //this is very slow, we should cache it in a map!
         try {
             Listing listing = EM.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBase", base, quote);
             if (listing == null) {
@@ -76,10 +86,12 @@ public class Listing extends EntityBase {
                 EM.find(quote);
                 EM.persist(listing);
             }
+            listings.add(listing);
             return listing;
         } catch (NoResultException e) {
             final Listing listing = new Listing(base, quote);
             EM.persist(listing);
+            listings.add(listing);
             return listing;
         }
     }
@@ -113,10 +125,12 @@ public class Listing extends EntityBase {
     }
 
     @Transient
-    protected double getMultiplier() {
+    protected Amount getMultiplier(Market market, Amount entryPrice, Amount exitPrice) {
         if (prompt != null)
-            return prompt.getMultiplier();
-        return getContractSize() * getTickSize();
+            return prompt.getMultiplier(market, entryPrice, exitPrice);
+
+        return new DiscreteAmount((long) (getContractSize(market) * (1 / getTickSize())), getVolumeBasis());
+
     }
 
     @Transient
@@ -127,9 +141,9 @@ public class Listing extends EntityBase {
     }
 
     @Transient
-    protected double getContractSize() {
+    protected double getContractSize(Market market) {
         if (prompt != null)
-            return prompt.getContractSize();
+            return prompt.getContractSize(market);
         return 1;
     }
 
@@ -138,12 +152,6 @@ public class Listing extends EntityBase {
         if (prompt != null)
             return prompt.getTickSize();
         return getPriceBasis();
-    }
-
-    @Transient
-    protected Amount getMultiplierAsAmount() {
-
-        return new DiscreteAmount((long) getMultiplier(), getVolumeBasis());
     }
 
     @Transient
@@ -183,10 +191,10 @@ public class Listing extends EntityBase {
     }
 
     @Transient
-    protected Asset getTradedCurrency() {
-        if (prompt != null && prompt.getTradedCurrency() != null)
-            return prompt.getTradedCurrency();
-        return getQuote();
+    protected Asset getTradedCurrency(Market market) {
+        if (prompt != null && prompt.getTradedCurrency(market) != null)
+            return prompt.getTradedCurrency(market);
+        return null;
     }
 
     @Transient
@@ -304,7 +312,11 @@ public class Listing extends EntityBase {
     }
 
     @Override
-    public void persit() {
+    public synchronized void persit() {
+
+        this.setPeristanceAction(PersistanceAction.NEW);
+
+        this.setRevision(this.getRevision() + 1);
         listingDao.persist(this);
 
     }
@@ -336,7 +348,11 @@ public class Listing extends EntityBase {
     }
 
     @Override
-    public void merge() {
+    public synchronized void merge() {
+
+        this.setPeristanceAction(PersistanceAction.MERGE);
+
+        this.setRevision(this.getRevision() + 1);
         listingDao.merge(this);
         // TODO Auto-generated method stub
 
@@ -349,7 +365,21 @@ public class Listing extends EntityBase {
     }
 
     @Override
+    @Transient
+    public void setDao(Dao dao) {
+        listingDao = (ListingDao) dao;
+        // TODO Auto-generated method stub
+        //  return null;
+    }
+
+    @Override
     public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void prePersist() {
         // TODO Auto-generated method stub
 
     }

@@ -1,14 +1,19 @@
 package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
+import javax.annotation.Nullable;
 import javax.persistence.Basic;
 import javax.persistence.Cacheable;
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.Index;
 import javax.persistence.JoinColumn;
+import javax.persistence.ManyToMany;
 import javax.persistence.ManyToOne;
 import javax.persistence.NamedQuery;
 import javax.persistence.NoResultException;
@@ -18,8 +23,6 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.FeeMethod;
-import org.cryptocoinpartners.schema.dao.Dao;
-import org.cryptocoinpartners.schema.dao.MarketDao;
 import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.RemainderHandler;
 
@@ -35,37 +38,73 @@ import com.google.inject.assistedinject.AssistedInject;
 @Entity
 @Cacheable
 @NamedQuery(name = "Market.findByMarket", query = "select m from Market m where exchange=?1 and listing=?2", hints = { @QueryHint(name = "org.hibernate.cacheable", value = "true") })
-@Table(indexes = { @Index(columnList = "exchange"), @Index(columnList = "listing"), @Index(columnList = "active") })
-public class Market extends EntityBase {
-    @Inject
-    protected MarketDao marketDao;
+@Table(indexes = { @Index(columnList = "exchange"), @Index(columnList = "listing"), @Index(columnList = "active"), @Index(columnList = "version"),
+        @Index(columnList = "revision") })
+public class Market extends Tradeable {
 
+    protected List<SyntheticMarket> syntheticMarkets;
+    protected static Set<Market> markets = new HashSet<Market>();
     @Inject
     protected transient static MarketFactory marketFactory;
+    @Inject
+    protected transient static ExchangeFactory exchangeFactory;
 
-    public static List<Market> findAll() {
-        return EM.queryList(Market.class, "select m from Market m");
-    }
-
+    //TODO
+    //add a set of markets, that we keep and get from here, if not presnet in set go to db
     /** adds the Market to the database if it does not already exist */
     public static Market findOrCreate(Exchange exchange, Listing listing) {
         return findOrCreate(exchange, listing, listing.getPriceBasis(), listing.getVolumeBasis());
     }
 
-    @PostPersist
-    private void postPersist() {
+    @Nullable
+    @ManyToMany(fetch = FetchType.EAGER)
+    //  @JoinColumn(name = "syntheticMarket")
+    public List<SyntheticMarket> getSyntheticMarkets() {
+        return syntheticMarkets;
+    }
 
-        //PersistUtil.detach(this);
+    public void setSyntheticMarkets(List<SyntheticMarket> syntheticMarkets) {
+        if (syntheticMarkets == null || (syntheticMarkets != null && !syntheticMarkets.equals(this)))
+            this.syntheticMarkets = syntheticMarkets;
+    }
+
+    public void addSyntheticMarket(SyntheticMarket market) {
+        synchronized (getSyntheticMarkets()) {
+            if (!getSyntheticMarkets().contains(market))
+                getSyntheticMarkets().add(market);
+        }
+    }
+
+    public synchronized void removeSyntheticMarket(SyntheticMarket market) {
+        getSyntheticMarkets().remove(market);
+        market.getMarkets().remove(this);
 
     }
 
     public static Market findOrCreate(Exchange exchange, Listing listing, double quoteBasis, double volumeBasis) {
         // final String queryStr = "select m from Market m where exchange=?1 and listing=?2";
         try {
-            return EM.namedQueryOne(Market.class, "Market.findByMarket", exchange, listing);
+            for (Market market : markets) {
+                if (market.getExchange().equals(exchange) && market.getListing().equals(listing))
+                    return market;
+            }
+            List<Market> results = EM.namedQueryList(Market.class, "Market.findByMarket", exchange, listing);
+            if (results != null && !results.isEmpty() && results.get(0) != null) {
+                markets.add(results.get(0));
+                return results.get(0);
+            } else {
+                Market ml = marketFactory.create(exchange, listing, quoteBasis, volumeBasis);
+                markets.add(ml);
+                //  Market ml = new Market(exchange, listing, quoteBasis, volumeBasis);
+                ml.persit();
+                // marketDao.persist(ml);
+                return ml;
+            }
+
         } catch (NoResultException e) {
 
             Market ml = marketFactory.create(exchange, listing, quoteBasis, volumeBasis);
+            markets.add(ml);
             //  Market ml = new Market(exchange, listing, quoteBasis, volumeBasis);
             ml.persit();
             // marketDao.persist(ml);
@@ -92,27 +131,23 @@ public class Market extends EntityBase {
         return exchange;
     }
 
-    @ManyToOne(optional = false)
-    //, cascade = CascadeType.ALL)
+    @ManyToOne(optional = true, cascade = CascadeType.PERSIST)
     @JoinColumn(name = "listing")
     public Listing getListing() {
         return listing;
     }
 
+    @Override
     @Basic(optional = false)
     public double getPriceBasis() {
-
-        return listing.getPriceBasis() == 0 ? priceBasis : listing.getPriceBasis();
+        if (listing != null)
+            return listing.getPriceBasis() == 0 ? priceBasis : listing.getPriceBasis();
+        else
+            return priceBasis;
 
     }
 
-    @Transient
-    public int getScale() {
-
-        int length = (int) (Math.log10(getPriceBasis()));
-        return length;
-    }
-
+    @Override
     @Basic(optional = false)
     public double getVolumeBasis() {
         return listing.getVolumeBasis() == 0 ? volumeBasis : listing.getVolumeBasis();
@@ -120,13 +155,19 @@ public class Market extends EntityBase {
     }
 
     /** @return true iff the Listing is currently traded at the Exchange.  The Market could have been retired. */
-    public boolean isActive() {
-        return active;
-    }
 
     @Transient
     public Asset getBase() {
         return listing.getBase();
+    }
+
+    @Override
+    @Transient
+    public Amount getBalance(Asset currency) {
+        if (getExchange() != null && getExchange().getBalances() != null && getExchange().getBalances().get(currency) != null)
+            return getExchange().getBalances().get(currency).getAmount();
+        return new DiscreteAmount(0, getVolumeBasis());
+
     }
 
     @Transient
@@ -159,8 +200,8 @@ public class Market extends EntityBase {
     }
 
     @Transient
-    public double getMultiplier() {
-        return listing.getMultiplier();
+    public Amount getMultiplier(Market market, Amount entryPrice, Amount exitPrice) {
+        return listing.getMultiplier(market, entryPrice, exitPrice);
 
     }
 
@@ -170,9 +211,8 @@ public class Market extends EntityBase {
 
     }
 
-    @Transient
-    public double getContractSize() {
-        return listing.getContractSize();
+    public double getContractSize(Market market) {
+        return listing.getContractSize(market);
 
     }
 
@@ -183,11 +223,12 @@ public class Market extends EntityBase {
     }
 
     @Transient
-    public Asset getTradedCurrency() {
-        return listing.getTradedCurrency();
+    public Asset getTradedCurrency(Tradeable market) {
+        return listing.getTradedCurrency((Market) market);
 
     }
 
+    @Override
     @Transient
     public String getSymbol() {
         return exchange.toString() + ':' + listing.toString();
@@ -196,23 +237,6 @@ public class Market extends EntityBase {
     @Override
     public String toString() {
         return getSymbol();
-    }
-
-    public static Market forSymbol(String marketSymbol) {
-        for (Market market : findAll()) {
-            if (market.getSymbol().equalsIgnoreCase(marketSymbol)) {
-                return market;
-            }
-        }
-        return null;
-    }
-
-    public static List<String> allSymbols() {
-        List<String> result = new ArrayList<>();
-        List<Market> markets = EM.queryList(Market.class, "select m from Market m");
-        for (Market market : markets)
-            result.add((market.getSymbol()));
-        return result;
     }
 
     public static class MarketAmountBuilder {
@@ -238,8 +262,8 @@ public class Market extends EntityBase {
             this.volumeBuilder = DiscreteAmount.withBasis(volumeBasis);
         }
 
-        private final DiscreteAmount.DiscreteAmountBuilder priceBuilder;
-        private final DiscreteAmount.DiscreteAmountBuilder volumeBuilder;
+        private final transient DiscreteAmount.DiscreteAmountBuilder priceBuilder;
+        private final transient DiscreteAmount.DiscreteAmountBuilder volumeBuilder;
     }
 
     public MarketAmountBuilder buildAmount() {
@@ -256,24 +280,12 @@ public class Market extends EntityBase {
         this.exchange = exchange;
     }
 
-    protected void setListing(Listing listing) {
+    protected synchronized void setListing(Listing listing) {
         this.listing = listing;
     }
 
-    protected void setActive(boolean active) {
-        this.active = active;
-    }
-
-    protected void setPriceBasis(double quoteBasis) {
-        this.priceBasis = quoteBasis;
-    }
-
-    protected void setVolumeBasis(double volumeBasis) {
-        this.volumeBasis = volumeBasis;
-    }
-
     @AssistedInject
-    private Market(@Assisted Exchange exchange, @Assisted Listing listing, @Assisted("marketPriceBasis") double priceBasis,
+    public Market(@Assisted Exchange exchange, @Assisted Listing listing, @Assisted("marketPriceBasis") double priceBasis,
             @Assisted("marketVolumeBasis") double volumeBasis) {
         this.exchange = exchange;
         this.listing = listing;
@@ -282,47 +294,61 @@ public class Market extends EntityBase {
         this.active = true;
     }
 
-    private Exchange exchange;
-    private Listing listing;
-    private double priceBasis;
-    private double volumeBasis;
-    private boolean active;
-    private MarketAmountBuilder marketAmountBuilder;
-
-    @Override
-    public void persit() {
-        if (listing != null)
-            if (listing.find() == null)
-                listing.persit();
-        marketDao.persist(this);
-    }
-
-    @Override
-    public EntityBase refresh() {
-        return marketDao.refresh(this);
-    }
-
-    @Override
-    public void detach() {
-        marketDao.detach(this);
-
-    }
-
-    @Override
-    public void merge() {
-        marketDao.merge(this);
-
-    }
-
     @Override
     @Transient
-    public Dao getDao() {
-        return marketDao;
+    public boolean isSynthetic() {
+
+        return false;
     }
 
+    protected Exchange exchange;
+    protected volatile Listing listing;
+
+    protected transient MarketAmountBuilder marketAmountBuilder;
+
     @Override
-    public void delete() {
+    public void prePersist() {
+
+        if (getDao() != null) {
+
+            EntityBase dbListing = null;
+
+            if (getListing() != null) {
+                try {
+                    dbListing = getListing().getDao().find(getListing().getClass(), getListing().getId());
+                    if (dbListing != null && dbListing.getVersion() != getListing().getVersion()) {
+                        getListing().setVersion(dbListing.getVersion());
+                        if (getListing().getRevision() > dbListing.getRevision()) {
+                            //  getOrder().setPeristanceAction(PersistanceAction.MERGE);
+                            getListing().getDao().merge(getListing());
+                        }
+                    } else {
+                        //getOrder().setPeristanceAction(PersistanceAction.NEW);
+                        getListing().getDao().persist(getListing());
+                    }
+                } catch (Exception | Error ex) {
+                    if (dbListing != null)
+                        if (getListing().getRevision() > dbListing.getRevision()) {
+                            //  getOrder().setPeristanceAction(PersistanceAction.MERGE);
+                            getListing().getDao().merge(getListing());
+                        } else {
+                            //   getOrder().setPeristanceAction(PersistanceAction.NEW);
+                            getListing().getDao().persist(getListing());
+                        }
+                }
+            }
+
+        }
+
         // TODO Auto-generated method stub
 
     }
+
+    @Override
+    @PostPersist
+    public void postPersist() {
+        // TODO Auto-generated method stub
+
+    }
+
 }

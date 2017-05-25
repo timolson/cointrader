@@ -14,6 +14,7 @@ import org.cryptocoinpartners.module.ApplicationInitializer;
 import org.cryptocoinpartners.module.StaticInjectionModule;
 import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.Injector;
+import org.cryptocoinpartners.util.PersistUtil;
 import org.cryptocoinpartners.util.ReflectionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,6 +24,7 @@ import com.beust.jcommander.JCommander;
 import com.beust.jcommander.MissingCommandException;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
+import com.google.inject.tools.jmx.Manager;
 
 /**
  * This is the only entry point required into the Cryptocoin Partners executable world.  Depending on parameters passed,
@@ -69,6 +71,7 @@ public class Main {
         rootInjector.getInstance(ApplicationInitializer.class);
         //  context.getInjector().root().
         rootInjector.createChildInjector(new StaticInjectionModule());
+        Manager.manage("org.cryptocoinpartners", rootInjector.getInjector());
         //  rootInjector.getInstance(BookJpaDao.class);
         // rootInjector.getInstance(BarJpaDao.class);
         // rootInjector.getInstance(CurrencyJpaDao.class);
@@ -84,6 +87,7 @@ public class Main {
         // rootInjector.getInstance(TradeJpaDao.class);
         //rootInjector.getInstance(TransactionJpaDao.class);
         //rootInjector.getInstance(OrderUpdateJpaDao.class);
+        PersistUtil.ensureSingletonsExist();
 
         // now parse the full command line
         MainParams mainParams = new MainParams();
@@ -134,5 +138,6 @@ public class Main {
             // rootInjector.getInstance(EntityManagerFactory.class).close();
             //  PersistUtil.shutdown();
         }
+
     }
 }

@@ -2,6 +2,8 @@ package org.cryptocoinpartners.schema;
 
 import java.util.Arrays;
 
+import javax.persistence.Transient;
+
 import org.apache.commons.lang.builder.CompareToBuilder;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
@@ -116,6 +118,13 @@ public class SubscribePortfolio extends Event {
     }
 
     @Override
+    @Transient
+    public void setDao(Dao dao) {
+        // TODO Auto-generated method stub
+        //  return null;
+    }
+
+    @Override
     public void delete() {
         // TODO Auto-generated method stub
 
@@ -125,6 +134,18 @@ public class SubscribePortfolio extends Event {
     public EntityBase refresh() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public void prePersist() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void postPersist() {
+        // TODO Auto-generated method stub
+
     }
 
 }

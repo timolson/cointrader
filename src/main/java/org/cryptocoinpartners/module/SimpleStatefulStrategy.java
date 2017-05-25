@@ -4,6 +4,7 @@ import javax.annotation.Nullable;
 
 import org.cryptocoinpartners.schema.BaseStrategy;
 import org.cryptocoinpartners.schema.Fill;
+import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderBuilder;
 
@@ -25,7 +26,7 @@ public abstract class SimpleStatefulStrategy extends BaseStrategy {
     /** Override this method to build the Order to use when entering a trade.  If you return null, then the trade
      * entry will be aborted and you will stay out of the trade */
     @Nullable
-    protected abstract OrderBuilder.CommonOrderBuilder buildEntryOrder();
+    protected abstract OrderBuilder.CommonOrderBuilder buildEntryOrder(Market market);
 
     @Nullable
     protected abstract OrderBuilder.CommonOrderBuilder buildStopOrder(Fill fill);
@@ -39,9 +40,9 @@ public abstract class SimpleStatefulStrategy extends BaseStrategy {
      * You must call this method when your Strategy wants to enter a trade.  If the strategy is not ready to trade,
      * nothing will happen
      */
-    protected void enterTrade() {
+    protected void enterTrade(Market market) {
         if (state == State.READY) {
-            OrderBuilder.CommonOrderBuilder orderBuilder = buildEntryOrder();
+            OrderBuilder.CommonOrderBuilder orderBuilder = buildEntryOrder(market);
             if (orderBuilder != null) {
                 entryOrder = orderBuilder.getOrder();
                 //entryOrder.

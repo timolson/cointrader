@@ -18,7 +18,7 @@
                         <MaxHistory>30</MaxHistory>
 			<timeBasedFileNamingAndTriggeringPolicy
 				class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
-				<maxFileSize>500MB</maxFileSize>
+				<maxFileSize>5000MB</maxFileSize>
 			</timeBasedFileNamingAndTriggeringPolicy>
 		</rollingPolicy>
     </appender>
@@ -35,16 +35,17 @@
         <appender-ref ref="CONSOLE"/>
     </root>
  <logger name="com.mchange.v2.c3p0" level="INFO"/>
- <logger name="org.hibernate.transaction" level="INFO"/>
+   <logger name="org.hibernate.transaction" level="INFO"/>
 
        		<!--  <logger name="org.hibernate.ejb.HibernatePersistence" level="trace"/>   -->
-       		<!--<logger name="org.hibernate.type" level="ALL" /> -->
- 	   		<!--<	<logger name="org.hibernate" level="DEBUG" /> -->
- 	    	 <logger name="com.espertech.esper" level="DEBUG" />
+       	 <!--  <logger name="org.hibernate.type" level="ALL" /> -->
+       	   <!--  	   <logger name="org.hibernate.SQL" level="DEBUG" />  -->
+   <!--  <logger name="org.hibernate.type" level="TRACE" /> -->
+ 	    	<!--<logger name="com.espertech.esper" level="DEBUG" />-->
 
      <logger name="org.cryptocoinpartners" level="DEBUG"/>
   <logger name="com.xeiam.xchange" level="DEBUG" />
-	<!--<logger name="si.mazi.rescu" level="TRACE" />-->
+	  <logger name="si.mazi.rescu" level="INFO" />
     <!--<logger name="org.cryptocoinpartners.module" level="debug"/>-->
    <!-- <logger name="org.hibernate.tool.hbm2ddl.SchemaExport" level="off"/>-->
     <!--<logger name="org.cryptocoinpartners.util.ConfigUtil" level="debug"/>-->

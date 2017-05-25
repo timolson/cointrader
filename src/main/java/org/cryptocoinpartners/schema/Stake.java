@@ -2,7 +2,6 @@ package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
 
-import javax.persistence.Cacheable;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.ManyToOne;
@@ -16,7 +15,7 @@ import org.cryptocoinpartners.schema.dao.Dao;
  * @author Tim Olson
  */
 @Entity
-@Cacheable
+//@Cacheable
 public class Stake extends EntityBase {
 
     public Stake(Owner owner, BigDecimal stake, Portfolio portfolio) {
@@ -30,7 +29,8 @@ public class Stake extends EntityBase {
         return owner;
     }
 
-    @Column(precision = 30, scale = 15)
+    // @Column(precision = c, scale = 15)
+    @Column(precision = 3, scale = 2)
     public BigDecimal getStake() {
         return stake;
     }
@@ -88,6 +88,13 @@ public class Stake extends EntityBase {
     }
 
     @Override
+    @Transient
+    public void setDao(Dao dao) {
+        // TODO Auto-generated method stub
+        //  return null;
+    }
+
+    @Override
     public void delete() {
         // TODO Auto-generated method stub
 
@@ -97,5 +104,17 @@ public class Stake extends EntityBase {
     public EntityBase refresh() {
         // TODO Auto-generated method stub
         return null;
+    }
+
+    @Override
+    public void prePersist() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void postPersist() {
+        // TODO Auto-generated method stub
+
     }
 }

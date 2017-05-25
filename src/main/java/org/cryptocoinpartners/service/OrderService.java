@@ -13,50 +13,65 @@ import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.SpecificOrder;
+import org.cryptocoinpartners.schema.Tradeable;
 
 @Service
 public interface OrderService {
 
     // send new Order events to the correct market
-    public void placeOrder(Order order) throws Throwable;
+    public boolean placeOrder(Order order) throws Throwable;
 
     void init();
 
-    public Collection<SpecificOrder> getPendingLongOpenOrders(Portfolio portfolio);
+    public Collection<SpecificOrder> getPendingLongOpenOrders(Portfolio portfolio, Market market);
 
-    public Collection<SpecificOrder> getPendingLongCloseOrders(Portfolio portfolio);
+    public Collection<SpecificOrder> getPendingLongOpenOrders(Portfolio portfolio, Market market, double orderGroup);
 
-    public Collection<SpecificOrder> getPendingShortOpenOrders(Portfolio portfolio);
+    public Collection<SpecificOrder> getPendingLongCloseOrders(Portfolio portfolio, Market market);
 
-    public Collection<SpecificOrder> getPendingShortCloseOrders(Portfolio portfolio);
+    public Collection<SpecificOrder> getPendingLongCloseOrders(Portfolio portfolio, Market market, double orderGroup);
 
-    public Collection<SpecificOrder> getPendingCloseOrders(Portfolio portfolio);
+    public Collection<SpecificOrder> getPendingShortOpenOrders(Portfolio portfolio, Market market);
 
-    public Collection<SpecificOrder> getPendingShortCloseOrders(Portfolio portfolio, ExecutionInstruction execInst);
+    public Collection<SpecificOrder> getPendingShortOpenOrders(Portfolio portfolio, Market market, double orderGroup);
 
-    public Collection<SpecificOrder> getPendingLongCloseOrders(Portfolio portfolio, ExecutionInstruction execInst);
+    public Collection<SpecificOrder> getPendingShortCloseOrders(Portfolio portfolio, Market market);
 
-    public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio);
+    public Collection<SpecificOrder> getPendingShortCloseOrders(Portfolio portfolio, Market market, double orderGroup);
 
-    public Collection<Order> getPendingStopOrders(Portfolio portfolio);
+    public Collection<SpecificOrder> getPendingCloseOrders(Portfolio portfolio, Market market);
 
-    public void handleCancelSpecificOrder(SpecificOrder specificOrder);
+    public Collection<SpecificOrder> getPendingShortCloseOrders(Portfolio portfolio, ExecutionInstruction execInst, Market market);
 
-    public void handleCancelGeneralOrder(GeneralOrder generalOrder);
+    public Collection<SpecificOrder> getPendingShortCloseOrders(Portfolio portfolio, ExecutionInstruction execInst, Market market, double interval);
 
-    public void handleCancelAllShortStopOrders(Portfolio portfolio, Market market);
+    public Collection<SpecificOrder> getPendingLongCloseOrders(Portfolio portfolio, ExecutionInstruction execInst, Market market);
 
-    public void handleCancelAllLongStopOrders(Portfolio portfolio, Market market);
+    public Collection<SpecificOrder> getPendingLongCloseOrders(Portfolio portfolio, ExecutionInstruction execInst, Market market, double interval);
 
-    public void handleCancelAllSpecificOrders(Portfolio portfolio, Market market);
+    public Collection<SpecificOrder> getPendingOrders(Portfolio portfolio, Market market);
 
-    public void adjustShortStopLoss(Amount price, Amount stopAdjustment, Boolean force);
+    public Collection<Order> getPendingStopOrders(Portfolio portfolio, Market market);
 
-    public void adjustLongStopLoss(Amount price, Amount stopAdjustment, Boolean force);
+    public boolean handleCancelSpecificOrder(SpecificOrder specificOrder);
 
-    public void adjustShortTargetPrices(Amount price, Amount targetAdjustment);
+    public boolean handleCancelGeneralOrder(GeneralOrder generalOrder);
 
-    public void adjustLongTargetPrices(Amount price, Amount targetAdjustment);
+    public Collection<Order> handleCancelAllShortStopOrders(Portfolio portfolio, Market market);
+
+    public Collection<Order> handleCancelAllLongStopOrders(Portfolio portfolio, Market market);
+
+    public Collection<Order> handleCancelAllLongStopOrders(Portfolio portfolio, Market market, double orderGroup);
+
+    public Collection<SpecificOrder> handleCancelAllSpecificOrders(Portfolio portfolio, Market market);
+
+    public void adjustShortStopLoss(Amount price, Amount stopAdjustment, Boolean force, double orderGroup);
+
+    public void adjustLongStopLoss(Amount price, Amount stopAdjustment, Boolean force, double orderGroup);
+
+    public void adjustShortTargetPrices(Amount price, Amount targetAdjustment, double orderGroup);
+
+    public void adjustLongTargetPrices(Amount price, Amount targetAdjustment, double orderGroup);
 
     // DO PLENTY OF LOGGING IN THIS METHOD
     // initialize data interface with Xchange
@@ -79,27 +94,31 @@ public interface OrderService {
     //             - this handler should try the next best market
     //                 - this can be based on data from time of placement, or from the current data interface
 
-    public OrderState getOrderState(Order o);
-
-    void cancelOrder(Order order);
+    public OrderState getOrderState(Order o) throws IllegalStateException;
 
     Collection<Order> getPendingOrders();
 
-    void handleCancelAllOpeningSpecificOrders(Portfolio portfolio, Market market);
+    Collection<SpecificOrder> handleCancelAllOpeningSpecificOrders(Portfolio portfolio, Market market);
 
-    void handleCancelAllLongOpeningSpecificOrders(Portfolio portfolio, Market market);
+    Collection<SpecificOrder> handleCancelAllLongOpeningSpecificOrders(Portfolio portfolio, Market market);
 
-    void handleCancelAllLongOpeningGeneralOrders(Portfolio portfolio, Market market);
+    Collection<SpecificOrder> handleCancelAllLongOpeningSpecificOrders(Portfolio portfolio, Market market, double interval);
 
-    void handleCancelAllShortOpeningSpecificOrders(Portfolio portfolio, Market market);
+    Collection<Order> handleCancelAllLongOpeningGeneralOrders(Portfolio portfolio, Market market);
 
-    void handleCancelAllShortOpeningGeneralOrders(Portfolio portfolio, Market market);
+    Collection<Order> handleCancelAllLongOpeningGeneralOrders(Portfolio portfolio, Market market, double interval);
 
-    void handleCancelAllClosingSpecificOrders(Portfolio portfolio, Market market);
+    Collection<SpecificOrder> handleCancelAllShortOpeningSpecificOrders(Portfolio portfolio, Market market);
 
-    void handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market, ExecutionInstruction execInst);
+    Collection<Order> handleCancelAllShortOpeningGeneralOrders(Portfolio portfolio, Market market);
 
-    void handleCancelAllShortClosingSpecificOrders(Portfolio portfolio, Market market, ExecutionInstruction execInst);
+    Collection<SpecificOrder> handleCancelAllClosingSpecificOrders(Portfolio portfolio, Market market);
+
+    Collection<SpecificOrder> handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market, ExecutionInstruction execInst, double orderGroup);
+
+    Collection<SpecificOrder> handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market, ExecutionInstruction execInst);
+
+    Collection<SpecificOrder> handleCancelAllShortClosingSpecificOrders(Portfolio portfolio, Market market, ExecutionInstruction execInst);
 
     Collection<SpecificOrder> getPendingOrders(Market market, Portfolio portfolio);
 
@@ -109,13 +128,21 @@ public interface OrderService {
 
     Order getPendingTriggerOrder(Order order);
 
-    void handleCancelSpecificOrderByParentFill(Fill parentFill) throws OrderNotFoundException;
+    boolean handleCancelSpecificOrderByParentFill(Fill parentFill) throws OrderNotFoundException;
 
     void updateWorkingOrderQuantity(Order order, Amount quantity);
 
     Collection<Order> getPendingShortStopOrders(Portfolio portfolio, Market market);
 
+    Collection<Order> getPendingShortStopOrders(Portfolio portfolio, Market market, double interval);
+
+    Collection<Order> getPendingShortTriggerOrders(Portfolio portfolio, Market market, double interval);
+
     Collection<Order> getPendingLongStopOrders(Portfolio portfolio, Market market);
+
+    Collection<Order> getPendingLongStopOrders(Portfolio portfolio, Market market, double interval);
+
+    Collection<Order> getPendingLongTriggerOrders(Portfolio portfolio, Market market, double interval);
 
     void handleCancelAllTriggerOrdersByParentFill(Fill parentFill);
 
@@ -124,5 +151,47 @@ public interface OrderService {
     Collection<SpecificOrder> cancelSpecificOrder(Collection<SpecificOrder> orders);
 
     public Collection<Fill> getFills(Market market, Portfolio portfolio);
+
+    void handleFillProcessing(Fill fill);
+
+    Collection<SpecificOrder> getPendingLongOrders();
+
+    Collection<SpecificOrder> getPendingShortOrders();
+
+    Collection<SpecificOrder> handleCancelAllShortClosingSpecificOrders(Portfolio portfolio, Market market);
+
+    Collection<SpecificOrder> handleCancelAllShortClosingSpecificOrders(Portfolio portfolio, Market market, double orderGroup);
+
+    Collection<SpecificOrder> handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market);
+
+    Collection<SpecificOrder> handleCancelAllLongClosingSpecificOrders(Portfolio portfolio, Market market, double orderGroup);
+
+    Collection<Order> getRoutedLongStopOrders(Portfolio portfolio, Market market);
+
+    Collection<Order> getRoutedShortStopOrders(Portfolio portfolio, Market market);
+
+    Collection<SpecificOrder> handleCancelAllShortOpeningSpecificOrders(Portfolio portfolio, Market market, double interval);
+
+    Collection<Order> handleCancelAllShortOpeningGeneralOrders(Portfolio portfolio, Market market, double interval);
+
+    Order triggerOrder(Order triggeredOrder, String comment, Collection<Order> triggeredOrders);
+
+    void adjustLongStopLossByAmount(Amount price, Boolean force, double orderGroup, double scaleFactor);
+
+    void adjustShortStopLossByAmount(Amount price, Boolean force, double orderGroup, double scaleFactor);
+
+    void sortLongStopOrders(Tradeable market);
+
+    void sortShortStopOrders(Tradeable market);
+
+    boolean handleCancelOrders(Collection<Order> orders);
+
+    boolean handleCancelOrder(Order order);
+
+    void lockTriggerOrders();
+
+    void unlockTriggerOrders();
+
+    // CountDownLatch getFillProcessingLatch();
 
 }

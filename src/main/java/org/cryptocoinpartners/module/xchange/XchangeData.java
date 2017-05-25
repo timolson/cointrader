@@ -5,8 +5,10 @@ import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -33,6 +35,17 @@ import org.cryptocoinpartners.util.RateLimiter;
 import org.cryptocoinpartners.util.XchangeUtil;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
+import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.Order.OrderType;
+import org.knowm.xchange.dto.marketdata.OrderBook;
+import org.knowm.xchange.dto.marketdata.Trade;
+import org.knowm.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.okcoin.FuturesContract;
+import org.knowm.xchange.service.streaming.ExchangeEvent;
+import org.knowm.xchange.service.streaming.ExchangeEventType;
+import org.knowm.xchange.service.streaming.ExchangeStreamingConfiguration;
+import org.knowm.xchange.service.streaming.StreamingExchangeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,17 +54,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.xeiam.xchange.currency.CurrencyPair;
-import com.xeiam.xchange.dto.Order.OrderType;
-import com.xeiam.xchange.dto.marketdata.OrderBook;
-import com.xeiam.xchange.dto.marketdata.Trade;
-import com.xeiam.xchange.dto.marketdata.Trades;
-import com.xeiam.xchange.dto.trade.LimitOrder;
-import com.xeiam.xchange.okcoin.FuturesContract;
-import com.xeiam.xchange.service.streaming.ExchangeEvent;
-import com.xeiam.xchange.service.streaming.ExchangeEventType;
-import com.xeiam.xchange.service.streaming.ExchangeStreamingConfiguration;
-import com.xeiam.xchange.service.streaming.StreamingExchangeService;
 
 /**
  * @author Tim Olson
@@ -61,6 +63,7 @@ public class XchangeData {
 
     @Inject
     public XchangeData(Context context, Configuration config, BookFactory bookFactory, TradeFactory tradeFactory) {
+        instanceExists = true;
         this.context = context;
         this.bookFactory = bookFactory;
         this.tradeFactory = tradeFactory;
@@ -109,7 +112,7 @@ public class XchangeData {
 
     private void initExchange(@Nullable String helperClassName, @Nullable String streamingConfigClassName, int queries, Duration per,
             Exchange coinTraderExchange, List listings, int retryCount) {
-        com.xeiam.xchange.Exchange xchangeExchange = XchangeUtil.getExchangeForMarket(coinTraderExchange);
+        org.knowm.xchange.Exchange xchangeExchange = XchangeUtil.getExchangeForMarket(coinTraderExchange);
         StreamingExchangeService streamingDataService;
         Helper helper = null;
         if (helperClassName != null && !helperClassName.isEmpty()) {
@@ -119,6 +122,7 @@ public class XchangeData {
                 final Class<?> helperClass = getClass().getClassLoader().loadClass(helperClassName);
                 try {
                     helper = (Helper) helperClass.newInstance();
+                    exchangeHelpers.put(coinTraderExchange, helper);
                 } catch (InstantiationException | IllegalAccessException e) {
                     log.error("Could not initialize XchangeData because helper class " + helperClassName + " could not be instantiated ", e);
                     return;
@@ -133,8 +137,6 @@ public class XchangeData {
         }
 
         ExchangeStreamingConfiguration streamingConfiguration = null;
-        if (streamingConfigClassName != null && !streamingConfigClassName.isEmpty()) {
-        }
         List<Market> markets = new ArrayList<>(listings.size());
         Market market;
         //  ExchangeStreamingConfiguration streamingConfiguration = new OkCoinExchangeStreamingConfiguration();
@@ -145,7 +147,7 @@ public class XchangeData {
             markets.add(market);
         }
 
-        if (streamingConfigClassName != null) {
+        if (streamingConfigClassName != null && !streamingConfigClassName.isEmpty()) {
             RateLimiter rateLimiter = new RateLimiter(queries, per);
             // streamingDataService = xchangeExchange.getStreamingExchangeService(streamingConfiguration);
             for (Iterator<Market> im = markets.iterator(); im.hasNext();) {
@@ -181,10 +183,29 @@ public class XchangeData {
 
             //   (@Nullable String helperClassName, @Nullable String streamingConfigClassName, int queries, Duration per,
             //         Exchange coinTraderExchange, List listings
+            //       for (Iterator<Market> im = markets.iterator(); im.hasNext(); rateLimiter.execute(new FetchTradesRunnable(context, helperClassName,
+            //             streamingConfigClassName, queries, per, coinTraderExchange, retryCount, xchangeExchange, market, rateLimiter, helper)))
+            //       market = im.next();
 
-            for (Iterator<Market> im = markets.iterator(); im.hasNext(); rateLimiter.execute(new FetchTradesRunnable(context, helperClassName,
-                    streamingConfigClassName, queries, per, coinTraderExchange, retryCount, xchangeExchange, market, rateLimiter, helper)))
-                market = im.next();
+            //TODO need to inialise data maps
+            for (Market cointraderMarket : markets) {
+                // add to various shared mapps
+                lastTradeIds.put(cointraderMarket, 0L);
+                lastTradeTimes.put(cointraderMarket, 0L);
+                failedTradeCounts.put(cointraderMarket, 0);
+                failedBookCounts.put(cointraderMarket, 0);
+                retryCounts.put(cointraderMarket, retryCount);
+
+                rateLimiter.execute(new FetchTradesRunnable(context, coinTraderExchange, cointraderMarket, rateLimiter));
+            }
+
+            // for (Iterator<Market> im = markets.iterator(); im.hasNext(); )
+            //   market = im.next();
+
+            //TODO need to inialise data maps
+
+            // for (Iterator<Market> im = markets.iterator(); im.hasNext(); )
+            //   market = im.next();
 
             return;
         }
@@ -197,7 +218,7 @@ public class XchangeData {
         private ExchangeStreamingConfiguration streamingConfiguration;
         private CurrencyPair[] pairs;
 
-        public StreamTradesRunnable(Context context, com.xeiam.xchange.Exchange xchangeExchange, Market market, RateLimiter rateLimiter,
+        public StreamTradesRunnable(Context context, org.knowm.xchange.Exchange xchangeExchange, Market market, RateLimiter rateLimiter,
                 String streamingConfigClassName, @Nullable Helper helper) {
             this.context = context;
             this.rateLimiter = rateLimiter;
@@ -350,7 +371,7 @@ public class XchangeData {
                         //System.out.println("---> " + event.getPayload() + " " + event.getEventType());
 
                         if (event.getEventType().equals(ExchangeEventType.TRADE)) {
-                            com.xeiam.xchange.dto.marketdata.Trade trade = (com.xeiam.xchange.dto.marketdata.Trade) event.getPayload();
+                            org.knowm.xchange.dto.marketdata.Trade trade = (org.knowm.xchange.dto.marketdata.Trade) event.getPayload();
                             long remoteId = Long.valueOf(String.valueOf(dateFormat.format(trade.getTimestamp()).concat(trade.getId()))).longValue();
                             if (remoteId > lastTradeId) {
 
@@ -387,7 +408,7 @@ public class XchangeData {
 
                         }
                         if (event.getEventType().equals(ExchangeEventType.DISCONNECT)) {
-                            log.error(this.getClass().getSimpleName() + " Disconnected");
+                            log.info(this.getClass().getSimpleName() + " Disconnected");
                             //Thread.currentThread().interrupt();
                             //dataService.
                             // dataService.disconnect();
@@ -437,37 +458,12 @@ public class XchangeData {
         private long lastTradeId;
     }
 
-    private class FetchTradesRunnable implements Runnable {
-
-        private final Helper helper;
-        DateFormat dateFormat = new SimpleDateFormat("ddMMyy");
-
-        //    @Nullable String helperClassName, @Nullable String streamingConfigClassName, int queries, Duration per,
-        //  Exchange coinTraderExchange, List listings
-
-        public FetchTradesRunnable(Context context, @Nullable String helperClassName, @Nullable String streamingConfigClassName, int queries, Duration per,
-                Exchange coinTraderExchange, int restartCount, com.xeiam.xchange.Exchange xchangeExchange, Market market, RateLimiter rateLimiter,
-                @Nullable Helper helper) {
-
-            this.helperClassName = helperClassName;
-            this.streamingConfigClassName = streamingConfigClassName;
-            this.queries = queries;
-            this.period = per;
-            this.coinTraderExchange = coinTraderExchange;
-            this.restartCount = restartCount;
-
-            this.context = context;
-            this.market = market;
-            this.rateLimiter = rateLimiter;
-            this.xchangeExchange = xchangeExchange;
-            this.helper = helper;
-            this.prompt = market.getListing().getPrompt();
-            pair = XchangeUtil.getCurrencyPairForListing(market.getListing());
-            contract = prompt == null ? null : XchangeUtil.getContractForListing(market.getListing());
-
-            lastTradeTime = 0;
-            lastTradeId = 0;
-            // EntityManager entityManager = PersistUtil.createEntityManager();
+    public synchronized Collection<org.cryptocoinpartners.schema.Trade> getTrades(Market market, Exchange coinTraderExchange) throws Throwable {
+        Prompt prompt = market.getListing().getPrompt();
+        ArrayList<org.cryptocoinpartners.schema.Trade> ourTrades = new ArrayList<org.cryptocoinpartners.schema.Trade>();
+        CurrencyPair pair = XchangeUtil.getCurrencyPairForListing(market.getListing());
+        FuturesContract contract = prompt == null ? null : XchangeUtil.getContractForListing(market.getListing());
+        if (lastTradeTimes.get(market) == null || lastTradeTimes.get(market) == 0 || lastTradeIds.get(market) == null || lastTradeIds.get(market) == 0) {
             try {
 
                 List<org.cryptocoinpartners.schema.Trade> results = EM.queryList(org.cryptocoinpartners.schema.Trade.class,
@@ -475,202 +471,262 @@ public class XchangeData {
 
                 for (org.cryptocoinpartners.schema.Trade trade : results) {
                     // org.cryptocoinpartners.schema.Trade trade = query.getSingleResult();
-                    long millis = trade.getTime().getMillis();
-                    if (millis > lastTradeTime)
-                        lastTradeTime = millis;
-                    // todo this is broken and assumes an increasing integer remote key
-                    // Long remoteId = Long.valueOf(trade.getRemoteKey().concat(String.valueOf(trade.getTimestamp())));
+                    //long millis = Math.round(trade.getTime().getMillis() / 86400000);
+
+                    if (trade.getTime().getMillis() > lastTradeTimes.get(market))
+                        lastTradeTimes.put(market, trade.getTime().getMillis());
+                    /*  Calendar cal = GregorianCalendar.getInstance();
+                      cal.setTimeInMillis(lastTradeTime);
+                      cal.set(Calendar.MILLISECOND, 0);
+                      cal.set(Calendar.SECOND, 0);
+                      cal.set(Calendar.MINUTE, 0);
+                      cal.set(Calendar.HOUR_OF_DAY, 0);
+                    */// long millis = cal.getTime().getTime();
+                      //  trade.getTime().get
+                      // todo this is broken and assumes an increasing integer remote key
+                      // Long remoteId = Long.valueOf(trade.getRemoteKey().concat(String.valueOf(trade.getTimestamp())));
+                      //Long remoteId = Long.valueOf(trade.getRemoteKey());
+                      //lastTradeTime
+                      //Long remoteId = cal.getTime().getTime() + Long.valueOf(trade.getRemoteKey());
                     Long remoteId = Long.valueOf(trade.getRemoteKey());
-                    if (remoteId > lastTradeId)
-                        lastTradeId = remoteId;
+                    // Long remoteId=trade.getTime().getMillis();
+                    //Long remoteId = millis+ Long.valueOf(trade.getRemoteKey());
+
+                    // Long remoteId = Long.valueOf(String.valueOf(millis)+ Long.valueOf(trade.getRemoteKey()));
+
+                    //   Long.valueOf(String.valueOf(lastTradeTime).concat(trade.getRemoteKey())).longValue();
+                    if (remoteId > lastTradeIds.get(market))
+                        lastTradeIds.put(market, remoteId);
+
                 }
             } catch (Exception | Error e) {
-                log.error(this.getClass().getSimpleName() + ":FetchTradesRunnable Unabel to query last trade id");
+                log.error(this.getClass().getSimpleName() + ":FetchTradesRunnable Unabel to query last trade id", e);
             }
+        }
+
+        try {
+            Object params[];
+            if (exchangeHelpers.get(coinTraderExchange) != null)
+                params = exchangeHelpers.get(coinTraderExchange).getTradesParameters(pair, lastTradeTimes.get(market), lastTradeIds.get(market));
+            else {
+                if (contract == null)
+                    params = new Object[] {};
+                else
+                    params = new Object[] { contract };
+
+            }
+            log.trace("Attempting to get trades from data service");
+            Trades tradeSpec = XchangeUtil.getExchangeForMarket(coinTraderExchange).getPollingMarketDataService().getTrades(pair, params);
+            if (exchangeHelpers.get(coinTraderExchange) != null)
+                exchangeHelpers.get(coinTraderExchange).handleTrades(tradeSpec);
+            List<org.knowm.xchange.dto.marketdata.Trade> trades = tradeSpec.getTrades();
+            log.trace("sorting trades by oldest first : " + trades);
+
+            Collections.sort(trades, timeOrderIdComparator);
+
+            //   Iterator<Trade> ilt = trades.iterator();
+            //   log.trace("itterating over sorted trades: " + trades.size());
+
+            for (Trade trade : trades) {
+                // do {
+                //   if (!ilt.hasNext())
+                //     break;
+                // org.knowm.xchange.dto.marketdata.Trade trade = ilt.next();
+                /* Calendar cal = GregorianCalendar.getInstance();
+                 cal.setTimeInMillis(trade.getTimestamp().getTime());
+                 cal.set(Calendar.MILLISECOND, 0);
+                 cal.set(Calendar.SECOND, 0);
+                 cal.set(Calendar.MINUTE, 0);
+                 cal.set(Calendar.HOUR_OF_DAY, 0);
+                 // long remoteId = cal.getTime().getTime() + Long.valueOf(trade.getId());
+                */long remoteId = Long.valueOf(trade.getId());
+                //   long remoteId = trade.getTimestamp().getTime() + Long.valueOf(trade.getId());
+
+                //  trade.getId().longValue();
+                if ((trade.getTimestamp().getTime() > lastTradeTimes.get(market))
+                        || (trade.getTimestamp().getTime() == lastTradeTimes.get(market) && remoteId > lastTradeTimes.get(market))) {
+                    Instant tradeInstant = new Instant(trade.getTimestamp());
+                    BigDecimal volume = (trade.getType() == OrderType.ASK) ? trade.getTradableAmount().negate() : trade.getTradableAmount();
+                    log.trace("Creating new cointrader trades from: " + trade);
+
+                    org.cryptocoinpartners.schema.Trade ourTrade = tradeFactory.create(market, tradeInstant, trade.getId(), trade.getPrice(), volume);
+                    ourTrades.add(ourTrade);
+                    // context.publish(ourTrade);
+                    if (ourTrade.getDao() == null)
+                        System.out.println("duffer");
+                    lastTradeTimes.put(market, tradeInstant.getMillis());
+                    lastTradeIds.put(market, remoteId);
+
+                }
+
+            }
+            failedTradeCounts.put(market, 0);
+            return ourTrades;
+
+        } catch (Exception | Error e) {
+            Integer tradeFailureCount = failedTradeCounts.get(market);
+            tradeFailureCount++;
+            failedTradeCounts.put(market, tradeFailureCount);
+
+            log.info(this.getClass().getSimpleName() + ":getTrades Unabel to get trade for market " + market + " pair " + pair + ".  Failure "
+                    + tradeFailureCount + " of " + retryCounts.get(market) + ".");
+            if (tradeFailureCount >= retryCounts.get(market)) {
+                //try {
+                //  if (rateLimiter.getRunnables() == null || rateLimiter.getRunnables().isEmpty() || rateLimiter.remove(this)) {
+
+                log.error(this.getClass().getSimpleName() + ":getTrades Unabel to get trade for market " + market + " pair " + pair + " for "
+                        + tradeFailureCount + " of " + retryCounts.get(market) + " time. Resetting Data Service Connection.", e);
+                XchangeUtil.resetExchange(coinTraderExchange);
+                // dataService = xchangeExchange.getPollingMarketDataService();
+                failedTradeCounts.put(market, 0);
+                // .// tradeFailureCount = 0;
+                failedBookCounts.put(market, 0);
+                throw e;
+                //}
+                // } catch (Throwable e) {
+                // TODO Auto-generated catch block
+                //       throw e;
+                // }
+                //Thread.currentThread().
+
+                // dataService = xchangeExchange.getPollingMarketDataService();
+
+            }
+            return null;
+        }
+
+    }
+
+    public static boolean exists() {
+        return instanceExists;
+
+    }
+
+    public synchronized Book getBook(Market market, Exchange coinTraderExchange) throws Exception {
+        Prompt prompt = market.getListing().getPrompt();
+        CurrencyPair pair = XchangeUtil.getCurrencyPairForListing(market.getListing());
+        FuturesContract contract = prompt == null ? null : XchangeUtil.getContractForListing(market.getListing());
+
+        try {
+            Object params[];
+            if (exchangeHelpers.get(coinTraderExchange) != null)
+                params = exchangeHelpers.get(coinTraderExchange).getOrderBookParameters(pair);
+            else {
+                if (contract == null)
+                    params = new Object[] {};
+                else
+                    params = new Object[] { contract };
+
+            }
+            log.trace("Attempting to get book from data service");
+
+            OrderBook orderBook = XchangeUtil.getExchangeForMarket(coinTraderExchange).getPollingMarketDataService().getOrderBook(pair, params);
+            if (exchangeHelpers.get(coinTraderExchange) != null)
+                exchangeHelpers.get(coinTraderExchange).handleOrderBook(orderBook);
+            log.trace("Attempting create book from: " + orderBook);
+            Book book = bookFactory.create(new Instant(orderBook.getTimeStamp()), market);
+            LimitOrder limitOrder;
+            // sort lowerst to highest limit price
+            List<LimitOrder> asks = orderBook.getAsks();
+            log.trace("Attempting to sort asks: " + asks);
+
+            Collections.sort(asks, limitPriceComparator);
+            // sort highest to lowest limit price
+            List<LimitOrder> bids = orderBook.getBids();
+            log.trace("Attempting to sort bids: " + bids);
+
+            Collections.sort(bids, Collections.reverseOrder(limitPriceComparator));
+            // need to sort bids
+            for (Iterator<LimitOrder> itb = bids.iterator(); itb.hasNext(); book.addBid(limitOrder.getLimitPrice(), limitOrder.getTradableAmount()))
+                limitOrder = itb.next();
+
+            // neet to sort asks
+            for (Iterator<LimitOrder> ita = asks.iterator(); ita.hasNext(); book.addAsk(limitOrder.getLimitPrice(), limitOrder.getTradableAmount()))
+                limitOrder = ita.next();
+
+            book.build();
+            //        log.debug("publish book:" + book.getId());
+
+            failedBookCounts.put(market, 0);
+            return book;
+            //
+
+        } catch (Exception | Error e) {
+            Integer bookFailureCount = failedTradeCounts.get(market);
+            bookFailureCount++;
+            failedTradeCounts.put(market, bookFailureCount);
+            log.info(this.getClass().getSimpleName() + ":getTrades Unabel to get trade for market " + market + " pair " + pair + ".  Failure "
+                    + bookFailureCount + " of " + retryCounts.get(market) + ".");
+
+            if ((bookFailureCount >= retryCounts.get(market))) {
+                log.error(this.getClass().getSimpleName() + ":getBook Unabel to get book for market " + market + " pair " + pair + ". Failure "
+                        + bookFailureCount + " of " + retryCounts.get(market) + " . Resetting Data Service Connection.", e);
+                XchangeUtil.resetExchange(coinTraderExchange);
+                failedTradeCounts.put(market, 0);
+                // .// tradeFailureCount = 0;
+                failedBookCounts.put(market, 0);
+                //   failureCount=0;
+                throw e;
+                //}
+                //  } catch (Throwable e) {
+                // TODO Auto-generated catch block
+                //     e.printStackTrace();
+                //   }
+
+            }
+            return null;
+        }
+
+    }
+
+    private class FetchTradesRunnable implements Runnable {
+
+        //TODO Need to make this a callabale with a time out, as sometimes it takes longer the 5 secs for get trades and get book to respond
+
+        DateFormat dateFormat = new SimpleDateFormat("ddMMyy");
+
+        //    @Nullable String helperClassName, @Nullable String streamingConfigClassName, int queries, Duration per,
+        //  Exchange coinTraderExchange, List listings
+
+        public FetchTradesRunnable(Context context, Exchange coinTraderExchange, Market market, RateLimiter rateLimiter) {
+
+            this.coinTraderExchange = coinTraderExchange;
+            this.context = context;
+            this.market = market;
+            this.rateLimiter = rateLimiter;
+
         }
 
         @Override
         public void run() {
             try {
+                rateLimiter.execute(this); // run again. requeue in case we die!
+                Book book = getBook(market, coinTraderExchange);
+                if (book != null && !book.getBids().isEmpty() && !book.getAsks().isEmpty())
+                    context.publish(book);
+                Collection<org.cryptocoinpartners.schema.Trade> trades = getTrades(market, coinTraderExchange);
+                if (trades != null && !trades.isEmpty()) {
 
-                getTrades();
+                    for (org.cryptocoinpartners.schema.Trade trade : trades)
+                        context.publish(trade);
+                }
 
-                getBook();
-            } catch (Exception | Error e) {
-                log.error(this.getClass().getSimpleName() + ":run. Unable to retrive book or trades for market:" + market);
+            } catch (Throwable e) {
+                log.error(this.getClass().getSimpleName() + ":run. Unable to retrive book or trades for market:" + market, e);
                 //Thread.currentThread().
                 // throw e;
                 //Thread.currentThread().interrupt();
                 // throw e;
-            } finally {
-                // getTradesNext = !getTradesNext;
-                rateLimiter.execute(this); // run again. requeue
-
-            }
-        }
-
-        protected void getTrades() throws Exception {
-            try {
-                Object params[];
-                if (helper != null)
-                    params = helper.getTradesParameters(pair, lastTradeTime, lastTradeId);
-                else {
-                    if (contract == null)
-                        params = new Object[] {};
-                    else
-                        params = new Object[] { contract };
-
-                }
-                log.trace("Attempting to get trades from data service");
-                Trades tradeSpec = XchangeUtil.getExchangeForMarket(coinTraderExchange).getPollingMarketDataService().getTrades(pair, params);
-                if (helper != null)
-                    helper.handleTrades(tradeSpec);
-                List<com.xeiam.xchange.dto.marketdata.Trade> trades = tradeSpec.getTrades();
-                log.trace("sorting trades by time and id: " + trades);
-
-                Collections.sort(trades, timeOrderIdComparator);
-
-                //   Iterator<Trade> ilt = trades.iterator();
-                //   log.trace("itterating over sorted trades: " + trades.size());
-
-                for (Trade trade : trades) {
-                    // do {
-                    //   if (!ilt.hasNext())
-                    //     break;
-                    // com.xeiam.xchange.dto.marketdata.Trade trade = ilt.next();
-                    long remoteId = Long.valueOf(String.valueOf(dateFormat.format(trade.getTimestamp()).concat(trade.getId()))).longValue();
-                    if (remoteId > lastTradeId) {
-                        Instant tradeInstant = new Instant(trade.getTimestamp());
-                        BigDecimal volume = (trade.getType() == OrderType.ASK) ? trade.getTradableAmount().negate() : trade.getTradableAmount();
-                        log.trace("Creating new cointrader trades from: " + trade);
-
-                        org.cryptocoinpartners.schema.Trade ourTrade = tradeFactory.create(market, tradeInstant, trade.getId(), trade.getPrice(), volume);
-                        context.publish(ourTrade);
-                        if (ourTrade.getDao() == null)
-                            System.out.println("duffer");
-                        lastTradeTime = tradeInstant.getMillis();
-                        lastTradeId = remoteId;
-                    }
-
-                }
-                tradeFailureCount = 0;
-                return;
-
-            } catch (Exception | Error e) {
-                tradeFailureCount++;
-                log.error(this.getClass().getSimpleName() + ":getTrades Unabel to get trade for market " + market + " pair " + pair + ".  Failure "
-                        + tradeFailureCount + " of " + restartCount + ". Full Stack Trace: " + e);
-                if (tradeFailureCount >= restartCount) {
-                    //try {
-                    //  if (rateLimiter.getRunnables() == null || rateLimiter.getRunnables().isEmpty() || rateLimiter.remove(this)) {
-
-                    log.error(this.getClass().getSimpleName() + ":getTrades Unabel to get trade for market " + market + " pair " + pair + " for "
-                            + tradeFailureCount + " of " + restartCount + " time. Resetting Data Service Connection.");
-                    com.xeiam.xchange.Exchange xchangeExchange = XchangeUtil.resetExchange(coinTraderExchange);
-                    // dataService = xchangeExchange.getPollingMarketDataService();
-                    tradeFailureCount = 0;
-                    bookFailureCount = 0;
-                    throw e;
-                    //}
-                    // } catch (Throwable e) {
-                    // TODO Auto-generated catch block
-                    //       throw e;
-                    // }
-                    //Thread.currentThread().
-
-                    // dataService = xchangeExchange.getPollingMarketDataService();
-
-                }
-            }
-
-        }
-
-        protected void getBook() throws Exception {
-            try {
-                Object params[];
-                if (helper != null)
-                    params = helper.getOrderBookParameters(pair);
-                else {
-                    if (contract == null)
-                        params = new Object[] {};
-                    else
-                        params = new Object[] { contract };
-
-                }
-                log.trace("Attempting to get book from data service");
-
-                OrderBook orderBook = XchangeUtil.getExchangeForMarket(coinTraderExchange).getPollingMarketDataService().getOrderBook(pair, params);
-                if (helper != null)
-                    helper.handleOrderBook(orderBook);
-                log.trace("Attempting create book from: " + orderBook);
-                Book book = bookFactory.create(new Instant(orderBook.getTimeStamp()), market);
-                LimitOrder limitOrder;
-                // sort lowerst to highest limit price
-                List<LimitOrder> asks = orderBook.getAsks();
-                log.trace("Attempting to sort asks: " + asks);
-
-                Collections.sort(asks, limitPriceComparator);
-                // sort highest to lowest limit price
-                List<LimitOrder> bids = orderBook.getBids();
-                log.trace("Attempting to sort bids: " + bids);
-
-                Collections.sort(bids, Collections.reverseOrder(limitPriceComparator));
-                // need to sort bids
-                for (Iterator<LimitOrder> itb = bids.iterator(); itb.hasNext(); book.addBid(limitOrder.getLimitPrice(), limitOrder.getTradableAmount()))
-                    limitOrder = itb.next();
-
-                // neet to sort asks
-                for (Iterator<LimitOrder> ita = asks.iterator(); ita.hasNext(); book.addAsk(limitOrder.getLimitPrice(), limitOrder.getTradableAmount()))
-                    limitOrder = ita.next();
-
-                book.build();
-                //        log.debug("publish book:" + book.getId());
-                context.publish(book);
-                bookFailureCount = 0;
-
-            } catch (Exception | Error e) {
-                bookFailureCount++;
-                log.error(this.getClass().getSimpleName() + ":getTrades Unabel to get trade for market " + market + " pair " + pair + ".  Failure "
-                        + bookFailureCount + " of " + restartCount + ". Full Stack Trace: " + e);
-
-                if ((bookFailureCount >= restartCount)) {
-                    log.error(this.getClass().getSimpleName() + ":getBook Unabel to get book for market " + market + " pair " + pair + ". Failure "
-                            + bookFailureCount + " of " + restartCount + " . Resetting Data Service Connection.");
-                    com.xeiam.xchange.Exchange xchangeExchange = XchangeUtil.resetExchange(coinTraderExchange);
-                    tradeFailureCount = 0;
-                    bookFailureCount = 0;
-                    //   failureCount=0;
-                    throw e;
-                    //}
-                    //  } catch (Throwable e) {
-                    // TODO Auto-generated catch block
-                    //     e.printStackTrace();
-                    //   }
-
-                }
             }
         }
 
         // private final Book.Builder bookBuilder = new Book.Builder();
-        private final boolean getTradesNext = true;
-        private final boolean restarted = false;
-        private final String helperClassName;
-        private final String streamingConfigClassName;
-        private final int queries;
-        private final Duration period;
+
         private final Exchange coinTraderExchange;
-        private final int restartCount;
-        private int tradeFailureCount = 0;
-        private int bookFailureCount = 0;
+
         private final RateLimiter rateLimiter;
         private final Context context;
         private final Market market;
-        private final CurrencyPair pair;
-        private final FuturesContract contract;
-        private long lastTradeTime;
-        private final Prompt prompt;
-        private long lastTradeId;
-        private final com.xeiam.xchange.Exchange xchangeExchange;
 
     }
 
@@ -699,6 +755,12 @@ public class XchangeData {
     private final TradeFactory tradeFactory;
     //  @Inject
     //protected EntityManager entityManager;
-
+    private final HashMap<Exchange, Helper> exchangeHelpers = new HashMap<Exchange, Helper>();
+    private final HashMap<Market, Long> lastTradeIds = new HashMap<Market, Long>();
+    private final HashMap<Market, Long> lastTradeTimes = new HashMap<Market, Long>();
+    private final HashMap<Market, Integer> failedTradeCounts = new HashMap<Market, Integer>();
+    private final HashMap<Market, Integer> failedBookCounts = new HashMap<Market, Integer>();
+    private final HashMap<Market, Integer> retryCounts = new HashMap<Market, Integer>();
     private final Context context;
+    private static boolean instanceExists = false;
 }

@@ -9,6 +9,7 @@ import java.util.Set;
 import javax.inject.Inject;
 
 import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.Tradeable;
 
 /**
  * @author Tim Olson
@@ -19,13 +20,18 @@ public class ListingsCommand extends CommandBase {
     Market markets;
 
     @Override
-    public void run() {
+    public Object call() {
         Set<String> symbols = new HashSet<>();
-        for (Market market : markets.findAll())
-            symbols.add(market.getListing().getSymbol());
+        for (Tradeable tradeable : markets.findAll())
+            if (!tradeable.isSynthetic()) {
+                Market market = (Market) tradeable;
+
+                symbols.add(market.getListing().getSymbol());
+            }
         List<String> sorted = new ArrayList<>(symbols);
         Collections.sort(sorted);
         out.printList(symbols);
+        return true;
     }
 
     @Override

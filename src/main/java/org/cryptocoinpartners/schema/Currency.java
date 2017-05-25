@@ -7,6 +7,7 @@ import javax.persistence.Entity;
 import javax.persistence.NoResultException;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.schema.dao.CurrencyJpaDao;
 import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.util.EM;
@@ -30,7 +31,7 @@ public class Currency extends Asset {
     private static final long serialVersionUID = 5360515183621144962L;
 
     @Inject
-    protected static CurrencyJpaDao currencyDao;
+    protected transient static CurrencyJpaDao currencyDao;
 
     @Inject
     protected transient static CurrencyFactory currencyFactory;
@@ -59,8 +60,9 @@ public class Currency extends Asset {
     static Currency forSymbolOrCreate(String symbol, boolean isFiat, double basis) {
         try {
             Currency currency = forSymbol(symbol);
-            currency.setRevision(currency.getRevision() + 1);
-            currencyDao.persistEntities(currency);
+            //  currency.setRevision(currency.getRevision() + 1);
+
+            // currencyDao.persistEntities(currency);
             return currency;
         } catch (NoResultException e) {
 
@@ -69,7 +71,12 @@ public class Currency extends Asset {
             //Injector.root().injectMembers(currency);
             // final Currency currency = currencyFactory.create(isFiat, symbol, basis);
             currency.setRevision(currency.getRevision() + 1);
-            currencyDao.persistEntities(currency);
+            try {
+                currencyDao.persistEntities(currency);
+            } catch (Throwable e1) {
+                // TODO Auto-generated catch block
+                e1.printStackTrace();
+            }
             return currency;
         }
     }
@@ -81,13 +88,18 @@ public class Currency extends Asset {
         } catch (NoResultException e) {
             final Currency currency = new Currency(isFiat, symbol, basis, multiplier);
             currency.setRevision(currency.getRevision() + 1);
-            currencyDao.persistEntities(currency);
+            try {
+                currencyDao.persistEntities(currency);
+            } catch (Throwable e1) {
+                // TODO Auto-generated catch block
+
+            }
             return currency;
         }
     }
 
     @AssistedInject
-    private Currency(@Assisted boolean fiat, @Assisted String symbol, @Assisted double basis) {
+    public Currency(@Assisted boolean fiat, @Assisted String symbol, @Assisted double basis) {
         super(symbol, basis);
         this.fiat = fiat;
     }
@@ -108,9 +120,16 @@ public class Currency extends Asset {
     }
 
     @Override
-    public void persit() {
+    public synchronized void persit() {
+        this.setPeristanceAction(PersistanceAction.NEW);
+
         this.setRevision(this.getRevision() + 1);
-        currencyDao.persistEntities(this);
+        try {
+            currencyDao.persistEntities(this);
+        } catch (Throwable e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
         // TODO Auto-generated method stub
 
     }
@@ -134,7 +153,27 @@ public class Currency extends Asset {
     }
 
     @Override
+    @Transient
+    public void setDao(Dao dao) {
+        currencyDao = (CurrencyJpaDao) dao;
+        // TODO Auto-generated method stub
+        //  return null;
+    }
+
+    @Override
     public void delete() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void prePersist() {
+        // TODO Auto-generated method stub
+
+    }
+
+    @Override
+    public void postPersist() {
         // TODO Auto-generated method stub
 
     }

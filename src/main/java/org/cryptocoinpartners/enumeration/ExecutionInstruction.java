@@ -22,7 +22,11 @@ public enum ExecutionInstruction {
     /** Order add current order to book */
     MAKER("MAKER"),
     /** Order takes current order of book */
-    TAKER("TAKER");
+    TAKER("TAKER"),
+    /** Manually created order that should not be placed on exchange order of book */
+    MANUAL("MANUAL"),
+    /** Order adds to current order book then after ttl period it takes from current order book */
+    MAKERTOTAKER("MAKERTOTAKER");
 
     private final String enumValue;
 
@@ -112,23 +116,31 @@ public enum ExecutionInstruction {
         synchronized (ExecutionInstruction.values) {
             ExecutionInstruction.values.put(MAKER.enumValue, MAKER);
             ExecutionInstruction.values.put(TAKER.enumValue, TAKER);
+            ExecutionInstruction.values.put(MANUAL.enumValue, MANUAL);
+            ExecutionInstruction.values.put(MAKERTOTAKER.enumValue, MAKERTOTAKER);
 
         }
         synchronized (ExecutionInstruction.valueList) {
             ExecutionInstruction.valueList.add(MAKER);
             ExecutionInstruction.valueList.add(TAKER);
+            ExecutionInstruction.valueList.add(MANUAL);
+            ExecutionInstruction.valueList.add(MAKERTOTAKER);
 
             ExecutionInstruction.valueList = Collections.unmodifiableList(valueList);
         }
         synchronized (ExecutionInstruction.literals) {
             ExecutionInstruction.literals.add(MAKER.enumValue);
             ExecutionInstruction.literals.add(TAKER.enumValue);
+            ExecutionInstruction.literals.add(MANUAL.enumValue);
+            ExecutionInstruction.literals.add(MAKERTOTAKER.enumValue);
 
             ExecutionInstruction.literals = Collections.unmodifiableList(literals);
         }
         synchronized (ExecutionInstruction.names) {
             ExecutionInstruction.names.add("MAKER");
             ExecutionInstruction.names.add("TAKER");
+            ExecutionInstruction.names.add("MANUAL");
+            ExecutionInstruction.names.add("MAKERTOTAKER");
 
             ExecutionInstruction.names = Collections.unmodifiableList(names);
         }

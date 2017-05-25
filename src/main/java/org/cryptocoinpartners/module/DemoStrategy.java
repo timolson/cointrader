@@ -34,7 +34,7 @@ public class DemoStrategy extends SimpleStatefulStrategy {
         // String marketSymbol = config.getString("demostrategy.market","BITFINEX:BTC.USD");
         String marketSymbol = ("BITFINEX:BTC.USD");
 
-        market = context.getInjector().getInstance(Market.class).forSymbol(marketSymbol);
+        market = (Market) context.getInjector().getInstance(Market.class).forSymbol(marketSymbol);
         if (market == null)
             throw new Error("Could not find Market for symbol " + marketSymbol);
         BigDecimal volumeBD = new BigDecimal("1");// 100 satoshis
@@ -62,7 +62,7 @@ public class DemoStrategy extends SimpleStatefulStrategy {
 
     @Override
     @SuppressWarnings("ConstantConditions")
-    protected OrderBuilder.CommonOrderBuilder buildEntryOrder() {
+    protected OrderBuilder.CommonOrderBuilder buildEntryOrder(Market market) {
         if (bestAsk == null)
             return null;
         DiscreteAmount limitPrice = bestBid.getPrice().decrement();

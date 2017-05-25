@@ -1,9 +1,8 @@
 package org.cryptocoinpartners.command;
 
-import org.cryptocoinpartners.schema.Currency;
-
 import java.util.ArrayList;
 
+import org.cryptocoinpartners.schema.Currency;
 
 /**
  * @author Tim Olson
@@ -16,13 +15,14 @@ public class CurrenciesCommand extends CommandBase {
     }
 
     @Override
-    public void run() {
+    public Object call() {
         ArrayList<String> lines = new ArrayList<>();
-        for( String symbol : Currency.allSymbols() ) {
+        for (String symbol : Currency.allSymbols()) {
             Currency currency = Currency.forSymbol(symbol);
-            lines.add(symbol+" "+currency.getBasis());
+            lines.add(symbol + " " + currency.getBasis());
         }
         out.printList(lines);
+        return true;
     }
 
 }

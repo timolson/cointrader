@@ -17,7 +17,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <xchange.version>4.0.1-SNAPSHOT</xchange.version>
+        <xchange.version>4.1.0-SNAPSHOT</xchange.version>
         <slf4j-api.version>1.7.5</slf4j-api.version>
         <hibernate.version>4.3.11.Final</hibernate.version>
         <antlr.version>4.2.2</antlr.version>
@@ -75,6 +75,11 @@
             <artifactId>esper</artifactId>
             <version>4.9.0</version>
         </dependency>
+<dependency>
+    <groupId>org.apache.commons</groupId>
+    <artifactId>commons-math3</artifactId>
+    <version>3.2</version>
+</dependency>
         <dependency>
             <groupId>com.beust</groupId>
             <artifactId>jcommander</artifactId>
@@ -147,6 +152,11 @@
         <dependency>
             <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-campbx</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+                <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-poloniex</artifactId>
             <version>${xchange.version}</version>
         </dependency>
         <dependency>
@@ -224,6 +234,12 @@
 	<artifactId>commons-beanutils</artifactId>
 	<version>1.7.0</version>
 </dependency>
+
+<dependency>
+    <groupId>org.apache.commons</groupId>
+    <artifactId>commons-math3</artifactId>
+    <version>3.6.1</version>
+</dependency>
  
         
         <dependency>
@@ -263,7 +279,13 @@
 			<artifactId>commons-codec</artifactId>
 			<version>1.9</version>
 		</dependency>
-        
+
+
+		<dependency>
+			<groupId>org.python.pypi</groupId>
+			<artifactId>jep</artifactId>
+			<version>3.6.1</version>
+		</dependency>
     </dependencies>
 
 
@@ -375,6 +397,7 @@
             <snapshots/>
             <url>https://oss.sonatype.org/content/repositories/snapshots</url>
         </repository>
+
         <!-- this is for any jars registered in the project's /repo directory -->
         <repository>
             <id>project-local</id>
@@ -382,5 +405,6 @@
             <url>file:${project.basedir}/repo</url>
         </repository>
     </repositories>
+
 
 </project>

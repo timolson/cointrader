@@ -32,7 +32,13 @@ public enum FillType {
     /** TThis will trigger a limit order at the specficed stop price and will move the stop price by the trailing stop ammount as the price changes */
     TRAILING_STOP_LIMIT("TRAILING_STOP_LIMIT"),
     /** This place a limit order and will limit losses on the filled order by selling at the stop price */
+    TRAILING_UNREALISED_STOP_LIMIT("TRAILING_UNREALISED_STOP_LIMIT"),
+    /** This place a limit order and will limit losses on the filled order by selling at the stop price */
     STOP_LOSS("STOP_LOSS"),
+    /** The other order in the pair will be cancelled when the opposit order if filled or partially filled */
+    TRAILING_STOP_LOSS("TRAILING_STOP_LOSS"),
+    /** The other order in the pair will be cancelled when the opposit order if filled or partially filled */
+    TRAILING_UNREALISED_STOP_LOSS("TRAILING_UNREALISED_STOP_LOSS"),
     /** The other order in the pair will be cancelled when the opposit order if filled or partially filled */
     ONE_CANCELS_OTHER("ONE_CANCELS_OTHER"),
     /** The other order in the pair will be cancelled when the opposit order is filled or partially filled */
@@ -132,7 +138,10 @@ public enum FillType {
             FillType.values.put(LIMIT.enumValue, LIMIT);
             FillType.values.put(STOP_LIMIT.enumValue, STOP_LIMIT);
             FillType.values.put(TRAILING_STOP_LIMIT.enumValue, TRAILING_STOP_LIMIT);
+            FillType.values.put(TRAILING_UNREALISED_STOP_LIMIT.enumValue, TRAILING_UNREALISED_STOP_LIMIT);
             FillType.values.put(STOP_LOSS.enumValue, STOP_LOSS);
+            FillType.values.put(TRAILING_STOP_LOSS.enumValue, TRAILING_STOP_LOSS);
+            FillType.values.put(TRAILING_UNREALISED_STOP_LOSS.enumValue, TRAILING_UNREALISED_STOP_LOSS);
             FillType.values.put(ONE_CANCELS_OTHER.enumValue, ONE_CANCELS_OTHER);
             FillType.values.put(MARKET.enumValue, MARKET);
             FillType.values.put(COMPLETED_CANCELS_OTHER.enumValue, COMPLETED_CANCELS_OTHER);
@@ -145,7 +154,10 @@ public enum FillType {
             FillType.valueList.add(LIMIT);
             FillType.valueList.add(STOP_LIMIT);
             FillType.valueList.add(TRAILING_STOP_LIMIT);
+            FillType.valueList.add(TRAILING_UNREALISED_STOP_LIMIT);
             FillType.valueList.add(STOP_LOSS);
+            FillType.valueList.add(TRAILING_STOP_LOSS);
+            FillType.valueList.add(TRAILING_UNREALISED_STOP_LOSS);
             FillType.valueList.add(ONE_CANCELS_OTHER);
             FillType.valueList.add(MARKET);
             FillType.valueList.add(COMPLETED_CANCELS_OTHER);
@@ -158,7 +170,10 @@ public enum FillType {
             FillType.literals.add(LIMIT.enumValue);
             FillType.literals.add(STOP_LIMIT.enumValue);
             FillType.literals.add(TRAILING_STOP_LIMIT.enumValue);
+            FillType.literals.add(TRAILING_UNREALISED_STOP_LIMIT.enumValue);
             FillType.literals.add(STOP_LOSS.enumValue);
+            FillType.literals.add(TRAILING_STOP_LOSS.enumValue);
+            FillType.literals.add(TRAILING_UNREALISED_STOP_LOSS.enumValue);
             FillType.literals.add(ONE_CANCELS_OTHER.enumValue);
             FillType.literals.add(MARKET.enumValue);
             FillType.literals.add(COMPLETED_CANCELS_OTHER.enumValue);
@@ -171,7 +186,11 @@ public enum FillType {
             FillType.names.add("LIMIT");
             FillType.names.add("STOP_LIMIT");
             FillType.names.add("TRAILING_STOP_LIMIT");
+            FillType.names.add("TRAILING_UNREALISED_STOP_LIMIT");
             FillType.names.add("STOP_LOSS");
+            FillType.names.add("TRAILING_STOP_LOSS");
+            FillType.names.add("TRAILING_UNREALISED_STOP_LOSS");
+
             FillType.names.add("ONE_CANCELS_OTHER");
             FillType.names.add("MARKET");
             FillType.names.add("COMPLETED_CANCELS_OTHER");

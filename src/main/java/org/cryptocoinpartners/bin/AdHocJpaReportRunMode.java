@@ -1,27 +1,36 @@
 package org.cryptocoinpartners.bin;
 
-import com.beust.jcommander.Parameter;
-import com.beust.jcommander.Parameters;
-import org.apache.commons.lang.StringUtils;
-import org.cryptocoinpartners.report.AdHocJpaReport;
-import org.cryptocoinpartners.report.Report;
-
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.commons.lang.StringUtils;
+import org.cryptocoinpartners.report.AdHocJpaReport;
+import org.cryptocoinpartners.report.Report;
+
+import com.beust.jcommander.Parameter;
+import com.beust.jcommander.Parameters;
 
 @SuppressWarnings("UnusedDeclaration")
-@Parameters(commandNames = "report-jpa",separators = "",commandDescription = "interprets the command-line args as a JPA query")
-public class AdHocJpaReportRunMode extends ReportRunMode
-{
+@Parameters(commandNames = "report-jpa", separators = "", commandDescription = "interprets the command-line args as a JPA query")
+public class AdHocJpaReportRunMode extends ReportRunMode {
 
     @Override
     protected Report getReport() {
         Iterator<String> quotedStringIter = new Iterator<String>() {
-            private Iterator<String> queryIter = query.iterator();
-            public boolean hasNext() { return queryIter.hasNext(); }
-            public void remove() { throw new Error("Unimplemented"); }
+            private final Iterator<String> queryIter = query.iterator();
+
+            @Override
+            public boolean hasNext() {
+                return queryIter.hasNext();
+            }
+
+            @Override
+            public void remove() {
+                throw new Error("Unimplemented");
+            }
+
+            @Override
             public String next() {
                 String next = queryIter.next();
                 return next.matches(".*\\s.*") ? '\'' + next + '\'' : next;
@@ -32,7 +41,6 @@ public class AdHocJpaReportRunMode extends ReportRunMode
         report.setQueryString(queryStr);
         return report;
     }
-
 
     @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
     @Parameter

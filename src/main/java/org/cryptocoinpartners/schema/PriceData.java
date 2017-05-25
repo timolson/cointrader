@@ -3,6 +3,8 @@ package org.cryptocoinpartners.schema;
 import java.math.BigDecimal;
 
 import javax.annotation.Nullable;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
 import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;
 
@@ -14,6 +16,8 @@ import org.joda.time.Instant;
  * @author Tim Olson
  */
 @MappedSuperclass
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
+//@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public abstract class PriceData extends MarketData {
 
     /**
@@ -23,16 +27,18 @@ public abstract class PriceData extends MarketData {
      * @param priceCount relative to the Market's quoteBasis
      * @param volumeCount relative to the Market's volumeBasis
      */
-    public PriceData(Instant time, @Nullable String remoteKey, Market market, @Nullable Long priceCount, @Nullable Long volumeCount) {
+    public PriceData(Instant time, @Nullable String remoteKey, Tradeable market, @Nullable Long priceCount, @Nullable Long volumeCount) {
         super(time, remoteKey, market);
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
     }
 
-    public PriceData(Instant time, @Nullable String remoteKey, Market market, @Nullable BigDecimal price, @Nullable BigDecimal volume) {
+    public PriceData(Instant time, @Nullable String remoteKey, Tradeable market, BigDecimal price, BigDecimal volume) {
         super(time, remoteKey, market);
+
         this.priceCount = DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis());
         this.volumeCount = DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis());
+
     }
 
     /**
@@ -42,16 +48,18 @@ public abstract class PriceData extends MarketData {
      * @param priceCount relative to the Market's quoteBasis
      * @param volumeCount relative to the Market's volumeBasis
      */
-    public PriceData(Instant time, Instant timeReceived, @Nullable String remoteKey, Market market, @Nullable Long priceCount, @Nullable Long volumeCount) {
+    public PriceData(Instant time, Instant timeReceived, @Nullable String remoteKey, Tradeable market, @Nullable Long priceCount, @Nullable Long volumeCount) {
         super(time, timeReceived, remoteKey, market);
         this.priceCount = priceCount;
         this.volumeCount = volumeCount;
     }
 
-    public PriceData(Instant time, Instant timeReceived, @Nullable String remoteKey, Market market, @Nullable BigDecimal price, @Nullable BigDecimal volume) {
+    public PriceData(Instant time, Instant timeReceived, @Nullable String remoteKey, Tradeable market, BigDecimal price, BigDecimal volume) {
         super(time, timeReceived, remoteKey, market);
+
         this.priceCount = DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis());
         this.volumeCount = DiscreteAmount.roundedCountForBasis(volume, market.getVolumeBasis());
+
     }
 
     public @Nullable
@@ -71,6 +79,7 @@ public abstract class PriceData extends MarketData {
             return null;
         if (price == null)
             price = new DiscreteAmount(priceCount, getMarket().getPriceBasis());
+
         return price;
     }
 
@@ -135,7 +144,7 @@ public abstract class PriceData extends MarketData {
         this.priceCount = priceCount;
     }
 
-    protected void setVolumeCount(Long volumeCount) {
+    public void setVolumeCount(Long volumeCount) {
         this.volumeCount = volumeCount;
     }
 
@@ -143,4 +152,5 @@ public abstract class PriceData extends MarketData {
     private DiscreteAmount volume;
     private Long priceCount;
     private Long volumeCount;
+
 }

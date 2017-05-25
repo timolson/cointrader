@@ -5,6 +5,7 @@ import javax.inject.Inject;
 import org.cryptocoinpartners.enumeration.FeeMethod;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.schema.Amount;
+import org.cryptocoinpartners.schema.Asset;
 import org.cryptocoinpartners.schema.DecimalAmount;
 import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Market;
@@ -207,16 +208,19 @@ public class FeesUtil {
 
     private static Amount calculatePercentagePerUnit(Amount price, Amount amount, double rate, Market market) {
         //BigDecimal precision = BigDecimal.valueOf(market.getPriceBasis());
+        Amount notional = DecimalAmount.ZERO;
         if (price == null)
-            log.debug("null price");
-        if (market.getTradedCurrency().equals(market.getBase())) {
-            price = price.invert();
-            //precision = BigDecimal.valueOf(market.getTradedCurrency().getBasis());
-        }
-        Amount notional = ((price.times(amount, Remainder.ROUND_EVEN)).times(rate, Remainder.ROUND_EVEN).abs()).times(market.getContractSize(),
+            return notional;
+        //BTC(base)/USD traded = BTC, ETH(base)/BTC  traded = ETH
+        //  if (market.getContractSize(market) != 1)
+        price = market.getMultiplier(market, price, DecimalAmount.ONE);
+        notional = ((price.times(amount, Remainder.ROUND_EVEN)).times(rate, Remainder.ROUND_EVEN).abs()).times(market.getContractSize(market),
                 Remainder.ROUND_EVEN);
-
-        return notional.toBasis(market.getTradedCurrency().getBasis(), Remainder.ROUND_CEILING).negate();
+        //     BTC/USD, so seelling BTC and buing $ 450.76 (BTC/USD
+        //             buying 1 ETH at 0.02 BTC)
+        //     BTC/USD so buying BTC selling $
+        Asset tradedCCY = (market.getTradedCurrency(market) == null) ? market.getQuote() : market.getTradedCurrency(market);
+        return notional.toBasis(tradedCCY.getBasis(), Remainder.ROUND_CEILING).negate();
 
         //      
         //      BigDecimal fees = notional.asBigDecimal().setScale(price.getScale(), BigDecimal.ROUND_UP);
@@ -230,13 +234,12 @@ public class FeesUtil {
     private static Amount calculateFlatRatePerUnit(Amount price, Amount amount, double rate, Market market) {
         //BigDecimal precision = BigDecimal.valueOf(market.getPriceBasis());
 
-        if (market.getTradedCurrency().equals(market.getBase())) {
-            price = price.invert();
-            //precision = BigDecimal.valueOf(market.getTradedCurrency().getBasis());
-        }
-        Amount notional = (amount.times(rate, Remainder.ROUND_EVEN).abs());
+        price = market.getMultiplier(market, price, DecimalAmount.ONE);
 
-        return notional.toBasis(market.getTradedCurrency().getBasis(), Remainder.ROUND_CEILING).negate();
+        Amount notional = (amount.times(rate, Remainder.ROUND_EVEN).abs());
+        Asset tradedCCY = (market.getTradedCurrency(market) == null) ? market.getQuote() : market.getTradedCurrency(market);
+
+        return notional.toBasis(tradedCCY.getBasis(), Remainder.ROUND_CEILING).negate();
 
         //      
         //      BigDecimal fees = notional.asBigDecimal().setScale(price.getScale(), BigDecimal.ROUND_UP);
@@ -250,7 +253,9 @@ public class FeesUtil {
     private static Amount calculatePerUnit(Amount amount, double rate, Market market) {
 
         Amount notional = ((amount.times(rate, Remainder.ROUND_EVEN)).abs());
-        return notional.toBasis(market.getTradedCurrency().getBasis(), Remainder.ROUND_CEILING).negate();
+        Asset tradedCCY = (market.getTradedCurrency(market) == null) ? market.getQuote() : market.getTradedCurrency(market);
+
+        return notional.toBasis(tradedCCY.getBasis(), Remainder.ROUND_CEILING).negate();
 
         //      
         //      BigDecimal fees = notional.asBigDecimal().setScale(amount.getScale(), BigDecimal.ROUND_UP);

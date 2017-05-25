@@ -10,6 +10,7 @@ import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.schema.Currency;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.Tradeable;
 
 /**
  * This helper utility converts Antlr TerminalNodes into Cointrader schema classes
@@ -55,9 +56,9 @@ public class Parse {
         return positionEffect;
     }
 
-    public static Market market(TerminalNode node) throws ParseError {
+    public static Tradeable market(TerminalNode node) throws ParseError {
         String text = text(node);
-        Market market = markets.forSymbol(text);
+        Tradeable market = markets.forSymbol(text);
         if (market == null)
             throw new ParseError("Unknown market " + text);
         return market;

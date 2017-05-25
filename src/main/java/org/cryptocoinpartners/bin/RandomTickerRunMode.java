@@ -3,8 +3,8 @@ package org.cryptocoinpartners.bin;
 import java.util.concurrent.Semaphore;
 
 import org.cryptocoinpartners.module.Context;
+import org.cryptocoinpartners.module.JMXManager;
 import org.cryptocoinpartners.module.MockTicker;
-import org.cryptocoinpartners.module.SaveMarketData;
 
 import com.beust.jcommander.Parameters;
 
@@ -12,14 +12,15 @@ import com.beust.jcommander.Parameters;
  * @author Tim Olson
  */
 @SuppressWarnings("UnusedDeclaration")
-@Parameters(commandNames = "mockticker", commandDescription = "Launch a test ticker and save bogus data to the database")
-public class FakeTickerRunMode extends RunMode {
+@Parameters(commandNames = "randomticker", commandDescription = "Launch a random ticker generater and save into strategy")
+public class RandomTickerRunMode extends RunMode {
 
     @Override
     public void run(Semaphore semaphore) {
         Context context = Context.create();
         context.attach(MockTicker.class);
-        context.attach(SaveMarketData.class);
+        //  context.attach(SaveMarketData.class);
+        context.attach(JMXManager.class);
         if (semaphore != null)
             semaphore.release();
     }

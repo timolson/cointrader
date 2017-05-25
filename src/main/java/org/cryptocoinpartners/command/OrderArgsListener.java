@@ -8,6 +8,7 @@ import org.antlr.v4.runtime.misc.NotNull;
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.Tradeable;
 
 /**
  * @author Tim Olson
@@ -41,8 +42,8 @@ public class OrderArgsListener extends OrderBaseListener {
 
     @Override
     public void exitMarket(@NotNull OrderParser.MarketContext ctx) {
-        Market market = Parse.market(ctx.Market());
-        command.setMarket(market);
+        Tradeable market = Parse.market(ctx.Market());
+        command.setMarket((Market) market);
     }
 
     @Override

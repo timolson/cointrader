@@ -2,7 +2,6 @@ package org.cryptocoinpartners.command;
 
 import org.cryptocoinpartners.util.PersistUtil;
 
-
 /**
  * @author Tim Olson
  */
@@ -20,12 +19,14 @@ public class ExitCommand extends CommandBase {
     }
 
     @Override
-    public void parse(String commandArguments) { }
+    public void parse(String commandArguments) {
+    }
 
     @Override
-    public void run() {
+    public Object call() {
         PersistUtil.shutdown();
         System.exit(0);
+        return true;
     }
 
 }

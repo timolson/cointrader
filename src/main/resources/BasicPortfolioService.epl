@@ -14,11 +14,33 @@ select
 from
 	SubscribePortfolio;
 
+	@Priority(1)
+//@Name('LOG_PORTFOLIO_VALUE')
+//@Subscriber(className='org.cryptocoinpartners.module.TrendStrategy$DataSubscriber')
+//on pattern
+	//[every timer:interval(99 month)]
+//	select portfolio from PortfolioWindow;
+
+	
+//		@Priority(1)
+//@Name('LOG_PORTFOLIO_VALUE')
+//@Subscriber(className='org.cryptocoinpartners.module.TrendStrategy$DataSubscriber')
+//on pattern [every timer:at (59, 23, *,*,*)] select current_timestamp,portfolio from PortfolioWindow;
+
+
+//[every timer:interval(1 month)]
+	// [every timer:at (*, *, 1, *, *)]
+	//every timer:at(*, 13, *, *, *)
+	// date: current_timestamp.withTime(9, 0, 0, 0)]
+
+	
 @Priority(1)
 @Name('LOG_PORTFOLIO_VALUE')
 @Subscriber(className='org.cryptocoinpartners.schema.PortfolioManager$DataSubscriber')
 on pattern
-	[every timer:interval(1 day)]
+	//[every timer:schedule(iso: 'R2/PT1D')]
+	 [every timer:interval(1 day)]
 	select current_timestamp,portfolio from PortfolioWindow;
+
 
 	

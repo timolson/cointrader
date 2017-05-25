@@ -7,6 +7,7 @@ import javax.inject.Inject;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Portfolio;
+import org.cryptocoinpartners.schema.Tradeable;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.PortfolioService;
 
@@ -43,12 +44,16 @@ public class PendingCommand extends CommandBase {
     }
 
     @Override
-    public void run() {
+    public Object call() {
         for (Portfolio portfolio : portfolioService.getPortfolios())
             if (market == null)
-                out.printList(orderService.getPendingOrders(portfolio));
-            else
-                out.printList(orderService.getPendingOrders(market, portfolio));
+                for (Tradeable tradeable : portfolio.getMarkets())
+                    if (!tradeable.isSynthetic()) {
+                        Market market = (Market) tradeable;
+                        out.printList(orderService.getPendingOrders(market, portfolio));
+                    } else
+                        out.printList(orderService.getPendingOrders((Market) market, portfolio));
+        return true;
     }
 
     @Inject
@@ -59,7 +64,7 @@ public class PendingCommand extends CommandBase {
     private ConsoleWriter console;
     private BigDecimal volume;
     @Inject
-    private Market market;
+    private Tradeable market;
     private Listing listing;
     private BigDecimal limit;
     private BigDecimal stop;

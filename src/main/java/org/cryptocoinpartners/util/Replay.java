@@ -3,8 +3,10 @@ package org.cryptocoinpartners.util;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -12,12 +14,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 
+import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
+import org.cryptocoinpartners.module.MockTicker;
 import org.cryptocoinpartners.schema.Book;
+import org.cryptocoinpartners.schema.BookFactory;
 import org.cryptocoinpartners.schema.Event;
-import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.RemoteEvent;
 import org.cryptocoinpartners.schema.Trade;
+import org.cryptocoinpartners.schema.Tradeable;
+import org.cryptocoinpartners.service.PortfolioService;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.joda.time.Interval;
@@ -80,8 +87,9 @@ public class Replay implements Runnable {
 
     //
     @AssistedInject
-    public Replay(@Assisted("startTime") Instant start, @Assisted("endTime") Instant end, @Assisted boolean orderByTimeReceived, @Assisted Semaphore semaphore) {
-        this(new Interval(start, end), orderByTimeReceived, semaphore);
+    public Replay(@Assisted("startTime") Instant start, @Assisted("endTime") Instant end, @Assisted("orderByTimeReceived") boolean orderByTimeReceived,
+            @Assisted Semaphore semaphore, @Assisted("useRandomData") boolean useRandomData) {
+        this(new Interval(start, end), orderByTimeReceived, semaphore, useRandomData);
     }
 
     //
@@ -101,6 +109,8 @@ public class Replay implements Runnable {
         this.semaphore = null;
         this.context = Context.create(new EventTimeManager());
         this.orderByTimeReceived = orderByTimeReceived;
+        this.useRandomData = false;
+
     }
 
     @AssistedInject
@@ -109,6 +119,17 @@ public class Replay implements Runnable {
         this.semaphore = semaphore;
         this.context = Context.create(new EventTimeManager());
         this.orderByTimeReceived = orderByTimeReceived;
+        this.useRandomData = false;
+        // this.useRandomData=useRandomData;
+    }
+
+    public Replay(Interval replayTimeInterval, boolean orderByTimeReceived, @Assisted Semaphore semaphore, boolean useRandomData) {
+        this.replayTimeInterval = replayTimeInterval; // set this before creating EventTimeManager
+        this.semaphore = semaphore;
+        this.context = Context.create(new EventTimeManager());
+        this.orderByTimeReceived = orderByTimeReceived;
+        this.useRandomData = useRandomData;
+        // this.useRandomData=useRandomData;
     }
 
     public Context getContext() {
@@ -125,39 +146,53 @@ public class Replay implements Runnable {
 
         final Instant start = replayTimeInterval.getStart().toInstant();
         final Instant end = replayTimeInterval.getEnd().toInstant();
-        int threadCount = 0;
-        CountDownLatch startLatch = null;
-        CountDownLatch stopLatch = null;
-        service = Executors.newFixedThreadPool(dbReaderThreads);
-        //   engines = Executors.newFixedThreadPool(1);
+        if (!useRandomData) {
+            int threadCount = 0;
+            CountDownLatch startLatch = null;
+            CountDownLatch stopLatch = null;
+            service = Executors.newFixedThreadPool(dbReaderThreads);
+            //   engines = Executors.newFixedThreadPool(1);
+            //    replayTimeInterval.toDuration().
+            // engines.submit(new PublisherRunnable());
+            /*       if (replayTimeInterval.toDuration().isLongerThan(timeStep)) {
+                       // Start two threads, but ensure the first thread publish first, then reuse it
 
-        // engines.submit(new PublisherRunnable());
-        if (replayTimeInterval.toDuration().isLongerThan(timeStep)) {
-            // Start two threads, but ensure the first thread publish first, then reuse it
+                       for (Instant now = start; !now.isAfter(end);) {
+                           final Instant stepEnd = now.plus(timeStep);
+                           threadCount++;
+                           now = stepEnd;
+                       }
+                   }
+                   endLatch = new CountDownLatch(threadCount);
+              *///  semaphore.release(threadCount);
 
-            for (Instant now = start; !now.isAfter(end);) {
-                final Instant stepEnd = now.plus(timeStep);
-                stopLatch = new CountDownLatch(1);
-                ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime(), semaphore, startLatch, stopLatch, threadCount);
-                service.submit(replayStep);
-                startLatch = stopLatch;
-                // if (threadCount != 0)
+            if (replayTimeInterval.toDuration().isLongerThan(timeStep)) {
+                // Start two threads, but ensure the first thread publish first, then reuse it
 
-                threadCount++;
-                now = stepEnd;
+                for (Instant now = start; !now.isAfter(end);) {
+                    final Instant stepEnd = now.plus(timeStep);
+                    log.debug("Replay: Run replaying from " + now + " to " + stepEnd);
+                    stopLatch = new CountDownLatch(1);
+                    log.debug("Replay: ReplayStepRunnable created with: " + now + ", " + context.getRunTime() + ", " + semaphore + ", " + startLatch + ", "
+                            + stopLatch + ", " + threadCount);
 
-            }
+                    ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime(), semaphore, startLatch, stopLatch, threadCount);
+                    startLatch = stopLatch;
+                    service.submit(replayStep);
+                    // if (threadCount != 0)
+                    threadCount++;
+                    now = stepEnd;
 
-        } else
-            replayStep(start, end);
+                }
+                semaphore.release(threadCount);
 
-        if (semaphore != null)
-            try {
-                semaphore.acquire(threadCount);
-            } catch (InterruptedException e) {
-                // TODO Auto-generated catch block
-                //  e.printStackTrace();
-            }
+            } else
+                replayStep(start, end);
+        } else {
+            new MockTicker(context, ConfigUtil.combined(), start, end, context.getInjector().getInstance(BookFactory.class), context.getInjector().getInstance(
+                    BasicQuoteService.class));
+
+        }
 
     }
 
@@ -191,12 +226,13 @@ public class Replay implements Runnable {
         private final Instant stop;
         private final EPRuntime runtime;
         private final Semaphore semaphore;
-        private final CountDownLatch startLatch;
+        //  private final CountDownLatch startLatch;
         private final CountDownLatch stopLatch;
         private final int threadCount;
+        private final CountDownLatch startLatch;
 
-        public ReplayStepRunnable(Instant start, Instant stop, EPRuntime runtime, Semaphore semaphore, CountDownLatch startLatch, CountDownLatch stopLatch,
-                int threadCount) {
+        public ReplayStepRunnable(Instant start, Instant stop, EPRuntime runtime, Semaphore semaphore, final CountDownLatch startLatch,
+                CountDownLatch stopLatch, int threadCount) {
             this.semaphore = semaphore;
             this.start = start;
             this.stop = stop;
@@ -213,45 +249,72 @@ public class Replay implements Runnable {
 
             try {
                 // perform interesting task
+                log.debug("ReplayStepRunnable: Run querying events from " + start + " to " + stop + " with latch " + startLatch);
+                List<RemoteEvent> events = queryEvents(start, stop);
 
                 // Log.debug(context.getInjector().toString());
                 //PortfolioService port = context.getInjector().getInstance(PortfolioService.class);
-                Iterator<RemoteEvent> ite = queryEvents(start, stop).iterator();
+                //   Iterator<RemoteEvent> ite = queryEvents(start, stop).iterator();
                 // thread 1 starts, thread 2 finishes, want to wait till thread 1 is complete before processing 
 
                 // we need to wait for current thread to finish.
-                try {
-                    if (startLatch != null)
-                        startLatch.await();
+                //  try {
+                if (startLatch != null) {
+                    log.debug("ReplayStepRunnable: Run Waiting for start latch " + startLatch);
 
-                    while (ite.hasNext()) {
-                        RemoteEvent event = ite.next();
-                        //   queue.put(event);
-
-                        context.publish(event);
-                        EM.detach(event);
-
-                    }
-
-                } catch (Error | Exception e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    startLatch.await();
                 }
+                log.debug("ReplayStepRunnable: Run publishing events from " + start + " to " + stop);
+
+                for (RemoteEvent event : events) {
+                    context.publish(event);
+                    EM.detach(event);
+                }
+                log.debug("ReplayStepRunnable: Published events from " + start + " to " + stop);
+
+                //  } catch (Error | Exception e) {
+                // TODO Auto-generated catch block
+                //     log.debug("ReplayStepRunnable: Unable to query events between " + start + " and stop " + stop + ", full stack trace follows:", e);
+
+                // }
 
                 // context.advanceTime(stop);
 
             } catch (Error | Exception e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+                log.debug("ReplayStepRunnable: Unable to query events between " + start + " and stop " + stop + ", full stack trace follows:", e);
 
-            finally {
-                if (semaphore != null)
-                    semaphore.release();
+                // TODO Auto-generated catch block
+                //  e.printStackTrace();
+            } finally {
+                if (startLatch != null) {
+                    log.debug("ReplayStepRunnable: Run Waiting for start latch " + startLatch);
+
+                    try {
+                        startLatch.await();
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        log.debug("ReplayStepRunnable: Unable to query events between " + start + " and stop " + stop + ", full stack trace follows:", e);
+
+                    }
+                }
+
+                log.debug("ReplayStepRunnable: Run Counting down stop latch " + stopLatch);
 
                 stopLatch.countDown();
+                if (semaphore != null) {
+
+                    try {
+                        log.debug("ReplayStepRunnable: removing permit from to pool for semaphore avaiable permits " + semaphore.availablePermits());
+
+                        semaphore.acquire();
+                    } catch (InterruptedException e) {
+                        log.debug("ReplayStepRunnable: unable to remove permit from to pool for semaphore avaiable permits " + semaphore.availablePermits(), e);
+
+                    }
+                }
 
             }
+
         }
 
     }
@@ -267,13 +330,38 @@ public class Replay implements Runnable {
     }
 
     private List<RemoteEvent> queryEvents(Instant start, Instant stop) {
-        final Market market = Market.forSymbol("OKCOIN_THISWEEK:BTC.USD.THISWEEK");
+        //  final Market market = 
+        Map<String, Tradeable> markets = new HashMap<String, Tradeable>();
+
+        // markets.add(Market.forSymbol("OKCOIN_THISWEEK:BTC.USD.THISWEEK"));
+
+        //Portfolio portfolio = context.getInjector().getInstance(Portfolio.class);
+
+        PortfolioService portfolioService = context.getInjector().getInstance(PortfolioService.class);
+        for (Portfolio portfolio : portfolioService.getPortfolios()) {
+            for (Tradeable tradeable : portfolio.getMarkets())
+
+                markets.put(tradeable.getSymbol(), tradeable);
+
+        }
+        //.getMarkets();
+
         final String timeField = timeFieldForOrdering(orderByTimeReceived);
-        final String tradeQuery = "select t from Trade t where market=?1 and " + timeField + " >= ?2 and " + timeField + " <= ?3";
-        final String bookQuery = "select b from Book b where market=?1 and " + timeField + " >= ?2 and " + timeField + " <= ?3";
+        //  order in (?1)
+        final String tradeQuery = "select t from Trade t where market in (?1) and " + timeField + " >= ?2 and " + timeField + " <= ?3";
+        final String bookQuery = "select b from Book b where market in (?1) and " + timeField + " >= ?2 and " + timeField + " <= ?3";
         final List<RemoteEvent> events = new ArrayList<>();
-        events.addAll(EM.queryList(Trade.class, tradeQuery, market, start, stop));
-        events.addAll(EM.queryList(Book.class, bookQuery, market, start, stop));
+        final List<Book> books = new ArrayList<>();
+        final List<Trade> trades = new ArrayList<>();
+        //   ArrayList marketsArray = new ArrayList(markets.values());
+        trades.addAll(EM.queryList(Trade.class, tradeQuery, new ArrayList(markets.values()), start, stop));
+        for (Trade trade : trades)
+            trade.setMarket(markets.get(trade.getMarket().getSymbol()));
+        books.addAll(EM.queryList(Book.class, bookQuery, new ArrayList(markets.values()), start, stop));
+        for (Book book : books)
+            book.setMarket(markets.get(book.getMarket().getSymbol()));
+        events.addAll(trades);
+        events.addAll(books);
         Collections.sort(events, orderByTimeReceived ? timeReceivedComparator : timeHappenedComparator);
         return events;
     }
@@ -312,14 +400,33 @@ public class Replay implements Runnable {
     private static final Comparator<RemoteEvent> timeReceivedComparator = new Comparator<RemoteEvent>() {
         @Override
         public int compare(RemoteEvent event, RemoteEvent event2) {
-            return event.getTimeReceived().compareTo(event2.getTimeReceived());
+            int sComp = event.getTimeReceived().compareTo(event2.getTimeReceived());
+            if (sComp != 0) {
+                return sComp;
+            } else if (event.getRemoteKey() != null && event.getRemoteKey() != null) {
+                return (event.getId().compareTo(event2.getId()));
+            } else
+                return event.getTimeReceived().compareTo(event2.getTimeReceived());
+
+            //   return event.getRemoteKey().compareTo(event.getRemoteKey());
+
         }
+
     };
 
     private static final Comparator<RemoteEvent> timeHappenedComparator = new Comparator<RemoteEvent>() {
+        // @Override
+        //  public int compare(RemoteEvent event, RemoteEvent event2) {
+        //    return event.getTime().compareTo(event2.getTime());
+        // }
         @Override
         public int compare(RemoteEvent event, RemoteEvent event2) {
-            return event.getTime().compareTo(event2.getTime());
+            // if (event.getRemoteKey() != null && event.getRemoteKey() != null)
+            //   return event.getRemoteKey().compareTo(event.getRemoteKey());
+
+            //else
+            return (event.getTime().compareTo(event2.getTime()));
+
         }
     };
 
@@ -346,9 +453,11 @@ public class Replay implements Runnable {
     private final Semaphore semaphore;
     private static ExecutorService service;
     private static ExecutorService engines;
+    private static CountDownLatch endLatch;
 
     private final Context context;
     private static final Duration timeStep = Duration.standardDays(1); // how many rows from the DB to gather in one batch
     private final boolean orderByTimeReceived;
+    private final boolean useRandomData;
 
 }
