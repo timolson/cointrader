@@ -180,6 +180,13 @@ public class Balance extends Holding {
     }
 
     @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return getExchange();
+    }
+
+    @Override
     public synchronized void setExchange(Exchange exchange) {
         this.exchange = exchange;
     }

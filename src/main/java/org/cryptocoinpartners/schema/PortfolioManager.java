@@ -49,6 +49,13 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         this.context = context;
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return getPortfolio();
+    }
+
     @Transient
     public Context getContext() {
         return context;

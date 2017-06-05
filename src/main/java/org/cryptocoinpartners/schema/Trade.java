@@ -50,6 +50,13 @@ public class Trade extends PriceData {
 
     @Override
     @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
+    @Override
+    @Transient
     public TradeDao getDao() {
         return tradeDao;
     }

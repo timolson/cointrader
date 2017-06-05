@@ -1082,7 +1082,7 @@ public class Position extends Holding {
     //  public void removeFill(Fill fill) {
     //  synchronized (lock) {
     @Nullable
-    @ManyToOne(optional = true, cascade = CascadeType.PERSIST)
+    @ManyToOne(optional = true, cascade = CascadeType.MERGE)
     @JoinColumn(name = "portfolio")
     public Portfolio getPortfolio() {
         if (portfolio == null)
@@ -1093,6 +1093,13 @@ public class Position extends Holding {
 
     public void setPortfolio(Portfolio portfolio) {
         this.portfolio = portfolio;
+    }
+
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return getPortfolio();
     }
 
     //this.fills.remove(fill);

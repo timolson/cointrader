@@ -137,4 +137,11 @@ public class Adjustment extends EntityBase {
 
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
 }

@@ -32,6 +32,13 @@ public class Prompt extends EntityBase {
         return EM.queryOne(Prompt.class, "select c from Prompt c where symbol=?1", symbol);
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
     public static List<String> allSymbols() {
         return EM.queryList(String.class, "select symbol from Prompt");
     }

@@ -402,6 +402,12 @@ public class SpecificOrder extends Order {
 
     @Override
     @Transient
+    public double getTargetPercentage() {
+        return 0.0;
+    }
+
+    @Override
+    @Transient
     public double getTriggerInterval() {
         return 0.0;
     }
@@ -648,6 +654,19 @@ public class SpecificOrder extends Order {
 
     @Override
     public void setStopPercentage(double stopPercentage) {
+        throw new NotImplementedException();
+
+    }
+
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return getParentOrder();
+    }
+
+    @Override
+    public void setTargetPercentage(double targetPercentage) {
         throw new NotImplementedException();
 
     }

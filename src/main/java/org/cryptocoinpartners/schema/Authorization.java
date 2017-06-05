@@ -89,4 +89,11 @@ public class Authorization extends EntityBase {
 
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+        // TODO Auto-generated method stub
+        return null;
+    }
+
 }

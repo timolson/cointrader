@@ -26,6 +26,13 @@ public class Offer extends PriceData {
         return new Offer(market, time, timeReceived, priceCount, -volumeCount);
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
     public static Offer bid(Tradeable market, Instant time, Instant timeReceived, BigDecimal price, BigDecimal volume) {
         return new Offer(market, time, timeReceived, price, volume);
     }

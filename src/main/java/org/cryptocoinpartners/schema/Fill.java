@@ -483,7 +483,7 @@ public class Fill extends RemoteEvent {
     @OneToMany
     //(cascade = CascadeType.PERSIST)
     //, mappedBy = "order")
-    (mappedBy = "fill", orphanRemoval = true)
+    (mappedBy = "fill")
     //, cascade = CascadeType.MERGE)
     //, fetch = FetchType.EAGER)
     //, cascade = CascadeType.MERGE)
@@ -853,6 +853,41 @@ public class Fill extends RemoteEvent {
         }
     }
 
+    public void getAllParnetSpecificOrdersByFill(Fill parentFill, Set<Order> allChildren) {
+        for (Order child : parentFill.getFillChildOrders()) {
+            if (child instanceof SpecificOrder) {
+                if (!allChildren.contains(child)) {
+                    allChildren.add(child);
+                }
+                child.getAllSpecificOrderByParentOrder(child, allChildren);
+
+                parentFill.getOrder().getAllSpecificOrderByParentOrder(parentFill.getOrder(), allChildren);
+            }
+        }
+    }
+
+    public void getAllParentOrdersByFill(Fill fill, Collection<Order> allParents) {
+
+        ArrayList<EntityBase> parents = new ArrayList<EntityBase>();
+        getParents(fill.getParent(), parents);
+
+        for (EntityBase parent : parents)
+            if (parent instanceof Order)
+                allParents.add((Order) parent);
+
+    }
+
+    public void getAllParentFillsByFill(Fill fill, Collection<Fill> allParents) {
+
+        ArrayList<EntityBase> parents = new ArrayList<EntityBase>();
+        getParents(fill.getParent(), parents);
+
+        for (EntityBase parent : parents)
+            if (parent instanceof Fill)
+                allParents.add((Fill) parent);
+
+    }
+
     public void getAllOrdersByParentFill(Collection<Order> allChildren) {
         Set<Order> allSpecificChildOrders = new HashSet<Order>();
         Set<Order> allGeneralChildOrders = new HashSet<Order>();
@@ -1013,6 +1048,13 @@ public class Fill extends RemoteEvent {
     public void delete() {
         // TODO Auto-generated method stub
 
+    }
+
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return getOrder();
     }
 
     // @Override

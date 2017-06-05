@@ -40,6 +40,13 @@ public class Stake extends EntityBase {
         return portfolio;
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
     // JPA
     protected Stake() {
     }

@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.schema;
 
+import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -216,7 +217,21 @@ public abstract class EntityBase implements java.io.Serializable, Cloneable, Com
 
     public abstract void persit();
 
+    @Transient
+    public abstract EntityBase getParent();
+
     public abstract EntityBase refresh();
+
+    protected void getParents(EntityBase child, Collection<EntityBase> parents) {
+        if (child.getParent() == null) {
+            parents.add(child);
+            return;
+        }
+
+        getParents(child.getParent(), parents);
+        parents.add(child);
+
+    }
 
     public long findRevisionById() {
         try {

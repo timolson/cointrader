@@ -9,9 +9,9 @@ create window LastBarWindow.std:groupwin(interval,market).win:length(2) as selec
 
 
 @Priority(10)	
-insert into LastTradeWindow select * from Trade (Trade.market in (BaseStrategy.getMarkets()), BaseStrategy.getMarketAllocation(Trade.market)>0, Trade.timestamp>= coalesce((select max(timestamp) from LastTradeWindow where LastTradeWindow.market=Trade.market),0));
+insert into LastTradeWindow select * from Trade (Trade.market in (BaseStrategy.getMarkets()), Trade.timestamp>= coalesce((select max(timestamp) from LastTradeWindow where LastTradeWindow.market=Trade.market),0));
 
 @Priority(10)	
-insert into LastBookWindow select * from Book (Book.bidVolumeAsDouble>0, Book.askVolumeAsDouble<0,Book.market in (BaseStrategy.getMarkets()), BaseStrategy.getMarketAllocation(Book.market)>0);
+insert into LastBookWindow select * from Book (Book.bidVolumeAsDouble>0, Book.askVolumeAsDouble<0,Book.market in (BaseStrategy.getMarkets()));
 
 	

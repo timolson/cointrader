@@ -196,6 +196,11 @@ public abstract class Order extends Event {
     @Nullable
     @Column(insertable = false, updatable = false)
     @Transient
+    public abstract double getTargetPercentage();
+
+    @Nullable
+    @Column(insertable = false, updatable = false)
+    @Transient
     public abstract double getTriggerInterval();
 
     @Nullable
@@ -250,6 +255,8 @@ public abstract class Order extends Event {
     }
 
     public abstract void setStopPercentage(double percentage);
+
+    public abstract void setTargetPercentage(double percentage);
 
     public abstract void setTriggerInterval(double triggerInterval);
 
@@ -633,7 +640,7 @@ public abstract class Order extends Event {
     @OneToMany
     //(cascade = CascadeType.PERSIST)
     //, mappedBy = "order")
-    (mappedBy = "order", orphanRemoval = true)
+    (mappedBy = "order")
     //, cascade = CascadeType.MERGE)
     //, fetch = FetchType.LAZY)
     //  @OrderBy
@@ -644,9 +651,7 @@ public abstract class Order extends Event {
     }
 
     public Order withTargetPrice(String price) {
-        if (this.fillType == (FillType.STOP_LIMIT) || this.fillType == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LIMIT)
-                || this.fillType == (FillType.TRAILING_STOP_LOSS) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
+        if (getFillType().isTrigger()) {
             this.setTargetPrice(DecimalAmount.of(price));
             return this;
         }
@@ -670,9 +675,7 @@ public abstract class Order extends Event {
     }
 
     public Order withTargetPrice(BigDecimal price) {
-        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
+        if (getFillType().isTrigger()) {
             this.setTargetPrice(DecimalAmount.of(price));
             return this;
         }
@@ -681,9 +684,7 @@ public abstract class Order extends Event {
     }
 
     public Order withStopPrice(String price) {
-        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
+        if (getFillType().isTrigger()) {
             this.setStopPrice(DecimalAmount.of(price));
             this.stopAdjustmentCount++;
 
@@ -693,9 +694,7 @@ public abstract class Order extends Event {
     }
 
     public Order withStopPrice(BigDecimal price) {
-        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
+        if (getFillType().isTrigger()) {
             this.setStopPrice(DecimalAmount.of(price));
             this.stopAdjustmentCount++;
 
@@ -706,9 +705,7 @@ public abstract class Order extends Event {
     }
 
     public Order withTrailingStopAmount(BigDecimal price) {
-        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
+        if (getFillType().isTrigger()) {
             this.setTrailingStopAmount(DecimalAmount.of(price));
             return this;
         }
@@ -718,8 +715,7 @@ public abstract class Order extends Event {
 
     public Order withStopAmount(BigDecimal price) {
 
-        if ((getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT))) {
+        if (getFillType().isTrigger()) {
             if (price.compareTo(BigDecimal.ZERO) == 0)
                 return this;
             this.setStopAmount(DecimalAmount.of(price));
@@ -741,8 +737,7 @@ public abstract class Order extends Event {
 
     public Order withStopPercentage(double stopPercentage) {
 
-        if ((getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT))) {
+        if (getFillType().isTrigger()) {
             if (stopPercentage == 0)
                 return this;
             this.setStopPercentage(stopPercentage);
@@ -754,10 +749,23 @@ public abstract class Order extends Event {
 
     }
 
+    public Order withTargetPercentage(double targetPercentage) {
+
+        if (getFillType().isTrigger()) {
+            if (targetPercentage == 0)
+                return this;
+            this.setTargetPercentage(targetPercentage);
+            this.setTargetAmount(DecimalAmount.of(getLimitPrice().times(targetPercentage, Remainder.ROUND_EVEN)));
+            return this;
+        }
+
+        throw new NotImplementedException();
+
+    }
+
     public Order withTriggerInterval(double triggerInterval) {
 
-        if ((getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT))) {
+        if (getFillType().isTrigger()) {
             if (triggerInterval == 0)
                 return this;
             this.setTriggerInterval(triggerInterval);
@@ -781,9 +789,7 @@ public abstract class Order extends Event {
     }
 
     public Order withTrailingStopPrice(BigDecimal price, BigDecimal trailingStopPrice) {
-        if (getFillType() == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
+        if (getFillType().isTrigger()) {
             this.setTrailingStopAmount(DecimalAmount.of(price));
             this.setTrailingStopPrice(DecimalAmount.of(trailingStopPrice));
             return this;
@@ -792,9 +798,7 @@ public abstract class Order extends Event {
     }
 
     public Order withTrailingStopPrice(String price, String trailingStopPrice) {
-        if (this.fillType == (FillType.STOP_LIMIT) || getFillType() == (FillType.STOP_LOSS) || this.fillType == (FillType.TRAILING_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_STOP_LIMIT) || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LOSS)
-                || getFillType() == (FillType.TRAILING_UNREALISED_STOP_LIMIT)) {
+        if (getFillType().isTrigger()) {
             this.setTrailingStopAmount(DecimalAmount.of(price));
             this.setTrailingStopPrice(DecimalAmount.of(trailingStopPrice));
             return this;
@@ -844,7 +848,7 @@ public abstract class Order extends Event {
     @OneToMany
     //(cascade = CascadeType.PERSIST)
     //, mappedBy = "order")
-    (mappedBy = "order", orphanRemoval = true)
+    (mappedBy = "order")
     //, fetch = FetchType.EAGER)
     //, cascade = CascadeType.MERGE)
     //, fetch = FetchType.LAZY)

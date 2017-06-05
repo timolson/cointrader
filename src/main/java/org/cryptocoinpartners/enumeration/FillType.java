@@ -29,14 +29,22 @@ public enum FillType {
     LIMIT("LIMIT"),
     /** This will trigger a limit order at the specficed stop price */
     STOP_LIMIT("STOP_LIMIT"),
+    /** This will trigger a limit order at the specficed stop price */
+    REENTRANT_STOP_LIMIT("REENTRANT_STOP_LIMIT"),
     /** TThis will trigger a limit order at the specficed stop price and will move the stop price by the trailing stop ammount as the price changes */
     TRAILING_STOP_LIMIT("TRAILING_STOP_LIMIT"),
+    /** TThis will trigger a limit order at the specficed stop price and will move the stop price by the trailing stop ammount as the price changes */
+    REENTRANT_TRAILING_STOP_LIMIT("REENTRANT_TRAILING_STOP_LIMIT"),
     /** This place a limit order and will limit losses on the filled order by selling at the stop price */
     TRAILING_UNREALISED_STOP_LIMIT("TRAILING_UNREALISED_STOP_LIMIT"),
     /** This place a limit order and will limit losses on the filled order by selling at the stop price */
     STOP_LOSS("STOP_LOSS"),
+    /** This place a limit order and will limit losses on the filled order by selling at the stop price */
+    REENTRANT_STOP_LOSS("REENTRANT_STOP_LOSS"),
     /** The other order in the pair will be cancelled when the opposit order if filled or partially filled */
     TRAILING_STOP_LOSS("TRAILING_STOP_LOSS"),
+    /** The other order in the pair will be cancelled when the opposit order if filled or partially filled */
+    REENTRANT_TRAILING_STOP_LOSS("REENTRANT_TRAILING_STOP_LOSS"),
     /** The other order in the pair will be cancelled when the opposit order if filled or partially filled */
     TRAILING_UNREALISED_STOP_LOSS("TRAILING_UNREALISED_STOP_LOSS"),
     /** The other order in the pair will be cancelled when the opposit order if filled or partially filled */
@@ -54,6 +62,23 @@ public enum FillType {
      */
     private FillType(String value) {
         this.enumValue = value;
+    }
+
+    public boolean isTrigger() {
+        return this == FillType.STOP_LIMIT || this == FillType.REENTRANT_STOP_LIMIT || this == FillType.TRAILING_STOP_LIMIT
+                || this == FillType.REENTRANT_TRAILING_STOP_LIMIT || this == FillType.TRAILING_UNREALISED_STOP_LIMIT || this == FillType.STOP_LOSS
+                || this == FillType.REENTRANT_STOP_LOSS || this == FillType.TRAILING_STOP_LOSS || this == FillType.REENTRANT_TRAILING_STOP_LOSS
+                || this == FillType.TRAILING_UNREALISED_STOP_LOSS;
+    }
+
+    public boolean isTrailing() {
+        return this == FillType.TRAILING_STOP_LIMIT || this == FillType.REENTRANT_TRAILING_STOP_LIMIT || this == FillType.TRAILING_UNREALISED_STOP_LIMIT
+                || this == FillType.TRAILING_STOP_LOSS || this == FillType.REENTRANT_TRAILING_STOP_LOSS || this == FillType.TRAILING_UNREALISED_STOP_LOSS;
+    }
+
+    public boolean isReentrant() {
+        return this == FillType.REENTRANT_STOP_LIMIT || this == FillType.REENTRANT_TRAILING_STOP_LIMIT || this == FillType.REENTRANT_STOP_LOSS
+                || this == FillType.REENTRANT_TRAILING_STOP_LOSS;
     }
 
     /**

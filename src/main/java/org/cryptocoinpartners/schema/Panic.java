@@ -25,6 +25,13 @@ public class Panic extends Event {
         return panics;
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
     private static List<Panic> panics = new ArrayList<>();
 
     @Override

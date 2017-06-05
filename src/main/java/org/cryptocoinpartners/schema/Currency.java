@@ -48,6 +48,13 @@ public class Currency extends Asset {
         return EM.queryList(String.class, "select symbol from Currency");
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
     // JPA
     protected Currency() {
     }

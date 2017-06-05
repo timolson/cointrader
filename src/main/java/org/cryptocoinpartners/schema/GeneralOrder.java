@@ -79,6 +79,7 @@ public class GeneralOrder extends Order {
         this.marketPrice = generalOrder.getMarketPrice();
         this.stopAmount = generalOrder.getStopAmount();
         this.stopPercentage = generalOrder.getStopPercentage();
+        this.targetPercentage = generalOrder.getTargetPercentage();
         this.triggerInterval = generalOrder.getTriggerInterval();
         this.stopPrice = generalOrder.getStopPrice();
         this.lastBestPrice = generalOrder.getLastBestPrice();
@@ -265,7 +266,7 @@ public class GeneralOrder extends Order {
         return market;
     }
 
-    @Column(precision = 18, scale = 6)
+    @Column(precision = 18, scale = 8)
     public BigDecimal getVolumeDecimal() {
 
         if (volume == null)
@@ -274,7 +275,7 @@ public class GeneralOrder extends Order {
 
     }
 
-    @Column(precision = 18, scale = 6)
+    @Column(precision = 18, scale = 8)
     public BigDecimal getLimitPriceDecimal() {
         if (limitPrice == null)
             return null;
@@ -282,7 +283,7 @@ public class GeneralOrder extends Order {
 
     }
 
-    @Column(precision = 18, scale = 6)
+    @Column(precision = 18, scale = 8)
     public BigDecimal getStopAmountDecimal() {
         if (stopAmount == null)
             return null;
@@ -290,7 +291,7 @@ public class GeneralOrder extends Order {
 
     }
 
-    @Column(precision = 18, scale = 6)
+    @Column(precision = 18, scale = 8)
     public BigDecimal getTargetAmountDecimal() {
         if (targetAmount == null)
             return null;
@@ -298,7 +299,7 @@ public class GeneralOrder extends Order {
 
     }
 
-    @Column(precision = 18, scale = 6)
+    @Column(precision = 18, scale = 8)
     public BigDecimal getStopPriceDecimal() {
         if (stopPrice == null)
             return null;
@@ -306,7 +307,7 @@ public class GeneralOrder extends Order {
 
     }
 
-    @Column(precision = 18, scale = 6)
+    @Column(precision = 18, scale = 8)
     public BigDecimal getLastBestPriceDecimal() {
         if (lastBestPrice == null)
             return null;
@@ -314,7 +315,7 @@ public class GeneralOrder extends Order {
 
     }
 
-    @Column(precision = 18, scale = 6)
+    @Column(precision = 18, scale = 8)
     public BigDecimal getTargetPriceDecimal() {
         if (targetPrice == null)
             return null;
@@ -322,7 +323,7 @@ public class GeneralOrder extends Order {
 
     }
 
-    @Column(precision = 18, scale = 6)
+    @Column(precision = 18, scale = 8)
     public BigDecimal getTrailingStopPriceDecimal() {
         if (trailingStopPrice == null)
             return null;
@@ -356,6 +357,11 @@ public class GeneralOrder extends Order {
     @Override
     public double getStopPercentage() {
         return stopPercentage;
+    }
+
+    @Override
+    public double getTargetPercentage() {
+        return targetPercentage;
     }
 
     @Override
@@ -433,6 +439,13 @@ public class GeneralOrder extends Order {
 
     @Override
     @Transient
+    public EntityBase getParent() {
+
+        return (getParentFill() != null) ? getParentFill() : getParentOrder();
+    }
+
+    @Override
+    @Transient
     public boolean isBid() {
         return !volume.isNegative();
     }
@@ -458,6 +471,8 @@ public class GeneralOrder extends Order {
             s += ", stopAmount=" + stopAmount;
         if (stopPercentage != 0)
             s += ", stopPercentage=" + stopPercentage;
+        if (targetPercentage != 0)
+            s += ", targetPercentage=" + targetPercentage;
         if (triggerInterval != 0)
             s += ", triggerInterval=" + triggerInterval;
         if (trailingStopAmount != null && trailingStopAmount.asBigDecimal() != null)
@@ -552,6 +567,16 @@ public class GeneralOrder extends Order {
         this.stopPercentage = stopPercentage;
         if (getParentFill() != null && stopPercentage != 0)
             this.setStopAmount((DecimalAmount) getLimitPrice().times(stopPercentage, Remainder.ROUND_EVEN));
+        // getParentFill().setStopAmountCount(stopAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+        //getParentFill().set//StopAmountCount(stopAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
+
+    }
+
+    @Override
+    public void setTargetPercentage(double targetPercentage) {
+        this.targetPercentage = targetPercentage;
+        if (getParentFill() != null && targetPercentage != 0)
+            this.setTargetAmount((DecimalAmount) getLimitPrice().times(targetPercentage, Remainder.ROUND_EVEN));
         // getParentFill().setStopAmountCount(stopAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
         //getParentFill().set//StopAmountCount(stopAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
 
@@ -655,6 +680,7 @@ public class GeneralOrder extends Order {
     private DecimalAmount marketPrice;
     private DecimalAmount stopAmount;
     private double stopPercentage;
+    private double targetPercentage;
     private double triggerInterval;
     private DecimalAmount trailingStopAmount;
     private volatile DecimalAmount stopPrice;

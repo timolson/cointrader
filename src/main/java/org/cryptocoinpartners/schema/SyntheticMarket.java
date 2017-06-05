@@ -121,6 +121,13 @@ public class SyntheticMarket extends Tradeable {
 
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
     @Transient
     public List<Listing> getListings() {
         List<Listing> listings = new ArrayList<Listing>();

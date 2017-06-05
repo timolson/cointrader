@@ -21,6 +21,13 @@ public class SubscribePortfolio extends Event {
         this.portfolio = portfolioIn;
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
     public SubscribePortfolio(final SubscribePortfolio otherBean) {
         this.portfolio = otherBean.getPortfolio();
 

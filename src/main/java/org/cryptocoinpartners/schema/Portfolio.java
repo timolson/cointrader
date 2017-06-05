@@ -1941,6 +1941,13 @@ public class Portfolio extends EntityBase {
         return stakes;
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
     @ManyToOne(fetch = FetchType.EAGER)
     public Asset getBaseAsset() {
         return baseAsset;

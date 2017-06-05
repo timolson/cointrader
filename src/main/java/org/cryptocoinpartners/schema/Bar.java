@@ -88,6 +88,13 @@ public class Bar extends MarketData {
         return barDao.refresh(this);
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
     public Double getOpen() {
         return open;
     }

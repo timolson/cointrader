@@ -19,6 +19,13 @@ public class MarketDataError extends Event {
         this(market, null);
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
     public MarketDataError(Market market, @Nullable Exception exception) {
         this.exception = exception;
         this.market = market;

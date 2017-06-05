@@ -56,6 +56,13 @@ public class Market extends Tradeable {
         return findOrCreate(exchange, listing, listing.getPriceBasis(), listing.getVolumeBasis());
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
     @Nullable
     @ManyToMany(fetch = FetchType.EAGER)
     //  @JoinColumn(name = "syntheticMarket")

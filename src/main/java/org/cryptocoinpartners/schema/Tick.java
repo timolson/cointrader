@@ -20,6 +20,13 @@ public class Tick extends PriceData implements Spread {
         return startInstant;
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
     @Transient
     public Instant getEndInstant() {
         return getTime();

@@ -1316,7 +1316,7 @@ public class BasicPortfolioService implements PortfolioService {
                         .getBalances().get(exchangeAsset).getAmount();
                 Map<Asset, Balance> bals;
                 log.trace(this.getClass().getSimpleName() + " getAvailableBaseBalance: Calculating Available balance with rate " + rate + " exchangeAsset "
-                        + exchangeAsset + " existingBalance " + existingBalance);
+                        + exchangeAsset + " existingBalances  " + existingBalance);
                 if (existingBalance == null)
                     bals = exchange.getBalances();
                 if (rate != null)
@@ -1327,6 +1327,7 @@ public class BasicPortfolioService implements PortfolioService {
         }
         ConcurrentHashMap<Asset, Amount> margins = getMargins(exchange);
         for (Asset marginCurrency : margins.keySet()) {
+
             Listing listing = Listing.forPair(marginCurrency, quoteAsset);
             Offer rate = quotes.getImpliedBestAskForListing(listing);
             if (rate != null) {
@@ -1336,13 +1337,18 @@ public class BasicPortfolioService implements PortfolioService {
             }
 
         }
+
+        DecimalAmount marginRatio = baseMargin.abs().divide(baseExchangeBalance, Remainder.ROUND_CEILING);
+        //   if (marginRatio.compareTo(DecimalAmount.of("0.8")) > 0)
+        log.debug(this.getClass().getSimpleName() + " getAvailableBaseBalance: Ratio of margin to " + exchange + " " + quoteAsset + " balance is "
+                + marginRatio + ", " + exchange + "  " + quoteAsset + " balance: " + baseExchangeBalance + ", utlised " + quoteAsset + " margin " + baseMargin);
         ConcurrentHashMap<Asset, Amount> unrealisedPnLs = getUnrealisedPnLs(exchange);
         for (Asset currency : unrealisedPnLs.keySet()) {
             Listing listing = Listing.forPair(currency, quoteAsset);
             Offer rate = quotes.getImpliedBestAskForListing(listing);
             if (rate != null) {
                 baseUnrealisedPnL = baseUnrealisedPnL.plus(unrealisedPnLs.get(currency).times(rate.getPrice(), Remainder.ROUND_EVEN));
-                log.trace(this.getClass().getSimpleName() + " getAvailableBaseBalance: Calculating unrealisedPnLs with rate " + rate + " exchangeAsset "
+                log.debug(this.getClass().getSimpleName() + " getAvailableBaseBalance: Calculating unrealisedPnLs with rate " + rate + " exchangeAsset "
                         + listing + " unrealisedPnL " + unrealisedPnLs.get(currency));
             }
 

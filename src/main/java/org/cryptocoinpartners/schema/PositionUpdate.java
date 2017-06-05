@@ -26,6 +26,13 @@ public class PositionUpdate extends Event {
         return position;
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return getPosition();
+    }
+
     @ManyToOne
     public Market getMarket() {
         return market;

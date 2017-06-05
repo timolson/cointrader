@@ -139,6 +139,13 @@ public class OrderUpdate extends Event {
         return order;
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return getOrder();
+    }
+
     public OrderState getLastState() {
         return lastState;
     }

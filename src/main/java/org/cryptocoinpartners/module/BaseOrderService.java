@@ -1748,7 +1748,11 @@ public abstract class BaseOrderService implements OrderService {
             }
         }
         // always create teh stops
+        //    if (fill.getOrder().getParentOrder().getComment().contains("Reentry"))
+        //      log.debug("test1");
+
         GeneralOrder stopOrder = buildStopLimitOrder(fill);
+        GeneralOrder targetOrder = buildReentrantLimitOrder(fill);
         //    stopOrder.persit();
         if (stopOrder != null && order.getPositionEffect() == (PositionEffect.OPEN)) {
 
@@ -1759,6 +1763,19 @@ public abstract class BaseOrderService implements OrderService {
                 // Now we can link them up
             } catch (Throwable e) {
                 log.info("Unable to place Stop order " + stopOrder + ". Full stack trace", e);
+                // throw e;
+            }
+
+        }
+        if (targetOrder != null && order.getPositionEffect() == (PositionEffect.CLOSE)) {
+
+            try {
+                placeOrder(targetOrder);
+                log.info("Placed Target order " + targetOrder);
+
+                // Now we can link them up
+            } catch (Throwable e) {
+                log.info("Unable to place Target order " + targetOrder + ". Full stack trace", e);
                 // throw e;
             }
 
@@ -1847,30 +1864,131 @@ public abstract class BaseOrderService implements OrderService {
         }
     }
 
+    private GeneralOrder buildReentrantLimitOrder(Fill fill) {
+
+        //      GeneralOrder order = generalOrderFactory.create(fill.getOrder().getPortfolio(), this));
+
+        //        OrderBuilder stoporder = new OrderBuilder(fill.getOrder().getPortfolio(), this);
+
+        if ((fill.getPositionEffect() != null && fill.getPositionEffect() != PositionEffect.OPEN) && ((!fill.getUnfilledVolume().isZero()))) {
+            Amount targetPrice = null;
+            DiscreteAmount targetPriceDiscrete;
+            BigDecimal bdTargetPrice;
+            BigDecimal bdLimitPrice;
+            GeneralOrder targetOrder;
+            BigDecimal bdVolume = fill.getVolume().asBigDecimal();
+            //   targetPrice = fill.getOrder().getParentOrder().getParentFill().getPrice();
+
+            ArrayList<Fill> parentFills = new ArrayList<Fill>();
+            Fill parent = null;
+            fill.getAllParentFillsByFill(fill, parentFills);
+            Collections.reverse(parentFills);
+            Amount targetAmount = null;
+
+            for (Fill parentFill : parentFills) {
+                if (parentFill.getPositionEffect().equals(PositionEffect.OPEN)) {
+                    targetPrice = parentFill.getPrice();
+                    parent = parentFill;
+                    break;
+                }
+            }
+
+            if (targetPrice == null)
+                return null;
+            targetAmount = targetAmount == null ? targetPrice.minus(fill.getPrice()).abs() : targetAmount;
+
+            targetPriceDiscrete = new DiscreteAmount(DiscreteAmount.roundedCountForBasis(targetPrice.asBigDecimal(), fill.getMarket().getPriceBasis()), fill
+                    .getMarket().getPriceBasis());
+            bdTargetPrice = targetPriceDiscrete.asBigDecimal();
+            // String comment = (fill.isLong()? "")
+
+            bdLimitPrice = (fill.getVolume().isNegative()) ? targetPriceDiscrete.increment(2).asBigDecimal() : targetPriceDiscrete.decrement(2).asBigDecimal();
+
+            FillType fillType = null;
+            if (parent.getFillChildOrders().get(0).getFillType() != null)
+                switch (parent.getFillChildOrders().get(0).getFillType()) {
+                    case TRAILING_STOP_LOSS:
+                        break;
+                    case REENTRANT_STOP_LOSS:
+                    case REENTRANT_STOP_LIMIT:
+                        fillType = FillType.REENTRANT_STOP_LIMIT;
+                        break;
+                    case REENTRANT_TRAILING_STOP_LOSS:
+                    case REENTRANT_TRAILING_STOP_LIMIT:
+                        fillType = FillType.REENTRANT_TRAILING_STOP_LIMIT;
+                        break;
+                    case TRAILING_UNREALISED_STOP_LOSS:
+                        break;
+
+                }
+            if (fillType == null)
+                return null;
+            targetOrder = generalOrderFactory.create(context.getTime(), fill, fill.getMarket(), bdVolume.negate(), fillType);
+            String comment = (bdVolume.compareTo(BigDecimal.ZERO) > 0) ? "Long Reentry Order" : "Short Reentry Order";
+            //   if (stopOrder.getFillType().equals(FillType.TRAILING_UNREALISED_STOP_LIMIT))
+            targetOrder.withLastBestPrice(fill.getPrice().asBigDecimal());
+
+            targetOrder.withComment(comment).withTargetPrice(bdTargetPrice).withLimitPrice(bdLimitPrice).withPositionEffect(PositionEffect.OPEN)
+                    .withExecutionInstruction(fill.getOrder().getExecutionInstruction()).withTargetAmount(targetAmount.asBigDecimal())
+                    .withTargetPercentage(parent.getFillChildOrders().get(0).getTargetPercentage())
+                    .withTriggerInterval(parent.getFillChildOrders().get(0).getTriggerInterval()).withUsePosition(false)
+                    .withOrderGroup(fill.getOrder().getOrderGroup());
+
+            targetOrder.copyCommonFillProperties(fill);
+            fill.setTargetPriceCount(targetPriceDiscrete.getCount());
+            //this might cause the order to trigger as stop loss exit order!
+            // if (fillType.equals(FillType.REENTRANT_STOP_LIMIT) || fillType.equals(FillType.REENTRANT_TRAILING_STOP_LIMIT)) {
+            //   targetOrder.withStopPrice(bdStopPrice).withStopAmount(stopAmount.asBigDecimal())
+            //         .withStopPercentage(fill.getOrder().getParentOrder().getStopPercentage());
+            //fill.setStopPriceCount(stopPriceDiscrete.getCount());
+            // }
+
+            Set<Order> parentFillOrders = new HashSet<Order>();
+            fill.getAllSpecificOrdersByParentFill(fill, parentFillOrders);
+            for (Order childOrder : parentFillOrders) {
+                if (childOrder instanceof SpecificOrder) {
+                    targetOrder.addChildOrder(childOrder);
+                    childOrder.setParentOrder(targetOrder);
+                }
+            }
+            return targetOrder;
+        }
+        return null;
+    }
+
     private GeneralOrder buildStopLimitOrder(Fill fill) {
 
         //      GeneralOrder order = generalOrderFactory.create(fill.getOrder().getPortfolio(), this));
 
         //        OrderBuilder stoporder = new OrderBuilder(fill.getOrder().getPortfolio(), this);
 
-        if ((fill.getPositionEffect() != null && fill.getPositionEffect() != PositionEffect.CLOSE)
-                && (fill.getOrder().getParentOrder() != null && (fill.getOrder().getParentOrder().getStopPrice() != null
-                        || fill.getOrder().getParentOrder().getStopAmount() != null || fill.getOrder().getParentOrder().getStopPercentage() != 0 || !fill
-                        .getUnfilledVolume().isZero()))) {
-            Amount stopPrice;
+        //   fill.getAllOrdersByParentFill(allChildren)
+
+        if ((fill.getPositionEffect() != null && fill.getPositionEffect() != PositionEffect.CLOSE) && (!fill.getUnfilledVolume().isZero())) {
+            Amount stopPrice = null;
             DiscreteAmount stopPriceDiscrete;
             BigDecimal bdStopPrice;
             BigDecimal bdLimitPrice;
             GeneralOrder stopOrder;
             BigDecimal bdVolume = fill.getVolume().asBigDecimal();
-            Amount stopAmount = fill.getOrder().getParentOrder().getStopAmount();
-            if (fill.getOrder().getParentOrder().getStopAmount() != null || fill.getOrder().getParentOrder().getStopPercentage() != 0) {
-                stopAmount = (fill.getOrder().getParentOrder().getStopPercentage() != 0) ? fill.getPrice().times(
-                        fill.getOrder().getParentOrder().getStopPercentage(), Remainder.ROUND_EVEN) : fill.getOrder().getParentOrder().getStopAmount();
-
-                stopPrice = (fill.isLong()) ? fill.getPrice().minus(stopAmount) : fill.getPrice().plus(stopAmount);
-            } else
-                stopPrice = fill.getOrder().getParentOrder().getStopPrice();
+            ArrayList<Order> parentOrders = new ArrayList<Order>();
+            fill.getAllParentOrdersByFill(fill, parentOrders);
+            Collections.reverse(parentOrders);
+            Order parent = null;
+            Amount stopAmount = null;
+            for (Order parentOrder : parentOrders) {
+                if (parentOrder.getStopAmount() != null) {
+                    stopAmount = (parentOrder.getStopPercentage() != 0) ? fill.getPrice().times(parentOrder.getStopPercentage(), Remainder.ROUND_EVEN)
+                            : parentOrder.getStopAmount();
+                    stopPrice = (fill.getVolume().isPositive()) ? fill.getPrice().minus(stopAmount) : fill.getPrice().plus(stopAmount);
+                    parent = parentOrder;
+                    break;
+                } else if (parentOrder.getStopPrice() != null) {
+                    stopPrice = parentOrder.getStopPrice();
+                    parent = parentOrder;
+                    break;
+                }
+            }
 
             if (stopPrice == null)
                 return null;
@@ -1882,10 +2000,18 @@ public abstract class BaseOrderService implements OrderService {
             bdLimitPrice = (fill.getVolume().isNegative()) ? stopPriceDiscrete.increment(2).asBigDecimal() : stopPriceDiscrete.decrement(2).asBigDecimal();
 
             FillType fillType = FillType.STOP_LIMIT;
-            if (fill.getOrder() != null && fill.getOrder().getParentOrder() != null && fill.getOrder().getParentOrder().getFillType() != null)
-                switch (fill.getOrder().getParentOrder().getFillType()) {
+            if (parent.getFillType() != null)
+                switch (parent.getFillType()) {
                     case TRAILING_STOP_LOSS:
                         fillType = FillType.TRAILING_STOP_LIMIT;
+                        break;
+                    case REENTRANT_STOP_LOSS:
+                    case REENTRANT_STOP_LIMIT:
+                        fillType = FillType.REENTRANT_STOP_LIMIT;
+                        break;
+                    case REENTRANT_TRAILING_STOP_LOSS:
+                    case REENTRANT_TRAILING_STOP_LIMIT:
+                        fillType = FillType.REENTRANT_TRAILING_STOP_LIMIT;
                         break;
                     case TRAILING_UNREALISED_STOP_LOSS:
                         fillType = FillType.TRAILING_UNREALISED_STOP_LIMIT;
@@ -1902,10 +2028,10 @@ public abstract class BaseOrderService implements OrderService {
 
             stopOrder.withComment(comment).withStopPrice(bdStopPrice).withLimitPrice(bdLimitPrice).withPositionEffect(PositionEffect.CLOSE)
                     .withExecutionInstruction(fill.getOrder().getExecutionInstruction()).withStopAmount(stopAmount.asBigDecimal())
-                    .withStopPercentage(fill.getOrder().getParentOrder().getStopPercentage())
-                    .withTriggerInterval(fill.getOrder().getParentOrder().getTriggerInterval())
-                    .withUsePosition(fill.getOrder().getParentOrder().getUsePosition()).withOrderGroup(fill.getOrder().getOrderGroup());
-
+                    .withStopPercentage(parent.getStopPercentage()).withTriggerInterval(parent.getTriggerInterval()).withUsePosition(true)
+                    .withOrderGroup(fill.getOrder().getOrderGroup());
+            //       if (fillType.equals(FillType.REENTRANT_STOP_LIMIT) || fillType.equals(FillType.REENTRANT_TRAILING_STOP_LIMIT))
+            //         stopOrder.withTargetPrice(fill.getPrice().asBigDecimal());
             stopOrder.copyCommonFillProperties(fill);
             fill.setStopPriceCount(stopPriceDiscrete.getCount());
 
@@ -2025,6 +2151,7 @@ public abstract class BaseOrderService implements OrderService {
                     placeOrder(specificOrder);
                     break;
                 case STOP_LIMIT:
+                case REENTRANT_STOP_LIMIT:
                     addTriggerOrder(generalOrder);
                     updateOrderState(generalOrder, OrderState.TRIGGER, true);
                     if (generalOrder.getStopPrice() != null)
@@ -2033,6 +2160,7 @@ public abstract class BaseOrderService implements OrderService {
                         log.info("Target trade Entered at " + generalOrder.getTargetPrice());
                     break;
                 case TRAILING_STOP_LIMIT:
+                case REENTRANT_TRAILING_STOP_LIMIT:
                 case TRAILING_UNREALISED_STOP_LIMIT:
                     addTriggerOrder(generalOrder);
                     updateOrderState(generalOrder, OrderState.TRIGGER, true);
@@ -2040,7 +2168,9 @@ public abstract class BaseOrderService implements OrderService {
                     break;
                 case TRAILING_STOP_LOSS:
                 case TRAILING_UNREALISED_STOP_LOSS:
+                case REENTRANT_TRAILING_STOP_LOSS:
                 case STOP_LOSS:
+                case REENTRANT_STOP_LOSS:
                     if (generalOrder.getTargetPrice() != null) {
                         // so we are adding an orde that might or might not have a stop price/ammount.
                         addTriggerOrder(generalOrder);
@@ -2467,11 +2597,17 @@ public abstract class BaseOrderService implements OrderService {
                     // so if I am selling I am sellling bid
 
                     // so we are going to decrements by this number of ticks?
-                    Amount priceUpdate = bestOffer.getPrice().times((pendingOrder.getPlacementCount() / (double) (updateOrderAfter * 200)),
-                            Remainder.ROUND_EVEN);
+                    int index = (pendingOrder.isBid()) ? Math.min(lastBook.getAsks().size() - 1, pendingOrder.getPlacementCount()) : Math.min(lastBook
+                            .getBids().size() - 1, pendingOrder.getPlacementCount());
+                    updatedlimitPrice = (pendingOrder.isBid()) ? lastBook.getAsks().get(index).getPrice() : lastBook.getBids().get(index).getPrice();
 
-                    updatedlimitPrice = (((pendingOrder.isAsk()) ? bestOffer.getPrice().minus(priceUpdate) : bestOffer.getPrice().plus(priceUpdate))).toBasis(
-                            pendingOrder.getMarket().getPriceBasis(), Remainder.ROUND_FLOOR);
+                    //     (((pendingOrder.isAsk())
+                    //   lastBook.getAsks().
+                    // Amount priceUpdate = bestOffer.getPrice().times((pendingOrder.getPlacementCount() / (double) (updateOrderAfter * 200)),
+                    //       Remainder.ROUND_EVEN);
+
+                    //updatedlimitPrice = (((pendingOrder.isAsk()) ? bestOffer.getPrice().minus(priceUpdate) : bestOffer.getPrice().plus(priceUpdate))).toBasis(
+                    //      pendingOrder.getMarket().getPriceBasis(), Remainder.ROUND_FLOOR);
                     //Sell at lowest possible price
                     limitPrice = (limitPrice == null) ? updatedlimitPrice : limitPrice;
 
@@ -2763,7 +2899,8 @@ public abstract class BaseOrderService implements OrderService {
                                 if (triggeredOrder != null
                                         && ((triggeredOrder.getStopPrice() != null && (triggerPrice.compareTo(triggeredOrder.getStopPrice()) >= 0)) || (triggeredOrder
                                                 .getTargetPrice() != null && (triggerPrice.compareTo(triggeredOrder.getTargetPrice()) >= 0)))) {
-
+                                    //614.62
+                                    //615                                    
                                     log.info(this.getClass().getSimpleName() + ":updatingRestingOrder - At price " + triggerPrice + " " + event
                                             + " triggered order: buy" + triggeredOrder);
                                     if (triggeredOrder.getParentFill() != null)
@@ -2782,13 +2919,17 @@ public abstract class BaseOrderService implements OrderService {
                                                         .getFillChildOrders()) : ""));
                                     String comment = null;
                                     if (triggeredOrder.getStopPrice() != null && (triggerPrice.compareTo(triggeredOrder.getStopPrice()) >= 0)) {
-
+                                        //    if (triggeredOrder.getPositionEffect() == null || triggeredOrder.getPositionEffect().equals(PositionEffect.CLOSE))
                                         comment = "Short Stop Order with Stop Price";
+                                        //  else
+                                        //    comment = "Long Entry Order with Target Price";
                                         //specificOrder.setExecutionInstruction(ExecutionInstruction.TAKER);
-                                    } else if (triggeredOrder.getPositionEffect() == (PositionEffect.CLOSE))
-                                        comment = "Short Stop Order with Target Price";
-                                    else if (triggeredOrder.getPositionEffect() == (PositionEffect.OPEN))
+                                    } else
                                         comment = "Long Entry Order with Target Price";
+                                    //        if (triggeredOrder.getPositionEffect() == (PositionEffect.CLOSE))
+                                    //      comment = "Short Stop Order with Stop Price";
+                                    //  else if (triggeredOrder.getPositionEffect() == (PositionEffect.OPEN))
+                                    //    comment = "Long Entry Order with Target Price";
 
                                     if (triggerOrder(triggeredOrder, comment, triggeredOrders) == null) {
                                         triggeredOrders.add(triggeredOrder);
@@ -2842,7 +2983,9 @@ public abstract class BaseOrderService implements OrderService {
                                 if (trailingTriggerOrder.getTimestamp() < b.getBestAsk().getTimestamp()) {
                                     DiscreteAmount triggerPrice = b.getBestAsk().getPrice();
 
-                                    if (trailingTriggerOrder.getFillType() != null && trailingTriggerOrder.getFillType().equals(FillType.TRAILING_STOP_LIMIT)) {
+                                    if (trailingTriggerOrder.getFillType() != null
+                                            && (trailingTriggerOrder.getFillType().equals(FillType.TRAILING_STOP_LIMIT) || trailingTriggerOrder.getFillType()
+                                                    .equals(FillType.REENTRANT_TRAILING_STOP_LIMIT))) {
                                         log.trace(this.getClass().getSimpleName()
                                                 + "- updateRestingOrders: Determing if any buy trailing stops to update for order id "
                                                 + trailingTriggerOrder.getId());
@@ -3020,12 +3163,17 @@ public abstract class BaseOrderService implements OrderService {
                                                         .getFillChildOrders()) : ""));
                                     String comment = null;
                                     if (triggeredOrder.getStopPrice() != null && (triggerPrice.compareTo(triggeredOrder.getStopPrice()) <= 0)) {
-                                        comment = ("Long Stop Order with Stop Price");
+                                        //  if (triggeredOrder.getPositionEffect() == null || triggeredOrder.getPositionEffect().equals(PositionEffect.CLOSE))
+                                        comment = "Long Stop Order with Stop Price";
+                                        //      else
+                                        //        comment = "Short Entry Order with Target Price";
 
-                                    } else if (triggeredOrder.getPositionEffect() == (PositionEffect.CLOSE))
-                                        comment = ("Long Stop Order with Target Price");
-                                    else if (triggeredOrder.getPositionEffect() == (PositionEffect.OPEN))
+                                    } else
                                         comment = ("Short Entry Order with Target Price");
+                                    //   if (triggeredOrder.getPositionEffect() == (PositionEffect.CLOSE))
+                                    // comment = ("Long Stop Order with Stop Price");
+                                    //else if (triggeredOrder.getPositionEffect() == (PositionEffect.OPEN))
+                                    //  comment = ("Short Entry Order with Target Price");
 
                                     if (triggerOrder(triggeredOrder, comment, triggeredOrders) == null) {
                                         triggeredOrders.add(triggeredOrder);
@@ -3086,7 +3234,9 @@ public abstract class BaseOrderService implements OrderService {
                                 if (trailingTriggerOrder.getTimestamp() < b.getBestAsk().getTimestamp()) {
                                     DiscreteAmount triggerPrice = b.getBestAsk().getPrice();
 
-                                    if (trailingTriggerOrder.getFillType() != null && trailingTriggerOrder.getFillType().equals(FillType.TRAILING_STOP_LIMIT)) {
+                                    if (trailingTriggerOrder.getFillType() != null
+                                            && (trailingTriggerOrder.getFillType().equals(FillType.TRAILING_STOP_LIMIT) || trailingTriggerOrder.getFillType()
+                                                    .equals(FillType.REENTRANT_TRAILING_STOP_LIMIT))) {
                                         log.trace(this.getClass().getSimpleName()
                                                 + "- updateRestingOrders: Determining if sell trailing stops to update for order id "
                                                 + trailingTriggerOrder.getId());
@@ -3255,6 +3405,7 @@ public abstract class BaseOrderService implements OrderService {
                 break;
             case TRAILING_UNREALISED_STOP_LIMIT:
             case TRAILING_STOP_LIMIT:
+            case REENTRANT_TRAILING_STOP_LIMIT:
             case STOP_LIMIT:
                 //we will put the stop order in at best bid or best ask
                 SpecificOrder stopOrder = specificOrder;
@@ -3281,8 +3432,10 @@ public abstract class BaseOrderService implements OrderService {
 
                 break;
             case TRAILING_STOP_LOSS:
+            case REENTRANT_TRAILING_STOP_LOSS:
             case TRAILING_UNREALISED_STOP_LOSS:
             case STOP_LOSS:
+            case REENTRANT_STOP_LOSS:
                 if (limitPrice != null) {
                     discreteLimit = limitPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
                     specificOrder.withLimitPrice(discreteLimit);
@@ -5690,6 +5843,8 @@ public abstract class BaseOrderService implements OrderService {
         //  TreeBasedTable<String, Integer, Character> table =
         //        TreeBasedTable.create(rowComparator, columnComparator);
         if (triggerOrder.getFillType().equals(FillType.TRAILING_STOP_LIMIT) || triggerOrder.getFillType().equals(FillType.TRAILING_STOP_LOSS)
+                || triggerOrder.getFillType().equals(FillType.REENTRANT_TRAILING_STOP_LOSS)
+                || triggerOrder.getFillType().equals(FillType.REENTRANT_TRAILING_STOP_LIMIT)
                 && (triggerOrder.getStopPrice() != null && triggerOrder.getStopAmount() != null)) {
             if (trailingTriggerOrders.get(market) == null || trailingTriggerOrders.get(market).isEmpty()) {
                 trailingTriggerOrderQueue.add(triggerOrder);

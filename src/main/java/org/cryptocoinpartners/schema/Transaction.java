@@ -365,6 +365,13 @@ public class Transaction extends Event {
         return baseRateCount;
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return getOrder() != null ? getOrder() : getFill() != null ? getFill() : getExchange() != null ? getExchange() : getPortfolio();
+    }
+
     public Long getAmountCount() {
         return amountCount;
     }

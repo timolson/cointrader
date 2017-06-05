@@ -117,6 +117,13 @@ public class Listing extends EntityBase {
         return getSymbol();
     }
 
+    @Override
+    @Transient
+    public EntityBase getParent() {
+
+        return null;
+    }
+
     @Transient
     public String getSymbol() {
         if (prompt != null)

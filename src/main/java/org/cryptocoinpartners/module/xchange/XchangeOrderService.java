@@ -1,13 +1,11 @@
 package org.cryptocoinpartners.module.xchange;
 
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -15,9 +13,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
-import java.util.concurrent.RejectedExecutionException;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -45,43 +40,27 @@ import org.cryptocoinpartners.schema.Prompt;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.schema.Tradeable;
 import org.cryptocoinpartners.service.PortfolioService;
-import org.cryptocoinpartners.util.CompareUtils;
 import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.RateLimiter;
 import org.cryptocoinpartners.util.Remainder;
 import org.cryptocoinpartners.util.XchangeUtil;
 import org.joda.time.Duration;
-import org.joda.time.Instant;
 import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderStatus;
-import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
-import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.dto.trade.MarketOrder;
 import org.knowm.xchange.dto.trade.OpenOrders;
 import org.knowm.xchange.exceptions.ExchangeException;
-import org.knowm.xchange.exceptions.NotAvailableFromExchangeException;
 import org.knowm.xchange.exceptions.NotYetImplementedForExchangeException;
 import org.knowm.xchange.okcoin.FuturesContract;
-import org.knowm.xchange.okcoin.service.polling.OkCoinFuturesTradeService.OkCoinFuturesTradeHistoryParams;
-import org.knowm.xchange.service.polling.trade.PollingTradeService;
-import org.knowm.xchange.service.polling.trade.params.TradeHistoryParams;
-import org.knowm.xchange.service.streaming.ExchangeEvent;
-import org.knowm.xchange.service.streaming.ExchangeEventType;
-import org.knowm.xchange.service.streaming.ExchangeStreamingConfiguration;
-import org.knowm.xchange.service.streaming.StreamingExchangeService;
+import org.knowm.xchange.service.trade.TradeService;
 
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Sets.SetView;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * This module routes SpecificOrders through Xchange
@@ -145,7 +124,6 @@ public class XchangeOrderService extends BaseOrderService {
     private void initExchange(@Nullable String helperClassName, @Nullable String streamingConfigClassName, int retryCount, int queries, Duration per,
             Exchange coinTraderExchange, List listings) {
         org.knowm.xchange.Exchange xchangeExchange = XchangeUtil.getExchangeForMarket(coinTraderExchange);
-        StreamingExchangeService streamingDataService;
         Helper helper = null;
         if (helperClassName != null && !helperClassName.isEmpty()) {
             if (helperClassName.indexOf('.') == -1)
@@ -168,7 +146,6 @@ public class XchangeOrderService extends BaseOrderService {
             }
         }
 
-        ExchangeStreamingConfiguration streamingConfiguration = null;
         List<Market> markets = new ArrayList<>(listings.size());
         Market market;
         //  ExchangeStreamingConfiguration streamingConfiguration = new OkCoinExchangeStreamingConfiguration();
@@ -179,279 +156,24 @@ public class XchangeOrderService extends BaseOrderService {
             markets.add(market);
         }
 
-        if (streamingConfigClassName != null && !streamingConfigClassName.isEmpty()) {
-            RateLimiter rateLimiter = new RateLimiter(queries, per);
-            // streamingDataService = xchangeExchange.getStreamingExchangeService(streamingConfiguration);
-            for (Iterator<Market> im = markets.iterator(); im.hasNext();) {
-                market = im.next();
+        //    PollingTradeService dataService = xchangeExchange.getPollingTradeService();
+        // when 
+        RateLimiter rateLimiter = new RateLimiter(queries, per);
 
-                ListeningExecutorService service = MoreExecutors.listeningDecorator(Executors.newSingleThreadExecutor());
-                ListenableFuture<StreamOrdersRunnable> streamingTradesFuture = service.submit(new StreamOrdersRunnable(context, xchangeExchange, market,
-                        rateLimiter, streamingConfigClassName, helper));
+        for (Iterator<Market> im = markets.iterator(); im.hasNext(); rateLimiter.execute(new FetchOrdersRunnable(context, market, rateLimiter,
+                coinTraderExchange, retryCount, helper)))
+            market = im.next();
 
-                Futures.addCallback(streamingTradesFuture, new FutureCallback<StreamOrdersRunnable>() {
-                    // we want this handler to run immediately after we push the big red button!
-                    @Override
-                    public void onSuccess(StreamOrdersRunnable streamingTradesFuture) {
-                        System.out.println("complete");
+        return;
 
-                        //walkAwayFrom(explosion);
-                    }
-
-                    @Override
-                    public void onFailure(Throwable thrown) {
-                        System.out.println("failed");
-                        //battleArchNemesis(); // escaped the explosion!
-                    }
-                });
-
-            }
-            return;
-        } else {
-            //    PollingTradeService dataService = xchangeExchange.getPollingTradeService();
-            // when 
-            RateLimiter rateLimiter = new RateLimiter(queries, per);
-
-            for (Iterator<Market> im = markets.iterator(); im.hasNext(); rateLimiter.execute(new FetchOrdersRunnable(context, market, rateLimiter,
-                    coinTraderExchange, retryCount, helper)))
-                market = im.next();
-
-            return;
-        }
-    }
-
-    private class StreamOrdersRunnable implements Callable {
-
-        private final Helper helper;
-        DateFormat dateFormat = new SimpleDateFormat("ddMMyy");
-        private ExchangeStreamingConfiguration streamingConfiguration;
-        private CurrencyPair[] pairs;
-
-        public StreamOrdersRunnable(Context context, org.knowm.xchange.Exchange xchangeExchange, Market market, RateLimiter rateLimiter,
-                String streamingConfigClassName, @Nullable Helper helper) {
-            this.context = context;
-            this.rateLimiter = rateLimiter;
-            this.market = market;
-            this.helper = helper;
-            this.prompt = market.getListing().getPrompt();
-            pairs = new CurrencyPair[] { XchangeUtil.getCurrencyPairForListing(market.getListing()) };
-            contract = prompt == null ? null : XchangeUtil.getContractForListing(market.getListing());
-
-            //            Thread.currentThread().setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
-            //                @Override
-            //                public void uncaughtException(Thread t, Throwable e) {
-            //                    e.printStackTrace();
-            //                }
-            //            });
-
-            if (streamingConfigClassName.indexOf('.') == -1)
-                streamingConfigClassName = XchangeData.class.getPackage().getName() + '.' + streamingConfigClassName;
-            try {
-                final Class<?> streamingConfigClass = getClass().getClassLoader().loadClass(streamingConfigClassName);
-                //  CurrencyPair[] ccy = new CurrencyPair[] { CurrencyPair.BTC_USD };
-                try {
-                    streamingConfiguration = (ExchangeStreamingConfiguration) CompareUtils.tryToCreateBestMatch(streamingConfigClass, new Object[] { pairs });
-                    dataService = xchangeExchange.getStreamingExchangeService(streamingConfiguration);
-                    dataService.connect();
-
-                    String str = streamingConfigClass.getCanonicalName();
-                } catch (InstantiationException e1) {
-                    // TODO Auto-generated catch block
-                    log.error("Threw a Execption, full stack trace follows:", e1);
-
-                    e1.printStackTrace();
-                } catch (IllegalAccessException e1) {
-                    // TODO Auto-generated catch block
-                    log.error("Threw a Execption, full stack trace follows:", e1);
-
-                    e1.printStackTrace();
-                } catch (InvocationTargetException e1) {
-                    // TODO Auto-generated catch block
-                    log.error("Threw a Execption, full stack trace follows:", e1);
-
-                    e1.printStackTrace();
-                } catch (Exception | Error e2) {
-                    // TODO Auto-generated catch block
-                    log.error("Threw a Execption, full stack trace follows:", e2);
-
-                    e2.printStackTrace();
-                }
-
-                try {
-                    streamingConfiguration = (ExchangeStreamingConfiguration) streamingConfigClass.newInstance();
-
-                    //           StreamingExchangeService service = xchangeExchange.getStreamingExchangeService(new (ExchangeStreamingConfiguration) streamingConfigClass(new CurrencyPair[]{ CurrencyPair.BTC_USD }));
-
-                } catch (InstantiationException | IllegalAccessException e) {
-                    log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName
-                            + " could not be instantiated ", e);
-                    return;
-                } catch (ClassCastException e) {
-                    log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName + " does not implement "
-                            + ExchangeStreamingConfiguration.class);
-                    return;
-                } catch (Exception | Error e2) {
-                    // TODO Auto-generated catch block
-                    log.error("Threw a Execption, full stack trace follows:", e2);
-
-                    e2.printStackTrace();
-                    return;
-                }
-            } catch (ClassNotFoundException e) {
-                log.error("Could not initialize XchangeData because stremaing configuration class " + streamingConfigClassName + " was not found");
-                return;
-            } catch (Exception | Error e2) {
-                log.error("Threw a Execption, full stack trace follows:", e2);
-
-                // TODO Auto-generated catch block
-                e2.printStackTrace();
-            }
-
-            Class<? extends ExchangeStreamingConfiguration> myclass = streamingConfiguration.getClass();
-            Class<?> streamingConfigClass = null;
-            try {
-                streamingConfigClass = getClass().getClassLoader().loadClass(streamingConfigClassName);
-            } catch (ClassNotFoundException e) {
-                // TODO Auto-generated catch block
-                log.error("Threw a Execption, full stack trace follows:", e);
-
-                e.printStackTrace();
-            } catch (Exception | Error e2) {
-                // TODO Auto-generated catch block
-                log.error("Threw a Execption, full stack trace follows:", e2);
-
-                e2.printStackTrace();
-            }
-
-            try {
-                streamingConfiguration = (ExchangeStreamingConfiguration) streamingConfigClass.newInstance();
-            } catch (InstantiationException e) {
-                // TODO Auto-generated catch block
-                log.error("Threw a Execption, full stack trace follows:", e);
-
-                e.printStackTrace();
-            } catch (IllegalAccessException e) {
-                // TODO Auto-generated catch block
-                log.error("Threw a Execption, full stack trace follows:", e);
-
-                e.printStackTrace();
-            } catch (Exception | Error e2) {
-                log.error("Threw a Execption, full stack trace follows:", e2);
-
-                // TODO Auto-generated catch block
-                e2.printStackTrace();
-            }
-            //   EntityManager entityManager = //.createEntityManager();
-            try {
-
-                List<org.cryptocoinpartners.schema.Trade> results = EM.queryList(org.cryptocoinpartners.schema.Trade.class,
-                        "select t from Trade t where market=?1 and time=(select max(time) from Trade where market=?1)", market);
-
-                for (org.cryptocoinpartners.schema.Trade trade : results) {
-                    // org.cryptocoinpartners.schema.Trade trade = query.getSingleResult();
-                    long millis = trade.getTime().getMillis();
-                    if (millis > lastTradeTime)
-                        lastTradeTime = millis;
-                    // todo this is broken and assumes an increasing integer remote key
-                    // Long remoteId = Long.valueOf(trade.getRemoteKey().concat(String.valueOf(trade.getTimestamp())));
-                    Long remoteId = Long.valueOf(trade.getRemoteKey());
-                    if (remoteId > lastTradeId)
-                        lastTradeId = remoteId;
-                }
-            } finally {
-                //  EM.em().close();
-            }
-
-            //StreamingExchangeService streamingDataService = xchangeExchange.getStreamingExchangeService(streamingConfiguration,new CurrencyPair[]{ CurrencyPair.BTC_USD }));
-
-            lastTradeTime = 0;
-            lastTradeId = 0;
-
-        }
-
-        @Override
-        public Object call() {
-            try {
-                while (true) {
-
-                    ExchangeEvent event = dataService.getNextEvent();
-
-                    if (event != null) {
-                        //System.out.println("---> " + event.getPayload() + " " + event.getEventType());
-
-                        if (event.getEventType().equals(ExchangeEventType.TRADE)) {
-                            org.knowm.xchange.dto.marketdata.Trade trade = (org.knowm.xchange.dto.marketdata.Trade) event.getPayload();
-                            long remoteId = Long.valueOf(String.valueOf(dateFormat.format(trade.getTimestamp()).concat(trade.getId()))).longValue();
-                            if (remoteId > lastTradeId) {
-
-                                Instant tradeInstant = new Instant(trade.getTimestamp());
-                                BigDecimal volume = (trade.getType() == OrderType.ASK) ? trade.getTradableAmount().negate() : trade.getTradableAmount();
-
-                                // Fill fill = fillFactory.create(order, context.getTime(), context.getTime(), bid.getMarket(), bid.getPriceCount(), fillVolume,
-                                //       Long.toString(bid.getTime().getMillis()));
-
-                                // context.publish(fill);
-                                lastTradeTime = tradeInstant.getMillis();
-                                lastTradeId = remoteId;
-                            }
-
-                        }
-                        if (event.getEventType().equals(ExchangeEventType.DISCONNECT)) {
-                            log.error(this.getClass().getSimpleName() + " Disconnected");
-                            //Thread.currentThread().interrupt();
-                            //dataService.
-                            // dataService.disconnect();
-                            //    dataService.connect();
-                            //READYSTATE status = dataService.getWebSocketStatus();
-                            //  dataService.connect();
-
-                            // let's resubmit and connect
-                        }
-
-                    }
-                }
-            } catch (InterruptedException e) {
-                log.error("Threw a Execption, full stack trace follows disconnecting:", e);
-
-                //  Thread.currentThread().interrupt();
-                dataService.disconnect();
-
-                // Thread.currentThread().interrupt();
-
-            } catch (RejectedExecutionException rej) {
-                log.error("Threw a Execption, full stack trace follows:", rej);
-
-                rej.printStackTrace();
-            }
-
-            catch (Exception | Error e2) {
-                // TODO Auto-generated catch block
-                log.error("Threw a Execption, full stack trace follows:", e2);
-
-                e2.printStackTrace();
-
-            }
-
-            return Thread.currentThread();
-        }
-
-        //   private final Book.Builder bookBuilder = new Book.Builder();
-        private final boolean getTradesNext = true;
-        private StreamingExchangeService dataService = null;
-        private final Context context;
-        private final Market market;
-        private final RateLimiter rateLimiter;
-        private final FuturesContract contract;
-        private long lastTradeTime;
-        private final Prompt prompt;
-        private long lastTradeId;
     }
 
     @Override
     protected void handleSpecificOrder(SpecificOrder specificOrder) throws Throwable {
         Order.OrderType orderType = null;
         org.knowm.xchange.Exchange exchange = XchangeUtil.getExchangeForMarket(specificOrder.getMarket().getExchange());
-        PollingTradeService tradeService = exchange.getPollingTradeService();
+        TradeService tradeService = exchange.getTradeService();
+
         if (specificOrder.getLimitPrice() != null && specificOrder.getStopPrice() != null) {
             specificOrder.persit();
             reject(specificOrder, "Stop-limit orders are not supported");
@@ -542,12 +264,13 @@ public class XchangeOrderService extends BaseOrderService {
             log.info("market:" + market + " not found");
             return pendingOrders;
         }
-        PollingTradeService tradeService = exchange.getPollingTradeService();
+        TradeService tradeService = exchange.getTradeService();
         SpecificOrder specificOrder;
         boolean exists = false;
         //TODO: need to check prompts to ensure they have the full OKCOIN_THISWEEK:BTC.USD.THISWEEK not just OKCOIN_THISWEEK:BTC.USD
         try {
             OpenOrders openOrders = tradeService.getOpenOrders();
+
             for (LimitOrder xchangeOrder : openOrders.getOpenOrders()) {
                 for (org.cryptocoinpartners.schema.Order cointraderOrder : orderStateMap.keySet()) {
                     if (cointraderOrder instanceof SpecificOrder) {
@@ -592,26 +315,13 @@ public class XchangeOrderService extends BaseOrderService {
 
     }
 
-    @Transient
-    private Collection<Trade> getFills(Portfolio portfolio) {
-
-        Collection<Trade> fills = new ArrayList<Trade>();
-
-        for (Tradeable market : portfolio.getContext().getInjector().getInstance(Market.class).findAll())
-            if (market instanceof Market)
-                fills.addAll(getXchangeFills((Market) market, portfolio));
-
-        return fills;
-
-    }
-
     protected synchronized void getOrders(@Nullable Helper helper, Market market, CurrencyPair pair, long lastTradeTime, long lastTradeId,
             FuturesContract contract, boolean firstRun, Exchange coinTraderExchange, int restartCount) throws Throwable {
         int tradeFailureCount = 0;
         Set<org.cryptocoinpartners.schema.Order> cointraderOpenOrders = new HashSet<org.cryptocoinpartners.schema.Order>();
         Set<org.knowm.xchange.dto.Order> xchangeOpenOrders = new HashSet<org.knowm.xchange.dto.Order>();
         Set<org.knowm.xchange.dto.Order> cointraderXchangeOrders = new HashSet<org.knowm.xchange.dto.Order>();
-        PollingTradeService tradePollingService = XchangeUtil.getExchangeForMarket(coinTraderExchange).getPollingTradeService();
+        TradeService tradePollingService = XchangeUtil.getExchangeForMarket(coinTraderExchange).getTradeService();
         try {
             Object params[];
             if (helper != null)
@@ -1057,49 +767,6 @@ public class XchangeOrderService extends BaseOrderService {
 
     }
 
-    @Transient
-    protected Collection<Trade> getXchangeFills(Market market, Portfolio portfolio) {
-        org.knowm.xchange.Exchange exchange;
-        Collection<Trade> fills = Collections.synchronizedList(new ArrayList<Trade>());
-
-        try {
-            exchange = XchangeUtil.getExchangeForMarket(market.getExchange());
-        } catch (Error err) {
-            log.info("market:" + market + " not found");
-            return fills;
-        }
-        PollingTradeService tradeService = exchange.getPollingTradeService();
-
-        try {
-            //   TradeHistoryParamsAll params = new TradeHistoryParamsAll();
-            // for (order workingOrder : orderStateMap.
-            TradeHistoryParams params = new OkCoinFuturesTradeHistoryParams(50, 0, CurrencyPair.BTC_USD, FuturesContract.ThisWeek, "86751191");
-
-            //tradeService.createTradeHistoryParams();
-            //new TradeHistoryParamFuturesContract();
-            //params.
-            //params.setCurrencyPair(CurrencyPair.BTC_MXN);
-            //params.setStartId("86751191");
-            //   params.
-
-            Trades trades = tradeService.getTradeHistory(params);
-            //for (Trade trade : trades.getTrades())
-            fills.addAll(trades.getTrades());
-            return fills;
-        } catch (ExchangeException e) {
-            log.error("Unable to find orders of portfolio :" + portfolio.getId() + ". Full stack trace: ", e);
-        } catch (NotAvailableFromExchangeException e) {
-            log.error("Unable to cancel order :" + portfolio.getId() + ". Full stack trace: ", e);
-        } catch (NotYetImplementedForExchangeException e) {
-            log.error("Unable to cancel order :" + portfolio.getId() + ". Full stack trace: ", e);
-        } catch (IOException e) {
-            log.error("failed to cancel order " + portfolio.getId() + ". Full stack trace: ", e);
-            e.printStackTrace();
-        }
-        return fills;
-
-    }
-
     protected static final Collection<SpecificOrder> pendingOrders = new ArrayList<SpecificOrder>();
     protected static final HashBiMap<org.knowm.xchange.dto.Order, org.knowm.xchange.dto.Order> externalOrderMap = HashBiMap.create();
 
@@ -1138,7 +805,7 @@ public class XchangeOrderService extends BaseOrderService {
 
         try {
             exchange = XchangeUtil.getExchangeForMarket(order.getMarket().getExchange());
-            PollingTradeService tradeService = exchange.getPollingTradeService();
+            TradeService tradeService = exchange.getTradeService();
             if (tradeService.cancelOrder(order.getRemoteKey())) {
 
                 /*    this.context = context;
@@ -1199,7 +866,7 @@ public class XchangeOrderService extends BaseOrderService {
 
                 //TODO: need to check prompts to ensure they have the full OKCOIN_THISWEEK:BTC.USD.THISWEEK not just OKCOIN_THISWEEK:BTC.USD
                 try {
-                    exchangeOrders = XchangeUtil.getExchangeForMarket(specificOrder.getMarket().getExchange()).getPollingTradeService()
+                    exchangeOrders = XchangeUtil.getExchangeForMarket(specificOrder.getMarket().getExchange()).getTradeService()
                             .getOrder(openOrders.toArray(new String[openOrders.size()]));
                     for (Order exchangeOrder : exchangeOrders) {
                         if (specificOrder.getRemoteKey().equals(exchangeOrder.getId())) {
