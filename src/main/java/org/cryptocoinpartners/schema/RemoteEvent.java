@@ -58,12 +58,12 @@ public abstract class RemoteEvent extends Event {
     protected RemoteEvent() {
     }
 
-    protected void setTimeReceived(Instant timeReceived) {
+    protected synchronized void setTimeReceived(Instant timeReceived) {
         this.timeReceived = timeReceived;
         this.timestampReceived = timeReceived.getMillis();
     }
 
-    protected void setRemoteKey(@Nullable String remoteKey) {
+    protected synchronized void setRemoteKey(@Nullable String remoteKey) {
         this.remoteKey = remoteKey;
     }
 

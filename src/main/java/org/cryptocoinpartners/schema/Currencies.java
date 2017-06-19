@@ -39,6 +39,9 @@ public class Currencies {
     public static final Currency NXT = crypto("NXT", 1e-8);
     public static final Currency XCP = crypto("XCP", 1e-8);
     public static final Currency XPM = crypto("XPM", 1e-8);
+    public static final Currency XRP = crypto("XRP", 1e-8);
+    public static final Currency BTS = crypto("BTS", 1e-8);
+    public static final Currency ETC = crypto("ETC", 1e-8);
 
     // Altcoins
     // todo review bases!  they may not be correct

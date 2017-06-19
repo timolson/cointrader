@@ -60,13 +60,13 @@ public abstract class Temporal extends EntityBase {
     protected Temporal() {
     }
 
-    protected void setTimestamp(long timestamp) {
+    protected synchronized void setTimestamp(long timestamp) {
         //  this.time = time;
         //this.dateTime = time.toDate();
         this.timestamp = timestamp;
     }
 
-    protected void setTime(Instant time) {
+    protected synchronized void setTime(Instant time) {
         this.time = time;
         this.dateTime = time.toDate();
         setTimestamp(time.getMillis());

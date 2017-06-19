@@ -123,7 +123,8 @@ public class ConsoleRunMode extends RunMode {
 
         StrategyInstance strategyInstance = new StrategyInstance("ConsoleStrategy");
         context.attachInstance(strategyInstance);
-        setUpInitialPortfolio(strategyInstance);
+        strategyInstance.getStrategy().init();
+
         // context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));
 
         //  context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));

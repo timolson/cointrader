@@ -17,6 +17,7 @@ import javax.persistence.QueryHint;
 import javax.persistence.Table;
 import javax.persistence.Transient;
 
+import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.FeeMethod;
 import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.schema.dao.Dao;
@@ -32,363 +33,365 @@ import com.google.inject.Inject;
 @Entity
 @Cacheable
 @NamedQueries({
-        @NamedQuery(name = "Listing.findByQuoteBase", query = "select a from Listing a where base=?1 and quote=?2 and prompt IS NULL", hints = { @QueryHint(name = "org.hibernate.cacheable", value = "true") }),
-        @NamedQuery(name = "Listing.findByQuoteBasePrompt", query = "select a from Listing a where base=?1 and quote=?2 and prompt=?3", hints = { @QueryHint(name = "org.hibernate.cacheable", value = "true") }) })
-@Table(indexes = { @Index(columnList = "base"), @Index(columnList = "quote"), @Index(columnList = "prompt") })
+    @NamedQuery(name = "Listing.findByQuoteBase", query = "select a from Listing a where base=?1 and quote=?2 and prompt IS NULL",
+        hints = {@QueryHint(name = "org.hibernate.cacheable", value = "true")}),
+    @NamedQuery(name = "Listing.findByQuoteBasePrompt", query = "select a from Listing a where base=?1 and quote=?2 and prompt=?3",
+        hints = {@QueryHint(name = "org.hibernate.cacheable", value = "true")})})
+@Table(indexes = {@Index(columnList = "base"), @Index(columnList = "quote"), @Index(columnList = "prompt")})
 //@Table(name = "listing", uniqueConstraints = { @UniqueConstraint(columnNames = { "base", "quote", "prompt" }),
 //@UniqueConstraint(columnNames = { "base", "quote" }) })
 public class Listing extends EntityBase {
-    @Inject
-    protected transient static ListingDao listingDao;
-    protected static Set<Listing> listings = new HashSet<Listing>();
+  @Inject
+  protected transient static ListingDao listingDao;
+  protected static Set<Listing> listings = new HashSet<Listing>();
 
-    @ManyToOne(optional = false)
-    //@Column(unique = true)
-    public Asset getBase() {
-        return base;
+  @ManyToOne(optional = false)
+  //@Column(unique = true)
+  public Asset getBase() {
+    return base;
+  }
+
+  @PostPersist
+  @Override
+  public void postPersist() {
+    //  PersistUtil.clear();
+    //  PersistUtil.refresh(this);
+    //PersistUtil.merge(this);
+    // PersistUtil.close();
+    //PersistUtil.evict(this);
+
+  }
+
+  @ManyToOne(optional = false)
+  //@Column(unique = true)
+  public Asset getQuote() {
+    return quote;
+  }
+
+  @ManyToOne(optional = true)
+  public Prompt getPrompt() {
+    return prompt;
+  }
+
+  /** will create the listing if it doesn't exist */
+  public static Listing forPair(Asset base, Asset quote) {
+
+    for (Listing listing : listings) {
+      if (listing.getBase().equals(base) && listing.getQuote().equals(quote))
+        return listing;
     }
-
-    @PostPersist
-    @Override
-    public void postPersist() {
-        //  PersistUtil.clear();
-        //  PersistUtil.refresh(this);
-        //PersistUtil.merge(this);
-        // PersistUtil.close();
-        //PersistUtil.evict(this);
-
+    //this is very slow, we should cache it in a map!
+    try {
+      Listing listing = EM.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBase", base, quote);
+      if (listing == null) {
+        listing = new Listing(base, quote);
+        EM.find(base);
+        EM.find(quote);
+        EM.persist(listing);
+      }
+      listings.add(listing);
+      return listing;
+    } catch (NoResultException e) {
+      final Listing listing = new Listing(base, quote);
+      EM.persist(listing);
+      listings.add(listing);
+      return listing;
     }
+  }
 
-    @ManyToOne(optional = false)
-    //@Column(unique = true)
-    public Asset getQuote() {
-        return quote;
+  public static Listing forPair(Asset base, Asset quote, Prompt prompt) {
+    try {
+
+      Listing listing = EM.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBasePrompt", base, quote, prompt);
+      if (listing == null) {
+        listing = new Listing(base, quote, prompt);
+        EM.persist(listing);
+      }
+      return listing;
+    } catch (NoResultException e) {
+      final Listing listing = new Listing(base, quote, prompt);
+      EM.persist(listing);
+      return listing;
     }
+  }
 
-    @ManyToOne(optional = true)
-    public Prompt getPrompt() {
-        return prompt;
-    }
+  @Override
+  public String toString() {
+    return getSymbol();
+  }
 
-    /** will create the listing if it doesn't exist */
-    public static Listing forPair(Asset base, Asset quote) {
+  @Override
+  @Transient
+  public EntityBase getParent() {
 
-        for (Listing listing : listings) {
-            if (listing.getBase().equals(base) && listing.getQuote().equals(quote))
-                return listing;
-        }
-        //this is very slow, we should cache it in a map!
-        try {
-            Listing listing = EM.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBase", base, quote);
-            if (listing == null) {
-                listing = new Listing(base, quote);
-                EM.find(base);
-                EM.find(quote);
-                EM.persist(listing);
-            }
-            listings.add(listing);
-            return listing;
-        } catch (NoResultException e) {
-            final Listing listing = new Listing(base, quote);
-            EM.persist(listing);
-            listings.add(listing);
-            return listing;
-        }
-    }
+    return null;
+  }
 
-    public static Listing forPair(Asset base, Asset quote, Prompt prompt) {
-        try {
+  @Transient
+  public String getSymbol() {
+    if (prompt != null)
+      return base.getSymbol() + '.' + quote.getSymbol() + '.' + prompt.getSymbol();
+    return base.getSymbol() + '.' + quote.getSymbol();
+  }
 
-            Listing listing = EM.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBasePrompt", base, quote, prompt);
-            if (listing == null) {
-                listing = new Listing(base, quote, prompt);
-                EM.persist(listing);
-            }
-            return listing;
-        } catch (NoResultException e) {
-            final Listing listing = new Listing(base, quote, prompt);
-            EM.persist(listing);
-            return listing;
-        }
-    }
+  @Transient
+  protected Amount getMultiplier(Market market, Amount entryPrice, Amount exitPrice) {
+    if (prompt != null)
+      return prompt.getMultiplier(market, entryPrice, exitPrice);
 
-    @Override
-    public String toString() {
-        return getSymbol();
-    }
+    return new DiscreteAmount((long) (getContractSize(market) * (1 / getTickSize())), getVolumeBasis());
 
-    @Override
-    @Transient
-    public EntityBase getParent() {
+  }
 
-        return null;
-    }
+  @Transient
+  protected double getTickValue() {
+    if (prompt != null)
+      return prompt.getTickValue();
+    return 1;
+  }
 
-    @Transient
-    public String getSymbol() {
-        if (prompt != null)
-            return base.getSymbol() + '.' + quote.getSymbol() + '.' + prompt.getSymbol();
-        return base.getSymbol() + '.' + quote.getSymbol();
-    }
+  @Transient
+  protected double getContractSize(Market market) {
+    if (prompt != null)
+      return prompt.getContractSize(market);
+    return 1;
+  }
 
-    @Transient
-    protected Amount getMultiplier(Market market, Amount entryPrice, Amount exitPrice) {
-        if (prompt != null)
-            return prompt.getMultiplier(market, entryPrice, exitPrice);
+  @Transient
+  protected double getTickSize() {
+    if (prompt != null)
+      return prompt.getTickSize();
+    return getPriceBasis();
+  }
 
-        return new DiscreteAmount((long) (getContractSize(market) * (1 / getTickSize())), getVolumeBasis());
+  @Transient
+  protected double getVolumeBasis() {
+    double volumeBasis = 0;
+    if (prompt != null)
+      volumeBasis = prompt.getVolumeBasis();
+    return volumeBasis == 0 ? getBase().getBasis() : volumeBasis;
 
-    }
+  }
 
-    @Transient
-    protected double getTickValue() {
-        if (prompt != null)
-            return prompt.getTickValue();
-        return 1;
-    }
+  @Transient
+  public FeeMethod getMarginMethod() {
+    FeeMethod marginMethod = null;
+    if (prompt != null)
+      marginMethod = prompt.getMarginMethod();
+    return marginMethod == null ? null : marginMethod;
 
-    @Transient
-    protected double getContractSize(Market market) {
-        if (prompt != null)
-            return prompt.getContractSize(market);
-        return 1;
-    }
+  }
 
-    @Transient
-    protected double getTickSize() {
-        if (prompt != null)
-            return prompt.getTickSize();
-        return getPriceBasis();
-    }
+  @Transient
+  public FeeMethod getMarginFeeMethod() {
+    FeeMethod marginFeeMethod = null;
+    if (prompt != null)
+      marginFeeMethod = prompt.getMarginFeeMethod();
+    return marginFeeMethod == null ? null : marginFeeMethod;
 
-    @Transient
-    protected double getVolumeBasis() {
-        double volumeBasis = 0;
-        if (prompt != null)
-            volumeBasis = prompt.getVolumeBasis();
-        return volumeBasis == 0 ? getBase().getBasis() : volumeBasis;
+  }
 
-    }
+  @Transient
+  protected double getPriceBasis() {
+    double priceBasis = 0;
+    if (prompt != null)
+      priceBasis = prompt.getPriceBasis();
+    return priceBasis == 0 ? getQuote().getBasis() : priceBasis;
 
-    @Transient
-    public FeeMethod getMarginMethod() {
-        FeeMethod marginMethod = null;
-        if (prompt != null)
-            marginMethod = prompt.getMarginMethod();
-        return marginMethod == null ? null : marginMethod;
+  }
 
-    }
+  @Transient
+  protected Asset getTradedCurrency(Market market) {
+    if (prompt != null && prompt.getTradedCurrency(market) != null)
+      return prompt.getTradedCurrency(market);
+    return null;
+  }
 
-    @Transient
-    public FeeMethod getMarginFeeMethod() {
-        FeeMethod marginFeeMethod = null;
-        if (prompt != null)
-            marginFeeMethod = prompt.getMarginFeeMethod();
-        return marginFeeMethod == null ? null : marginFeeMethod;
+  @Transient
+  public FeeMethod getFeeMethod() {
+    if (prompt != null && prompt.getFeeMethod() != null)
+      return prompt.getFeeMethod();
+    return null;
+  }
 
-    }
+  @Transient
+  public double getFeeRate(ExecutionInstruction executionInstruction) {
+    if (prompt != null && prompt.getFeeRate(executionInstruction) != 0)
+      return prompt.getFeeRate(executionInstruction);
+    return 0;
+  }
 
-    @Transient
-    protected double getPriceBasis() {
-        double priceBasis = 0;
-        if (prompt != null)
-            priceBasis = prompt.getPriceBasis();
-        return priceBasis == 0 ? getQuote().getBasis() : priceBasis;
+  @Transient
+  protected int getMargin() {
+    if (prompt != null && prompt.getMargin() != 0)
+      return prompt.getMargin();
+    return 0;
+  }
 
-    }
+  public static List<String> allSymbols() {
+    List<String> result = new ArrayList<>();
+    List<Listing> listings = EM.queryList(Listing.class, "select x from Listing x");
+    for (Listing listing : listings)
+      result.add((listing.getSymbol()));
+    return result;
+  }
 
-    @Transient
-    protected Asset getTradedCurrency(Market market) {
-        if (prompt != null && prompt.getTradedCurrency(market) != null)
-            return prompt.getTradedCurrency(market);
-        return null;
-    }
+  // JPA
+  protected Listing() {
+  }
 
-    @Transient
-    public FeeMethod getFeeMethod() {
-        if (prompt != null && prompt.getFeeMethod() != null)
-            return prompt.getFeeMethod();
-        return null;
-    }
+  protected void setBase(Asset base) {
+    this.base = base;
+  }
 
-    @Transient
-    public double getFeeRate() {
-        if (prompt != null && prompt.getFeeRate() != 0)
-            return prompt.getFeeRate();
-        return 0;
-    }
+  protected void setQuote(Asset quote) {
+    this.quote = quote;
+  }
 
-    @Transient
-    protected int getMargin() {
-        if (prompt != null && prompt.getMargin() != 0)
-            return prompt.getMargin();
-        return 0;
-    }
+  protected void setPrompt(Prompt prompt) {
+    this.prompt = prompt;
+  }
 
-    public static List<String> allSymbols() {
-        List<String> result = new ArrayList<>();
-        List<Listing> listings = EM.queryList(Listing.class, "select x from Listing x");
-        for (Listing listing : listings)
-            result.add((listing.getSymbol()));
-        return result;
-    }
+  protected Asset base;
+  protected Asset quote;
+  private Prompt prompt;
 
-    // JPA
-    protected Listing() {
-    }
+  public Listing(Asset base, Asset quote) {
+    this.base = base;
+    this.quote = quote;
+  }
 
-    protected void setBase(Asset base) {
-        this.base = base;
-    }
+  public Listing(Asset base, Asset quote, Prompt prompt) {
+    this.base = base;
+    this.quote = quote;
+    this.prompt = prompt;
+  }
 
-    protected void setQuote(Asset quote) {
-        this.quote = quote;
-    }
+  public static Listing forSymbol(String symbol) {
+    symbol = symbol.toUpperCase();
+    final int dot = symbol.indexOf('.');
+    if (dot == -1)
+      throw new IllegalArgumentException("Invalid Listing symbol: \"" + symbol + "\"");
+    final String baseSymbol = symbol.substring(0, dot);
+    Asset base = Asset.forSymbol(baseSymbol);
+    if (base == null)
+      throw new IllegalArgumentException("Invalid base symbol: \"" + baseSymbol + "\"");
+    int len = symbol.substring(dot + 1, symbol.length()).indexOf('.');
+    len = (len != -1) ? Math.min(symbol.length(), dot + 1 + symbol.substring(dot + 1, symbol.length()).indexOf('.')) : symbol.length();
+    final String quoteSymbol = symbol.substring(dot + 1, len);
+    final String promptSymbol = (symbol.length() > len) ? symbol.substring(len + 1, symbol.length()) : null;
+    Asset quote = Asset.forSymbol(quoteSymbol);
+    if (quote == null)
+      throw new IllegalArgumentException("Invalid quote symbol: \"" + quoteSymbol + "\"");
+    if (promptSymbol == null)
+      return Listing.forPair(base, quote);
+    Prompt prompt = Prompt.forSymbol(promptSymbol);
+    return Listing.forPair(base, quote, prompt);
+  }
 
-    protected void setPrompt(Prompt prompt) {
-        this.prompt = prompt;
-    }
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof Listing) {
+      Listing listing = (Listing) obj;
 
-    protected Asset base;
-    protected Asset quote;
-    private Prompt prompt;
-
-    public Listing(Asset base, Asset quote) {
-        this.base = base;
-        this.quote = quote;
-    }
-
-    public Listing(Asset base, Asset quote, Prompt prompt) {
-        this.base = base;
-        this.quote = quote;
-        this.prompt = prompt;
-    }
-
-    public static Listing forSymbol(String symbol) {
-        symbol = symbol.toUpperCase();
-        final int dot = symbol.indexOf('.');
-        if (dot == -1)
-            throw new IllegalArgumentException("Invalid Listing symbol: \"" + symbol + "\"");
-        final String baseSymbol = symbol.substring(0, dot);
-        Asset base = Asset.forSymbol(baseSymbol);
-        if (base == null)
-            throw new IllegalArgumentException("Invalid base symbol: \"" + baseSymbol + "\"");
-        int len = symbol.substring(dot + 1, symbol.length()).indexOf('.');
-        len = (len != -1) ? Math.min(symbol.length(), dot + 1 + symbol.substring(dot + 1, symbol.length()).indexOf('.')) : symbol.length();
-        final String quoteSymbol = symbol.substring(dot + 1, len);
-        final String promptSymbol = (symbol.length() > len) ? symbol.substring(len + 1, symbol.length()) : null;
-        Asset quote = Asset.forSymbol(quoteSymbol);
-        if (quote == null)
-            throw new IllegalArgumentException("Invalid quote symbol: \"" + quoteSymbol + "\"");
-        if (promptSymbol == null)
-            return Listing.forPair(base, quote);
-        Prompt prompt = Prompt.forSymbol(promptSymbol);
-        return Listing.forPair(base, quote, prompt);
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj instanceof Listing) {
-            Listing listing = (Listing) obj;
-
-            if (!listing.getBase().equals(getBase())) {
-                return false;
-            }
-
-            if (!listing.getQuote().equals(getQuote())) {
-                return false;
-            }
-            if (listing.getPrompt() != null)
-                if (this.getPrompt() != null) {
-                    if (!listing.getPrompt().equals(getPrompt()))
-                        return false;
-                } else {
-                    return false;
-                }
-
-            return true;
-        }
-
+      if (!listing.getBase().equals(getBase())) {
         return false;
-    }
+      }
 
-    @Override
-    public int hashCode() {
-        return getPrompt() != null ? getQuote().hashCode() + getBase().hashCode() + getPrompt().hashCode() : getQuote().hashCode() + getBase().hashCode();
-
-    }
-
-    @Override
-    public synchronized void persit() {
-
-        this.setPeristanceAction(PersistanceAction.NEW);
-
-        this.setRevision(this.getRevision() + 1);
-        listingDao.persist(this);
-
-    }
-
-    @Override
-    public EntityBase refresh() {
-        return listingDao.refresh(this);
-    }
-
-    public <T> T find() {
-        //   synchronized (persistanceLock) {
-        try {
-            return (T) listingDao.find(Listing.class, this.getId());
-            //if (duplicate == null || duplicate.isEmpty())
-        } catch (Exception | Error ex) {
-            return null;
-            // System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":find, full stack trace follows:" + ex);
-            // ex.printStackTrace();
-
+      if (!listing.getQuote().equals(getQuote())) {
+        return false;
+      }
+      if (listing.getPrompt() != null)
+        if (this.getPrompt() != null) {
+          if (!listing.getPrompt().equals(getPrompt()))
+            return false;
+        } else {
+          return false;
         }
 
+      return true;
     }
 
-    @Override
-    public void detach() {
-        listingDao.detach(this);
-        // TODO Auto-generated method stub
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return getPrompt() != null ? getQuote().hashCode() + getBase().hashCode() + getPrompt().hashCode() : getQuote().hashCode() + getBase().hashCode();
+
+  }
+
+  @Override
+  public synchronized void persit() {
+
+    this.setPeristanceAction(PersistanceAction.NEW);
+
+    this.setRevision(this.getRevision() + 1);
+    listingDao.persist(this);
+
+  }
+
+  @Override
+  public EntityBase refresh() {
+    return listingDao.refresh(this);
+  }
+
+  public <T> T find() {
+    //   synchronized (persistanceLock) {
+    try {
+      return (T) listingDao.find(Listing.class, this.getId());
+      //if (duplicate == null || duplicate.isEmpty())
+    } catch (Exception | Error ex) {
+      return null;
+      // System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":find, full stack trace follows:" + ex);
+      // ex.printStackTrace();
 
     }
 
-    @Override
-    public synchronized void merge() {
+  }
 
-        this.setPeristanceAction(PersistanceAction.MERGE);
+  @Override
+  public void detach() {
+    listingDao.detach(this);
+    // TODO Auto-generated method stub
 
-        this.setRevision(this.getRevision() + 1);
-        listingDao.merge(this);
-        // TODO Auto-generated method stub
+  }
 
-    }
+  @Override
+  public synchronized void merge() {
 
-    @Override
-    @Transient
-    public Dao getDao() {
-        return listingDao;
-    }
+    this.setPeristanceAction(PersistanceAction.MERGE);
 
-    @Override
-    @Transient
-    public void setDao(Dao dao) {
-        listingDao = (ListingDao) dao;
-        // TODO Auto-generated method stub
-        //  return null;
-    }
+    this.setRevision(this.getRevision() + 1);
+    listingDao.merge(this);
+    // TODO Auto-generated method stub
 
-    @Override
-    public void delete() {
-        // TODO Auto-generated method stub
+  }
 
-    }
+  @Override
+  @Transient
+  public Dao getDao() {
+    return listingDao;
+  }
 
-    @Override
-    public void prePersist() {
-        // TODO Auto-generated method stub
+  @Override
+  @Transient
+  public void setDao(Dao dao) {
+    listingDao = (ListingDao) dao;
+    // TODO Auto-generated method stub
+    //  return null;
+  }
 
-    }
+  @Override
+  public void delete() {
+    // TODO Auto-generated method stub
+
+  }
+
+  @Override
+  public void prePersist() {
+    // TODO Auto-generated method stub
+
+  }
 
 }

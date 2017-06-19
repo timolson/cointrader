@@ -24,6 +24,7 @@ import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Prompt;
+import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.schema.TradeFactory;
 import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.RateLimiter;
@@ -31,12 +32,14 @@ import org.cryptocoinpartners.util.XchangeUtil;
 import org.joda.time.Duration;
 import org.joda.time.Instant;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.Order.IOrderFlags;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.LimitOrder;
 import org.knowm.xchange.okcoin.FuturesContract;
+import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -88,11 +91,16 @@ public class XchangeData {
     public interface Helper {
         Object[] getTradesParameters(CurrencyPair pair, long lastTradeTime, long lastTradeId);
 
+        TradeHistoryParams getTradeHistoryParameters(CurrencyPair pair, long lastTradeTime, long lastTradeId);
+
         Object[] getOrderBookParameters(CurrencyPair pair);
+
+        IOrderFlags[] getOrderFlags(SpecificOrder specificOrder);
 
         void handleTrades(Trades tradeSpec);
 
         void handleOrderBook(OrderBook orderBook);
+
     }
 
     private void initExchange(@Nullable String helperClassName, @Nullable String streamingConfigClassName, int queries, Duration per,

@@ -118,6 +118,8 @@ public abstract class PriceData extends MarketData {
             return null;
         if (volume == null)
             volume = new DiscreteAmount(volumeCount, getMarket().getVolumeBasis());
+        if (!volume.isZero() && volumeCount == 0 || volume.isZero() && volumeCount != 0)
+            log.error("volumecount and volume don't match");
         return volume;
     }
 
@@ -140,12 +142,14 @@ public abstract class PriceData extends MarketData {
         super();
     }
 
-    protected void setPriceCount(Long priceCount) {
+    protected synchronized void setPriceCount(Long priceCount) {
         this.priceCount = priceCount;
+        this.price = null;
     }
 
-    public void setVolumeCount(Long volumeCount) {
+    public synchronized void setVolumeCount(Long volumeCount) {
         this.volumeCount = volumeCount;
+        this.volume = null;
     }
 
     private DiscreteAmount price;

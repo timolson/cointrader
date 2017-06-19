@@ -3,6 +3,7 @@ package org.cryptocoinpartners.schema.dao;
 import java.util.List;
 import java.util.UUID;
 
+import javax.persistence.EntityExistsException;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityNotFoundException;
 import javax.persistence.NoResultException;
@@ -343,14 +344,14 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
         boolean persisted = false;
         for (EntityBase entity : entities) {
             try {
-                long revision = entity.findRevisionById();
-                if (entity.getRevision() > revision) {
-                    insert(entity);
-                    persisted = true;
-                } else {
-                    log.trace("DapJpa - persistEntities: " + entity.getClass().getSimpleName() + " not peristed as entity revision " + entity.getRevision()
-                            + " is not greater than peristed revision " + revision + ". Entity " + entity.getId());
-                }
+                //   long revision = entity.findRevisionById();
+                // if (entity.getRevision() > revision) {
+                insert(entity);
+                persisted = true;
+                //} else {
+                //  log.trace("DapJpa - persistEntities: " + entity.getClass().getSimpleName() + " not peristed as entity revision " + entity.getRevision()
+                //        + " is not greater than peristed revision " + revision + ". Entity " + entity.getId());
+                // }
 
             } catch (OptimisticLockException | StaleObjectStateException ole) {
                 attempt = entity.getAttempt() + 1;
@@ -396,6 +397,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
                 }
 
             } catch (Throwable ex) {
+                //   log.debug("casuse:" + ex.getCause() + " ex " + ex);
                 if (ex.getCause() != null && (ex.getCause() instanceof TransientPropertyValueException || ex.getCause() instanceof IllegalStateException)) {
                     //.setVersion(entity.getVersion() + 1);
                     attempt = entity.getAttempt() + 1;
@@ -422,7 +424,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
                         // attempt++;
                         // continue;
                     }
-                } else if (ex.getCause() != null && ex.getCause().getCause() instanceof ConstraintViolationException) {
+                } else if (ex instanceof EntityExistsException || (ex.getCause() != null && ex.getCause().getCause() instanceof ConstraintViolationException)) {
                     attempt = entity.getAttempt() + 1;
                     entity.setAttempt(attempt);
                     //    entity.setStartTime(entity.getDelay() * 2);
@@ -1321,7 +1323,9 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
             }
 
         } catch (Exception | Error ex) {
-            if (ex.getCause() != null && ex.getCause().getCause() instanceof TransientPropertyValueException) {
+            //    log.debug(" cause: " + ex.getCause() + "cause casuse" + ex.getCause().getCause() + "ex" + ex);
+            if (ex.getCause() != null && ex.getCause() instanceof TransientPropertyValueException
+                    || (ex.getCause().getCause() != null && ex.getCause().getCause() instanceof TransientPropertyValueException)) {
                 for (EntityBase entity : entities) {
                     // entity.setVersion(entity.getVersion() + 1);
                     attempt = entity.getAttempt() + 1;
@@ -1340,6 +1344,8 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
                     } else {
 
                         // entity.setRevision(0);
+                        //                   entity.setRevision(0);
+                        entity.prePersist();
                         entity.setPeristanceAction(PersistanceAction.MERGE);
 
                         application.getMergeQueue().add(entity);

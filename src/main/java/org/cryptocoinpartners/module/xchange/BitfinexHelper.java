@@ -4,7 +4,7 @@ import org.knowm.xchange.currency.CurrencyPair;
 import org.knowm.xchange.dto.marketdata.Trades;
 
 @SuppressWarnings("UnusedDeclaration")
-public class BitfinexHelper extends XchangeDataHelperBase {
+public class BitfinexHelper extends XchangeHelperBase {
     /** Send the lastTradeTime in millis as the first parameter to getTrades() */
     @Override
     public Object[] getTradesParameters(CurrencyPair pair, final long lastTradeTime, long lastTradeId) {

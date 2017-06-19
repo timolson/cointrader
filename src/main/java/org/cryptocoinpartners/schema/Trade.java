@@ -63,7 +63,7 @@ public class Trade extends PriceData {
 
     @Override
     @Transient
-    public void setDao(Dao dao) {
+    public synchronized void setDao(Dao dao) {
         tradeDao = (TradeDao) dao;
         // TODO Auto-generated method stub
         //  return null;

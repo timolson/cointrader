@@ -114,8 +114,12 @@ public class XchangeUtil {
 
                 for (String listingSymbol : listings) {
                     Listing listing = Listing.forSymbol(listingSymbol.toUpperCase());
-                    if (listing.getPrompt() != null)
+                    if (listing.getPrompt() != null) {
                         spec.setExchangeSpecificParametersItem("Futures_Contract_String", listing.getPrompt().getSymbol());
+                        spec.setExchangeSpecificParametersItem("Futures_Leverage",
+                                String.valueOf(config.getString(baseKey + "exchangeSpecificParameters.futures.leverage", "10")));
+
+                    }
                     org.knowm.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
                     exchangesByMarket.put(getExchangeForTag(exchangeTag), exchange);
                 }

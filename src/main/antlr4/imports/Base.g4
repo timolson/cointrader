@@ -50,7 +50,7 @@ Ident
 ;
 
 Market: Exchange ':' Listing ;
-Listing: Currency '.' Currency '.' Prompt ;
+Listing: Currency '.' Currency | Currency '.' Currency '.' Prompt ;
 Prompt: Ident; // set by ident();
 Currency: Ident; // set by ident();
 Exchange: Ident; // set by ident();

@@ -37,7 +37,7 @@ public abstract class MarketData extends RemoteEvent {
         super();
     }
 
-    public void setMarket(Tradeable market) {
+    public synchronized void setMarket(Tradeable market) {
         this.market = market;
     }
 
