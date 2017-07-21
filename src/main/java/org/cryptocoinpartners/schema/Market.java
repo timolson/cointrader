@@ -54,7 +54,7 @@ public class Market extends Tradeable {
   //TODO
   //add a set of markets, that we keep and get from here, if not presnet in set go to db
   /** adds the Market to the database if it does not already exist */
-  public static Market findOrCreate(Exchange exchange, Listing listing) {
+  public synchronized static Market findOrCreate(Exchange exchange, Listing listing) {
     return findOrCreate(exchange, listing, listing.getPriceBasis(), listing.getVolumeBasis());
   }
 
@@ -72,12 +72,12 @@ public class Market extends Tradeable {
     return syntheticMarkets;
   }
 
-  public void setSyntheticMarkets(List<SyntheticMarket> syntheticMarkets) {
+  public synchronized void setSyntheticMarkets(List<SyntheticMarket> syntheticMarkets) {
     if (syntheticMarkets == null || (syntheticMarkets != null && !syntheticMarkets.equals(this)))
       this.syntheticMarkets = syntheticMarkets;
   }
 
-  public void addSyntheticMarket(SyntheticMarket market) {
+  public synchronized void addSyntheticMarket(SyntheticMarket market) {
     synchronized (getSyntheticMarkets()) {
       if (!getSyntheticMarkets().contains(market))
         getSyntheticMarkets().add(market);
@@ -90,7 +90,7 @@ public class Market extends Tradeable {
 
   }
 
-  public static Market findOrCreate(Exchange exchange, Listing listing, double quoteBasis, double volumeBasis) {
+  public synchronized static Market findOrCreate(Exchange exchange, Listing listing, double quoteBasis, double volumeBasis) {
     // final String queryStr = "select m from Market m where exchange=?1 and listing=?2";
     try {
       for (Market market : markets) {
@@ -287,7 +287,7 @@ public class Market extends Tradeable {
   protected Market() {
   }
 
-  protected void setExchange(Exchange exchange) {
+  protected synchronized void setExchange(Exchange exchange) {
     this.exchange = exchange;
   }
 
@@ -318,7 +318,7 @@ public class Market extends Tradeable {
   protected transient MarketAmountBuilder marketAmountBuilder;
 
   @Override
-  public void prePersist() {
+  public synchronized void prePersist() {
 
     if (getDao() != null) {
 
@@ -357,7 +357,7 @@ public class Market extends Tradeable {
 
   @Override
   @PostPersist
-  public void postPersist() {
+  public synchronized void postPersist() {
     // TODO Auto-generated method stub
 
   }

@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Represents anything valuable and tradable, like currency or stock
- *
+ * 
  * @author Tim Olson
  */
 @Entity
@@ -22,58 +22,58 @@ import org.slf4j.LoggerFactory;
 @Cacheable
 public abstract class Asset extends EntityBase {
 
-    public static Asset forSymbol(String symbol) {
-        // only Currency is supported
+  public static Asset forSymbol(String symbol) {
+    // only Currency is supported
 
-        try {
-            return Currency.forSymbol(symbol);
-        } catch (NoResultException e) {
-            return null;
-        }
-
+    try {
+      return Currency.forSymbol(symbol);
+    } catch (NoResultException e) {
+      return null;
     }
 
-    @Basic(optional = false)
-    public String getSymbol() {
-        return symbol;
-    }
+  }
 
-    @Basic(optional = false)
-    public double getBasis() {
-        return basis;
-    }
+  @Basic(optional = false)
+  public String getSymbol() {
+    return symbol;
+  }
 
-    @Transient
-    public int getScale() {
+  @Basic(optional = false)
+  public double getBasis() {
+    return basis;
+  }
 
-        int length = (int) (Math.log10(Math.round(1 / basis)));
-        return length;
-    }
+  @Transient
+  public int getScale() {
 
-    @Override
-    public String toString() {
-        return symbol;
-    }
+    int length = (int) (Math.log10(Math.round(1 / basis)));
+    return length;
+  }
 
-    protected Asset(String symbol, double basis) {
-        this.symbol = symbol;
-        this.basis = basis;
-    }
+  @Override
+  public String toString() {
+    return symbol;
+  }
 
-    // JPA
-    protected Asset() {
-    }
+  protected Asset(String symbol, double basis) {
+    this.symbol = symbol;
+    this.basis = basis;
+  }
 
-    protected void setSymbol(String symbol) {
-        this.symbol = symbol;
-    }
+  // JPA
+  protected Asset() {
+  }
 
-    protected void setBasis(double basis) {
-        this.basis = basis;
-    }
+  protected synchronized void setSymbol(String symbol) {
+    this.symbol = symbol;
+  }
 
-    private String symbol;
-    private double basis;
+  protected synchronized void setBasis(double basis) {
+    this.basis = basis;
+  }
 
-    protected static Logger log = LoggerFactory.getLogger(Asset.class);
+  private String symbol;
+  private double basis;
+
+  protected static Logger log = LoggerFactory.getLogger(Asset.class);
 }

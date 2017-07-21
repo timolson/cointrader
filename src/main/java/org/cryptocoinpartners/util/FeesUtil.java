@@ -110,12 +110,15 @@ public class FeesUtil {
       FeeMethod method = order.getMarket().getFeeMethod();
 
       Amount price = (order.getLimitPrice() != null) ? order.getLimitPrice() : order.getMarketPrice();
-      Amount ammount;
-      if (order.getMarket().getTradedCurrency(order.getMarket()) != null)
+      //Exchanges sometimes calcuated fees based on the price to nearst 1,2 or 3DP.
+      double feeBasis = order.getMarket().getExchange().getFeeBasis(order.getMarket());
+      price = price.toBasis(feeBasis, Remainder.ROUND_CEILING);
+      // Amount ammount;
+      //  if (order.getMarket().getTradedCurrency(order.getMarket()) != null)
 
-        ammount = order.getVolume().abs();
-      else
-        ammount = order.getVolume().abs().times(price, Remainder.ROUND_CEILING);
+      Amount ammount = order.getVolume().abs();
+      //else
+      //  ammount = order.getVolume().abs().times(price, Remainder.ROUND_CEILING);
 
       Amount commission;
       switch (method) {
@@ -256,7 +259,7 @@ public class FeesUtil {
     if (market.getBase().equals(Currency.ETH))
       log.debug("test");
 
-    Asset tradedCCY = (market.getTradedCurrency(market) == null) ? market.getQuote() : market.getTradedCurrency(market);
+    Asset tradedCCY = (market.getTradedCurrency(market) == null) ? market.getBase() : market.getTradedCurrency(market);
     return notional.toBasis(tradedCCY.getBasis(), Remainder.ROUND_CEILING).negate();
 
     //      

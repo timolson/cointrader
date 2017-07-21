@@ -53,7 +53,7 @@ public class Listing extends EntityBase {
 
   @PostPersist
   @Override
-  public void postPersist() {
+  public synchronized void postPersist() {
     //  PersistUtil.clear();
     //  PersistUtil.refresh(this);
     //PersistUtil.merge(this);
@@ -240,15 +240,15 @@ public class Listing extends EntityBase {
   protected Listing() {
   }
 
-  protected void setBase(Asset base) {
+  protected synchronized void setBase(Asset base) {
     this.base = base;
   }
 
-  protected void setQuote(Asset quote) {
+  protected synchronized void setQuote(Asset quote) {
     this.quote = quote;
   }
 
-  protected void setPrompt(Prompt prompt) {
+  protected synchronized void setPrompt(Prompt prompt) {
     this.prompt = prompt;
   }
 
@@ -332,7 +332,7 @@ public class Listing extends EntityBase {
   }
 
   @Override
-  public EntityBase refresh() {
+  public synchronized EntityBase refresh() {
     return listingDao.refresh(this);
   }
 
@@ -351,7 +351,7 @@ public class Listing extends EntityBase {
   }
 
   @Override
-  public void detach() {
+  public synchronized void detach() {
     listingDao.detach(this);
     // TODO Auto-generated method stub
 
@@ -376,20 +376,20 @@ public class Listing extends EntityBase {
 
   @Override
   @Transient
-  public void setDao(Dao dao) {
+  public synchronized void setDao(Dao dao) {
     listingDao = (ListingDao) dao;
     // TODO Auto-generated method stub
     //  return null;
   }
 
   @Override
-  public void delete() {
+  public synchronized void delete() {
     // TODO Auto-generated method stub
 
   }
 
   @Override
-  public void prePersist() {
+  public synchronized void prePersist() {
     // TODO Auto-generated method stub
 
   }

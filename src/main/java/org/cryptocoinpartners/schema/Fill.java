@@ -319,7 +319,7 @@ public class Fill extends RemoteEvent {
   //  }
   @PrePersist
   @Override
-  public void prePersist() {
+  public synchronized void prePersist() {
     if (getDao() != null) {
 
       EntityBase dbPortfolio = null;
@@ -365,7 +365,7 @@ public class Fill extends RemoteEvent {
   }
 
   @Override
-  public void detach() {
+  public synchronized void detach() {
 
     fillDao.detach(this);
   }
@@ -466,7 +466,7 @@ public class Fill extends RemoteEvent {
     getTransactions().remove(transaction);
   }
 
-  protected void setTransactions(List<Transaction> transactions) {
+  protected synchronized void setTransactions(List<Transaction> transactions) {
     this.transactions = transactions;
   }
 
@@ -961,7 +961,7 @@ public class Fill extends RemoteEvent {
 
   @Override
   @Transient
-  public void setDao(Dao dao) {
+  public synchronized void setDao(Dao dao) {
     fillDao = (FillDao) dao;
     // TODO Auto-generated method stub
     //  return null;
@@ -999,7 +999,7 @@ public class Fill extends RemoteEvent {
   private volatile Position position;
 
   @Override
-  public void delete() {
+  public synchronized void delete() {
     // TODO Auto-generated method stub
 
   }

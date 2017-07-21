@@ -54,7 +54,7 @@ public class Prompt extends EntityBase {
     return (entryPrice.times(exitPrice, Remainder.ROUND_EVEN)).invert();
   }
 
-  protected void setSymbol(String symbol) {
+  protected synchronized void setSymbol(String symbol) {
     this.symbol = symbol;
   }
 
@@ -63,7 +63,7 @@ public class Prompt extends EntityBase {
     return this.symbol;
   }
 
-  protected void setTickValue(double tickValue) {
+  protected synchronized void setTickValue(double tickValue) {
     this.tickValue = tickValue;
   }
 
@@ -72,7 +72,7 @@ public class Prompt extends EntityBase {
     return this.tickValue;
   }
 
-  protected void setTickSize(double tickSize) {
+  protected synchronized void setTickSize(double tickSize) {
     this.tickSize = tickSize;
   }
 
@@ -81,7 +81,7 @@ public class Prompt extends EntityBase {
     return this.tickSize;
   }
 
-  protected void setContractSize(double contractSize) {
+  protected synchronized void setContractSize(double contractSize) {
     this.contractSize = contractSize;
   }
 
@@ -97,7 +97,7 @@ public class Prompt extends EntityBase {
     return this.contractSize;
   }
 
-  protected void setPriceBasis(double priceBasis) {
+  protected synchronized void setPriceBasis(double priceBasis) {
     this.priceBasis = priceBasis;
   }
 
@@ -106,7 +106,7 @@ public class Prompt extends EntityBase {
     return this.priceBasis;
   }
 
-  protected void setVolumeBasis(double volumeBasis) {
+  protected synchronized void setVolumeBasis(double volumeBasis) {
     this.volumeBasis = volumeBasis;
   }
 
@@ -120,7 +120,7 @@ public class Prompt extends EntityBase {
     return this.margin;
   }
 
-  protected void setMargin(int margin) {
+  protected synchronized void setMargin(int margin) {
     this.margin = margin;
   }
 
@@ -161,28 +161,28 @@ public class Prompt extends EntityBase {
     return makerFeeRate;
   }
 
-  protected void setTakerFeeRate(double takerFeeRate) {
+  protected synchronized void setTakerFeeRate(double takerFeeRate) {
     this.takerFeeRate = takerFeeRate;
   }
 
-  protected void setMakerFeeRate(double makerFeeRate) {
+  protected synchronized void setMakerFeeRate(double makerFeeRate) {
     this.makerFeeRate = makerFeeRate;
   }
 
-  protected void setMarginMethod(FeeMethod marginMethod) {
+  protected synchronized void setMarginMethod(FeeMethod marginMethod) {
     this.marginMethod = marginMethod;
   }
 
-  protected void setMarginFeeMethod(FeeMethod marginFeeMethod) {
+  protected synchronized void setMarginFeeMethod(FeeMethod marginFeeMethod) {
     this.marginFeeMethod = marginFeeMethod;
   }
 
-  protected void setFeeMethod(FeeMethod feeMethod) {
+  protected synchronized void setFeeMethod(FeeMethod feeMethod) {
     this.feeMethod = feeMethod;
   }
 
   @Nullable
-  protected void setTradedCurrency(Asset tradedCurrency) {
+  protected synchronized void setTradedCurrency(Asset tradedCurrency) {
     this.tradedCurrency = tradedCurrency;
   }
 
@@ -314,12 +314,12 @@ public class Prompt extends EntityBase {
   }
 
   @Override
-  public EntityBase refresh() {
+  public synchronized EntityBase refresh() {
     return promptDao.refresh(this);
   }
 
   @Override
-  public void detach() {
+  public synchronized void detach() {
     promptDao.detach(this);
 
   }
@@ -332,7 +332,7 @@ public class Prompt extends EntityBase {
 
   @Override
   @Transient
-  public void setDao(Dao dao) {
+  public synchronized void setDao(Dao dao) {
     promptDao = (PromptJpaDao) dao;
     // TODO Auto-generated method stub
     //  return null;
@@ -349,19 +349,19 @@ public class Prompt extends EntityBase {
   }
 
   @Override
-  public void delete() {
+  public synchronized void delete() {
     // TODO Auto-generated method stub
 
   }
 
   @Override
-  public void prePersist() {
+  public synchronized void prePersist() {
     // TODO Auto-generated method stub
 
   }
 
   @Override
-  public void postPersist() {
+  public synchronized void postPersist() {
     // TODO Auto-generated method stub
 
   }

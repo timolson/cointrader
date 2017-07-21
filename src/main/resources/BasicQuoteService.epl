@@ -7,7 +7,6 @@ create window LastBookWindow.std:groupwin(market).std:lastevent() as select * fr
 @Name('LAST_BAR_WINDOW')	
 create window LastBarWindow.std:groupwin(interval,market).win:length(2) as select * from Bar;
 
-
 @Priority(10)	
 insert into LastTradeWindow select * from Trade (Trade.market in (BaseStrategy.getMarkets()), Trade.timestamp>= coalesce((select max(timestamp) from LastTradeWindow where LastTradeWindow.market=Trade.market),0));
 
