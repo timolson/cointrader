@@ -290,6 +290,8 @@ public class XchangeData {
         log.error(this.getClass().getSimpleName() + ":getTrades Unabel to get trade for market " + market + " pair " + pair + " for "
             + tradeFailureCount + " of " + retryCounts.get(market) + " time. Resetting Data Service Connection. ", e);
         XchangeUtil.resetExchange(coinTraderExchange);
+        //Required for nonces to sync
+        //   Thread.sleep(1000);
         // dataService = xchangeExchange.getPollingMarketDataService();
         failedTradeCounts.put(market, 0);
         // .// tradeFailureCount = 0;
@@ -375,6 +377,9 @@ public class XchangeData {
         log.error(this.getClass().getSimpleName() + ":getBook Unabel to get book for market " + market + " pair " + pair + ". Failure "
             + bookFailureCount + " of " + retryCounts.get(market) + " . Resetting Data Service Connection. ", e);
         XchangeUtil.resetExchange(coinTraderExchange);
+        //Required for nonces to sync
+
+        //  Thread.sleep(1000);
         failedTradeCounts.put(market, 0);
         // .// tradeFailureCount = 0;
         failedBookCounts.put(market, 0);

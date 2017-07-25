@@ -58,12 +58,24 @@ public class XchangeUtil {
 
   }
 
-  public static org.knowm.xchange.Exchange resetExchange(Exchange coinTraderExchange) {
+  public static org.knowm.xchange.Exchange resetExchange(Exchange coinTraderExchange) throws InterruptedException {
     ExchangeSpecification spec = getExchangeForMarket(coinTraderExchange).getExchangeSpecification();
+
     if (spec != null) {
-      org.knowm.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
-      exchangesByMarket.put(coinTraderExchange, exchange);
-      return exchange;
+      //Required for nonces to sync
+      try {
+        Thread.sleep(1000);
+
+        org.knowm.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
+        //Required for nonces to sync
+        // Thread.sleep(1000);
+        // exchange.getNonceFactory().createValue();
+        exchangesByMarket.put(coinTraderExchange, exchange);
+        return exchange;
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+        throw e;
+      }
     } else
       throw new Error("Could not get XChange Exchange for Coin Trader Exchange " + coinTraderExchange);
 

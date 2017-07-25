@@ -68,7 +68,7 @@ public class MockOrderService extends BaseOrderService {
 
     updateOrderState(specificOrder, OrderState.PLACED, true);
     updateBook(quotes.getLastBook(specificOrder.getMarket()));
-    //   specificOrder.persit();
+    specificOrder.merge();
 
     //TODO when placing the order it is on the same listener so it needs to be routed.
 
@@ -94,7 +94,7 @@ public class MockOrderService extends BaseOrderService {
   @SuppressWarnings("ConstantConditions")
   // @When("@Priority(9) select * from Book(Book.market in (TrendStrategy.getMarkets()), TrendStrategy.getMarketAllocation(Book.market)>0, Book.bidVolumeAsDouble>0, Book.askVolumeAsDouble<0 )")
   // @When("@Priority(9) select * from Book")
-  @When("@Priority(8) select * from LastBookWindow(market.synthetic=false)")
+  @When("@Priority(8) @Audit select * from LastBookWindow(market.synthetic=false)")
   private void handleBook(Book b) {
     log.trace("handleBook: Book Recieved: " + b);
     updateBook(b);
@@ -103,7 +103,7 @@ public class MockOrderService extends BaseOrderService {
   }
 
   @SuppressWarnings("ConstantConditions")
-  @When("@Priority(8) select * from LastTradeWindow(market.synthetic=false)")
+  @When("@Priority(8) @Audit select * from LastTradeWindow(market.synthetic=false)")
   private void handleTrade(Trade t) {
     log.trace("handleTrade: Book Recieved: " + t);
     updateBook(t);
@@ -113,7 +113,7 @@ public class MockOrderService extends BaseOrderService {
   @SuppressWarnings("ConstantConditions")
   private void updateBook(Event event) {
     if (event == null)
-      log.debug("test");
+      return;
     //   log.trace(this.getClass().getSimpleName() + " : updateBook to called from stack " + Thread.currentThread().getStackTrace()[2]);
 
     Tradeable market = null;
