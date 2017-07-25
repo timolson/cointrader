@@ -101,6 +101,8 @@ public class Currencies {
   public static final Currency USDT = crypto("USDT", 1e-8);
   public static final Currency BFX = crypto("BFX", 1e-8);
   public static final Currency RRT = crypto("RRT", 1e-8);
+  public static final Currency BCC = crypto("BCC", 1e-8);
+  public static final Currency BCU = crypto("BCU", 1e-8);
 
   /*
    * these need currency basis research public static final Currency FORTY_TWO = crypto("42"); public static final Currency POINTS = crypto("Points");
