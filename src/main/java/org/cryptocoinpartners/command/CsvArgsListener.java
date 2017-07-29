@@ -5,7 +5,7 @@ import javax.inject.Inject;
 import org.antlr.v4.runtime.misc.NotNull;
 
 /**
- * @authi or Tim Olson
+ * @author Tim Olson
  */
 @SuppressWarnings("UnusedDeclaration")
 public class CsvArgsListener extends CsvBaseListener {
