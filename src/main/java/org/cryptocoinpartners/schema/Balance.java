@@ -50,6 +50,8 @@ public class Balance extends Holding {
     this.getId();
 
     this.description = "";
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   @AssistedInject
@@ -60,6 +62,8 @@ public class Balance extends Holding {
     //  this.amount = amount;
     this.amountCount = amountCount;
     this.description = "";
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   //  public static Balance forSymbol(String symbol) {
@@ -81,6 +85,8 @@ public class Balance extends Holding {
 
     this.amountCount = amountCount;
     this.description = description;
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   protected synchronized void setAmountCount(long amountCount) {

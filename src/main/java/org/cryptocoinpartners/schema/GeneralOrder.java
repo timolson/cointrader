@@ -50,6 +50,8 @@ public class GeneralOrder extends Order {
     this.volume = DecimalAmount.of(volume);
     this.fillType = FillType.MARKET;
     this.positionEffect = PositionEffect.OPEN;
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   // So we need a filed that tells us to trigger on open quanity?
@@ -100,7 +102,8 @@ public class GeneralOrder extends Order {
       generalOrder.getParentFill().addChildOrder(this);
       this.setParentFill(generalOrder.getParentFill());
     }
-
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   @AssistedInject
@@ -121,6 +124,8 @@ public class GeneralOrder extends Order {
     this.volume = DecimalAmount.of(volume);
     this.fillType = FillType.MARKET;
     this.positionEffect = PositionEffect.OPEN;
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   @AssistedInject
@@ -137,9 +142,16 @@ public class GeneralOrder extends Order {
     super.setPortfolio(portfolio);
     this.market = market;
     this.listing = market.getListing();
-    this.volume = DecimalAmount.of(volume);
+    double minimumOrderSize = volume.compareTo(BigDecimal.ZERO) < 0 ? market.getExchange().getMinimumOrderSize(market) * -1 : market.getExchange()
+        .getMinimumOrderSize(market);
+    //set it to the order size or the minumum size for the market.
+    this.volume = (volume.compareTo(BigDecimal.ZERO) != 0 && volume.abs().compareTo(BigDecimal.valueOf(minimumOrderSize).abs()) < 0) ? DecimalAmount
+        .of(BigDecimal.valueOf(minimumOrderSize)) : DecimalAmount.of(volume);
+
     this.fillType = type;
     this.positionEffect = PositionEffect.OPEN;
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   @AssistedInject
@@ -158,6 +170,8 @@ public class GeneralOrder extends Order {
     this.volume = DecimalAmount.of(volume);
     this.fillType = type;
     this.positionEffect = PositionEffect.OPEN;
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   @AssistedInject
@@ -176,9 +190,15 @@ public class GeneralOrder extends Order {
     this.setParentOrder(parentOrder);
     this.market = market;
     this.listing = market.getListing();
-    this.volume = DecimalAmount.of(volume);
+    //set it to the order size or the minumum size for the market.
+    double minimumOrderSize = volume.compareTo(BigDecimal.ZERO) < 0 ? market.getExchange().getMinimumOrderSize(market) * -1 : market.getExchange()
+        .getMinimumOrderSize(market);
+    this.volume = (volume.compareTo(BigDecimal.ZERO) != 0 && volume.abs().compareTo(BigDecimal.valueOf(minimumOrderSize).abs()) < 0) ? DecimalAmount
+        .of(BigDecimal.valueOf(minimumOrderSize)) : DecimalAmount.of(volume);
     this.fillType = type;
     this.positionEffect = PositionEffect.OPEN;
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   @AssistedInject
@@ -196,9 +216,16 @@ public class GeneralOrder extends Order {
     this.setParentFill(parentFill);
     this.market = market;
     this.listing = market.getListing();
-    this.volume = DecimalAmount.of(volume);
+    //set it to the order size or the minumum size for the market.
+    double minimumOrderSize = volume.compareTo(BigDecimal.ZERO) < 0 ? market.getExchange().getMinimumOrderSize(market) * -1 : market.getExchange()
+        .getMinimumOrderSize(market);
+
+    this.volume = (volume.compareTo(BigDecimal.ZERO) != 0 && volume.abs().compareTo(BigDecimal.valueOf(minimumOrderSize).abs()) < 0) ? DecimalAmount
+        .of(BigDecimal.valueOf(minimumOrderSize)) : DecimalAmount.of(volume);
     this.fillType = type;
     this.positionEffect = PositionEffect.OPEN;
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   @AssistedInject
@@ -216,6 +243,8 @@ public class GeneralOrder extends Order {
     this.volume = DecimalAmount.of(volume);
     this.fillType = FillType.MARKET;
     this.positionEffect = PositionEffect.OPEN;
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   @Nullable

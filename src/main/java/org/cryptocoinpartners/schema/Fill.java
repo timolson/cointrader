@@ -97,6 +97,8 @@ public class Fill extends RemoteEvent {
     this.positionEffect = order.getPositionEffect();
     //  this.id = getId();
     this.version = getVersion();
+    if (getDao() != null)
+      getDao().persist(this);
 
   }
 
@@ -132,7 +134,8 @@ public class Fill extends RemoteEvent {
     this.portfolio = order.getPortfolio();
     this.stopAmountCount = (order.getStopAmount() != null) ? order.getStopAmount().getCount() : 0;
     this.positionEffect = order.getPositionEffect();
-
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   public <T> T find() {
@@ -359,6 +362,8 @@ public class Fill extends RemoteEvent {
          * getDao().merge(getOrder()); } else { // getOrder().setPeristanceAction(PersistanceAction.NEW); getDao().persist(getOrder()); } }
          */
       }
+      for (Order childorder : getFillChildOrders())
+        getDao().merge(childorder);
 
     }
 
@@ -929,15 +934,8 @@ public class Fill extends RemoteEvent {
     //   log.debug(element.toString());
     this.openVolumeCount = openVolumeCount;
     this.openVolume = null;
-    if (this.position != null) {
-      synchronized (this.position) {
-        this.position.setLongVolumeCount(0);
-        this.position.setOpenVolumeCount(0);
-        this.position.setShortVolumeCount(0);
-        this.position.setVolumeCount(0);
-      }
-
-    }
+    if (this.position != null)
+      this.position.reset();
 
   }
 
@@ -968,8 +966,7 @@ public class Fill extends RemoteEvent {
   }
 
   protected synchronized void setPosition(Position position) {
-    // if (position == null)
-    //   setOpenVolumeCount(0);
+
     this.position = position;
 
   }

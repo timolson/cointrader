@@ -2,6 +2,7 @@ package org.cryptocoinpartners.module.xchange;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.SocketTimeoutException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -169,95 +170,109 @@ public class XchangeOrderService extends BaseOrderService {
     Order.OrderType orderType = null;
     org.knowm.xchange.Exchange exchange = XchangeUtil.getExchangeForMarket(specificOrder.getMarket().getExchange());
     TradeService tradeService = exchange.getTradeService();
-    synchronized (tradeService) {
-      if (specificOrder.getLimitPrice() != null && specificOrder.getStopPrice() != null) {
-        specificOrder.persit();
-        reject(specificOrder, "Stop-limit orders are not supported");
-      }
-      if (specificOrder.getPositionEffect() == null || specificOrder.getPositionEffect() == PositionEffect.OPEN)
-        orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
-      else if (specificOrder.getPositionEffect() == PositionEffect.CLOSE)
-        // if order volume is < 0 && it is closing, then I am exiting Bid, else I am exit bid
-        //  orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
-        orderType = specificOrder.isAsk() ? Order.OrderType.EXIT_BID : Order.OrderType.EXIT_ASK;
-      BigDecimal tradeableVolume = specificOrder.getVolume().abs().asBigDecimal();
-      CurrencyPair currencyPair = XchangeUtil.getCurrencyPairForListing(specificOrder.getMarket().getListing());
-      String id = specificOrder.getId().toString();
-      Date timestamp = specificOrder.getTime().toDate();
-      if (specificOrder.getLimitPrice() != null) {
-        LimitOrder limitOrder = new LimitOrder(orderType, tradeableVolume, currencyPair, "", null, specificOrder.getLimitPrice().asBigDecimal());
-        if (XchangeUtil.getHelperForExchange(specificOrder.getMarket().getExchange()) != null)
-          //Ajust Order
-          XchangeUtil.getHelperForExchange(specificOrder.getMarket().getExchange()).adjustOrder(specificOrder, limitOrder);
+    if (specificOrder.getLimitPrice() != null && specificOrder.getStopPrice() != null) {
+      specificOrder.persit();
+      reject(specificOrder, "Stop-limit orders are not supported");
+    }
+    if (specificOrder.getPositionEffect() == null || specificOrder.getPositionEffect() == PositionEffect.OPEN)
+      orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
+    else if (specificOrder.getPositionEffect() == PositionEffect.CLOSE)
+      // if order volume is < 0 && it is closing, then I am exiting Bid, else I am exit bid
+      //  orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
+      orderType = specificOrder.isAsk() ? Order.OrderType.EXIT_BID : Order.OrderType.EXIT_ASK;
+    BigDecimal tradeableVolume = specificOrder.getVolume().abs().asBigDecimal();
+    CurrencyPair currencyPair = XchangeUtil.getCurrencyPairForListing(specificOrder.getMarket().getListing());
+    String id = specificOrder.getId().toString();
+    Date timestamp = specificOrder.getTime().toDate();
+    if (specificOrder.getLimitPrice() != null) {
+      LimitOrder limitOrder = new LimitOrder(orderType, tradeableVolume, currencyPair, "", null, specificOrder.getLimitPrice().asBigDecimal());
+      if (XchangeUtil.getHelperForExchange(specificOrder.getMarket().getExchange()) != null)
+        //Ajust Order
+        XchangeUtil.getHelperForExchange(specificOrder.getMarket().getExchange()).adjustOrder(specificOrder, limitOrder);
 
-        //   limitOrder.addOrderFlag(PoloniexOrderFlags.MARGIN);
-        // todo put on a queue
-        try {
-          //TODO if this failed like we place a clsoing order it jsut get's rejected but we have not reverted teh stack correctly
+      //   limitOrder.addOrderFlag(PoloniexOrderFlags.MARGIN);
+      // todo put on a queue
+      try {
+        //TODO if this failed like we place a clsoing order it jsut get's rejected but we have not reverted teh stack correctly
+        synchronized (tradeService) {
 
           specificOrder.setRemoteKey(tradeService.placeLimitOrder(limitOrder));
+        }
+        updateOrderState(specificOrder, OrderState.PLACED, true);
+      } catch (ExchangeException ex) {
+        specificOrder.persit();
+        reject(specificOrder, "handleSpecificOrder: unable to place order: " + specificOrder.getId() + " error " + ex);
 
-          updateOrderState(specificOrder, OrderState.PLACED, true);
-        } catch (ExchangeException ex) {
-          specificOrder.persit();
-          reject(specificOrder, "handleSpecificOrder: unable to place order: " + specificOrder.getId() + " error " + ex);
+        log.error(this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place order " + specificOrder + " as xchange order " + limitOrder
+            + " due to ExchangeException:" + ex);
 
-          log.error(this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place order " + specificOrder + " as xchange order "
-              + limitOrder + " due to ExchangeException:" + ex);
+        throw ex;
+        // todo retry until expiration or reject as invalid
+      } catch (SocketTimeoutException ste) {
+        // Order might or might not have been places so leave as new and poll later to get order state.
+        log.error(this.getClass().getSimpleName() + ":handleSpecificOrder Unable to determine order state of " + specificOrder
+            + " as no response recived from excahnge due to socket timeout");
 
-          throw ex;
-          // todo retry until expiration or reject as invalid
-        } catch (Exception | Error e) {
-          // Someexchange retrun a http execption even though order was placed, so let's raise an execption on this.
-          specificOrder.persit();
-          log.error(this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place order " + specificOrder + " as xchange order "
-              + limitOrder + ". due to Exception :" + e);
-          //  if (specificOrder.getId().toString().equals(specificOrder.getRemoteKey()))
+      } catch (Exception | Error e) {
 
+        // Someexchange retrun a http execption even though order was placed, so let's raise an execption on this.
+        specificOrder.persit();
+        log.error(this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place order " + specificOrder + " as xchange order " + limitOrder
+            + ". due to Exception :", e);
+        //  if (specificOrder.getId().toString().equals(specificOrder.getRemoteKey()))
+
+        error(specificOrder, "handleSpecificOrder: unable to place order: " + specificOrder.getId() + " error " + e);
+
+        throw e;
+
+        //  new UnknownOrderStateException("Unknown state of order " + specificOrder.getId(), e);
+        //  reject(specificOrder, "handleSpecificOrder: unable to place order: " + specificOrder.getId() + " error " + e);
+
+      } finally {
+        specificOrder.merge();
+      }
+    } else {
+      MarketOrder marketOrder = new MarketOrder(orderType, tradeableVolume, currencyPair, id, timestamp);
+      // todo put on a queue
+      try {
+        synchronized (tradeService) {
+
+          specificOrder.setRemoteKey(tradeService.placeMarketOrder(marketOrder));
+        }
+        specificOrder.persit();
+        updateOrderState(specificOrder, OrderState.PLACED, true);
+      } catch (NotYetImplementedForExchangeException e) {
+        specificOrder.persit();
+        log.warn("XChange adapter " + exchange + " does not support this order: " + specificOrder, e);
+        reject(specificOrder, "XChange adapter " + exchange + " does not support this order");
+        throw e;
+      } catch (ExchangeException ex) {
+
+        specificOrder.persit();
+        log.error(this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place order " + specificOrder + " as xchange order "
+            + marketOrder + ". Threw a Execption, full stack trace follows:", ex);
+        reject(specificOrder, "handleSpecificOrder: unable to place order: " + specificOrder.getId() + " error " + ex);
+        throw ex;
+      } catch (SocketTimeoutException ste) {
+        // Order might or might not have been places so leave as new and poll later to get order state.
+        log.error(this.getClass().getSimpleName() + ":handleSpecificOrder Unable to determine order state of " + specificOrder
+            + " as no response recived from excahnge due to socket timeout");
+
+      } catch (Exception | Error e) {
+        specificOrder.persit();
+        log.error(this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place order " + specificOrder + " as xchange order "
+            + marketOrder + ". Threw a Execption, full stack trace follows:", e);
+        if (specificOrder.getId().toString().equals(specificOrder.getRemoteKey()))
           error(specificOrder, "handleSpecificOrder: unable to place order: " + specificOrder.getId() + " error " + e);
 
-          throw e;
-
-          //  new UnknownOrderStateException("Unknown state of order " + specificOrder.getId(), e);
-          //  reject(specificOrder, "handleSpecificOrder: unable to place order: " + specificOrder.getId() + " error " + e);
-
-        } finally {
-          specificOrder.merge();
-        }
-      } else {
-        MarketOrder marketOrder = new MarketOrder(orderType, tradeableVolume, currencyPair, id, timestamp);
-        // todo put on a queue
-        try {
-          specificOrder.setRemoteKey(tradeService.placeMarketOrder(marketOrder));
-          specificOrder.persit();
-          updateOrderState(specificOrder, OrderState.PLACED, true);
-        } catch (NotYetImplementedForExchangeException e) {
-          specificOrder.persit();
-          log.warn("XChange adapter " + exchange + " does not support this order: " + specificOrder, e);
-          reject(specificOrder, "XChange adapter " + exchange + " does not support this order");
-          throw e;
-        } catch (ExchangeException ex) {
-
-          specificOrder.persit();
-          log.error(this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place order " + specificOrder + " as xchange order "
-              + marketOrder + ". Threw a Execption, full stack trace follows:", ex);
-          reject(specificOrder, "handleSpecificOrder: unable to place order: " + specificOrder.getId() + " error " + ex);
-          throw ex;
-        } catch (Exception | Error e) {
-          specificOrder.persit();
-          log.error(this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place order " + specificOrder + " as xchange order "
-              + marketOrder + ". Threw a Execption, full stack trace follows:", e);
-          if (specificOrder.getId().toString().equals(specificOrder.getRemoteKey()))
-            error(specificOrder, "handleSpecificOrder: unable to place order: " + specificOrder.getId() + " error " + e);
-
-          throw new UnknownOrderStateException("Unknown state of order " + specificOrder.getId(), e);
-          // throw e;
-          // todo retry until expiration or reject as invalid
-        } finally {
-          specificOrder.merge();
-        }
+        throw new UnknownOrderStateException("Unknown state of order " + specificOrder.getId(), e);
+        // throw e;
+        // todo retry until expiration or reject as invalid
+      } finally {
+        specificOrder.merge();
       }
     }
+
   }
 
   @Transient
@@ -274,48 +289,50 @@ public class XchangeOrderService extends BaseOrderService {
     TradeService tradeService = exchange.getTradeService();
     SpecificOrder specificOrder;
     boolean exists = false;
-    synchronized (tradeService) {
-      //TODO: need to check prompts to ensure they have the full OKCOIN_THISWEEK:BTC.USD.THISWEEK not just OKCOIN_THISWEEK:BTC.USD
-      try {
-        OpenOrders openOrders = tradeService.getOpenOrders();
+    //TODO: need to check prompts to ensure they have the full OKCOIN_THISWEEK:BTC.USD.THISWEEK not just OKCOIN_THISWEEK:BTC.USD
+    try {
+      OpenOrders openOrders;
+      synchronized (tradeService) {
 
-        for (LimitOrder xchangeOrder : openOrders.getOpenOrders()) {
-          for (org.cryptocoinpartners.schema.Order cointraderOrder : orderStateMap.keySet()) {
-            if (cointraderOrder instanceof SpecificOrder) {
-              specificOrder = (SpecificOrder) cointraderOrder;
-              if (xchangeOrder.getId().equals(specificOrder.getRemoteKey()) && specificOrder.getMarket().equals(market)) {
-                Fill fill = createFill(xchangeOrder, specificOrder);
-                if (fill != null)
-                  handleFillProcessing(fill);
+        openOrders = tradeService.getOpenOrders();
+      }
+      for (LimitOrder xchangeOrder : openOrders.getOpenOrders()) {
+        for (org.cryptocoinpartners.schema.Order cointraderOrder : orderStateMap.keySet()) {
+          if (cointraderOrder instanceof SpecificOrder) {
+            specificOrder = (SpecificOrder) cointraderOrder;
+            if (xchangeOrder.getId().equals(specificOrder.getRemoteKey()) && specificOrder.getMarket().equals(market)) {
+              Fill fill = createFill(xchangeOrder, specificOrder);
+              if (fill != null)
+                handleFillProcessing(fill);
 
-                if (!adaptOrderState(xchangeOrder.getStatus()).equals(orderStateMap.get(specificOrder)))
-                  if (adaptOrderState(xchangeOrder.getStatus()) != OrderState.FILLED
-                      || adaptOrderState(xchangeOrder.getStatus()) != OrderState.PARTFILLED)
-                    updateOrderState(specificOrder, adaptOrderState(xchangeOrder.getStatus()), true);
+              if (!adaptOrderState(xchangeOrder.getStatus()).equals(orderStateMap.get(specificOrder)))
+                if (adaptOrderState(xchangeOrder.getStatus()) != OrderState.FILLED
+                    || adaptOrderState(xchangeOrder.getStatus()) != OrderState.PARTFILLED)
+                  updateOrderState(specificOrder, adaptOrderState(xchangeOrder.getStatus()), true);
 
-                pendingOrders.add(specificOrder);
-                exists = true;
-                break;
-              }
+              pendingOrders.add(specificOrder);
+              exists = true;
+              break;
             }
           }
-
-          /*
-           * if (!exists) { Date time = (xchangeOrder.getTimestamp() != null) ? xchangeOrder.getTimestamp() : new Date(); specificOrder = new
-           * SpecificOrder(xchangeOrder, exchange, portfolio, time); specificOrder.persit(); updateOrderState(specificOrder,
-           * adaptOrderState(xchangeOrder.getStatus()), false); Fill fill = createFill(xchangeOrder, specificOrder); if (fill != null)
-           * handleFillProcessing(fill); // need to create fills if these are not the same pendingOrders.add(specificOrder); }
-           */
         }
 
-      } catch (IOException e) {
-        log.error("Threw a Execption, full stack trace follows:", e);
-
-        e.printStackTrace();
-
+        /*
+         * if (!exists) { Date time = (xchangeOrder.getTimestamp() != null) ? xchangeOrder.getTimestamp() : new Date(); specificOrder = new
+         * SpecificOrder(xchangeOrder, exchange, portfolio, time); specificOrder.persit(); updateOrderState(specificOrder,
+         * adaptOrderState(xchangeOrder.getStatus()), false); Fill fill = createFill(xchangeOrder, specificOrder); if (fill != null)
+         * handleFillProcessing(fill); // need to create fills if these are not the same pendingOrders.add(specificOrder); }
+         */
       }
-      return pendingOrders;
+
+    } catch (IOException e) {
+      log.error("Threw a Execption, full stack trace follows:", e);
+
+      e.printStackTrace();
+
     }
+    return pendingOrders;
+
   }
 
   //Need to ensure that each exchange implments the getOrder method
@@ -328,290 +345,294 @@ public class XchangeOrderService extends BaseOrderService {
     Set<org.knowm.xchange.dto.Order> xchangeOpenOrders = new HashSet<org.knowm.xchange.dto.Order>();
     Set<org.knowm.xchange.dto.Order> cointraderXchangeOrders = new HashSet<org.knowm.xchange.dto.Order>();
     TradeService tradePollingService = XchangeUtil.getExchangeForMarket(coinTraderExchange).getTradeService();
-    synchronized (tradePollingService) {
-      try {
-        Object params[];
-        if (helper != null)
-          params = helper.getTradesParameters(pair, lastTradeTime, lastTradeId);
-        else {
-          if (contract == null)
-            params = new Object[]{};
-          else
-            params = new Object[]{contract};
+    try {
+      Object params[];
+      if (helper != null)
+        params = helper.getTradesParameters(pair, lastTradeTime, lastTradeId);
+      else {
+        if (contract == null)
+          params = new Object[]{};
+        else
+          params = new Object[]{contract};
 
-        }
-        log.trace("Attempting to get trades from data service");
-        List<String> openOrdersXchangeIds = new ArrayList<String>();
+      }
+      log.trace("Attempting to get trades from data service");
+      List<String> openOrdersXchangeIds = new ArrayList<String>();
 
-        if (stateOrderMap.get(OrderState.PLACED) != null)
-          for (org.cryptocoinpartners.schema.Order placedOrder : stateOrderMap.get(OrderState.PLACED))
-            if (XchangeUtil.getCurrencyPairForListing(placedOrder.getMarket().getListing()).equals(pair)
-                && placedOrder.getMarket().getExchange().equals(coinTraderExchange))
-              cointraderOpenOrders.add(placedOrder);
-        if (stateOrderMap.get(OrderState.PARTFILLED) != null)
-          for (org.cryptocoinpartners.schema.Order partfilledOrder : stateOrderMap.get(OrderState.PARTFILLED))
-            if (XchangeUtil.getCurrencyPairForListing(partfilledOrder.getMarket().getListing()).equals(pair)
-                && partfilledOrder.getMarket().getExchange().equals(coinTraderExchange))
-              cointraderOpenOrders.add(partfilledOrder);
-        if (stateOrderMap.get(OrderState.ROUTED) != null)
-          for (org.cryptocoinpartners.schema.Order routedOrder : stateOrderMap.get(OrderState.ROUTED))
-            if (XchangeUtil.getCurrencyPairForListing(routedOrder.getMarket().getListing()).equals(pair)
-                && routedOrder.getMarket().getExchange().equals(coinTraderExchange))
-              cointraderOpenOrders.add(routedOrder);
-        if (stateOrderMap.get(OrderState.CANCELLING) != null)
-          for (org.cryptocoinpartners.schema.Order cancellingOrder : stateOrderMap.get(OrderState.CANCELLING))
-            if (XchangeUtil.getCurrencyPairForListing(cancellingOrder.getMarket().getListing()).equals(pair)
-                && cancellingOrder.getMarket().getExchange().equals(coinTraderExchange))
-              cointraderOpenOrders.add(cancellingOrder);
-        for (org.cryptocoinpartners.schema.Order openOrder : cointraderOpenOrders) {
-          SpecificOrder openSpecificOrder;
-          if (openOrder instanceof SpecificOrder) {
-            openSpecificOrder = (SpecificOrder) openOrder;
+      if (stateOrderMap.get(OrderState.PLACED) != null)
+        for (org.cryptocoinpartners.schema.Order placedOrder : stateOrderMap.get(OrderState.PLACED))
+          if (XchangeUtil.getCurrencyPairForListing(placedOrder.getMarket().getListing()).equals(pair)
+              && placedOrder.getMarket().getExchange().equals(coinTraderExchange))
+            cointraderOpenOrders.add(placedOrder);
+      if (stateOrderMap.get(OrderState.PARTFILLED) != null)
+        for (org.cryptocoinpartners.schema.Order partfilledOrder : stateOrderMap.get(OrderState.PARTFILLED))
+          if (XchangeUtil.getCurrencyPairForListing(partfilledOrder.getMarket().getListing()).equals(pair)
+              && partfilledOrder.getMarket().getExchange().equals(coinTraderExchange))
+            cointraderOpenOrders.add(partfilledOrder);
+      if (stateOrderMap.get(OrderState.ROUTED) != null)
+        for (org.cryptocoinpartners.schema.Order routedOrder : stateOrderMap.get(OrderState.ROUTED))
+          if (XchangeUtil.getCurrencyPairForListing(routedOrder.getMarket().getListing()).equals(pair)
+              && routedOrder.getMarket().getExchange().equals(coinTraderExchange))
+            cointraderOpenOrders.add(routedOrder);
+      if (stateOrderMap.get(OrderState.CANCELLING) != null)
+        for (org.cryptocoinpartners.schema.Order cancellingOrder : stateOrderMap.get(OrderState.CANCELLING))
+          if (XchangeUtil.getCurrencyPairForListing(cancellingOrder.getMarket().getListing()).equals(pair)
+              && cancellingOrder.getMarket().getExchange().equals(coinTraderExchange))
+            cointraderOpenOrders.add(cancellingOrder);
+      for (org.cryptocoinpartners.schema.Order openOrder : cointraderOpenOrders) {
+        SpecificOrder openSpecificOrder;
+        if (openOrder instanceof SpecificOrder) {
+          openSpecificOrder = (SpecificOrder) openOrder;
+          if (!openSpecificOrder.getRemoteKey().equals(openSpecificOrder.getId()))
             openOrdersXchangeIds.add(openSpecificOrder.getRemoteKey());
-          }
         }
+      }
 
-        // order based
-        //1 - Query exchange for the order id's we know about, create any fills to account of differnece in orders
+      // order based
+      //1 - Query exchange for the order id's we know about, create any fills to account of differnece in orders
 
-        //2 - Check exchange any orders we don't know about
-        // 3 - so what if we ahve an order placed but it is not in open order, nor in fille orders.
+      //2 - Check exchange any orders we don't know about
+      // 3 - so what if we ahve an order placed but it is not in open order, nor in fille orders.
 
-        //trades based
-        // 1- get trades from exchange loop over them and check if we have the fill for the given order
+      //trades based
+      // 1- get trades from exchange loop over them and check if we have the fill for the given order
 
-        // 2 - if we have an order we don't know about, deal with it as unknow order
-        // 2- Check any exchange orders we don't know about.
-        // 
+      // 2 - if we have an order we don't know about, deal with it as unknow order
+      // 2- Check any exchange orders we don't know about.
+      // 
 
-        //for all the order we know about, we need to see if we had any fills for these orders
+      //for all the order we know about, we need to see if we had any fills for these orders
 
-        //so we just need to blend 1 and generate unknow orders!
+      //so we just need to blend 1 and generate unknow orders!
 
-        Collection<Order> exchangeOrders = new ArrayList<Order>();
-        if (!openOrdersXchangeIds.isEmpty()) {
-          // so for the open orders we have get the state, then create fill for differnence.
-          try {
-       /*     for (String openOrdersXchangeId : openOrdersXchangeIds) {
-              try {
-                Collection<Order> exchangeOrderList = tradePollingService.getOrder(openOrdersXchangeId);
-                if (exchangeOrderList != null && !exchangeOrderList.isEmpty())
-                  exchangeOrders.addAll(exchangeOrderList);
-              } catch (Throwable e) {
-                log.error("getOrders: called from class " + Thread.currentThread().getStackTrace()[2]
-                    + " unable to get order status from trader service " + tradePollingService.hashCode() + " order:" + openOrdersXchangeId + " " + e);
-                continue;
-              }
-           } */ 
+      Collection<Order> exchangeOrders = new ArrayList<Order>();
+      if (!openOrdersXchangeIds.isEmpty()) {
+        // so for the open orders we have get the state, then create fill for differnence.
+        try {
+          /*
+           * for (String openOrdersXchangeId : openOrdersXchangeIds) { try { Collection<Order> exchangeOrderList =
+           * tradePollingService.getOrder(openOrdersXchangeId); if (exchangeOrderList != null && !exchangeOrderList.isEmpty())
+           * exchangeOrders.addAll(exchangeOrderList); } catch (Throwable e) { log.error("getOrders: called from class " +
+           * Thread.currentThread().getStackTrace()[2] + " unable to get order status from trader service " + tradePollingService.hashCode() +
+           * " order:" + openOrdersXchangeId + " " + e); continue; } }
+           */synchronized (tradePollingService) {
+
             exchangeOrders = tradePollingService.getOrder(openOrdersXchangeIds.toArray(new String[openOrdersXchangeIds.size()]));
-            
-            //  exchangeOrders = tradePollingService.getOrder(openOrdersXchangeIds.toArray(new String[openOrdersXchangeIds.size()]));
-            Boolean orderFound = false;
-            if (exchangeOrders != null)
-              for (Order exchangeOrder : exchangeOrders) {
-                cointraderXchangeOrders.add(exchangeOrder);
-                // so let's check these are in the ordermap
-                for (org.cryptocoinpartners.schema.Order openOrder : cointraderOpenOrders) {
+          }
 
-                  SpecificOrder specificOpenOrder = null;
-                  if (openOrder instanceof SpecificOrder) {
-                    specificOpenOrder = (SpecificOrder) openOrder;
-                    if (specificOpenOrder.getRemoteKey().equals(exchangeOrder.getId())) {
-                      orderFound = true;
-                      Fill fill = createFill(exchangeOrder, specificOpenOrder);
-                      if (fill != null) {
-                        handleFillProcessing(fill);
-                        if (fill.getTimestamp() > lastFillTimes.get(market))
-                          lastFillTimes.put(market, fill.getTimestamp());
-                      }
+          //  exchangeOrders = tradePollingService.getOrder(openOrdersXchangeIds.toArray(new String[openOrdersXchangeIds.size()]));
+          Boolean orderFound = false;
+          if (exchangeOrders != null)
+            for (Order exchangeOrder : exchangeOrders) {
+              cointraderXchangeOrders.add(exchangeOrder);
+              // so let's check these are in the ordermap
+              for (org.cryptocoinpartners.schema.Order openOrder : cointraderOpenOrders) {
 
-                      if (!adaptOrderState(exchangeOrder.getStatus()).equals(orderStateMap.get(openOrder)))
-                        if (adaptOrderState(exchangeOrder.getStatus()) != OrderState.FILLED
-                            || adaptOrderState(exchangeOrder.getStatus()) != OrderState.PARTFILLED)
-                          updateOrderState(openOrder, adaptOrderState(exchangeOrder.getStatus()), true);
+                SpecificOrder specificOpenOrder = null;
+                if (openOrder instanceof SpecificOrder) {
+                  specificOpenOrder = (SpecificOrder) openOrder;
+                  if (specificOpenOrder.getRemoteKey().equals(exchangeOrder.getId())) {
+                    orderFound = true;
+                    Fill fill = createFill(exchangeOrder, specificOpenOrder);
+                    if (fill != null) {
+                      handleFillProcessing(fill);
+                      if (fill.getTimestamp() > lastFillTimes.get(market))
+                        lastFillTimes.put(market, fill.getTimestamp());
                     }
+
+                    if (!adaptOrderState(exchangeOrder.getStatus()).equals(orderStateMap.get(openOrder)))
+                      if (adaptOrderState(exchangeOrder.getStatus()) != OrderState.FILLED
+                          || adaptOrderState(exchangeOrder.getStatus()) != OrderState.PARTFILLED)
+                        updateOrderState(openOrder, adaptOrderState(exchangeOrder.getStatus()), true);
                   }
                 }
-
-              }
-          } catch (NotYetImplementedForExchangeException nyie) {
-
-            TradeHistoryParams historyParams = null;
-            if (helper != null)
-              historyParams = helper.getTradeHistoryParameters(pair, lastTradeTime, lastTradeId);
-            if (historyParams == null)
-              throw nyie;
-            List<UserTrade> xchangeFills = tradePollingService.getTradeHistory(historyParams).getUserTrades();
-            log.trace("sorting trades by oldest first : " + xchangeFills);
-
-            Collections.sort(xchangeFills, timeOrderIdComparator);
-
-            log.debug("recivied urderOrders:" + xchangeFills);
-            HashMap<String, List<UserTrade>> userOrdersMap = new HashMap<String, List<UserTrade>>();
-            for (UserTrade trade : xchangeFills) {
-              if (!userOrdersMap.containsKey(trade.getOrderId())) {
-                List<UserTrade> fills = new ArrayList<UserTrade>();
-                fills.add(trade);
-                userOrdersMap.put(trade.getOrderId(), fills);
               }
 
-              else
-                userOrdersMap.get(trade.getOrderId()).add(trade);
             }
-            log.debug("created userOrdersMap:" + userOrdersMap);
+        } catch (NotYetImplementedForExchangeException nyie) {
 
-            OpenOrders openOrders = tradePollingService.getOpenOrders();
-            for (Order xchangeOrder : openOrders.getOpenOrders()) {
+          TradeHistoryParams historyParams = null;
+          if (helper != null)
+            historyParams = helper.getTradeHistoryParameters(pair, lastTradeTime, lastTradeId);
+          if (historyParams == null)
+            throw nyie;
+          List<UserTrade> xchangeFills;
+          synchronized (tradePollingService) {
 
-              xchangeOpenOrders.add(xchangeOrder);
+            xchangeFills = tradePollingService.getTradeHistory(historyParams).getUserTrades();
+          }
+          log.trace("sorting trades by oldest first : " + xchangeFills);
+
+          Collections.sort(xchangeFills, timeOrderIdComparator);
+
+          log.debug("recivied urderOrders:" + xchangeFills);
+          HashMap<String, List<UserTrade>> userOrdersMap = new HashMap<String, List<UserTrade>>();
+          for (UserTrade trade : xchangeFills) {
+            if (!userOrdersMap.containsKey(trade.getOrderId())) {
+              List<UserTrade> fills = new ArrayList<UserTrade>();
+              fills.add(trade);
+              userOrdersMap.put(trade.getOrderId(), fills);
             }
-            for (org.cryptocoinpartners.schema.Order openOrder : cointraderOpenOrders) {
 
-              SpecificOrder specificOpenOrder = null;
-              if (openOrder instanceof SpecificOrder) {
-                specificOpenOrder = (SpecificOrder) openOrder;
-                // So let's check the fills for this order.
-                boolean addTrade = false;
-                if (userOrdersMap.get(specificOpenOrder.getRemoteKey()) != null) {
-                  for (UserTrade trade : userOrdersMap.get(specificOpenOrder.getRemoteKey())) {
-                    if (specificOpenOrder.getFills() == null || specificOpenOrder.getFills().isEmpty()) {
+            else
+              userOrdersMap.get(trade.getOrderId()).add(trade);
+          }
+          log.debug("created userOrdersMap:" + userOrdersMap);
+          OpenOrders openOrders;
+          synchronized (tradePollingService) {
+            openOrders = tradePollingService.getOpenOrders();
+          }
+          for (Order xchangeOrder : openOrders.getOpenOrders()) {
+
+            xchangeOpenOrders.add(xchangeOrder);
+          }
+          for (org.cryptocoinpartners.schema.Order openOrder : cointraderOpenOrders) {
+
+            SpecificOrder specificOpenOrder = null;
+            if (openOrder instanceof SpecificOrder) {
+              specificOpenOrder = (SpecificOrder) openOrder;
+              // So let's check the fills for this order.
+              boolean addTrade = false;
+              if (userOrdersMap.get(specificOpenOrder.getRemoteKey()) != null) {
+                for (UserTrade trade : userOrdersMap.get(specificOpenOrder.getRemoteKey())) {
+                  if (specificOpenOrder.getFills() == null || specificOpenOrder.getFills().isEmpty()) {
+                    Fill newFill = createFill(trade, specificOpenOrder);
+                    if (newFill != null) {
+                      handleFillProcessing(newFill);
+                      if (newFill.getTimestamp() > lastFillTimes.get(market))
+                        lastFillTimes.put(market, newFill.getTimestamp());
+                    }
+
+                  } else {
+                    addTrade = true;
+                    for (Fill fill : specificOpenOrder.getFills()) {
+                      if (fill.getRemoteKey().equals(trade.getId())) {
+                        addTrade = false;
+                        break;
+                      }
+                    }
+                    if (addTrade) {
                       Fill newFill = createFill(trade, specificOpenOrder);
                       if (newFill != null) {
                         handleFillProcessing(newFill);
                         if (newFill.getTimestamp() > lastFillTimes.get(market))
                           lastFillTimes.put(market, newFill.getTimestamp());
-                      }
 
-                    } else {
-                      addTrade = true;
-                      for (Fill fill : specificOpenOrder.getFills()) {
-                        if (fill.getRemoteKey().equals(trade.getId())) {
-                          addTrade = false;
-                          break;
-                        }
                       }
-                      if (addTrade) {
-                        Fill newFill = createFill(trade, specificOpenOrder);
-                        if (newFill != null) {
-                          handleFillProcessing(newFill);
-                          if (newFill.getTimestamp() > lastFillTimes.get(market))
-                            lastFillTimes.put(market, newFill.getTimestamp());
-
-                        }
-                        //need to set state to filly filled somehow if the trade is filled.
-                      }
-
+                      //need to set state to filly filled somehow if the trade is filled.
                     }
-                    // the amount filled is not the same as the order quanity, so we need to assume if the xchange Order ID is not in the openOrderId list it is fully fillled and we have new fills for it.
-                    // else it could have been canclled not fully filled.
 
                   }
-                }
+                  // the amount filled is not the same as the order quanity, so we need to assume if the xchange Order ID is not in the openOrderId list it is fully fillled and we have new fills for it.
+                  // else it could have been canclled not fully filled.
 
-                //lets also check if cointrader knows about any open orders
-                boolean isOpen = false;
-                for (Order xchangeOrder : openOrders.getOpenOrders()) {
-                  if (specificOpenOrder != null && specificOpenOrder.getRemoteKey().equals(xchangeOrder.getId())) {
-
-                    if (specificOpenOrder.getVolume().asBigDecimal().compareTo(xchangeOrder.getTradableAmount()) != 0) {
-                      long updateVolumeCount = DiscreteAmount.roundedCountForBasis(xchangeOrder.getTradableAmount(), market.getVolumeBasis());
-                      specificOpenOrder.setVolumeCount(updateVolumeCount);
-                    }
-                    cointraderXchangeOrders.add(xchangeOrder);
-                    isOpen = true;
-                  }
                 }
-                if (!isOpen && specificOpenOrder.hasFills())
-                  updateOrderState(specificOpenOrder, OrderState.FILLED, true);
               }
-            }
-          }
 
-          //We need to update the orders to fully filled.
+              //lets also check if cointrader knows about any open orders
+              boolean isOpen = false;
+              for (Order xchangeOrder : openOrders.getOpenOrders()) {
+                if (specificOpenOrder != null && specificOpenOrder.getRemoteKey().equals(xchangeOrder.getId())) {
 
-          /*
-           * trade.get
-           * @param type The trade type (BID side or ASK side)
-           * @param tradableAmount The depth of this trade
-           * @param currencyPair The exchange identifier (e.g. "BTC/USD")
-           * @param price The price (either the bid or the ask)
-           * @param timestamp The timestamp of the trade
-           * @param id The id of the trade
-           * @param orderId The id of the order responsible for execution of this trade
-           * @param feeAmount The fee that was charged by the exchange for this trade
-           * @param feeCurrency The symbol of the currency in which the fee was charged
-           *///   String myorderId = trade.getOrderId();
-
-        }
-
-        //   exchangeOrders = tradePollingService.getTradeHistory(historyParams);
-
-        // if we have any order that are open at exchange but not known to cointrader, raise unknown order execption i.e orders in xchangeOpenOrders but not in cointraderXchangeOrders
-        //cointraderXchangeOrders is exchange orders that cointrader knows about
-        //unknownOrders are exchnge order we don't know.
-        //all xchange open orders that are not in cointrader.
-        SetView<Order> unknownOrders = Sets.difference(xchangeOpenOrders, cointraderXchangeOrders);
-        if (!ignoreUnknownOrders) {
-          for (Order unknowOrder : unknownOrders) {
-            // we are going to log it and cancel them, but they might have been filled!
-            //let's create a specifc order for them
-            Collection<Portfolio> portfolios = context.getInjector().getInstance(PortfolioService.class).getPortfolios();
-            Portfolio lastPortfolio = null;
-            for (Portfolio porfolio : portfolios)
-              for (Tradeable tradeable : porfolio.getMarkets())
-                if (!tradeable.isSynthetic()) {
-                  Market portfolioMarket = (Market) tradeable;
-                  if (portfolioMarket.equals(market))
-                    lastPortfolio = porfolio;
+                  if (specificOpenOrder.getVolume().asBigDecimal().compareTo(xchangeOrder.getTradableAmount()) != 0) {
+                    long updateVolumeCount = DiscreteAmount.roundedCountForBasis(xchangeOrder.getTradableAmount(), market.getVolumeBasis());
+                    specificOpenOrder.setVolumeCount(updateVolumeCount);
+                  }
+                  cointraderXchangeOrders.add(xchangeOrder);
+                  isOpen = true;
                 }
-            if (lastPortfolio == null)
-              continue;
-            SpecificOrder specificOrder = specificOrderFactory.create(unknowOrder, market, lastPortfolio);
-
-            // add the order to the state cache as placed
-            specificOrder.persit();
-            updateOrderState(specificOrder, OrderState.PLACED, true);
-            // then cancel the order to check if it is filled.
-            try {
-              if (cancelUnknownOrders && handleCancelSpecificOrder(specificOrder))
-
-                log.warn(this.getClass().getSimpleName() + ":getOrders - Cancelled Unkown order" + specificOrder);
-            } catch (Throwable e) {
-              // TODO Auto-generated catch block
-              log.error("getOrders: called from class " + Thread.currentThread().getStackTrace()[2] + " unable to cancel order:" + specificOrder
-                  + " " + e);
-              throw new OrderNotFoundException("Unknown exchnage order " + unknowOrder);
+              }
+              if (!isOpen && specificOpenOrder.hasFills())
+                updateOrderState(specificOpenOrder, OrderState.FILLED, true);
             }
-
           }
         }
-        tradeFailureCount = 0;
-        return;
+
+        //We need to update the orders to fully filled.
+
+        /*
+         * trade.get
+         * @param type The trade type (BID side or ASK side)
+         * @param tradableAmount The depth of this trade
+         * @param currencyPair The exchange identifier (e.g. "BTC/USD")
+         * @param price The price (either the bid or the ask)
+         * @param timestamp The timestamp of the trade
+         * @param id The id of the trade
+         * @param orderId The id of the order responsible for execution of this trade
+         * @param feeAmount The fee that was charged by the exchange for this trade
+         * @param feeCurrency The symbol of the currency in which the fee was charged
+         *///   String myorderId = trade.getOrderId();
+
       }
 
-      catch (Exception | Error e) {
+      //   exchangeOrders = tradePollingService.getTradeHistory(historyParams);
 
-        tradeFailureCount++;
-        log.error(this.getClass().getSimpleName() + ":getOrders unable to get orders for market  " + market + " pair " + pair + ".  Failure "
-            + tradeFailureCount + " of " + restartCount + ". Full Stack Trace: " + e);
-        if (restartCount != 0 && tradeFailureCount >= restartCount) {
-          //try {
-          //  if (rateLimiter.getRunnables() == null || rateLimiter.getRunnables().isEmpty() || rateLimiter.remove(this)) {
+      // if we have any order that are open at exchange but not known to cointrader, raise unknown order execption i.e orders in xchangeOpenOrders but not in cointraderXchangeOrders
+      //cointraderXchangeOrders is exchange orders that cointrader knows about
+      //unknownOrders are exchnge order we don't know.
+      //all xchange open orders that are not in cointrader.
+      SetView<Order> unknownOrders = Sets.difference(xchangeOpenOrders, cointraderXchangeOrders);
+      if (!ignoreUnknownOrders) {
+        for (Order unknowOrder : unknownOrders) {
+          // we are going to log it and cancel them, but they might have been filled!
+          //let's create a specifc order for them
+          Collection<Portfolio> portfolios = context.getInjector().getInstance(PortfolioService.class).getPortfolios();
+          Portfolio lastPortfolio = null;
+          for (Portfolio porfolio : portfolios)
+            for (Tradeable tradeable : porfolio.getMarkets())
+              if (!tradeable.isSynthetic()) {
+                Market portfolioMarket = (Market) tradeable;
+                if (portfolioMarket.equals(market))
+                  lastPortfolio = porfolio;
+              }
+          if (lastPortfolio == null)
+            continue;
+          SpecificOrder specificOrder = specificOrderFactory.create(unknowOrder, market, lastPortfolio);
 
-          log.error(this.getClass().getSimpleName() + ":getOrders unable to get orders for " + market + " pair " + pair + " for " + tradeFailureCount
-              + " of " + restartCount + " time. Resetting Trade Service Connection.");
-          org.knowm.xchange.Exchange xchangeExchange = XchangeUtil.resetExchange(coinTraderExchange);
-          //requeried for nonces to sync to nearest minute
-          // Thread.sleep(1000);
-          // dataService = xchangeExchange.getPollingMarketDataService();
-          tradeFailureCount = 0;
-          throw e;
-          //}
+          // add the order to the state cache as placed
+          specificOrder.persit();
+          updateOrderState(specificOrder, OrderState.PLACED, true);
+          // then cancel the order to check if it is filled.
+          try {
+            if (cancelUnknownOrders && handleCancelSpecificOrder(specificOrder))
+
+              log.warn(this.getClass().getSimpleName() + ":getOrders - Cancelled Unkown order" + specificOrder);
+          } catch (Throwable e) {
+            // TODO Auto-generated catch block
+            log.error("getOrders: called from class " + Thread.currentThread().getStackTrace()[2] + " unable to cancel order:" + specificOrder + " "
+                + e);
+            throw new OrderNotFoundException("Unknown exchnage order " + unknowOrder);
+          }
 
         }
-        return;
       }
+      tradeFailureCount = 0;
+      return;
     }
+
+    catch (Exception | Error e) {
+
+      tradeFailureCount++;
+      log.error(this.getClass().getSimpleName() + ":getOrders unable to get orders for market  " + market + " pair " + pair + ".  Failure "
+          + tradeFailureCount + " of " + restartCount + ". Full Stack Trace: " + e);
+      if (restartCount != 0 && tradeFailureCount >= restartCount) {
+        //try {
+        //  if (rateLimiter.getRunnables() == null || rateLimiter.getRunnables().isEmpty() || rateLimiter.remove(this)) {
+
+        log.error(this.getClass().getSimpleName() + ":getOrders unable to get orders for " + market + " pair " + pair + " for " + tradeFailureCount
+            + " of " + restartCount + " time. Resetting Trade Service Connection.");
+        org.knowm.xchange.Exchange xchangeExchange = XchangeUtil.resetExchange(coinTraderExchange);
+        //requeried for nonces to sync to nearest minute
+        // Thread.sleep(1000);
+        // dataService = xchangeExchange.getPollingMarketDataService();
+        tradeFailureCount = 0;
+        throw e;
+        //}
+
+      }
+      return;
+    }
+
   }
 
   //  FetchOrdersRunnable.
@@ -978,13 +999,14 @@ public class XchangeOrderService extends BaseOrderService {
         try {
           synchronized (tradeService) {
             exchangeOrders = tradeService.getOrder(openOrders.toArray(new String[openOrders.size()]));
-            for (Order exchangeOrder : exchangeOrders) {
-              if (specificOrder.getRemoteKey().equals(exchangeOrder.getId())) {
-                exchangeOrderFound = true;
-                return adaptOrderState(exchangeOrder.getStatus());
-              }
+          }
+          for (Order exchangeOrder : exchangeOrders) {
+            if (specificOrder.getRemoteKey().equals(exchangeOrder.getId())) {
+              exchangeOrderFound = true;
+              return adaptOrderState(exchangeOrder.getStatus());
             }
           }
+
         } catch (IllegalArgumentException iae) {
           return OrderState.REJECTED;
         }

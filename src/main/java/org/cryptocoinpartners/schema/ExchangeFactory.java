@@ -13,6 +13,7 @@ public interface ExchangeFactory {
 
   Exchange create(String symbol, int margin, @Assisted("makerFeeRate") double makerfeeRate, @Assisted("takerFeeRate") double takerfeeRate,
       @Assisted("feeBasis") double feeBasis, @Assisted("orderBasis") double orderBasis, @Assisted("feeMethod") FeeMethod feeMethod,
-      @Assisted("marginFeeRate") double marginFeeRate, @Assisted("marginFeeMethod") FeeMethod marginFeeMethod, boolean fillsProvided);
+      @Assisted("marginFeeRate") double marginFeeRate, @Assisted("marginFeeMethod") FeeMethod marginFeeMethod,
+      @Assisted("minimumOrderSize") double minimumOrderSize, boolean fillsProvided);
 
 }

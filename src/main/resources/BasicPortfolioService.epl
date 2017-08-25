@@ -38,8 +38,7 @@ from
 @Name('LOG_PORTFOLIO_VALUE')
 @Subscriber(className='org.cryptocoinpartners.schema.PortfolioManager$DataSubscriber')
 on pattern
-	//[every timer:schedule(iso: 'R2/PT1D')]
-	 [every timer:interval(1 day)]
+	[every timer:at(0, 00, *, *, *)]
 	select current_timestamp,portfolio from PortfolioWindow;
 
 

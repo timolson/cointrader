@@ -180,6 +180,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
     //		position.getAvgPrice());
     //context.route(transaction);
     //TODO need to ensure transacations are not duplicated, i.e. we should use a set.
+
     log.info("transaction: " + transaction + " Recieved.");
     if (transaction.getPortfolio().equals(portfolio)) {
 
@@ -204,10 +205,15 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
         if ((transaction.getExchange().getBalances().isEmpty() || transaction.getExchange().getBalances().get(transaction.getCurrency()) == null)) {
           Balance updateBalance;
           if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL) {
+            log.debug(this.getClass().getSimpleName() + "- updatePortfolio creating buy/sell balance for exchange " + transaction.getExchange()
+                + " asset: " + transaction.getCommissionCurrency() + " amountCount: " + currentBalanceCount + transaction.getCommissionCount());
+
             updateBalance = balanceFactory.create(transaction.getExchange(), transaction.getCommissionCurrency(),
                 currentBalanceCount + transaction.getCommissionCount());
 
           } else {
+            log.debug(this.getClass().getSimpleName() + "- updatePortfolio creating balance for exchange " + transaction.getExchange() + " asset: "
+                + transaction.getCommissionCurrency() + " amountCount: " + currentBalanceCount + transaction.getCommissionCount());
 
             updateBalance = (transaction.getType().isDebit() ? balanceFactory.create(transaction.getExchange(), transaction.getCurrency(),
                 (currentBalanceCount - transaction.getAmountCount())) : balanceFactory.create(transaction.getExchange(), transaction.getCurrency(),

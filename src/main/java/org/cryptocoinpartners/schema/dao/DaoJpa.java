@@ -602,12 +602,12 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
           // entity.setRevision(entity.getRevision() + 1);
           entity.setStartTime(entity.getDelay());
           //   entity.getDao().deleteEntities(entity);
-          EntityBase entityClone = entity.clone();
+          // EntityBase entityClone = entity.clone();
 
           // EntityBase entityClone = SerializationUtils.clone(entity);
-          entityClone.setDao(entity.getDao());
+          //  entityClone.setDao(entity.getDao());
 
-          application.getMergeQueue().add(entityClone);
+          application.getMergeQueue().add(entity);
 
           log.debug("deleting " + entity.getClass().getSimpleName() + " id:" + entity.getId());
         }

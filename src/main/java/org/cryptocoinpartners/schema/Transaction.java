@@ -82,6 +82,8 @@ public class Transaction extends Event {
         this.baseCommissionRateCount = getBaseRateCount();
     } else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
       this.baseCommissionRateCount = 1;
+    if (getDao() != null)
+      getDao().persist(this);
 
   }
 
@@ -124,6 +126,8 @@ public class Transaction extends Event {
         this.baseCommissionRateCount = getBaseRateCount();
     } else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
       this.baseCommissionRateCount = 1;
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   public Transaction(Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount) {
@@ -159,6 +163,8 @@ public class Transaction extends Event {
         this.baseCommissionRateCount = getBaseRateCount();
     } else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
       this.baseCommissionRateCount = 1;
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   @AssistedInject
@@ -225,6 +231,8 @@ public class Transaction extends Event {
         this.baseCommissionRateCount = getBaseRateCount();
     } else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
       this.baseCommissionRateCount = 1;
+    if (getDao() != null)
+      getDao().persist(this);
 
   }
 
@@ -285,7 +293,8 @@ public class Transaction extends Event {
         this.baseCommissionRateCount = getBaseRateCount();
     } else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
       this.baseCommissionRateCount = 1;
-
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   private synchronized void setDateTime(Instant time) {

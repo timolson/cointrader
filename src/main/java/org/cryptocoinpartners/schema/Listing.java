@@ -139,7 +139,7 @@ public class Listing extends EntityBase {
     if (prompt != null)
       return prompt.getMultiplier(market, entryPrice, exitPrice);
 
-    return new DiscreteAmount((long) (getContractSize(market) * (1 / getTickSize())), getVolumeBasis());
+    return new DiscreteAmount((long) (getContractSize(market) * (1 / getTickSize())), getPriceBasis());
 
   }
 

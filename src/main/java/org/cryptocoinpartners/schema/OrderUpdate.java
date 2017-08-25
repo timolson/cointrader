@@ -166,6 +166,8 @@ public class OrderUpdate extends Event {
     this.order = order;
     this.lastState = lastState;
     this.state = state;
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   @Override

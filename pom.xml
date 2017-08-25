@@ -17,7 +17,7 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <xchange.version>4.2.1-SNAPSHOT</xchange.version>
+        <xchange.version>4.2.2-SNAPSHOT</xchange.version>
         <slf4j-api.version>1.7.5</slf4j-api.version>
         <hibernate.version>4.3.11.Final</hibernate.version>
         <antlr.version>4.2.2</antlr.version>
@@ -109,51 +109,7 @@
             <artifactId>guava</artifactId>
             <version>18.0</version>
         </dependency>
-        <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-core</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-bitfinex</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-bitstamp</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-btcchina</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-btce</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-coinbase</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-bter</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-campbx</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-                <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-poloniex</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>joda-time</groupId>
             <artifactId>joda-time</artifactId>
@@ -242,16 +198,98 @@
             <artifactId>jline</artifactId>
             <version>2.12</version>
         </dependency>
+                <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-core</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
         <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-bitfinex</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-bitstamp</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+                <dependency>
         	<groupId>org.knowm.xchange</groupId>
         	<artifactId>xchange-bittrex</artifactId>
         	<version>${xchange.version}</version>
         </dependency>
+                        <dependency>
+        	<groupId>org.knowm.xchange</groupId>
+        	<artifactId>xchange-btc38</artifactId>
+        	<version>${xchange.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-btcchina</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+                <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-btctrade</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+      <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-bter</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+      <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-chbtc</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+              <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-gdax</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+                      <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-gemini</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+                              <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-hitbtc</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+                                      <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-huobi</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+        
+                     <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-kraken</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+
+
         <dependency>
         	<groupId>org.knowm.xchange</groupId>
         	<artifactId>xchange-okcoin</artifactId>
         	<version>${xchange.version}</version>
         </dependency>
+
+        
+                        <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-poloniex</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+                                <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-quoine</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
+        
+        
         <dependency>
         	<groupId>com.mchange</groupId>
         	<artifactId>c3p0</artifactId>

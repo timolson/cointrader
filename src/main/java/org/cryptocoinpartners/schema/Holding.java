@@ -14,6 +14,8 @@ import javax.persistence.Transient;
 
 import org.cryptocoinpartners.schema.dao.Dao;
 import org.cryptocoinpartners.schema.dao.HoldingDao;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 
@@ -31,6 +33,7 @@ public abstract class Holding extends EntityBase {
   protected transient HoldingDao holdingDao;
   @Inject
   protected transient static BalanceFactory balanceFactory;
+  protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.holding");
 
   //private Amount volume;
   // private long volumeCount;
@@ -41,9 +44,12 @@ public abstract class Holding extends EntityBase {
   }
 
   public static Holding forSymbol(String symbol) {
+    log.debug("Holding - forSymbol: called from class " + Thread.currentThread().getStackTrace()[2]);
     Matcher matcher = Pattern.compile("(\\w+):(\\w+)").matcher(symbol);
     if (!matcher.matches())
       throw new IllegalArgumentException("Could not parse Holding symbol " + symbol);
+    log.debug("Holding - forSymbol creating balance for exchange " + matcher.group(1) + " asset: " + matcher.group(2));
+
     return balanceFactory.create(Exchange.forSymbol(matcher.group(1)), Asset.forSymbol(matcher.group(2)));
   }
 

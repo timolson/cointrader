@@ -58,9 +58,16 @@ public class SpecificOrder extends Order {
 
     this.remoteKey = getId().toString();
     this.market = market;
-    this.volumeCount = volumeCount;
+    //set it to the order size or the minumum size for the market.
+
+    double minimumOrderSize = volumeCount < 0 ? market.getExchange().getMinimumOrderSize(market) * -1 : market.getExchange().getMinimumOrderSize(
+        market);
+    long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+    this.volumeCount = (volumeCount != 0 && Math.abs(volumeCount) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount : volumeCount;
     super.setPortfolio(portfolio);
     this.placementCount = 1;
+    if (getDao() != null)
+      getDao().persist(this);
     //this.positionEffect = PositionEffect.OPEN;
 
   }
@@ -79,10 +86,16 @@ public class SpecificOrder extends Order {
     this.transactions = new CopyOnWriteArrayList<Transaction>();
     this.remoteKey = getId().toString();
     this.market = market;
-    this.volumeCount = volumeCount;
+    //set it to the order size or the minumum size for the market.
+    double minimumOrderSize = volumeCount < 0 ? market.getExchange().getMinimumOrderSize(market) * -1 : market.getExchange().getMinimumOrderSize(
+        market);
+    long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+    this.volumeCount = (volumeCount != 0 && Math.abs(volumeCount) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount : volumeCount;
     super.setComment(comment);
     super.setPortfolio(portfolio);
     this.placementCount = 1;
+    if (getDao() != null)
+      getDao().persist(this);
     //   this.positionEffect = PositionEffect.OPEN;
 
   }
@@ -101,13 +114,19 @@ public class SpecificOrder extends Order {
     this.transactions = new CopyOnWriteArrayList<Transaction>();
     this.remoteKey = getId().toString();
     this.market = market;
-    this.volumeCount = volumeCount;
+    //set it to the order size or the minumum size for the market.
+    double minimumOrderSize = volumeCount < 0 ? market.getExchange().getMinimumOrderSize(market) * -1 : market.getExchange().getMinimumOrderSize(
+        market);
+    long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+    this.volumeCount = (volumeCount != 0 && Math.abs(volumeCount) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount : volumeCount;
     if (comment != null)
       super.setComment(comment);
     parentOrder.addChildOrder(this);
     this.setParentOrder(parentOrder);
     super.setPortfolio(portfolio);
     this.placementCount = 1;
+    if (getDao() != null)
+      getDao().persist(this);
     //  this.positionEffect = PositionEffect.OPEN;
 
   }
@@ -126,11 +145,17 @@ public class SpecificOrder extends Order {
     this.transactions = new CopyOnWriteArrayList<Transaction>();
     this.remoteKey = getId().toString();
     this.market = market;
-    this.volumeCount = volumeCount;
+    //set it to the order size or the minumum size for the market.
+    double minimumOrderSize = volumeCount < 0 ? market.getExchange().getMinimumOrderSize(market) * -1 : market.getExchange().getMinimumOrderSize(
+        market);
+    long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+    this.volumeCount = (volumeCount != 0 && Math.abs(volumeCount) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount : volumeCount;
     parentOrder.addChildOrder(this);
     this.setParentOrder(parentOrder);
     super.setPortfolio(portfolio);
     this.placementCount = 1;
+    if (getDao() != null)
+      getDao().persist(this);
     //  this.positionEffect = PositionEffect.OPEN;
 
   }
@@ -150,12 +175,19 @@ public class SpecificOrder extends Order {
     this.remoteKey = getId().toString();
     this.market = market;
 
-    this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+    long unadjustedVolumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+    double minimumOrderSize = unadjustedVolumeCount < 0 ? market.getExchange().getMinimumOrderSize(market) * -1 : market.getExchange()
+        .getMinimumOrderSize(market);
+    long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+    this.volumeCount = (unadjustedVolumeCount != 0 && Math.abs(unadjustedVolumeCount) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount
+        : unadjustedVolumeCount;
 
     super.setComment(comment);
     super.setPortfolio(portfolio);
     this.placementCount = 1;
     this.positionEffect = PositionEffect.OPEN;
+    if (getDao() != null)
+      getDao().persist(this);
 
   }
 
@@ -181,8 +213,16 @@ public class SpecificOrder extends Order {
 
     this.setRemoteKey(limitOrder.getId());
     long vol = limitOrder.getTradableAmount().divide(BigDecimal.valueOf(market.getPriceBasis())).longValue();
-    this.volume = new DiscreteAmount(vol, market.getPriceBasis());
-    this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+
+    // this.volume = 
+    //set it to the order size or the minumum size for the market.
+    long unadjustedVolumeCount = new DiscreteAmount(vol, market.getPriceBasis()).toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+    double minimumOrderSize = unadjustedVolumeCount < 0 ? market.getExchange().getMinimumOrderSize(market) * -1 : market.getExchange()
+        .getMinimumOrderSize(market);
+    long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+    this.volumeCount = (unadjustedVolumeCount != 0 && Math.abs(unadjustedVolumeCount) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount
+        : unadjustedVolumeCount;
+
     this.positionEffect = PositionEffect.OPEN;
     super.setComment(comment);
     this.placementCount = 1;
@@ -190,6 +230,8 @@ public class SpecificOrder extends Order {
     //   this.setParentOrder(parentOrder);
     super.setPortfolio(portfolio);
     // this.placementCount = 1;
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   @AssistedInject
@@ -208,13 +250,21 @@ public class SpecificOrder extends Order {
     // setMarket(market);
     // this.market = market;
     this.remoteKey = getId().toString();
-    this.volumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+
+    long unadjustedVolumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
+    double minimumOrderSize = unadjustedVolumeCount < 0 ? market.getExchange().getMinimumOrderSize(market) * -1 : market.getExchange()
+        .getMinimumOrderSize(market);
+    long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+    this.volumeCount = (unadjustedVolumeCount != 0 && Math.abs(unadjustedVolumeCount) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount
+        : unadjustedVolumeCount;
     super.setComment(comment);
     parentOrder.addChildOrder(this);
     this.setParentOrder(parentOrder);
     super.setPortfolio(portfolio);
     this.placementCount = 1;
     this.positionEffect = (parentOrder.getPositionEffect() == null) ? PositionEffect.OPEN : parentOrder.getPositionEffect();
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted BigDecimal volume,
@@ -237,9 +287,13 @@ public class SpecificOrder extends Order {
     this.market = specficOrder.getMarket();
     this.orderGroup = specficOrder.getOrderGroup();
     this.remoteKey = getId().toString();
-    if (!specficOrder.getFills().isEmpty())
-      this.volumeCount = specficOrder.getUnfilledVolumeCount();
-    this.volumeCount = specficOrder.getUnfilledVolumeCount();
+
+    //set it to the order size or the minumum size for the market.
+    double minimumOrderSize = specficOrder.getUnfilledVolumeCount() < 0 ? market.getExchange().getMinimumOrderSize(market) * -1 : market
+        .getExchange().getMinimumOrderSize(market);
+    long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+    this.volumeCount = (specficOrder.getUnfilledVolumeCount() != 0 && Math.abs(specficOrder.getUnfilledVolumeCount()) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount
+        : specficOrder.getUnfilledVolumeCount();
     //  this.volumeCount = specficOrder.getOpenVolumeCount();
     if (specficOrder.getComment() != null)
       super.setComment(specficOrder.getComment());
@@ -257,6 +311,8 @@ public class SpecificOrder extends Order {
     this.limitPriceCount = specficOrder.getLimitPriceCount();
     this.fillType = specficOrder.getFillType();
     this.executionInstruction = specficOrder.getExecutionInstruction();
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   @AssistedInject
@@ -274,9 +330,14 @@ public class SpecificOrder extends Order {
     this.market = market;
     this.remoteKey = exchangeOrder.getId();
 
-    this.volumeCount = DiscreteAmount.roundedCountForBasis((exchangeOrder.getType() != null
+    long unadjustedVolumeCount = DiscreteAmount.roundedCountForBasis((exchangeOrder.getType() != null
         && (exchangeOrder.getType() == OrderType.ASK || exchangeOrder.getType() == OrderType.EXIT_BID) ? exchangeOrder.getTradableAmount().negate()
         : exchangeOrder.getTradableAmount()), market.getVolumeBasis());
+    double minimumOrderSize = unadjustedVolumeCount < 0 ? market.getExchange().getMinimumOrderSize(market) * -1 : market.getExchange()
+        .getMinimumOrderSize(market);
+    long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+    this.volumeCount = (unadjustedVolumeCount != 0 && Math.abs(unadjustedVolumeCount) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount
+        : unadjustedVolumeCount;
 
     super.setPortfolio(portfolio);
     this.placementCount = 1;
@@ -293,6 +354,8 @@ public class SpecificOrder extends Order {
     }
 
     this.executionInstruction = ExecutionInstruction.TAKER;
+    if (getDao() != null)
+      getDao().persist(this);
   }
 
   public SpecificOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted double volume,

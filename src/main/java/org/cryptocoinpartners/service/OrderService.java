@@ -185,6 +185,10 @@ public interface OrderService {
 
   void sortShortStopOrders(Tradeable market);
 
+  void sortShortTargetOrders(Tradeable market);
+
+  void sortLongTargetOrders(Tradeable market);
+
   boolean handleCancelOrders(Collection<Order> orders);
 
   boolean handleCancelOrder(Order order);

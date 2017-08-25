@@ -53,9 +53,12 @@ public class BacktestRunMode extends RunMode {
   // private final Instant start = new DateTime(2016, 07, 03, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
   //private final Instant start = new DateTime(2016, 05, 03, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
   //private final Instant end = new DateTime(2016, 07, 18, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();//
+
   // aws replay 
   // private final Instant start = new DateTime(2015, 8, 8, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
-  // private final Instant end = new DateTime(2016, 06, 26, 0, 0, 0, DateTimeZone.UTC).toInstant();//
+  private final Instant start = new DateTime(2016, 4, 22, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+
+  private final Instant end = new DateTime(2016, 06, 26, 0, 0, 0, DateTimeZone.UTC).toInstant();//
   //
   //  private final Instant start = new DateTime(2016, 8, 19, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
   // private final Instant start = new DateTime(2016, 8, 7, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
@@ -74,13 +77,11 @@ public class BacktestRunMode extends RunMode {
 
   //  private final Instant end = new DateTime(2015, 11, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
   //
-  //backtest replay
-  private final Instant start = new DateTime(2014, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();//
-  private final Instant end = new DateTime(2015, 11, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
-  //
 
+  //     private final Instant start = new DateTime(2014, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();//
   //   private final Instant end = new DateTime(2015, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();//
 
+  //  private final Instant end = new DateTime(2015, 11, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();;//
   // private final Instant end = new DateTime(2016, 03, 06, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
   //
