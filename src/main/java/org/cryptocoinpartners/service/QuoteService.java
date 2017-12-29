@@ -20,46 +20,48 @@ import org.cryptocoinpartners.schema.Tradeable;
 @Service
 public interface QuoteService {
 
-    /** returns the most recent Trade of the specified Market */
-    @Nullable
-    public Trade getLastTrade(Tradeable market);
+	/** returns the most recent Trade of the specified Market */
+	@Nullable
+	public Trade getLastTrade(Tradeable market);
 
-    /** returns the most recent Trade of the specified Market */
-    @Nullable
-    public Bar getLastBar(Tradeable market, double interval);
+	/** returns the most recent Trade of the specified Market */
+	@Nullable
+	public Bar getLastBar(Tradeable market, double interval);
 
-    /** returns the most recent trade of the specified Listing on any Exchange */
-    @Nullable
-    public Trade getLastTrade(Listing listing);
+	/** returns the most recent trade of the specified Listing on any Exchange */
+	@Nullable
+	public Trade getLastTrade(Listing listing);
 
-    /** returns the most recent Book of the specified Market */
-    @Nullable
-    public Book getLastBook(Tradeable market);
+	/** returns the most recent Book of the specified Market */
+	@Nullable
+	public Book getLastBook(Tradeable market);
 
-    /** returns the most recent trade of the specified Listing on any Exchange */
-    @Nullable
-    public Book getLastBook(Listing listing);
+	/** returns the most recent trade of the specified Listing on any Exchange */
+	@Nullable
+	public Book getLastBook(Listing listing);
 
-    /** returns all the Markets which have reported data for the given Listing.  This is a way to discover
-     *  which Markets are trading a Listing */
-    public Set<Market> getMarketsForListing(Listing listing);
+	/** returns all the Markets which have reported data for the given Listing.  This is a way to discover
+	 *  which Markets are trading a Listing */
+	public Set<Market> getMarketsForListing(Listing listing);
 
-    /** returns the Book which offers the best bid price.  Could be null if no data for listing has been received yet. */
-    public @Nullable
-    org.cryptocoinpartners.schema.Offer getBestBidForListing(Listing listing);
+	/** returns the Book which offers the best bid price.  Could be null if no data for listing has been received yet. */
+	public @Nullable
+	org.cryptocoinpartners.schema.Offer getBestBidForListing(Listing listing);
 
-    /** returns the Book which offers the best ask price.  Could be null if no data for listing has been received yet. */
-    public @Nullable
-    org.cryptocoinpartners.schema.Offer getBestAskForListing(Listing listing);
+	/** returns the Book which offers the best ask price.  Could be null if no data for listing has been received yet. */
+	public @Nullable
+	org.cryptocoinpartners.schema.Offer getBestAskForListing(Listing listing);
 
-    public @Nullable
-    org.cryptocoinpartners.schema.Offer getLastBidForMarket(Tradeable market);
+	public @Nullable
+	org.cryptocoinpartners.schema.Offer getLastBidForMarket(Tradeable market);
 
-    public @Nullable
-    org.cryptocoinpartners.schema.Offer getLastAskForMarket(Tradeable market);
+	public @Nullable
+	org.cryptocoinpartners.schema.Offer getLastAskForMarket(Tradeable market);
 
-    Offer getImpliedBestAskForListing(Listing listing);
+	Offer getImpliedBestAskForListing(Listing listing);
 
-    Offer getImpliedBestBidForListing(Listing listing);
+	Offer getImpliedBestBidForListing(Listing listing);
+
+	Trade getLastImpliedTrade(Listing listing);
 
 }

@@ -3,6 +3,7 @@ package org.cryptocoinpartners.util;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -14,248 +15,248 @@ import org.cryptocoinpartners.schema.Asset;
  */
 public class ListingsMatrix {
 
-    /**
-     * The map between the currencies and their order.
-     */
-    private final ConcurrentHashMap<Asset, ConcurrentHashMap<Asset, Long>> listings;
+	/**
+	 * The map between the currencies and their order.
+	 */
+	private final Map<Asset, Map<Asset, Long>> listings;
 
-    /**
-     * Constructor with no currency. The ListingsMatrix constructed has no currency and no rates.
-     */
-    public ListingsMatrix() {
-        listings = new ConcurrentHashMap<>();
+	/**
+	 * Constructor with no currency. The ListingsMatrix constructed has no currency and no rates.
+	 */
+	public ListingsMatrix() {
+		listings = new ConcurrentHashMap<>();
 
-    }
+	}
 
-    /**
-     * Constructor with one currency. The ListingsMatrix has one currency with a 1.0 exchange rate to itself.
-     * @param ccy The currency.
-     */
-    public ListingsMatrix(final Asset ccy) {
-        ArgumentChecker.notNull(ccy, "Asset");
-        listings = new ConcurrentHashMap<>();
-        listings.put(ccy, new ConcurrentHashMap<Asset, Long>());
-        listings.get(ccy).put(ccy, (long) (1.0 / ccy.getBasis()));
+	/**
+	 * Constructor with one currency. The ListingsMatrix has one currency with a 1.0 exchange rate to itself.
+	 * @param ccy The currency.
+	 */
+	public ListingsMatrix(final Asset ccy) {
+		ArgumentChecker.notNull(ccy, "Asset");
+		listings = new ConcurrentHashMap<>();
+		listings.put(ccy, new ConcurrentHashMap<Asset, Long>());
+		listings.get(ccy).put(ccy, (long) (1.0 / ccy.getBasis()));
 
-    }
+	}
 
-    /**
-     * Constructor with an initial currency pair.
-     * @param ccy1 The first currency.
-     * @param ccy2 The second currency.
-     * @param rate TheListings rate between ccy1 and the ccy2. It is 1 ccy1 = rate * ccy2. The Listings matrix will be completed with the ccy2/ccy1 rate.
-     */
-    public ListingsMatrix(final Asset ccy1, final Asset ccy2, final long rate) {
-        listings = new ConcurrentHashMap<>();
+	/**
+	 * Constructor with an initial currency pair.
+	 * @param ccy1 The first currency.
+	 * @param ccy2 The second currency.
+	 * @param rate TheListings rate between ccy1 and the ccy2. It is 1 ccy1 = rate * ccy2. The Listings matrix will be completed with the ccy2/ccy1 rate.
+	 */
+	public ListingsMatrix(final Asset ccy1, final Asset ccy2, final long rate) {
+		listings = new ConcurrentHashMap<>();
 
-        addAsset(ccy1, ccy2, rate);
-    }
+		addAsset(ccy1, ccy2, rate);
+	}
 
-    /**
-     * Constructor from an existing ListingsMatrix. A new map and array are created.
-     * @param ListingsMatrix The ListingsMatrix.
-     */
-    public ListingsMatrix(final ListingsMatrix ListingsMatrix) {
-        ArgumentChecker.notNull(ListingsMatrix, "ListingsMatrix");
+	/**
+	 * Constructor from an existing ListingsMatrix. A new map and array are created.
+	 * @param ListingsMatrix The ListingsMatrix.
+	 */
+	public ListingsMatrix(final ListingsMatrix ListingsMatrix) {
+		ArgumentChecker.notNull(ListingsMatrix, "ListingsMatrix");
 
-        listings = new ConcurrentHashMap<>(ListingsMatrix.listings);
+		listings = new ConcurrentHashMap<>(ListingsMatrix.listings);
 
-    }
+	}
 
-    /**
-     * Add a new currency to the Listings matrix.
-     * @param ccyToAdd The currency to add. Should not be in the Listings matrix already.
-     * @param ccyReference The reference currency used to compute the cross rates with the new currency. Should already be in the matrix, except if the matrix is empty.
-     * IF the Listings  matrix is empty, the reference currency will be used as currency 0.
-     * @param rate TheListings rate between the new currency and the reference currency. It is 1 ccyToAdd = rate ccyReference. The Listings matrix will be completed using cross rate
-     * coherent with the data provided.
-     */
-    public synchronized void addAsset(Asset ccyToAdd, Asset ccyReference, long rate) {
-        ArgumentChecker.notNull(ccyToAdd, "Asset to add to the Listings matrix should not be null");
-        ArgumentChecker.notNull(ccyReference, "Reference currency should not be null");
-        ArgumentChecker.isTrue(!ccyToAdd.equals(ccyReference), "Currencies should be different");
-        if ((listings.get(ccyReference) == null && rate != 0) || (listings.isEmpty() && rate != 0)) { // Listings Matrix is empty.
-            BigDecimal inverseRateBD = (((BigDecimal.valueOf(1.0 / (ccyReference.getBasis()))).divide(BigDecimal.valueOf(rate), ccyToAdd.getScale(),
-                    RoundingMode.HALF_EVEN)).divide(BigDecimal.valueOf(ccyToAdd.getBasis())));
-            long inverseCrossRate = inverseRateBD.longValue();
-            listings.put(ccyReference, new ConcurrentHashMap<Asset, Long>());
-            listings.put(ccyToAdd, new ConcurrentHashMap<Asset, Long>());
+	/**
+	 * Add a new currency to the Listings matrix.
+	 * @param ccyToAdd The currency to add. Should not be in the Listings matrix already.
+	 * @param ccyReference The reference currency used to compute the cross rates with the new currency. Should already be in the matrix, except if the matrix is empty.
+	 * IF the Listings  matrix is empty, the reference currency will be used as currency 0.
+	 * @param rate TheListings rate between the new currency and the reference currency. It is 1 ccyToAdd = rate ccyReference. The Listings matrix will be completed using cross rate
+	 * coherent with the data provided.
+	 */
+	public synchronized void addAsset(Asset ccyToAdd, Asset ccyReference, long rate) {
+		ArgumentChecker.notNull(ccyToAdd, "Asset to add to the Listings matrix should not be null");
+		ArgumentChecker.notNull(ccyReference, "Reference currency should not be null");
+		ArgumentChecker.isTrue(!ccyToAdd.equals(ccyReference), "Currencies should be different");
+		if ((listings.get(ccyReference) == null && rate != 0) || (listings.isEmpty() && rate != 0)) { // Listings Matrix is empty.
+			BigDecimal inverseRateBD = (((BigDecimal.valueOf(1.0 / (ccyReference.getBasis()))).divide(BigDecimal.valueOf(rate), ccyToAdd.getScale(),
+					RoundingMode.HALF_EVEN)).divide(BigDecimal.valueOf(ccyToAdd.getBasis())));
+			long inverseCrossRate = inverseRateBD.longValue();
+			listings.put(ccyReference, new ConcurrentHashMap<Asset, Long>());
+			listings.put(ccyToAdd, new ConcurrentHashMap<Asset, Long>());
 
-            listings.get(ccyToAdd).put(ccyReference, rate);
-            listings.get(ccyToAdd).put(ccyToAdd, (long) (1.0 / ccyToAdd.getBasis()));
-            listings.get(ccyReference).put(ccyToAdd, inverseCrossRate);
-            listings.get(ccyReference).put(ccyReference, (long) (1.0 / ccyReference.getBasis()));
+			listings.get(ccyToAdd).put(ccyReference, rate);
+			listings.get(ccyToAdd).put(ccyToAdd, (long) (1.0 / ccyToAdd.getBasis()));
+			listings.get(ccyReference).put(ccyToAdd, inverseCrossRate);
+			listings.get(ccyReference).put(ccyReference, (long) (1.0 / ccyReference.getBasis()));
 
-        } else if (rate != 0) {
-            // ArgumentChecker.isTrue(listings.containsKey(ccyReference), " {} not in the Listings matrix", ccyReference);
-            //ArgumentChecker.isTrue(!listings.containsKey(ccyToAdd), "New currency {} already in the Listings matrix", ccyToAdd);
+		} else if (rate != 0) {
+			// ArgumentChecker.isTrue(listings.containsKey(ccyReference), " {} not in the Listings matrix", ccyReference);
+			//ArgumentChecker.isTrue(!listings.containsKey(ccyToAdd), "New currency {} already in the Listings matrix", ccyToAdd);
 
-            Iterator<Asset> lit = listings.keySet().iterator();
+			Iterator<Asset> lit = listings.keySet().iterator();
 
-            while (lit.hasNext()) {
-                Asset ccy = lit.next();
-                if (!ccyToAdd.equals(ccy)) {
+			while (lit.hasNext()) {
+				Asset ccy = lit.next();
+				if (!ccyToAdd.equals(ccy)) {
 
-                    long inverseCrossRate = 0;
-                    long crossRate = 0;
-                    // new matrix create of rates that is _currenciesLookup (size) x _currenciesLookup.sise()
-                    // loop over each of the quote currencies and get the cross rate, converting to th the baiss of the new curency
-                    //   if (listings.get(ccyReference)==null)
-                    //     listings.put(ccyReference, value)
-                    if (listings.get(ccyReference).get(ccy) == null) {
-                        BigDecimal inverseRateBD = (((BigDecimal.valueOf(1.0 / (ccyReference.getBasis()))).divide(BigDecimal.valueOf(rate),
-                                ccyToAdd.getScale(), RoundingMode.HALF_EVEN)).divide(BigDecimal.valueOf(ccy.getBasis())));
-                        inverseCrossRate = inverseRateBD.longValue();
-                        //listings.put(ccyReference, new ConcurrentHashMap<Asset, Long>());
-                        //listings.put(ccy, new ConcurrentHashMap<Asset, Long>());
+					long inverseCrossRate = 0;
+					long crossRate = 0;
+					// new matrix create of rates that is _currenciesLookup (size) x _currenciesLookup.sise()
+					// loop over each of the quote currencies and get the cross rate, converting to th the baiss of the new curency
+					//   if (listings.get(ccyReference)==null)
+					//     listings.put(ccyReference, value)
+					if (listings.get(ccyReference).get(ccy) == null) {
+						BigDecimal inverseRateBD = (((BigDecimal.valueOf(1.0 / (ccyReference.getBasis()))).divide(BigDecimal.valueOf(rate),
+								ccyToAdd.getScale(), RoundingMode.HALF_EVEN)).divide(BigDecimal.valueOf(ccy.getBasis())));
+						inverseCrossRate = inverseRateBD.longValue();
+						//listings.put(ccyReference, new ConcurrentHashMap<Asset, Long>());
+						//listings.put(ccy, new ConcurrentHashMap<Asset, Long>());
 
-                        listings.get(ccy).put(ccyReference, rate);
-                        listings.get(ccy).put(ccy, (long) (1.0 / ccy.getBasis()));
-                        listings.get(ccyReference).put(ccy, inverseCrossRate);
-                        listings.get(ccyReference).put(ccyReference, (long) (1.0 / ccyReference.getBasis()));
+						listings.get(ccy).put(ccyReference, rate);
+						listings.get(ccy).put(ccy, (long) (1.0 / ccy.getBasis()));
+						listings.get(ccyReference).put(ccy, inverseCrossRate);
+						listings.get(ccyReference).put(ccyReference, (long) (1.0 / ccyReference.getBasis()));
 
-                    }
+					}
 
-                    // break;
+					// break;
 
-                    crossRate = Math.round((rate * listings.get(ccyReference).get(ccy).longValue() * (ccyToAdd.getBasis())));
-                    // get the rate for the 
-                    if (crossRate != 0) {
-                        BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
-                        // calculate the inverse by getting the basis of the currenct rate and setting the scale to ttha tof the quote currency.
-                        BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1.0 / (ccy.getBasis()))).divide(crossRateBD, ccyToAdd.getScale(),
-                                RoundingMode.HALF_EVEN));
-                        // divine the rate by the basis fo the currency to be added
-                        inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(ccyToAdd.getBasis()));
+					crossRate = Math.round((rate * listings.get(ccyReference).get(ccy).longValue() * (ccyToAdd.getBasis())));
+					// get the rate for the 
+					if (crossRate != 0) {
+						BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
+						// calculate the inverse by getting the basis of the currenct rate and setting the scale to ttha tof the quote currency.
+						BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1.0 / (ccy.getBasis()))).divide(crossRateBD, ccyToAdd.getScale(),
+								RoundingMode.HALF_EVEN));
+						// divine the rate by the basis fo the currency to be added
+						inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(ccyToAdd.getBasis()));
 
-                        inverseCrossRate = inverseCrossRateBD.longValue();
-                        // update the base currecny vs the quote
-                        if (listings.get(ccyToAdd) == null) {
-                            listings.put(ccyToAdd, new ConcurrentHashMap<Asset, Long>());
+						inverseCrossRate = inverseCrossRateBD.longValue();
+						// update the base currecny vs the quote
+						if (listings.get(ccyToAdd) == null) {
+							listings.put(ccyToAdd, new ConcurrentHashMap<Asset, Long>());
 
-                        }
-                    }
+						}
+					}
 
-                    if (this.listings.get(ccyToAdd) == null)
-                        this.listings.put(ccyToAdd, new ConcurrentHashMap<Asset, Long>());
-                    listings.get(ccyToAdd).put(ccy, Long.valueOf(crossRate));
-                    if (this.listings.get(ccy) == null)
-                        this.listings.put(ccy, new ConcurrentHashMap<Asset, Long>());
-                    listings.get(ccy).put(ccyToAdd, Long.valueOf(inverseCrossRate));
+					if (this.listings.get(ccyToAdd) == null)
+						this.listings.put(ccyToAdd, new ConcurrentHashMap<Asset, Long>());
+					listings.get(ccyToAdd).put(ccy, Long.valueOf(crossRate));
+					if (this.listings.get(ccy) == null)
+						this.listings.put(ccy, new ConcurrentHashMap<Asset, Long>());
+					listings.get(ccy).put(ccyToAdd, Long.valueOf(inverseCrossRate));
 
-                }
+				}
 
-            }
-            listings.get(ccyToAdd).put(ccyToAdd, (long) (1.0 / ccyToAdd.getBasis()));
+			}
+			listings.get(ccyToAdd).put(ccyToAdd, (long) (1.0 / ccyToAdd.getBasis()));
 
-        }
-    }
+		}
+	}
 
-    /**
-     * Return the exchange rate between two currencies.
-     * @param ccy1 The first currency.
-     * @param ccy2 The second currency.
-     * @return The exchange rate: 1.0 * ccy1 = x * ccy2.
-     */
-    public long getRate(final Asset ccy1, final Asset ccy2) {
-        if (ccy1.equals(ccy2)) {
-            return (long) (1.0 / ccy1.getBasis());
-        }
-        final ConcurrentHashMap<Asset, Long> index1 = listings.get(ccy1);
-        final ConcurrentHashMap<Asset, Long> index2 = listings.get(ccy2);
-        ArgumentChecker.isTrue(listings.get(ccy1) != null, "Asset {} is  not in the Listings Matrix", ccy1);
-        ArgumentChecker.isTrue(listings.get(ccy1).get(ccy2) != null, "Asset {} and {}  not in the Listings Matrix", ccy1, ccy2);
+	/**
+	 * Return the exchange rate between two currencies.
+	 * @param ccy1 The first currency.
+	 * @param ccy2 The second currency.
+	 * @return The exchange rate: 1.0 * ccy1 = x * ccy2.
+	 */
+	public long getRate(final Asset ccy1, final Asset ccy2) {
+		if (ccy1.equals(ccy2)) {
+			return (long) (1.0 / ccy1.getBasis());
+		}
+		final Map<Asset, Long> index1 = listings.get(ccy1);
+		final Map<Asset, Long> index2 = listings.get(ccy2);
+		ArgumentChecker.isTrue(listings.get(ccy1) != null, "Asset {} is  not in the Listings Matrix", ccy1);
+		ArgumentChecker.isTrue(listings.get(ccy1).get(ccy2) != null, "Asset {} and {}  not in the Listings Matrix", ccy1, ccy2);
 
-        return listings.get(ccy1).get(ccy2).longValue();
+		return listings.get(ccy1).get(ccy2).longValue();
 
-    }
+	}
 
-    /**
-     * @param ccy1 The first currency
-     * @param ccy2 The second currency
-     * @return True if the matrix contains both currencies
-     */
-    public boolean containsPair(final Asset ccy1, final Asset ccy2) {
-        return listings.containsKey(ccy1) && listings.containsKey(ccy2);
-    }
+	/**
+	 * @param ccy1 The first currency
+	 * @param ccy2 The second currency
+	 * @return True if the matrix contains both currencies
+	 */
+	public boolean containsPair(final Asset ccy1, final Asset ccy2) {
+		return listings.containsKey(ccy1) && listings.containsKey(ccy2);
+	}
 
-    /**
-     * Reset the exchange rate of a given currency.
-     * @param ccyToUpdate The currency for which the exchange rats should be updated. Should be in the Listings matrix already.
-     * @param ccyReference The reference currency used to compute the cross rates with the new currency. Should already be in the matrix.
-     * @param rate TheListings rate between the new currency and the reference currency. It is 1.0 * ccyToAdd = rate * ccyReference. The Listings matrix will be changed for currency1
-     * using cross rate coherent with the data provided.
-     */
-    public void updateRates(final Asset ccyToUpdate, final Asset ccyReference, final long rate) {
+	/**
+	 * Reset the exchange rate of a given currency.
+	 * @param ccyToUpdate The currency for which the exchange rats should be updated. Should be in the Listings matrix already.
+	 * @param ccyReference The reference currency used to compute the cross rates with the new currency. Should already be in the matrix.
+	 * @param rate TheListings rate between the new currency and the reference currency. It is 1.0 * ccyToAdd = rate * ccyReference. The Listings matrix will be changed for currency1
+	 * using cross rate coherent with the data provided.
+	 */
+	public void updateRates(final Asset ccyToUpdate, final Asset ccyReference, final long rate) {
 
-        ArgumentChecker.isTrue(listings.get(ccyReference) != null, "Reference Asset not in the Listings matrix");
-        ArgumentChecker.isTrue(listings.get(ccyReference).get(ccyToUpdate) != null, "Asset to update not in the Listings matrix");
+		ArgumentChecker.isTrue(listings.get(ccyReference) != null, "Reference Asset not in the Listings matrix");
+		ArgumentChecker.isTrue(listings.get(ccyReference).get(ccyToUpdate) != null, "Asset to update not in the Listings matrix");
 
-        if (rate != 0) {
-            //TODO we get an exepction here if we have two exchanges with balacnes.
-            Set<Asset> test = listings.keySet();
-            // Iterator<Asset> lit = listings.keySet().iterator();
-            for (Asset ccy : listings.keySet()) {
-                //  while (lit.hasNext()) {
+		if (rate != 0) {
+			//TODO we get an exepction here if we have two exchanges with balacnes.
+			Set<Asset> test = listings.keySet();
+			// Iterator<Asset> lit = listings.keySet().iterator();
+			for (Asset ccy : listings.keySet()) {
+				//  while (lit.hasNext()) {
 
-                //     Asset ccy = lit.next();
-                if (!ccyToUpdate.equals(ccy)) {
-                    long inverseCrossRate = 0;
-                    long crossRate = 0;
+				//     Asset ccy = lit.next();
+				if (!ccyToUpdate.equals(ccy)) {
+					long inverseCrossRate = 0;
+					long crossRate = 0;
 
-                    if ((this.listings.get(ccyReference) != null) && (((ConcurrentHashMap) this.listings.get(ccyReference)).get(ccy) != null)) {
+					if ((this.listings.get(ccyReference) != null) && (((Map) this.listings.get(ccyReference)).get(ccy) != null)) {
 
-                        crossRate = Math.round((rate * listings.get(ccyReference).get(ccy).longValue() * (ccyReference.getBasis())));
-                        // get the rate for the 
-                        if (crossRate != 0) {
-                            BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
-                            // calculate the inverse by getting the basis of the currenct rate and setting the scale to ttha tof the quote currency.
-                            BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1.0 / (ccy.getBasis()))).divide(crossRateBD, ccyToUpdate.getScale(),
-                                    RoundingMode.HALF_EVEN));
-                            // divine the rate by the basis fo the currency to be added
-                            inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(ccyToUpdate.getBasis()));
+						crossRate = Math.round((rate * listings.get(ccyReference).get(ccy).longValue() * (ccyReference.getBasis())));
+						// get the rate for the 
+						if (crossRate != 0) {
+							BigDecimal crossRateBD = BigDecimal.valueOf(crossRate);
+							// calculate the inverse by getting the basis of the currenct rate and setting the scale to ttha tof the quote currency.
+							BigDecimal inverseCrossRateBD = ((BigDecimal.valueOf(1.0 / (ccy.getBasis()))).divide(crossRateBD, ccyToUpdate.getScale(),
+									RoundingMode.HALF_EVEN));
+							// divine the rate by the basis fo the currency to be added
+							inverseCrossRateBD = inverseCrossRateBD.divide(BigDecimal.valueOf(ccyToUpdate.getBasis()));
 
-                            inverseCrossRate = inverseCrossRateBD.longValue();
-                        }
-                    }
+							inverseCrossRate = inverseCrossRateBD.longValue();
+						}
+					}
 
-                    listings.get(ccyToUpdate).put(ccy, crossRate);
-                    listings.get(ccy).put(ccyToUpdate, inverseCrossRate);
-                }
-            }
-            listings.get(ccyToUpdate).put(ccyToUpdate, (long) (1.0 / ccyToUpdate.getBasis()));
+					listings.get(ccyToUpdate).put(ccy, crossRate);
+					listings.get(ccy).put(ccyToUpdate, inverseCrossRate);
+				}
+			}
+			listings.get(ccyToUpdate).put(ccyToUpdate, (long) (1.0 / ccyToUpdate.getBasis()));
 
-        }
-    }
+		}
+	}
 
-    @Override
-    public String toString() {
-        return listings.keySet().toString() + " - ";
-    }
+	@Override
+	public String toString() {
+		return listings.keySet().toString() + " - ";
+	}
 
-    @Override
-    public int hashCode() {
+	@Override
+	public int hashCode() {
 
-        return listings.hashCode();
-    }
+		return listings.hashCode();
+	}
 
-    @Override
-    public boolean equals(final Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final ListingsMatrix other = (ListingsMatrix) obj;
-        if (!ObjectUtils.equals(listings.keySet(), other.listings.keySet())) {
-            return false;
-        }
+	@Override
+	public boolean equals(final Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		final ListingsMatrix other = (ListingsMatrix) obj;
+		if (!ObjectUtils.equals(listings.keySet(), other.listings.keySet())) {
+			return false;
+		}
 
-        return true;
-    }
+		return true;
+	}
 
 }

@@ -1,6 +1,6 @@
 @Name('PORTFOLIO_WINDOW')
 create window
-	PortfolioWindow.std:lastevent()
+	PortfolioWindow.std:groupwin(portfolio).std:lastevent()
 as
 	select *
 from
@@ -40,6 +40,11 @@ from
 on pattern
 	[every timer:at(0, 00, *, *, *)]
 	select current_timestamp,portfolio from PortfolioWindow;
+	
+@Priority(1)
+@Name('LOG_PORTFOLIO_SUBSCRIBED')
+@Subscriber(className='org.cryptocoinpartners.schema.PortfolioManager$DataSubscriber')
+select * from PortfolioWindow;
 
 
 	

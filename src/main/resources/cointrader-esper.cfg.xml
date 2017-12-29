@@ -21,7 +21,7 @@
 			<threading>
 			      <!-- <threadpool-inbound enabled="true" num-threads="1"/>-->
       			  <!--   <threadpool-outbound enabled="true" num-threads="2"/>-->
-     			<!--  	  <threadpool-timerexec enabled="true" num-threads="1"/> -->
+     			 	 <!--    <threadpool-timerexec enabled="true" num-threads="1"/> -->
       				<!--  <threadpool-routeexec enabled="true" num-threads="1"/> -->
 				<internal-timer enabled="true" msec-resolution="500"/>
 				<insert-into-dispatch preserve-order="true" timeout-msec="5000" locking="spin"/> 

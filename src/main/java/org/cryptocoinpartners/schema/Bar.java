@@ -204,4 +204,10 @@ public class Bar extends MarketData {
     // TODO Auto-generated method stub
 
   }
+
+  @Override
+  public void persitParents() {
+    // TODO Auto-generated method stub
+
+  }
 }

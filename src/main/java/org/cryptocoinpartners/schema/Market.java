@@ -58,6 +58,10 @@ public class Market extends Tradeable {
     return findOrCreate(exchange, listing, listing.getPriceBasis(), listing.getVolumeBasis());
   }
 
+  public synchronized static Market findOrCreate(Exchange exchange, Listing listing, double minOrderSize) {
+    return findOrCreate(exchange, listing, listing.getPriceBasis(), listing.getVolumeBasis(), minOrderSize);
+  }
+
   @Override
   @Transient
   public EntityBase getParent() {
@@ -113,6 +117,43 @@ public class Market extends Tradeable {
     } catch (NoResultException e) {
 
       Market ml = marketFactory.create(exchange, listing, quoteBasis, volumeBasis);
+      markets.add(ml);
+      //  Market ml = new Market(exchange, listing, quoteBasis, volumeBasis);
+      ml.persit();
+      // marketDao.persist(ml);
+      return ml;
+    }
+  }
+
+  public synchronized static Market findOrCreate(Exchange exchange, Listing listing, double quoteBasis, double volumeBasis, double minOrderSize) {
+    // final String queryStr = "select m from Market m where exchange=?1 and listing=?2";
+    try {
+      for (Market market : markets) {
+        if (market.getExchange().equals(exchange) && market.getListing().equals(listing))
+          return market;
+      }
+      List<Market> results = EM.namedQueryList(Market.class, "Market.findByMarket", exchange, listing);
+      if (results != null && !results.isEmpty() && results.get(0) != null) {
+        markets.add(results.get(0));
+        if (results.get(0).getMinimumOrderSize(results.get(0)) == minOrderSize)
+          return results.get(0);
+        else {
+          results.get(0).setMinimumOrderSize(minOrderSize);
+          results.get(0).merge();
+          return results.get(0);
+        }
+      } else {
+        Market ml = marketFactory.create(exchange, listing, quoteBasis, volumeBasis, minOrderSize);
+        markets.add(ml);
+        //  Market ml = new Market(exchange, listing, quoteBasis, volumeBasis);
+        ml.persit();
+        // marketDao.persist(ml);
+        return ml;
+      }
+
+    } catch (NoResultException e) {
+
+      Market ml = marketFactory.create(exchange, listing, quoteBasis, volumeBasis, minOrderSize);
       markets.add(ml);
       //  Market ml = new Market(exchange, listing, quoteBasis, volumeBasis);
       ml.persit();
@@ -291,8 +332,27 @@ public class Market extends Tradeable {
     this.exchange = exchange;
   }
 
+  @Transient
+  public double getMinimumOrderSize(Tradeable market) {
+    if (minimumOrderSize == 0)
+      return exchange.getMinimumOrderSize(market);
+    else
+      return minimumOrderSize;
+
+  }
+
   protected synchronized void setListing(Listing listing) {
     this.listing = listing;
+  }
+
+  @Basic(optional = true)
+  protected double getMinimumOrderSize() {
+
+    return minimumOrderSize;
+  }
+
+  protected void setMinimumOrderSize(double minimumOrderSize) {
+    this.minimumOrderSize = minimumOrderSize;
   }
 
   @AssistedInject
@@ -305,6 +365,17 @@ public class Market extends Tradeable {
     this.active = true;
   }
 
+  @AssistedInject
+  public Market(@Assisted Exchange exchange, @Assisted Listing listing, @Assisted("marketPriceBasis") double priceBasis,
+      @Assisted("marketVolumeBasis") double volumeBasis, @Assisted("minimumOrderSize") double minimumOrderSize) {
+    this.exchange = exchange;
+    this.listing = listing;
+    this.priceBasis = priceBasis;
+    this.volumeBasis = volumeBasis;
+    this.minimumOrderSize = minimumOrderSize;
+    this.active = true;
+  }
+
   @Override
   @Transient
   public boolean isSynthetic() {
@@ -314,6 +385,7 @@ public class Market extends Tradeable {
 
   protected Exchange exchange;
   protected volatile Listing listing;
+  protected double minimumOrderSize;
 
   protected transient MarketAmountBuilder marketAmountBuilder;
 
@@ -358,6 +430,12 @@ public class Market extends Tradeable {
   @Override
   @PostPersist
   public synchronized void postPersist() {
+    // TODO Auto-generated method stub
+
+  }
+
+  @Override
+  public void persitParents() {
     // TODO Auto-generated method stub
 
   }

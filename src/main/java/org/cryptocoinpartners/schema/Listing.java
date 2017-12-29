@@ -394,4 +394,10 @@ public class Listing extends EntityBase {
 
   }
 
+  @Override
+  public void persitParents() {
+    // TODO Auto-generated method stub
+
+  }
+
 }

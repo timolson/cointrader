@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.module;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
@@ -26,96 +27,96 @@ import org.cryptocoinpartners.schema.PositionUpdate;
  */
 @SuppressWarnings("UnusedDeclaration")
 public class ConsoleStrategy extends SimpleStatefulStrategy {
-    private static Object lock = new Object();
+	private static Object lock = new Object();
 
-    private final ConcurrentHashMap<Market, ConcurrentHashMap<PositionType, Position>> positionMap = new ConcurrentHashMap<Market, ConcurrentHashMap<PositionType, Position>>();
+	private final Map<Market, Map<PositionType, Position>> positionMap = new ConcurrentHashMap<Market, Map<PositionType, Position>>();
 
-    @Inject
-    public ConsoleStrategy(Context context, Configuration config) {
+	@Inject
+	public ConsoleStrategy(Context context, Configuration config) {
 
-    }
+	}
 
-    @When("@Priority(9) select * from PositionUpdate")
-    void handlePositionUpdate(PositionUpdate positionUpdate) {
-        //  synchronized (lock) {
-        if (positionUpdate.getPosition() != null)
-            updatePositionMap(positionUpdate.getMarket(), positionUpdate.getType(), positionUpdate.getPosition());
-        else
-            updatePositionMap(positionUpdate.getMarket(), positionUpdate.getType());
-    }
+	@When("@Priority(9) select * from PositionUpdate")
+	void handlePositionUpdate(PositionUpdate positionUpdate) {
+		//  synchronized (lock) {
+		if (positionUpdate.getPosition() != null)
+			updatePositionMap(positionUpdate.getMarket(), positionUpdate.getType(), positionUpdate.getPosition());
+		else
+			updatePositionMap(positionUpdate.getMarket(), positionUpdate.getType());
+	}
 
-    //}
+	//}
 
-    public boolean updatePositionMap(Market market, PositionType type, Position position) {
+	public boolean updatePositionMap(Market market, PositionType type, Position position) {
 
-        ConcurrentHashMap<PositionType, Position> newPosition = new ConcurrentHashMap<PositionType, Position>();
-        newPosition.put(type, position);
-        positionMap.put(market, newPosition);
-        return true;
+		Map<PositionType, Position> newPosition = new ConcurrentHashMap<PositionType, Position>();
+		newPosition.put(type, position);
+		positionMap.put(market, newPosition);
+		return true;
 
-    }
+	}
 
-    public Position getPosition(Market market) {
-        //    synchronized (lock) {
-        // Need to get existing position
-        // Position mergedPosition = new Position(portfolio, market.getExchange(), market, market.getTradedCurrency(), DecimalAmount.ZERO, DecimalAmount.ZERO);
-        if (positionMap.get(market) == null)
-            return null;
-        for (PositionType positionType : positionMap.get(market).keySet()) {
-            // if (positionType.equals(PositionType.ENTERING) || positionType.equals(PositionType.EXITING))
-            //    return null;
-            return (positionMap.get(market).get(positionType));
-        }
-        return null;
-    }
+	public Position getPosition(Market market) {
+		//    synchronized (lock) {
+		// Need to get existing position
+		// Position mergedPosition = new Position(portfolio, market.getExchange(), market, market.getTradedCurrency(), DecimalAmount.ZERO, DecimalAmount.ZERO);
+		if (positionMap.get(market) == null)
+			return null;
+		for (PositionType positionType : positionMap.get(market).keySet()) {
+			// if (positionType.equals(PositionType.ENTERING) || positionType.equals(PositionType.EXITING))
+			//    return null;
+			return (positionMap.get(market).get(positionType));
+		}
+		return null;
+	}
 
-    public boolean updatePositionMap(Market market, PositionType type) {
-        // Need to get existing position
-        //  synchronized (lock) {
-        if (positionMap.get(market) == null) {
-            ConcurrentHashMap<PositionType, Position> newPosition = new ConcurrentHashMap<PositionType, Position>();
-            //  Fill fill = new Fill();
-            Position position = new Position();
-            newPosition.put(type, position);
-            positionMap.put(market, newPosition);
-            return true;
-        }
+	public boolean updatePositionMap(Market market, PositionType type) {
+		// Need to get existing position
+		//  synchronized (lock) {
+		if (positionMap.get(market) == null) {
+			Map<PositionType, Position> newPosition = new ConcurrentHashMap<PositionType, Position>();
+			//  Fill fill = new Fill();
+			Position position = new Position();
+			newPosition.put(type, position);
+			positionMap.put(market, newPosition);
+			return true;
+		}
 
-        for (PositionType positionType : positionMap.get(market).keySet())
+		for (PositionType positionType : positionMap.get(market).keySet())
 
-        {
-            ConcurrentHashMap<PositionType, Position> position = new ConcurrentHashMap<PositionType, Position>();
-            position.put(type, positionMap.get(market).get(positionType));
-            positionMap.put(market, position);
-            return true;
-        }
-        return false;
-        //  }
-    }
+		{
+			Map<PositionType, Position> position = new ConcurrentHashMap<PositionType, Position>();
+			position.put(type, positionMap.get(market).get(positionType));
+			positionMap.put(market, position);
+			return true;
+		}
+		return false;
+		//  }
+	}
 
-    @Override
-    @Nullable
-    protected CommonOrderBuilder buildEntryOrder(Market market) {
-        // TODO Auto-generated method stub
-        return null;
-    }
+	@Override
+	@Nullable
+	protected CommonOrderBuilder buildEntryOrder(Market market) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
-    @Override
-    @Nullable
-    protected CommonOrderBuilder buildStopOrder(Fill fill) {
-        // TODO Auto-generated method stub
-        return null;
-    }
+	@Override
+	@Nullable
+	protected CommonOrderBuilder buildStopOrder(Fill fill) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
-    @Override
-    @Nullable
-    protected CommonOrderBuilder buildExitOrder(Order entryOrder) {
-        // TODO Auto-generated method stub
-        return null;
-    }
+	@Override
+	@Nullable
+	protected CommonOrderBuilder buildExitOrder(Order entryOrder) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
-    //	private static double interval = 86400;
+	//	private static double interval = 86400;
 
-    //int counter = 0;
+	//int counter = 0;
 
 }

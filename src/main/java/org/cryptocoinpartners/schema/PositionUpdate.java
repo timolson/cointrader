@@ -166,4 +166,10 @@ public class PositionUpdate extends Event {
 
   }
 
+  @Override
+  public void persitParents() {
+    // TODO Auto-generated method stub
+
+  }
+
 }

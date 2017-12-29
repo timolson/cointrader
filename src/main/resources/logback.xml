@@ -45,7 +45,7 @@
 
      <logger name="org.cryptocoinpartners" level="DEBUG"/>
   <logger name="com.xeiam.xchange" level="INFO" />
-     <logger name="si.mazi.rescu" level="TRACE" />
+      <logger name="si.mazi.rescu" level="INFO" /> 
   
  <!--<logger name="si.mazi.rescu" level="TRACE" /> -->
     <!--<logger name="org.cryptocoinpartners.module" level="debug"/>-->

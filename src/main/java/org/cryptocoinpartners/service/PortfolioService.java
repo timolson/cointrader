@@ -2,7 +2,6 @@ package org.cryptocoinpartners.service;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nullable;
 import javax.persistence.Transient;
@@ -15,6 +14,7 @@ import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.Position;
+import org.cryptocoinpartners.schema.Trade;
 
 /**
  * PortfolioService reports
@@ -24,107 +24,107 @@ import org.cryptocoinpartners.schema.Position;
 @Service
 public interface PortfolioService {
 
-    /** returns all Positions in all Exchanges.  NOTE: if you have open orders, you will not be able to trade
-     * all the Positions returned by this method.  Use getTradeablePositions() instead. */
-    @Nullable
-    public Collection<Position> getPositions();
+	/** returns all Positions in all Exchanges.  NOTE: if you have open orders, you will not be able to trade
+	 * all the Positions returned by this method.  Use getTradeablePositions() instead. */
+	@Nullable
+	public Collection<Position> getPositions();
 
-    // public void CreateTransaction(Portfolio portfolio, Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price);
+	// public void CreateTransaction(Portfolio portfolio, Exchange exchange, Asset asset, TransactionType type, Amount amount, Amount price);
 
-    /** returns all Postions for the given Exchange.  NOTE: if you have open orders, you will not be able to trade
-     * all the Positions returned by this method.  Use getTradeablePositions() instead. */
-    @Nullable
-    public Collection<Position> getPositions(Exchange exchange);
+	/** returns all Postions for the given Exchange.  NOTE: if you have open orders, you will not be able to trade
+	 * all the Positions returned by this method.  Use getTradeablePositions() instead. */
+	@Nullable
+	public Collection<Position> getPositions(Exchange exchange);
 
-    @Transient
-    public Amount getCashBalance(Asset quoteAsset);
+	@Transient
+	public Amount getCashBalance(Asset quoteAsset);
 
-    @Transient
-    public DiscreteAmount getMarketPrice(Position postion);
+	@Transient
+	public Trade getMarketPrice(Position postion);
 
-    @Transient
-    public Amount getMarketValue(Position postion);
+	@Transient
+	public Amount getMarketValue(Position postion);
 
-    @Transient
-    public Amount getMarketValue(Position postion, Asset quoteAsset);
+	@Transient
+	public Amount getMarketValue(Position postion, Asset quoteAsset);
 
-    @Transient
-    public Amount getMarketValue(Asset quoteAsset);
+	@Transient
+	public Amount getMarketValue(Asset quoteAsset);
 
-    void exitPosition(Position position) throws Exception;
+	void exitPosition(Position position) throws Exception;
 
-    void reducePosition(Position position, Amount amount);
+	void reducePosition(Position position, Amount amount);
 
-    void handleReducePosition(Position position, Amount amount) throws Exception;
+	void handleReducePosition(Position position, Amount amount) throws Exception;
 
-    void handleSetMargin(Position position) throws Exception;
+	void handleSetMargin(Position position) throws Exception;
 
-    void handleSetMargins() throws Exception;
+	void handleSetMargins() throws Exception;
 
-    ConcurrentHashMap<Asset, Amount> getMarketValues();
+	Map<Asset, Amount> getMarketValues();
 
-    Map<Asset, Amount> getCashBalances();
+	Map<Asset, Amount> getCashBalances();
 
-    ConcurrentHashMap<Asset, Amount> getRealisedPnLs();
+	Map<Asset, Amount> getRealisedPnLs();
 
-    Amount getRealisedPnL(Asset quoteAsset);
+	Amount getRealisedPnL(Asset quoteAsset);
 
-    Collection<Portfolio> getPortfolios();
+	Collection<Portfolio> getPortfolios();
 
-    abstract void setPortfolios(Collection<Portfolio> Portfolios);
+	abstract void setPortfolios(Collection<Portfolio> Portfolios);
 
-    void addPortfolio(Portfolio portfolio);
+	void addPortfolio(Portfolio portfolio);
 
-    ConcurrentHashMap<Asset, ConcurrentHashMap<Exchange, ConcurrentHashMap<Listing, Amount>>> getRealisedPnLByMarket();
+	Map<Asset, Map<Exchange, Map<Listing, Amount>>> getRealisedPnLByMarket();
 
-    ConcurrentHashMap<Asset, Amount> getUnrealisedPnLs();
+	Map<Asset, Amount> getUnrealisedPnLs();
 
-    Amount getUnrealisedPnL(Position postion, Amount markToMarketPrice);
+	Amount getUnrealisedPnL(Position postion, Amount markToMarketPrice);
 
-    Amount getBaseUnrealisedPnL(Position postion, Asset quoteAsset);
+	Amount getBaseUnrealisedPnL(Position postion, Asset quoteAsset);
 
-    Amount getBaseUnrealisedPnL(Position postion, Asset quoteAsset, DiscreteAmount marketPrice);
+	Amount getBaseUnrealisedPnL(Position postion, Asset quoteAsset, DiscreteAmount marketPrice);
 
-    Amount getUnrealisedPnL(Asset quoteAsset);
+	Amount getUnrealisedPnL(Asset quoteAsset);
 
-    Collection<Position> getPositions(Asset asset, Exchange exchange);
+	Collection<Position> getPositions(Asset asset, Exchange exchange);
 
-    ConcurrentHashMap<Asset, Amount> getAvailableBalances();
+	Map<Asset, Amount> getAvailableBalances();
 
-    Amount getAvailableBalance(Asset quoteAsset);
+	Amount getAvailableBalance(Asset quoteAsset);
 
-    Amount getAvailableBalance(Asset quoteAsset, Exchange exchange);
+	Amount getAvailableBalance(Asset quoteAsset, Exchange exchange);
 
-    Amount getBaseCashBalance(Asset quoteAsset);
+	Amount getBaseCashBalance(Asset quoteAsset);
 
-    Amount getBaseUnrealisedPnL(Asset quoteAsset);
+	Amount getBaseUnrealisedPnL(Asset quoteAsset);
 
-    Amount getBaseRealisedPnL(Asset quoteAsset);
+	Amount getBaseRealisedPnL(Asset quoteAsset);
 
-    Amount getBaseRealisedPnL(Asset quoteAsset, Market market);
+	Amount getBaseRealisedPnL(Asset quoteAsset, Market market);
 
-    Amount getBaseMarketValue(Asset quoteAsset);
+	Amount getBaseMarketValue(Asset quoteAsset);
 
-    Amount getAvailableBaseBalance(Asset quoteAsset);
+	Amount getAvailableBaseBalance(Asset quoteAsset);
 
-    Amount getAvailableBaseBalance(Asset quoteAsset, Exchange exchange);
+	Amount getAvailableBaseBalance(Asset quoteAsset, Exchange exchange);
 
-    DiscreteAmount getNetPosition(Asset base, Exchange exchange);
+	DiscreteAmount getNetPosition(Asset base, Exchange exchange);
 
-    void resetBalances();
+	void resetBalances();
 
-    void init();
+	void init();
 
-    void reset();
+	void reset();
 
-    void loadBalances();
+	void loadBalances();
 
-    ConcurrentHashMap<Asset, Amount> getUnrealisedPnLs(Market market);
+	Map<Asset, Amount> getUnrealisedPnLs(Market market);
 
-    Amount getBaseUnrealisedPnL(Asset quoteAsset, Market market);
+	Amount getBaseUnrealisedPnL(Asset quoteAsset, Market market);
 
-    ConcurrentHashMap<Asset, Amount> getRealisedPnLs(Market market);
+	Map<Asset, Amount> getRealisedPnLs(Market market);
 
-    ConcurrentHashMap<Asset, Amount> getUnrealisedPnLs(Exchange exchange);
+	Map<Asset, Amount> getUnrealisedPnLs(Exchange exchange);
 
 }

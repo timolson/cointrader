@@ -43,7 +43,7 @@ public class Currencies {
   public static final Currency ZEC = crypto("ZEC", 1e-8);
   public static final Currency BTS = crypto("BTS", 1e-8);
   public static final Currency ETC = crypto("ETC", 1e-8);
-
+  public static final Currency NEO = crypto("NEO", 1e-8);
   // Altcoins
   // todo review bases!  they may not be correct
   public static final Currency BC = crypto("BC", 1e-8);

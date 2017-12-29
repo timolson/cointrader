@@ -31,11 +31,11 @@ public class FeesUtil {
     FeeMethod method = fill.getMarket().getFeeMethod();
     Amount price = fill.getPrice();
     Amount ammount;
-    if (fill.getMarket().getTradedCurrency(fill.getMarket()) != null)
+   // if (fill.getMarket().getTradedCurrency(fill.getMarket()) != null)
 
       ammount = fill.getVolume();
-    else
-      ammount = fill.getVolume().times(price, Remainder.ROUND_CEILING);
+ //   else
+   //   ammount = fill.getVolume().times(price, Remainder.ROUND_CEILING);
 
     Amount commission;
     switch (method) {
@@ -90,11 +90,11 @@ public class FeesUtil {
 
     Amount price = fill.getPrice();
     Amount ammount;
-    if (fill.getMarket().getTradedCurrency(fill.getMarket()) != null)
+   // if (fill.getMarket().getTradedCurrency(fill.getMarket()) != null)
 
       ammount = fill.getVolume();
-    else
-      ammount = fill.getVolume().times(price, Remainder.ROUND_CEILING);
+   // else
+     // ammount = fill.getVolume().times(price, Remainder.ROUND_CEILING);
 
     Market market = fill.getMarket();
     PositionEffect positionEffect = fill.getOrder().getPositionEffect();
@@ -156,11 +156,11 @@ public class FeesUtil {
       FeeMethod method = (order.getMarket().getMarginFeeMethod() == null) ? FeeMethod.PercentagePerUnit : order.getMarket().getMarginFeeMethod();
       Amount price = (order.getLimitPrice() != null) ? order.getLimitPrice() : order.getMarketPrice();
       Amount ammount;
-      if (order.getMarket().getTradedCurrency(order.getMarket()) != null)
+  //    if (order.getMarket().getTradedCurrency(order.getMarket()) != null)
 
         ammount = order.getVolume().abs();
-      else
-        ammount = order.getVolume().abs().times(price, Remainder.ROUND_CEILING);
+    //  else
+      //  ammount = order.getVolume().abs().times(price, Remainder.ROUND_CEILING);
 
       Market market = order.getMarket();
       PositionEffect positionEffect = order.getPositionEffect();
@@ -180,12 +180,12 @@ public class FeesUtil {
 
       Amount price = (position.isLong()) ? position.getLongAvgPrice() : position.getShortAvgPrice();
       Amount ammount;
-      if (position.getMarket().getTradedCurrency(position.getMarket()) != null)
+  //    if (position.getMarket().getTradedCurrency(position.getMarket()) != null)
 
         ammount = (position.isLong()) ? position.getLongVolume() : position.getShortVolume();
-      else
-        ammount = (position.isLong()) ? position.getLongVolume().times(position.getLongAvgPrice(), Remainder.ROUND_CEILING) : position
-            .getShortVolume().times(position.getShortAvgPrice(), Remainder.ROUND_CEILING);
+    //  else
+      //  ammount = (position.isLong()) ? position.getLongVolume().times(position.getLongAvgPrice(), Remainder.ROUND_CEILING) : position
+        //    .getShortVolume().times(position.getShortAvgPrice(), Remainder.ROUND_CEILING);
       Market market = position.getMarket();
       PositionEffect positionEffect = PositionEffect.OPEN;
       return getMargin(price, ammount, rate, method, market, positionEffect);
@@ -256,8 +256,6 @@ public class FeesUtil {
     //     BTC/USD, so seelling BTC and buing $ 450.76 (BTC/USD
     //             buying 1 ETH at 0.02 BTC)
     //     BTC/USD so buying BTC selling $
-    if (market.getBase().equals(Currency.ETH))
-      log.debug("test");
 
     Asset tradedCCY = (market.getTradedCurrency(market) == null) ? market.getBase() : market.getTradedCurrency(market);
     return notional.toBasis(tradedCCY.getBasis(), Remainder.ROUND_CEILING).negate();
@@ -277,7 +275,7 @@ public class FeesUtil {
     price = market.getMultiplier(market, price, DecimalAmount.ONE);
 
     Amount notional = (amount.times(rate, Remainder.ROUND_EVEN).abs());
-    Asset tradedCCY = (market.getTradedCurrency(market) == null) ? market.getQuote() : market.getTradedCurrency(market);
+    Asset tradedCCY = (market.getTradedCurrency(market) == null) ? market.getBase() : market.getTradedCurrency(market);
 
     return notional.toBasis(tradedCCY.getBasis(), Remainder.ROUND_CEILING).negate();
 
@@ -293,7 +291,7 @@ public class FeesUtil {
   private static Amount calculatePerUnit(Amount amount, double rate, Market market) {
 
     Amount notional = ((amount.times(rate, Remainder.ROUND_EVEN)).abs());
-    Asset tradedCCY = (market.getTradedCurrency(market) == null) ? market.getQuote() : market.getTradedCurrency(market);
+    Asset tradedCCY = (market.getTradedCurrency(market) == null) ? market.getBase() : market.getTradedCurrency(market);
 
     return notional.toBasis(tradedCCY.getBasis(), Remainder.ROUND_CEILING).negate();
 

@@ -253,4 +253,10 @@ public class SyntheticMarket extends Tradeable {
     return true;
   }
 
+  @Override
+  public void persitParents() {
+    // TODO Auto-generated method stub
+
+  }
+
 }

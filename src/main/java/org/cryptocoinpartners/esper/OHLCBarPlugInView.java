@@ -4,9 +4,12 @@ import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.cryptocoinpartners.schema.Bar;
 import org.cryptocoinpartners.schema.Tradeable;
+import org.joda.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,317 +36,483 @@ import com.espertech.esper.view.ViewSupport;
  * timestamps) makes the group-by clause hard to use
  */
 public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
-  private final static int LATE_EVENT_SLACK_SECONDS = 5;
-  protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.OHLCBarPlugInView");
+	private final static int LATE_EVENT_SLACK_SECONDS = 0;
+	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.OHLCBarPlugInView");
 
-  private final AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext;
-  private final ScheduleSlot scheduleSlot;
-  private final ExprNode timestampExpression;
-  private final ExprNode valueExpression;
-  private ExprNode volumeExpression;
-  private ExprNode marketExpression;
-  private ExprNode intervalExpression;
-  private final EventBean[] eventsPerStream = new EventBean[1];
+	private final AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext;
+	private final ScheduleSlot scheduleSlot;
+	private final ExprNode timestampExpression;
+	private final ExprNode valueExpression;
+	private ExprNode volumeExpression;
+	private ExprNode marketExpression;
+	private ExprNode intervalExpression;
+	private final HashMap<Tradeable, EventBean[]> eventsPerMarketPerStream = new HashMap<Tradeable, EventBean[]>();
 
-  private EPStatementHandleCallback handle;
-  private final HashMap<Tradeable, Long> cutoffTimestampMinute = new HashMap<Tradeable, Long>();
-  private final HashMap<Tradeable, Long> currentTimestampMinute = new HashMap<Tradeable, Long>();
-  private final HashMap<Tradeable, Double> first = new HashMap<Tradeable, Double>();
-  private final HashMap<Tradeable, Double> last = new HashMap<Tradeable, Double>();
-  private final HashMap<Tradeable, Double> max = new HashMap<Tradeable, Double>();
-  private final HashMap<Tradeable, Double> min = new HashMap<Tradeable, Double>();
-  private final HashMap<Tradeable, Double> vol = new HashMap<Tradeable, Double>();
+	private Map<Double, EPStatementHandleCallback> handle = new ConcurrentHashMap<Double, EPStatementHandleCallback>();
+	private final Map<Tradeable, Map<Double, Long>> cutoffTimestampMinute = new ConcurrentHashMap<Tradeable, Map<Double, Long>>();
+	private final Map<Tradeable, Map<Double, Long>> currentTimestampMinute = new ConcurrentHashMap<Tradeable, Map<Double, Long>>();
+	private final Map<Double, Map<Tradeable, Double>> first = new ConcurrentHashMap<Double, Map<Tradeable, Double>>();
+	private final Map<Double, Map<Tradeable, Double>> last = new ConcurrentHashMap<Double, Map<Tradeable, Double>>();
+	private final Map<Double, Map<Tradeable, Double>> max = new ConcurrentHashMap<Double, Map<Tradeable, Double>>();
+	private final Map<Double, Map<Tradeable, Double>> min = new ConcurrentHashMap<Double, Map<Tradeable, Double>>();
+	private final Map<Double, Map<Tradeable, Double>> vol = new ConcurrentHashMap<Double, Map<Tradeable, Double>>();
+	private final Map<Double, Map<Tradeable, Double>> previousLast = new ConcurrentHashMap<Double, Map<Tradeable, Double>>();
 
-  // private Market market;
-  //  private Double interval;
-  private final HashMap<Tradeable, EventBean> lastEvent = new HashMap<Tradeable, EventBean>();
+	// private Market market;
+	//  private Double interval;
+	private final HashMap<Tradeable, HashMap<Double, EventBean>> lastEvent = new HashMap<Tradeable, HashMap<Double, EventBean>>();
 
-  public OHLCBarPlugInView(AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext, ExprNode timestampExpression,
-      ExprNode valueExpression) {
-    this.agentInstanceViewFactoryContext = agentInstanceViewFactoryContext;
-    this.timestampExpression = timestampExpression;
-    this.valueExpression = valueExpression;
-    this.scheduleSlot = agentInstanceViewFactoryContext.getStatementContext().getScheduleBucket().allocateSlot();
-  }
+	public OHLCBarPlugInView(AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext, ExprNode timestampExpression, ExprNode valueExpression) {
+		this.agentInstanceViewFactoryContext = agentInstanceViewFactoryContext;
+		this.timestampExpression = timestampExpression;
+		this.valueExpression = valueExpression;
+		this.scheduleSlot = agentInstanceViewFactoryContext.getStatementContext().getScheduleBucket().allocateSlot();
+	}
 
-  public OHLCBarPlugInView(AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext, ExprNode timestampExpression,
-      ExprNode valueExpression, ExprNode volumeExpression, ExprNode marketExpression, ExprNode intervalExpression) {
-    this.agentInstanceViewFactoryContext = agentInstanceViewFactoryContext;
-    this.timestampExpression = timestampExpression;
-    this.valueExpression = valueExpression;
-    this.volumeExpression = volumeExpression;
-    this.marketExpression = marketExpression;
-    this.intervalExpression = intervalExpression;
-    this.scheduleSlot = agentInstanceViewFactoryContext.getStatementContext().getScheduleBucket().allocateSlot();
-  }
+	public OHLCBarPlugInView(AgentInstanceViewFactoryChainContext agentInstanceViewFactoryContext, ExprNode timestampExpression, ExprNode valueExpression,
+			ExprNode volumeExpression, ExprNode marketExpression, ExprNode intervalExpression) {
+		this.agentInstanceViewFactoryContext = agentInstanceViewFactoryContext;
+		this.timestampExpression = timestampExpression;
+		this.valueExpression = valueExpression;
+		this.volumeExpression = volumeExpression;
+		this.marketExpression = marketExpression;
+		this.intervalExpression = intervalExpression;
+		this.scheduleSlot = agentInstanceViewFactoryContext.getStatementContext().getScheduleBucket().allocateSlot();
+	}
 
-  @Override
-  public void update(EventBean[] newData, EventBean[] oldData) {
-    if (newData == null) {
-      return;
-    }
+	@Override
+	public void update(EventBean[] newData, EventBean[] oldData) {
+		if (newData == null) {
+			return;
+		}
 
-    for (EventBean theEvent : newData) {
-      eventsPerStream[0] = theEvent;
-      log.trace(this.getClass().getSimpleName() + ":update recieved new event" + eventsPerStream[0].toString());
+		EventBean[] eventsPerStream = new EventBean[1];
 
-      Double interval = (Double) intervalExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
+		for (EventBean theEvent : newData) {
 
-      Long timestamp = (Long) timestampExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
-      Long timestampMinute = removeSeconds(timestamp, interval);
-      double value = (Double) valueExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
-      double volume = (Double) volumeExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
+			eventsPerStream[0] = theEvent;
+			log.trace(this.getClass().getSimpleName() + ":update recieved new event" + eventsPerStream[0].toString());
 
-      Tradeable market = null;
-      if (marketExpression != null)
-        market = (Tradeable) marketExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
+			Double interval = (Double) intervalExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
 
-      // test if this minute has already been published, the event is too late
-      if (interval == null || interval == 0 || timestamp == null || timestamp == 0 || timestampMinute == null || timestampMinute == 0
-          || (marketExpression != null && market == null)) {
-        log.error(this.getClass().getSimpleName() + ":unable to create bar with interval: " + interval + " timestamp: " + timestamp
-            + " timestampMinute:" + timestampMinute + " market: " + market + " cutoffTimestampMinute: " + cutoffTimestampMinute);
+			Long timestamp = (Long) timestampExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
+			Long timestampMinute = removeSeconds(timestamp, interval);
+			double value = (Double) valueExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
+			double volume = (Double) volumeExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
 
-        return;
-      }
-      log.trace(this.getClass().getSimpleName() + ":update determing bar for interval: " + interval + " timestamp: " + timestamp
-          + " timestampMinute:" + timestampMinute + " value: " + value + " market: " + market + " cutoffTimestampMinute: " + cutoffTimestampMinute);
+			Tradeable market = null;
+			if (marketExpression != null)
+				market = (Tradeable) marketExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
 
-      if ((cutoffTimestampMinute.get(market) != null) && (timestampMinute <= cutoffTimestampMinute.get(market))) {
-        continue;
-      }
+			eventsPerMarketPerStream.put(market, eventsPerStream);
 
-      // if the same minute, aggregate
-      if (timestampMinute.equals(getCurrentTimestampMinute(market))) {
-        log.trace(this.getClass().getSimpleName() + ":update - apply value for " + value);
-        applyValue(market, value, volume);
-      }
-      // first time we see an event for this minute
-      else {
-        // there is data to post
-        if (getCurrentTimestampMinute(market) != null) {
-          log.trace(this.getClass().getSimpleName() + " update: posing data for bar for market: " + market + " with timestamp:"
-              + currentTimestampMinute + " first:" + first + " high: " + max + " low: " + min + " close: " + last);
+			// test if this minute has already been published, the event is too late
+			if (interval == null || interval == 0 || timestamp == null || timestamp == 0 || timestampMinute == null || timestampMinute == 0
+					|| (marketExpression != null && market == null)) {
+				log.error(this.getClass().getSimpleName() + ":unable to create bar with interval: " + interval + " timestamp: " + timestamp
+						+ " timestampMinute:" + timestampMinute + " market: " + market + " cutoffTimestampMinute: " + cutoffTimestampMinute);
 
-          postData(market, interval);
-        }
-        setCurrentTimestampMinute(market, timestampMinute);
+				return;
+			}
 
-        // currentTimestampMinute = timestampMinute;
-        log.trace(this.getClass().getSimpleName() + ":update - apply value for " + value);
+			log.trace(this.getClass().getSimpleName() + ":update determing bar for interval: " + interval + " timestamp: " + timestamp + " timestampMinute:"
+					+ timestampMinute + " value: " + value + " market: " + market + " cutoffTimestampMinute: " + cutoffTimestampMinute);
+			if (timestamp <= getCutoffTimestampMinute(market, interval)) {
+				continue;
+			}
+			setCurrentTimestampMinute(market, interval, timestampMinute);
 
-        applyValue(market, value, volume);
+			// currentTimestampMinute = timestampMinute;
+			log.trace(this.getClass().getSimpleName() + ":update - apply value for " + market + ", " + value);
 
-        // schedule a callback to fire in case no more events arrive
-        log.trace(this.getClass().getSimpleName() + ":update - scheduleCallback for interval: " + interval.longValue() + " slack "
-            + LATE_EVENT_SLACK_SECONDS);
+			applyValue(market, interval, value, volume);
 
-        scheduleCallback(market);
-      }
-    }
-  }
+			// schedule a callback to fire in case no more events arrive
+			log.trace(this.getClass().getSimpleName() + ":update - scheduleCallback for interval: " + interval.longValue() + " slack "
+					+ LATE_EVENT_SLACK_SECONDS);
 
-  public Long getCurrentTimestampMinute(Tradeable market) {
-    return currentTimestampMinute.get(market);
+			scheduleCallback(interval);
 
-  }
+		}
+	}
 
-  protected void setCurrentTimestampMinute(Tradeable market, Long timestamp) {
-    if ((timestamp == null || currentTimestampMinute.get(market) == null) || (timestamp > 0 && timestamp > currentTimestampMinute.get(market))) {
-      currentTimestampMinute.put(market, timestamp);
-    } else {
-      log.error("setCurrentTimestampMinute: unable to set current time stamp minute as currnet currentTimestampMinute "
-          + currentTimestampMinute.get(market) + " is greater than new time stamp " + timestamp);
+	public Long getCurrentTimestampMinute(Tradeable market, Double interval) {
+		if (currentTimestampMinute.get(market) != null && currentTimestampMinute.get(market).get(interval) != null)
+			return currentTimestampMinute.get(market).get(interval);
+		else
+			return 0L;
 
-    }
-  }
+	}
 
-  public Long getCutoffTimestampMinute(Tradeable market) {
-    return cutoffTimestampMinute.get(market);
-  }
+	protected void setCurrentTimestampMinute(Tradeable market, Double interval, Long timestamp) {
+		if ((timestamp == null || currentTimestampMinute.get(market) == null || currentTimestampMinute.get(interval) == null)
+				|| (timestamp > 0 && timestamp > currentTimestampMinute.get(market).get(interval))) {
+			if (currentTimestampMinute.get(market) == null) {
+				Map<Double, Long> intervalTimestampMinute = new ConcurrentHashMap<Double, Long>();
+				intervalTimestampMinute.put(interval, timestamp);
+				currentTimestampMinute.put(market, intervalTimestampMinute);
+			} else
+				currentTimestampMinute.get(market).put(interval, timestamp);
 
-  protected void setCutoffTimestampMinute(Tradeable market, Long cutoff) {
-    if (cutoffTimestampMinute.get(market) == null || (cutoff != null && cutoff > cutoffTimestampMinute.get(market))) {
-      cutoffTimestampMinute.put(market, cutoff);
+		} else {
+			log.error("setCurrentTimestampMinute: unable to set current time stamp minute as currnet currentTimestampMinute "
+					+ currentTimestampMinute.get(market).get(interval) + " is greater than new time stamp " + timestamp);
 
-    } else {
-      log.error("setCutoffTimestampMinute: unable to set cut off timestamp as currnet cutoffTimestampMinute " + cutoffTimestampMinute
-          + " is greater than new cut off time stamp " + cutoff);
+		}
+	}
 
-    }
-  }
+	public Long getCutoffTimestampMinute(Tradeable market, Double interval) {
+		if ((cutoffTimestampMinute == null || cutoffTimestampMinute.get(market) == null || cutoffTimestampMinute.get(market).get(interval) == null)
+				&& getCurrentTimestampMinute(market, interval) != 0) {
+			long cutOff = removeSeconds(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime(), interval);
+			setCutoffTimestampMinute(market, interval, cutOff);
+		}
 
-  @Override
-  public EventType getEventType() {
-    return getEventType(agentInstanceViewFactoryContext.getStatementContext().getEventAdapterService());
-  }
+		if (cutoffTimestampMinute != null && cutoffTimestampMinute.get(market) != null && cutoffTimestampMinute.get(market).get(interval) != null)
+			return cutoffTimestampMinute.get(market).get(interval);
+		else
+			return 0L;
 
-  @Override
-  public Iterator<EventBean> iterator() {
-    throw new UnsupportedOperationException("Not supported");
-  }
+	}
 
-  @Override
-  public View cloneView() {
-    return new OHLCBarPlugInView(agentInstanceViewFactoryContext, timestampExpression, valueExpression, volumeExpression, marketExpression,
-        intervalExpression);
-  }
+	protected void setCutoffTimestampMinute(Tradeable market, Double interval, Long cutoff) {
+		if (cutoffTimestampMinute.get(market) == null
+				|| cutoffTimestampMinute.get(market).get(interval) == null
+				|| (cutoffTimestampMinute.get(market) != null && cutoffTimestampMinute.get(market).get(interval) != null && (cutoff != null && cutoff > cutoffTimestampMinute
+						.get(market).get(interval)))) {
 
-  private void applyValue(Tradeable market, double value, double volume) {
-    if (first.get(market) == null) {
-      first.put(market, value);
+			if (cutoffTimestampMinute.get(market) == null) {
+				Map<Double, Long> intervalTimestampMinute = new ConcurrentHashMap<Double, Long>();
+				intervalTimestampMinute.put(interval, cutoff);
+				cutoffTimestampMinute.put(market, intervalTimestampMinute);
+			} else
+				cutoffTimestampMinute.get(market).put(interval, cutoff);
 
-    }
-    last.put(market, value);
-    if (min.get(market) == null) {
-      min.put(market, value);
+		}
+	}
 
-    } else if (min.get(market).compareTo(value) > 0) {
-      min.put(market, value);
-    }
-    if (max.get(market) == null) {
-      max.put(market, value);
-    } else if (max.get(market).compareTo(value) < 0) {
-      max.put(market, value);
+	@Override
+	public EventType getEventType() {
+		return getEventType(agentInstanceViewFactoryContext.getStatementContext().getEventAdapterService());
+	}
 
-    }
-    if (vol.get(market) == null) {
-      vol.put(market, volume);
-    } else {
-      vol.put(market, volume + vol.get(market));
+	@Override
+	public Iterator<EventBean> iterator() {
+		throw new UnsupportedOperationException("Not supported");
+	}
 
-    }
+	@Override
+	public View cloneView() {
+		return new OHLCBarPlugInView(agentInstanceViewFactoryContext, timestampExpression, valueExpression, volumeExpression, marketExpression,
+				intervalExpression);
+	}
 
-  }
+	private void applyValue(Tradeable market, double interval, double value, double volume) {
 
-  protected static EventType getEventType(EventAdapterService eventAdapterService) {
-    return eventAdapterService.addBeanType(Bar.class.getName(), Bar.class, false, false, false);
-  }
+		synchronized (first.get(interval) == null || first.get(interval).get(market) == null ? new Object() : first.get(interval).get(market)) {
+			if (first.get(interval) == null) {
+				Map<Tradeable, Double> intervalFirst = new ConcurrentHashMap<Tradeable, Double>();
+				intervalFirst.put(market, value);
 
-  private long removeSeconds(long timestamp, double interval) {
-    Calendar cal = GregorianCalendar.getInstance();
-    cal.setTimeInMillis(timestamp);
-    cal.set(Calendar.SECOND, 0);
-    cal.set(Calendar.MILLISECOND, 0);
+				first.put(interval, intervalFirst);
+			} else if (first.get(interval).get(market) == null) {
+				first.get(interval).put(market, value);
+			}
 
-    //TODO: need to support bars for mulitiple days
-    if ((interval / 86400) > 1) {
-      int days = (int) Math.round(interval / 86400);
-      cal.set(Calendar.HOUR_OF_DAY, 0);
-      int modulo = cal.get(Calendar.DAY_OF_YEAR) % days;
-      if (modulo > 0) {
+			if (last.get(interval) == null) {
+				Map<Tradeable, Double> intervalLast = new ConcurrentHashMap<Tradeable, Double>();
+				intervalLast.put(market, value);
+				last.put(interval, intervalLast);
+			} else {
+				last.get(interval).put(market, value);
+			}
+			if (previousLast.get(interval) == null) {
+				Map<Tradeable, Double> intervalLast = new ConcurrentHashMap<Tradeable, Double>();
+				intervalLast.put(market, value);
+				previousLast.put(interval, intervalLast);
+			} else {
+				previousLast.get(interval).put(market, value);
+			}
 
-        cal.add(Calendar.DAY_OF_YEAR, -modulo);
-      }
-      //cal.set(Calendar.DAY_OF_YEAR, 0);
-      // round interval to nearest day
-      interval = ((double) Math.round(interval / 86400)) * 86400;
-    }
+			if (min.get(interval) == null) {
+				Map<Tradeable, Double> intervalMin = new ConcurrentHashMap<Tradeable, Double>();
+				intervalMin.put(market, value);
+				min.put(interval, intervalMin);
+			} else if (min.get(interval).get(market) == null) {
+				min.get(interval).put(market, value);
+			} else if (min.get(interval).get(market).compareTo(value) > 0) {
+				min.get(interval).put(market, value);
+			}
 
-    if ((interval / 3600) > 1) {
-      int hours = (int) Math.round(interval / 3600);
-      cal.set(Calendar.MINUTE, 0);
-      int modulo = cal.get(Calendar.HOUR_OF_DAY) % hours;
-      if (modulo > 0) {
+			if (max.get(interval) == null) {
+				Map<Tradeable, Double> intervalMax = new ConcurrentHashMap<Tradeable, Double>();
+				intervalMax.put(market, value);
+				max.put(interval, intervalMax);
+			} else if (max.get(interval).get(market) == null) {
+				max.get(interval).put(market, value);
+			} else if (max.get(interval).get(market).compareTo(value) < 0) {
+				max.get(interval).put(market, value);
+			}
 
-        cal.add(Calendar.HOUR_OF_DAY, -modulo);
-      }
+			if (vol.get(interval) == null) {
+				Map<Tradeable, Double> intervalVol = new ConcurrentHashMap<Tradeable, Double>();
+				intervalVol.put(market, volume);
+				vol.put(interval, intervalVol);
+			} else if (vol.get(interval).get(market) == null) {
+				vol.get(interval).put(market, volume);
+			} else {
+				vol.get(interval).put(market, volume + vol.get(interval).get(market));
+			}
 
-      // cal.set(Calendar.HOUR_OF_DAY, 0);
-      // round interval to nearest hour
-      interval = ((double) Math.round(interval / 3600)) * 3600;
-    }
+		}
+	}
 
-    if ((interval / 60) > 1) {
-      int mins = (int) (Math.round(interval / 60));
+	protected static EventType getEventType(EventAdapterService eventAdapterService) {
+		return eventAdapterService.addBeanType(Bar.class.getName(), Bar.class, false, false, false);
+	}
 
-      int modulo = cal.get(Calendar.MINUTE) % mins;
-      if (modulo > 0) {
+	private long removeSeconds(long timestamp, double interval) {
+		Calendar cal = GregorianCalendar.getInstance();
+		cal.setTimeInMillis(timestamp);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
 
-        cal.add(Calendar.MINUTE, -modulo);
-      }
-      interval = ((double) Math.round(interval / 60)) * 60;
-    }
-    return cal.getTimeInMillis();
-  }
+		//TODO: need to support bars for mulitiple days
+		if ((interval / 86400) >= 1) {
+			int days = (int) Math.round(interval / 86400);
+			cal.set(Calendar.HOUR_OF_DAY, 0);
+			int modulo = cal.get(Calendar.DAY_OF_YEAR) % days;
+			if (modulo > 0) {
 
-  private void scheduleCallback(final Tradeable market) {
-    if (handle != null) {
-      // remove old schedule
-      agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().remove(handle, scheduleSlot);
-      handle = null;
-    }
-    final double interval = (Double) intervalExpression.getExprEvaluator().evaluate(eventsPerStream, true, agentInstanceViewFactoryContext);
+				cal.add(Calendar.DAY_OF_YEAR, -modulo);
+			}
+			//cal.set(Calendar.DAY_OF_YEAR, 0);
+			// round interval to nearest day
+			interval = ((double) Math.round(interval / 86400)) * 86400;
+		}
 
-    long currentTime = agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime();
-    long currentRemoveSeconds = removeSeconds(currentTime, interval);
-    //long targetTime = currentRemoveSeconds + (86400 + LATE_EVENT_SLACK_SECONDS) * 1000; // leave some seconds for late comers
+		if ((interval / 3600) >= 1) {
+			int hours = (int) Math.round(interval / 3600);
+			cal.set(Calendar.MINUTE, 0);
+			int modulo = cal.get(Calendar.HOUR_OF_DAY) % hours;
+			if (modulo > 0) {
 
-    long targetTime = (long) (currentRemoveSeconds + ((interval + LATE_EVENT_SLACK_SECONDS) * 1000)); // leave some seconds for late comers
+				cal.add(Calendar.HOUR_OF_DAY, -modulo);
+			}
 
-    long scheduleAfterMSec = targetTime - currentTime;
-    log.trace(this.getClass().getSimpleName() + ":scheduling Callback after : " + scheduleAfterMSec + " for currentTime " + currentTime
-        + " targetTime " + targetTime);
+			// cal.set(Calendar.HOUR_OF_DAY, 0);
+			// round interval to nearest hour
+			interval = ((double) Math.round(interval / 3600)) * 3600;
+		}
 
-    ScheduleHandleCallback callback = new ScheduleHandleCallback() {
-      @Override
-      public void scheduledTrigger(ExtensionServicesContext extensionServicesContext) {
-        //        if (extensionServicesContext == null)
-        //        return;
-        handle = null; // clear out schedule handle
-        OHLCBarPlugInView.this.postData(market, interval);
-      }
-    };
+		if ((interval / 60) >= 1) {
+			int mins = (int) (Math.round(interval / 60));
 
-    handle = new EPStatementHandleCallback(agentInstanceViewFactoryContext.getEpStatementAgentInstanceHandle(), callback);
-    agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().add(scheduleAfterMSec, handle, scheduleSlot);
-    log.trace(this.getClass().getSimpleName() + ":scheduledCallback after : " + scheduleAfterMSec + " for handle " + handle + " scheduleSlot "
-        + scheduleSlot);
+			int modulo = cal.get(Calendar.MINUTE) % mins;
+			if (modulo > 0) {
 
-  }
+				cal.add(Calendar.MINUTE, -modulo);
+			}
+			interval = ((double) Math.round(interval / 60)) * 60;
+		}
+		return cal.getTimeInMillis();
+	}
 
-  private void postData(Tradeable market, double interval) {
-    Bar barValue;
-    if (currentTimestampMinute.get(market) != null && first.get(market) != null && last.get(market) != null && max.get(market) != null
-        && min.get(market) != null && market != null) {
-      try {
-        barValue = new Bar(currentTimestampMinute.get(market), interval, first.get(market), last.get(market), max.get(market), min.get(market),
-            vol.get(market), market);
-      } catch (Exception | Error ex) {
-        log.error("PostData: Unable to generate bar for market: " + market + " with timestamp:" + currentTimestampMinute.get(market) + " first:"
-            + first.get(market) + " high: " + max.get(market) + " low: " + min.get(market) + " close: " + last.get(market));
-        return;
-      }
-      EventBean outgoing = agentInstanceViewFactoryContext.getStatementContext().getEventAdapterService().adapterForBean(barValue);
-      if (lastEvent == null) {
-        log.trace(this.getClass().getSimpleName() + ": PostData -  updating child " + outgoing.getUnderlying().toString());
+	private void scheduleCallback(final Double interval) {
+		//TODO we need to check this handle, as if it is nmight be there with wrong cutoff.
+		//xif (handle.get(interval) == null) {
+		// remove old schedule
 
-        this.updateChildren(new EventBean[]{outgoing}, null);
-      } else {
+		long currentTime = agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime();
+		long currentRemoveSeconds = removeSeconds(currentTime, interval);
+		//long targetTime = currentRemoveSeconds + (86400 + LATE_EVENT_SLACK_SECONDS) * 1000; // leave some seconds for late comers
 
-        log.trace(this.getClass().getSimpleName() + ": PostData - updating child outgoing event " + outgoing.getUnderlying().toString()
-            + " last event " + ((lastEvent != null && lastEvent.get(market) != null) ? (lastEvent.get(market).getUnderlying().toString()) : ""));
+		long targetTime = (long) (currentRemoveSeconds + ((interval + LATE_EVENT_SLACK_SECONDS) * 1000)); // leave some seconds for late comers
 
-        this.updateChildren(new EventBean[]{outgoing}, new EventBean[]{lastEvent.get(market)});
-      }
+		long scheduleAfterMSec = targetTime - currentTime;
+		if (scheduleAfterMSec <= 0)
+			return;
+		log.trace(this.getClass().getSimpleName() + ":scheduleCallback - scheduling Callback after : " + scheduleAfterMSec + " for currentTime "
+				+ (new Instant(currentTime)) + " targetTime " + (new Instant(targetTime)) + " for interval " + interval);
 
-      lastEvent.put(market, outgoing);
+		ScheduleHandleCallback callback = new ScheduleHandleCallback() {
+			/*			private void scheduleCallback(final Tradeable market, final Double interval) {
+							class ScheduleHandleCallback {
+								Tradeable market;
+								Double interval;
+								
+								public ScheduleHandleCallback(Tradeable market, Double interval) {
+									this.market=market;
+									this.interval=interval;
+								}
+								
+							}
+						}*/
+			@Override
+			public void scheduledTrigger(ExtensionServicesContext extensionServicesContext) {
+				//        if (extensionServicesContext == null)
+				//        return;
+				log.trace(this.getClass().getSimpleName() + ":scheduledTrigger - triggered at "
+						+ (new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime())) + " :  for interval "
+						+ interval + " with handle " + handle);
+				if (handle.get(interval) != null) {
+					log.trace(this.getClass().getSimpleName() + ":scheduledTrigger at "
+							+ (new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime())) + " :  for interval "
+							+ interval + " removing handle from  " + handle);
+					agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().remove(handle.get(interval), scheduleSlot);
+					handle.remove(interval);
 
-      setCutoffTimestampMinute(market, currentTimestampMinute.get(market));
-      // cutoffTimestampMinute = currentTimestampMinute;
+				}
+				//	handle.get(interval).get(interval).getAgentInstanceHandle().get
+				//	handle.remove(market); // clear out schedule handle
+				if (previousLast.get(interval) != null) {
+					for (Tradeable market : previousLast.get(interval).keySet()) {
+						log.trace(this.getClass().getSimpleName() + ":scheduledTrigger at "
+								+ (new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime())) + " :  for interval "
+								+ interval + " posting data as existing previousLast value of " + previousLast);
 
-      first.put(market, null);
-      last.put(market, null);
-      max.put(market, null);
-      min.put(market, null);
-      vol.put(market, null);
+						OHLCBarPlugInView.this.postData(interval, market, agentInstanceViewFactoryContext.getStatementContext().getSchedulingService()
+								.getTime());
+					}
+				}
+				//once we have been triggered we should add oursleves back.
 
-      setCurrentTimestampMinute(market, null);
+				//	long currentTime = agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime();
+				//long currentRemoveSeconds = removeSeconds(currentTime, interval);
+				//long targetTime = currentRemoveSeconds + (86400 + LATE_EVENT_SLACK_SECONDS) * 1000; // leave some seconds for late comers
 
-      // currentTimestampMinute = null;
+				//long targetTime = (long) (currentRemoveSeconds + ((scheduleAfterMSec + LATE_EVENT_SLACK_SECONDS) * 1000)); // leave some seconds for late comers
 
-    } else
-      log.error("PostData: Unable to generate bar for market: " + market + " with timestamp:" + currentTimestampMinute + " first:" + first
-          + " high: " + max + " low: " + min + " close: " + last);
-  }
+				long scheduleAfterMSec = (long) (interval * 1000);
+				handle.put(interval, new EPStatementHandleCallback(agentInstanceViewFactoryContext.getEpStatementAgentInstanceHandle(), this));
+
+				agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().add(scheduleAfterMSec, handle.get(interval), scheduleSlot);
+				log.trace(this.getClass().getSimpleName() + ":scheduledTrigger at "
+						+ (new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime())) + " :  for interval "
+						+ interval + " with handle " + handle + " scheduled call back after " + scheduleAfterMSec + " at "
+						+ new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime()).plus(scheduleAfterMSec));
+
+			}
+		};
+		if (handle.get(interval) != null) {
+			log.trace(this.getClass().getSimpleName() + ":scheduleCallback at "
+					+ (new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime())) + " :  for interval " + interval
+					+ " removing handle from  " + handle);
+
+			agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().remove(handle.get(interval), scheduleSlot);
+			handle.remove(interval);
+		}
+
+		handle.put(interval, new EPStatementHandleCallback(agentInstanceViewFactoryContext.getEpStatementAgentInstanceHandle(), callback));
+
+		agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().add(scheduleAfterMSec, handle.get(interval), scheduleSlot);
+		log.trace(this.getClass().getSimpleName() + ":scheduleCallback at "
+				+ (new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime())) + " :  for interval " + interval
+				+ " with handle " + handle + " handle count "
+				+ agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTimeHandleCount() + " scheduled call back after "
+				+ scheduleAfterMSec + " at "
+				+ new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime()).plus(scheduleAfterMSec));
+
+		//} else {
+		//EPStatementHandleCallback scheduleHandle = handle.get(interval);
+
+		//			log.trace(this.getClass().getSimpleName() + ":scheduledCallback call back already scheduled with handle " + scheduleHandle);
+
+		//}
+
+	}
+
+	private void postData(double interval, Tradeable market, long currentTime) {
+		Bar barValue;
+
+		//		if (first.get(interval) != null && first.get(interval).get(market) != null && last.get(interval) != null && last.get(interval).get(market) != null
+		//			&& min.get(interval) != null && min.get(interval).get(market) != null && max.get(interval) != null && max.get(interval).get(market) != null
+		//		&& market != null) {
+		if (market != null && previousLast.get(interval) != null && previousLast.get(interval).get(market) != null) {
+
+			try {
+				long currentRemoveSeconds = removeSeconds(currentTime, interval);
+				log.trace(this.getClass().getSimpleName() + ":PostData: generating bar at " + new Instant(currentTime) + " with  currenttimestamp "
+						+ (new Instant(getCurrentTimestampMinute(market, interval))) + " and " + (new Instant(getCurrentTimestampMinute(market, interval))));
+				Double open = (first.get(interval) != null && first.get(interval).get(market) != null) ? first.get(interval).get(market) : previousLast.get(
+						interval).get(market);
+				Double high = (max.get(interval) != null && max.get(interval).get(market) != null) ? max.get(interval).get(market) : previousLast.get(interval)
+						.get(market);
+				Double low = (min.get(interval) != null && min.get(interval).get(market) != null) ? min.get(interval).get(market) : previousLast.get(interval)
+						.get(market);
+				Double close = (last.get(interval) != null && last.get(interval).get(market) != null) ? last.get(interval).get(market) : previousLast.get(
+						interval).get(market);
+				Double volume = (vol.get(interval) != null && vol.get(interval).get(market) != null) ? vol.get(interval).get(market) : 0d;
+				if (volume != 0 && currentTimestampMinute.get(market) == null && currentTimestampMinute.get(market).get(interval) == null)
+					log.debug("error");
+				Long timestamp = (currentTimestampMinute.get(market) != null && currentTimestampMinute.get(market).get(interval) != null) ? currentTimestampMinute
+						.get(market).get(interval) : (currentRemoveSeconds - (long) (interval * 1000));
+
+				//long targetTime = currentRemoveSeconds + (86400 + LATE_EVENT_SLACK_SECONDS) * 1000; // leave some seconds for late comers
+
+				barValue = new Bar(timestamp, interval, open, close, high, low, volume, market);
+			} catch (Exception | Error ex) {
+				log.error(this.getClass().getSimpleName() + ":PostData: Unable to generate " + interval + " bar for market: " + market + " with timestamp:"
+						+ currentTimestampMinute.get(market) + " first:" + first.get(interval) + " high: " + max.get(interval) + " low: " + min.get(interval)
+						+ " close: " + last.get(interval));
+				return;
+			}
+
+			EventBean outgoing = agentInstanceViewFactoryContext.getStatementContext().getEventAdapterService().adapterForBean(barValue);
+			if (lastEvent.get(market) == null) {
+				log.trace(this.getClass().getSimpleName() + ": PostData -  updating child " + outgoing.getUnderlying().toString());
+
+				this.updateChildren(new EventBean[] { outgoing }, null);
+			} else {
+
+				log.trace(this.getClass().getSimpleName()
+						+ ": PostData - updating child outgoing event "
+						+ outgoing.getUnderlying().toString()
+						+ " last event "
+						+ ((lastEvent != null && lastEvent.get(market) != null && lastEvent.get(market).get(interval) != null) ? (lastEvent.get(market)
+								.get(interval).getUnderlying().toString()) : ""));
+
+				this.updateChildren(new EventBean[] { outgoing }, new EventBean[] { lastEvent.get(market).get(interval) });
+			}
+
+			if (lastEvent.get(market) == null) {
+				HashMap<Double, EventBean> intervalLastEvent = new HashMap<Double, EventBean>();
+				intervalLastEvent.put(interval, outgoing);
+				lastEvent.put(market, intervalLastEvent);
+			} else
+				lastEvent.get(market).put(interval, outgoing);
+
+			Long timestampMinute = removeSeconds(currentTime, interval);
+
+			//if (cutoffTimestampMinute.containsKey(market))
+			setCutoffTimestampMinute(market, interval, timestampMinute);
+			// cutoffTimestampMinute = currentTimestampMinute;
+			log.trace(this.getClass().getSimpleName() + ":postData - removing values for market " + market + ", interval" + interval);
+
+			if (first.get(interval) != null && first.get(interval).get(market) != null)
+				first.get(interval).remove(market);
+
+			if (last.get(interval) != null && last.get(interval).get(market) != null)
+				last.get(interval).remove(market);
+			if (max.get(interval) != null && max.get(interval).get(market) != null)
+				max.get(interval).remove(market);
+			if (min.get(interval) != null && min.get(interval).get(market) != null)
+				min.get(interval).remove(market);
+			if (vol.get(interval) != null && vol.get(interval).get(market) != null)
+				vol.get(interval).remove(market);
+			if (currentTimestampMinute.get(market) != null && currentTimestampMinute.get(market).get(interval) != null)
+				currentTimestampMinute.get(market).remove(interval);
+			//if (currentTimestampMinute.get(market) != null && currentTimestampMinute.get(market).get(interval) != null)
+
+			// currentTimestampMinute = null;
+
+		}
+
+		else
+			log.error(this.getClass().getSimpleName() + ":PostData: Unable to generate bar for interval " + interval + "  with market:" + market
+					+ "and first: " + first + " and last: " + last + " and min:" + min + " and max: " + max);
+
+		//}
+
+	}
 }

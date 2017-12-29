@@ -30,8 +30,7 @@ import com.google.inject.assistedinject.AssistedInject;
  */
 @Entity
 //@Cacheable(false)
-@Table(indexes = {@Index(columnList = "time"), @Index(columnList = "timeReceived"), @Index(columnList = "market"),
-    @Index(columnList = "market,time"), @Index(columnList = "market,remoteKey")})
+@Table(indexes = {@Index(columnList = "time"), @Index(columnList = "timeReceived")})
 public class Trade extends PriceData {
 
   @Inject
@@ -199,6 +198,12 @@ public class Trade extends PriceData {
 
   @Override
   public synchronized void prePersist() {
+    // TODO Auto-generated method stub
+
+  }
+
+  @Override
+  public void persitParents() {
     // TODO Auto-generated method stub
 
   }

@@ -184,4 +184,10 @@ public class Currency extends Asset {
     // TODO Auto-generated method stub
 
   }
+
+  @Override
+  public void persitParents() {
+    // TODO Auto-generated method stub
+
+  }
 }
