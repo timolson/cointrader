@@ -5,26 +5,27 @@ import java.util.Collection;
 import org.cryptocoinpartners.schema.SpecificOrder;
 
 public interface JMXManagerMBean {
-    public String sayHello(String name);
 
-    public void start();
+	String getOrderService();
 
-    public void stop();
+	String getPortfolioService();
 
-    String getOrderService();
+	void createSpecificOrder(String marketSymbol, String volume, String limitPrice);
 
-    String getPortfolioService();
+	void createGeneralOrder(String marketSymbol, String volume, String limitPrice);
 
-    void createSpecificOrder(String marketSymbol, String volume, String limitPrice);
+	Collection<SpecificOrder> pendingOrders();
 
-    void createGeneralOrder(String marketSymbol, String volume, String limitPrice);
+	String createManualFill(String marketSymbol, String volume, String price, String comment, String openClose) throws Throwable;
 
-    Collection<SpecificOrder> pendingOrders();
+	Object cancelOrder(String orderId);
 
-    String createManualFill(String marketSymbol, String volume, String price, String comment, String openClose) throws Throwable;
+	void createStopLoss(String marketSymbol, String volume, String limitPrice, String comment, String openClose, String stopAmount);
 
-    Object cancelOrder(String orderId);
+	String createStopLimitPercentageManualFill(String marketSymbol, String volume, String price, String stopPercentage, String type, String comment,
+			String openClose, String position) throws Throwable;
 
-    void createStopLoss(String marketSymbol, String volume, String limitPrice, String comment, String openClose, String stopAmount);
+	String createStopLimitAmountManualFill(String marketSymbol, String volume, String price, String stopAmount, String type, String comment, String openClose,
+			String position) throws Throwable;
 
 }

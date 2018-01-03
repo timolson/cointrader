@@ -19,6 +19,7 @@ import org.cryptocoinpartners.schema.dao.MarketDataJpaDao;
 import org.cryptocoinpartners.schema.dao.TradeJpaDao;
 import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.EM;
+import org.cryptocoinpartners.util.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,7 +82,7 @@ public class SaveMarketData {
 
 	}
 
-	@When("@Priority(1) @Audit select * from Bar")
+	@When("@Priority(1) @Audit select * from LastBarWindow")
 	public void handleBar(Bar m) {
 
 		//  if (future == null || future.isDone()) {
@@ -156,7 +157,7 @@ public class SaveMarketData {
 	}
 
 	public class saveBarRunnable implements Runnable {
-		Bar rawBar;
+		Bar bar;
 
 		@Override
 		public void run() {
@@ -165,14 +166,22 @@ public class SaveMarketData {
 		}
 
 		public saveBarRunnable(Bar m) {
-			this.rawBar = m;
+			this.bar = m;
 		}
 
 		public void saveData() {
 
-			Bar bar = barFactory.create(rawBar);
+			if (bar.getDao() == null)
+				Injector.root().getInjector().injectMembers(bar);
+
+			//		Bar bar = barFactory.create(rawBar);
+
 			try {
-				Bar duplicate = barDao.queryZeroOne(Bar.class, "select b from Bar b where b=?1", bar);
+
+				Bar duplicate = (bar.getDao() == null) ? EM.queryZeroOne(Bar.class, "select b from Bar b where market=?1 and interval=?2 and time=?3",
+						bar.getMarket(), bar.getInterval(), bar.getTime()) : bar.queryZeroOne(Bar.class,
+						"select b from Bar b where market=?1 and interval=?2 and time=?3", bar.getMarket(), bar.getInterval(), bar.getTime());
+
 				if (duplicate == null)
 					bar.persit();
 			} catch (Error | Exception ex) {

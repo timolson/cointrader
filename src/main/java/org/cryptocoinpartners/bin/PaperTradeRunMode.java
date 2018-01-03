@@ -46,6 +46,9 @@ public class PaperTradeRunMode extends RunMode {
 	private final Instant end = new DateTime(DateTime.now()).toInstant();
 	Semaphore paperSemaphore = new Semaphore(0);
 	Long prefeedPeriod = ConfigUtil.combined().getLong("strategy.prefeed.period", 25);
+	Boolean replayBooks = ConfigUtil.combined().getBoolean("strategy.prefeed.books", false);
+	Boolean replayBars = ConfigUtil.combined().getBoolean("strategy.prefeed.bars", false);
+
 	private final Instant start = end.minus(Duration.standardHours(prefeedPeriod)).toInstant();
 
 	// new DateTime(2013, 12, 20, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
@@ -54,7 +57,7 @@ public class PaperTradeRunMode extends RunMode {
 	public void run(Semaphore semaphore) {
 		//context = Context.create();
 
-		Replay replay = replayFactory.between(start, end, false, paperSemaphore, false, false);
+		Replay replay = replayFactory.between(start, end, false, paperSemaphore, false, replayBooks, replayBars);
 		context = replay.getContext();
 		context.attach(XchangeAccountService.class);
 		context.attach(BasicQuoteService.class);

@@ -70,7 +70,7 @@ public class BacktestRunMode extends RunMode {
 		//Replay replay = Replay.between(start, end, true);  
 		//  Replay replay;
 		// if (ConfigUtil.combined().getBoolean("randomticker", false))
-		Replay replay = replayFactory.between(start, end, false, backTestSemaphore, ConfigUtil.combined().getBoolean("randomticker", false), true);
+		Replay replay = replayFactory.between(start, end, false, backTestSemaphore, ConfigUtil.combined().getBoolean("randomticker", false), true, false);
 
 		//else
 		//  replay = replayFactory.between(start, end, false, backTestSemaphore);

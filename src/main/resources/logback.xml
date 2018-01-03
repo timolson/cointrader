@@ -43,7 +43,7 @@
     	 <!--  <logger name="org.hibernate.type" level="DEBUG" />  -->
  	    	<logger name="com.espertech.esper" level="WARN" />
 
-     <logger name="org.cryptocoinpartners" level="DEBUG"/>
+     <logger name="org.cryptocoinpartners" level="INFO"/>
   <logger name="com.xeiam.xchange" level="INFO" />
       <logger name="si.mazi.rescu" level="INFO" /> 
   

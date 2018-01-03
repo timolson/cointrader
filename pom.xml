@@ -292,12 +292,10 @@
 			<artifactId>commons-codec</artifactId>
 			<version>1.9</version>
 		</dependency>
-
-
-		<dependency>
-			<groupId>org.python.pypi</groupId>
+	<dependency>
+			<groupId>black.ninia</groupId>
 			<artifactId>jep</artifactId>
-			<version>3.6.1</version>
+			<version>3.7.0</version>
 		</dependency>
     </dependencies>
 
