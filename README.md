@@ -28,7 +28,7 @@ Coin Trader's future goals include:
 [Tim presents Coin Trader](http://youtu.be/JAvcL05nSKw) at the SF Bitcoin Dev meetup.
 
 #### Setup
-Coin Trader requires Java JDK 1.7, Maven, and a SQL database (MySQL default).  
+Coin Trader requires Java JDK 1.8, Maven, and a SQL database (MySQL default).  
 [Setup Instructions](https://github.com/timolson/cointrader/wiki/Setup)
 
 #### Support
