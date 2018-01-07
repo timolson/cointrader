@@ -26,7 +26,6 @@ import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Prompt;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.schema.TradeFactory;
-import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.RateLimiter;
 import org.cryptocoinpartners.util.XchangeUtil;
 import org.joda.time.Duration;
@@ -184,31 +183,39 @@ public class XchangeData {
 		if (lastTradeTimes.get(market) == null || lastTradeTimes.get(market) == 0 || lastTradeIds.get(market) == null || lastTradeIds.get(market) == 0) {
 			try {
 
-				org.cryptocoinpartners.schema.Trade trade = EM.queryLimitOne(org.cryptocoinpartners.schema.Trade.class,
-						"select t from Trade t where market=?1 order by time desc)", market);
-				//  for (org.cryptocoinpartners.schema.Trade trade : results) {
-				// org.cryptocoinpartners.schema.Trade trade = query.getSingleResult();
-				//long millis = Math.round(trade.getTime().getMillis() / 86400000);
-
-				if (trade.getTime().getMillis() > lastTradeTimes.get(market))
-					lastTradeTimes.put(market, trade.getTime().getMillis());
-				/*
-				 * Calendar cal = GregorianCalendar.getInstance(); cal.setTimeInMillis(lastTradeTime); cal.set(Calendar.MILLISECOND, 0);
-				 * cal.set(Calendar.SECOND, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.HOUR_OF_DAY, 0);
-				 */// long millis = cal.getTime().getTime();
+				//this is taking way to long to return!
+				/*	org.cryptocoinpartners.schema.Trade trade = EM.queryLimitOne(org.cryptocoinpartners.schema.Trade.class,
+							"select t from Trade t where market=?1 order by time desc)", market);
+				
+					if (trade.getTime().getMillis() > lastTradeTimes.get(market))
+						lastTradeTimes.put(market, trade.getTime().getMillis()); /*
+					Long remoteId = Long.valueOf(trade.getRemoteKey());
+						
+					/*
+						lastTradeTimes.put(market, trade.getTime().getMillis()); /*
+					Long remoteId = Long.valueOf(trade.getRemoteKey());
+					
+					 * Calendar cal = GregorianCalendar.getInstance(); cal.setTimeInMillis(lastTradeTime); cal.set(Calendar.MILLISECOND, 0);
+					 * cal.set(Calendar.SECOND, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.HOUR_OF_DAY, 0);
+					 */// long millis = cal.getTime().getTime();
 					//  trade.getTime().get
 					// todo this is broken and assumes an increasing integer remote key
 					// Long remoteId = Long.valueOf(trade.getRemoteKey().concat(String.valueOf(trade.getTimestamp())));
 					//Long remoteId = Long.valueOf(trade.getRemoteKey());
 					//lastTradeTime
 					//Long remoteId = cal.getTime().getTime() + Long.valueOf(trade.getRemoteKey());
-				Long remoteId = Long.valueOf(trade.getRemoteKey());
+
 				// Long remoteId=trade.getTime().getMillis();
 				//Long remoteId = millis+ Long.valueOf(trade.getRemoteKey());
 
 				// Long remoteId = Long.valueOf(String.valueOf(millis)+ Long.valueOf(trade.getRemoteKey()));
 
 				//   Long.valueOf(String.valueOf(lastTradeTime).concat(trade.getRemoteKey())).longValue();
+				if (context.getTime().getMillis() > lastTradeTimes.get(market))
+
+					lastTradeTimes.put(market, context.getTime().getMillis());
+				Long remoteId = Long.valueOf(0);
+
 				if (remoteId > lastTradeIds.get(market))
 					lastTradeIds.put(market, remoteId);
 
@@ -288,8 +295,8 @@ public class XchangeData {
 			tradeFailureCount++;
 			failedTradeCounts.put(market, tradeFailureCount);
 
-			log.info(this.getClass().getSimpleName() + ":getTrades Unabel to get trade for market " + market + " pair " + pair + ".  Failure "
-					+ tradeFailureCount + " of " + retryCounts.get(market) + ". ");
+			log.info(this.getClass().getSimpleName() + ":getTrades " + " " + market + " pair " + pair + ".  Failure " + tradeFailureCount + " of "
+					+ retryCounts.get(market) + ". ");
 			if (tradeFailureCount >= retryCounts.get(market)) {
 				//try {
 				//  if (rateLimiter.getRunnables() == null || rateLimiter.getRunnables().isEmpty() || rateLimiter.remove(this)) {

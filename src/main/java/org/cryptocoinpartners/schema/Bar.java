@@ -159,7 +159,6 @@ public class Bar extends MarketData {
 
 	@Override
 	public synchronized void detach() {
-		barDao.persist(this);
 
 	}
 

@@ -48,7 +48,7 @@ import com.google.inject.assistedinject.AssistedInject;
 @Entity
 //@Cacheable(false)
 //@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE, region = "book")
-@Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived"), @Index(columnList = "market") })
+@Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived") })
 public class Book extends MarketData implements Spread {
 
 	/**
@@ -922,7 +922,8 @@ public class Book extends MarketData implements Spread {
 	@Override
 	public synchronized void detach() {
 		try {
-			bookDao.detach(this);
+			if (bookDao != null)
+				bookDao.detach(this);
 		} catch (Exception | Error ex) {
 
 		}

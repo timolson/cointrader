@@ -327,8 +327,10 @@ public class Replay implements Runnable {
 		Iterator<RemoteEvent> ite = queryEvents(start, stop, replayBooks, replayBars).iterator();
 		while (ite.hasNext()) {
 			RemoteEvent event = ite.next();
+
 			context.publish(event);
 			event.detach();
+
 		}
 		context.advanceTime(stop); // advance to the end of the time window to trigger any timer events
 	}

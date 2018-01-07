@@ -272,33 +272,53 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 	}
 
 	private long removeSeconds(long timestamp, double interval) {
+		//Intervals can be greater than day so we start from the epoch.
+
 		Calendar cal = GregorianCalendar.getInstance();
 		cal.setTimeInMillis(timestamp);
 		cal.set(Calendar.SECOND, 0);
 		cal.set(Calendar.MILLISECOND, 0);
 
 		//TODO: need to support bars for mulitiple days
-		if ((interval / 86400) >= 1) {
-			int days = (int) Math.round(interval / 86400);
-			cal.set(Calendar.HOUR_OF_DAY, 0);
-			int modulo = cal.get(Calendar.DAY_OF_YEAR) % days;
-			if (modulo > 0) {
-
-				cal.add(Calendar.DAY_OF_YEAR, -modulo);
-			}
-			//cal.set(Calendar.DAY_OF_YEAR, 0);
-			// round interval to nearest day
-			interval = ((double) Math.round(interval / 86400)) * 86400;
-		}
+		//	if ((interval / 86400) >= 1) {
+		//	int days = (int) Math.round(interval / 86400);
+		//		cal.set(Calendar.HOUR_OF_DAY, 0);
+		//	int modulo = cal.get(Calendar.DAY_OF_YEAR) % days;
+		//		if (modulo > 0) {
+		//
+		//			cal.add(Calendar.DAY_OF_YEAR, -modulo);
+		//	}
+		//cal.set(Calendar.DAY_OF_YEAR, 0);
+		// round interval to nearest day
+		//		interval = ((double) Math.round(interval / 86400)) * 86400;
+		//	}
 
 		if ((interval / 3600) >= 1) {
+			//	if ((interval / 86400) >= 1) {
+			int hoursFromEpoch = (int) Math.floor(cal.getTimeInMillis() / 1000 / 60 / 60);
 			int hours = (int) Math.round(interval / 3600);
 			cal.set(Calendar.MINUTE, 0);
-			int modulo = cal.get(Calendar.HOUR_OF_DAY) % hours;
-			if (modulo > 0) {
+			//	if (hours >= 24) {
+			int epochModulo = hoursFromEpoch % hours;
+			int modulo = 0;
+			if (epochModulo >= 24)
+				modulo = hoursFromEpoch % (hours - 24);
+			else if (hours >= 24)
+				modulo = epochModulo + (hours - 24);
+			else
+				modulo = epochModulo;
+			cal.add(Calendar.HOUR_OF_DAY, -modulo);
 
-				cal.add(Calendar.HOUR_OF_DAY, -modulo);
-			}
+			/*} else{
+			  int hours = (int) Math.round(interval / 3600);
+				cal.set(Calendar.MINUTE, 0);
+				int modulo = cal.get(Calendar.HOUR_OF_DAY) % hours;
+				if (modulo > 0) {
+
+					cal.add(Calendar.HOUR_OF_DAY, -modulo);
+				
+			}*/
+			//}
 
 			// cal.set(Calendar.HOUR_OF_DAY, 0);
 			// round interval to nearest hour
