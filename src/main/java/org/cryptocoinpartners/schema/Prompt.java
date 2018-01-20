@@ -193,7 +193,7 @@ public class Prompt extends EntityBase {
 
 	@ManyToOne(optional = true)
 	public Asset getTradedCurrency(Market market) {
-		if (getTradedCurrency() == null || market.getBase().getSymbol().equals("LTC"))
+		if (getTradedCurrency() == null)
 			return market.getListing().getBase();
 
 		else
@@ -207,7 +207,9 @@ public class Prompt extends EntityBase {
 		try {
 			return forSymbol(symbol);
 		} catch (NoResultException e) {
-			Asset tradedCurrency = Currency.forSymbol(currency);
+			Asset tradedCurrency = null;
+			if (currency != null)
+				tradedCurrency = Currency.forSymbol(currency);
 			final Prompt prompt = new Prompt(symbol, tickValue, tickSize, tradedCurrency, volumeBasis, priceBasis, margin, marginMethod, makerFeeRate,
 					takerFeeRate, feeMethod, marginFeeMethod);
 			prompt.setRevision(prompt.getRevision() + 1);

@@ -214,8 +214,14 @@ public class Portfolio extends EntityBase {
 	//, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
 	public Set<Position> getPositions() {
 		if (positions == null)
-			positions = new HashSet<Position>();
+			positions = new HashSet<>();
 
+		/*		if (!positions.isEmpty() && !(positions instanceof KeySetView)) {
+					ConcurrentHashMap positionsHashMap = new ConcurrentHashMap<>();
+					Set<Position> tempPositions = positionsHashMap.newKeySet();
+					tempPositions.addAll(positions);
+					positions = tempPositions;
+				}*/
 		return positions;
 
 	}
@@ -226,17 +232,19 @@ public class Portfolio extends EntityBase {
 
 	}
 
-	public void positionReset() {
-		synchronized (positions) {
-			positions.clear();
-		}
+	public synchronized void positionReset() {
+		log.debug(this.getClass().getSimpleName() + ":positionReset called from class " + Thread.currentThread().getStackTrace()[2]
+				+ " reseiting positions for " + this.getId());
+
+		positions.clear();
+
 		positionsMap.clear();
 		restRealisedProfits();
 		resetTransactions();
 
 	}
 
-	public void balanceReset() {
+	public synchronized void balanceReset() {
 
 		restRealisedProfits();
 		resetTransactions();
@@ -899,27 +907,29 @@ public class Portfolio extends EntityBase {
 		context.publish(posUpdate);
 	}
 
-	public void addPosition(Position position) {
+	public synchronized void addPosition(Position position) {
 		// synchronized (lock) {
+
 		getPositions().add(position);
 
 		// }
 	}
 
-	public void removePositions(Collection<Position> removedPositions) {
+	public synchronized void removePositions(Collection<Position> removedPositions) {
 		//   synchronized (lock) {
-
 		for (Position removedPosition : removedPositions) {
 			getPositions().remove(removedPosition);
+
 			removedPosition.reset();
 			removedPosition.setPortfolio(null);
 		}
 
 	}
 
-	public boolean removePosition(Position removePosition) {
+	public synchronized boolean removePosition(Position removePosition) {
 
 		//  System.out.println("removing fill: " + fill + " from position: " + this);
+
 		getPositions().remove(removePosition);
 
 		//   removePosition.setPortfolio(null);
@@ -956,7 +966,7 @@ public class Portfolio extends EntityBase {
 	 * order.getFillType() == FillType.STOP_LIMIT) { orderService.handleCancelGeneralOrder((GeneralOrder) order); } } // synchronized (lock) { // } }
 	 */
 	@Transient
-	public void insert(Position position) {
+	public synchronized void insert(Position position) {
 
 		//baseCCY->Exchange->Listing->TransactionType
 		TransactionType transactionType = (position.isLong()) ? TransactionType.BUY : TransactionType.SELL;
@@ -1361,6 +1371,13 @@ public class Portfolio extends EntityBase {
 																					+ System.identityHashCode(cpitr));
 
 																			log.info(closePosition + " closed fully out with " + openPosition);
+																			for (Order childOrder : closePosition.getFillChildOrders())
+																				if (childOrder.getUsePosition() && childOrder.getFillType().isTrigger()
+																						&& childOrder.getStopPrice() != null)
+																					orderService.handleCancelOrder(childOrder);
+																			positionsToPublish.add(openPos);
+																			if (openPos.getOpenVolume().isZero())
+																				log.debug("test");
 																			closedFillBreak = true;
 																		} else
 																			log.info(closePosition + " not closed fully out with " + openPosition);
@@ -1374,6 +1391,10 @@ public class Portfolio extends EntityBase {
 																		+ closePosition.getId() + "   loop " + closedFillCount + " with iterator "
 																		+ System.identityHashCode(cpitr));
 																openPosition.setPosition(null);
+																for (Order childOrder : openPosition.getFillChildOrders())
+																	if (childOrder.getUsePosition() && childOrder.getFillType().isTrigger()
+																			&& childOrder.getStopPrice() != null)
+																		orderService.handleCancelOrder(childOrder);
 																opitr.remove();
 															}
 														}
@@ -1421,9 +1442,8 @@ public class Portfolio extends EntityBase {
 						}
 					}
 					//looop over latest postions and publish out.
-					for (Position position : listingPositions)
-						publishPositionUpdate(position, (position.isLong()) ? PositionType.LONG : PositionType.SHORT, position.getMarket(), 0);
-					for (Position position : openingListingPositions)
+
+					for (Position position : positionsToPublish)
 						publishPositionUpdate(position, (position.isLong()) ? PositionType.LONG : PositionType.SHORT, position.getMarket(), 0);
 					return true;
 				}
@@ -1487,37 +1507,40 @@ public class Portfolio extends EntityBase {
 	@Transient
 	public Collection<Order> getAllOrders() {
 		Set<Order> orders = new HashSet<Order>();
-		for (Position position : getPositions())
-			synchronized (position.getFills()) {
-				for (Fill positionFill : position.getFills()) {
-					orders.add(positionFill.getOrder());
-					synchronized (positionFill.getOrder().getFills()) {
-						for (Fill fill : positionFill.getOrder().getFills())
-							fill.getAllOrdersByParentFill(orders);
+		synchronized (this) {
+			for (Position position : getPositions()) {
+				synchronized (position.getFills()) {
+					for (Fill positionFill : position.getFills()) {
+						orders.add(positionFill.getOrder());
+						synchronized (positionFill.getOrder().getFills()) {
+							for (Fill fill : positionFill.getOrder().getFills())
+								fill.getAllOrdersByParentFill(orders);
+						}
+						//fills.add(fill);
+						// fill.loadAllChildOrdersByFill(fill, portfolioOrders, portfolioFills);
+
+						//fill.getOrder().loadAllChildOrdersByParentOrder(fill.getOrder(), portfolioOrders, portfolioFills);
+
 					}
-					//fills.add(fill);
-					// fill.loadAllChildOrdersByFill(fill, portfolioOrders, portfolioFills);
-
-					//fill.getOrder().loadAllChildOrdersByParentOrder(fill.getOrder(), portfolioOrders, portfolioFills);
-
 				}
 			}
-
+		}
 		return orders;
 	}
 
 	@Transient
 	public Collection<Fill> getAllFills() {
 		Collection<Fill> fills = new ArrayList<Fill>();
-
-		for (Position position : getPositions())
-			synchronized (position.getFills()) {
-				for (Fill fill : position.getFills()) {
-					fills.add(fill);
-					// fill.getAllOrdersByParentFill(orders);
+		synchronized (this) {
+			for (Position position : getPositions()) {
+				synchronized (position.getFills()) {
+					for (Fill fill : position.getFills()) {
+						fills.add(fill);
+						// fill.getAllOrdersByParentFill(orders);
+					}
 				}
 			}
-
+		}
 		return fills;
 
 	}
@@ -1760,95 +1783,98 @@ public class Portfolio extends EntityBase {
 			if (myPort == null)
 				return myPort;
 			// lets srippp of any emmpty positions.
+			log.info(" org.cryptocoinpartners.schema.Portfolio:findOrCreate removing empty positions.");
 
-			myPort.getPositions().remove(Collections.singleton(null));
+			synchronized (myPort) {
+				myPort.getPositions().remove(Collections.singleton(null));
 
-			// portfiolio
-			Map<Order, Order> portfolioOrders = new HashMap<Order, Order>();
-			Map<Fill, Fill> portfolioFills = new HashMap<Fill, Fill>();
-			Map<Position, Position> portfolioPositions = new HashMap<Position, Position>();
+				// portfiolio
+				Map<Order, Order> portfolioOrders = new HashMap<Order, Order>();
+				Map<Fill, Fill> portfolioFills = new HashMap<Fill, Fill>();
+				Map<Position, Position> portfolioPositions = new HashMap<Position, Position>();
 
-			Iterator<Position> it = myPort.getPositions().iterator();
+				Iterator<Position> it = myPort.getPositions().iterator();
 
-			while (it.hasNext()) {
-				Position position = it.next();
-				context.getInjector().injectMembers(position);
+				while (it.hasNext()) {
+					Position position = it.next();
+					context.getInjector().injectMembers(position);
 
-				//  for (Position position : myPort.getPositions()) {
-				if (!position.hasFills()) {
+					//  for (Position position : myPort.getPositions()) {
+					if (!position.hasFills()) {
 
-					it.remove();
-					position.delete();
-					continue;
+						it.remove();
+						position.delete();
+						continue;
 
-				}
-				synchronized (position.getFills()) {
-					position.getFills().removeAll(Collections.singleton(null));
-				}
-				portfolioPositions.put(position, position);
-				// log.debug("fills" + position.getFills());
-				List<Fill> fillsToBeAdded = new ArrayList<Fill>();
-				List<Fill> fills = new ArrayList<Fill>();
-				int index = 0;
-				synchronized (position.getFills()) {
-					for (Fill fill : position.getFills()) {
-						portfolioFills.put(fill, fill);
 					}
-				}
-
-				//TODO to figure out why this is doubleing/trebbeling meomory
-				synchronized (position.getFills()) {
-					for (Fill fill : position.getFills()) {
-
-						// Fill filltest;
-						//  if (!portfolioFills.containsKey(fill)) {
-						context.getInjector().injectMembers(fill);
-						log.debug("Portfolio: findOrCreate Loading all child order for fill " + fill.getId());
-						fill.loadAllChildOrdersByFill(fill, portfolioOrders, portfolioFills);
-						log.debug("Portfolio: findOrCreate Loading all child order for fill order " + fill.getOrder().getId());
-						if (fill.getOrder().getPortfolio().equals(myPort))
-							fill.getOrder().setPortfolio(myPort);
-						fill.getOrder().loadAllChildOrdersByParentOrder(fill.getOrder(), portfolioOrders, portfolioFills);
-						log.debug("Portfolio: findOrCreate loaded all child order for fill order " + fill.getOrder().getId());
-						//  } else {
-						//    filltest = portfolioFills.get(fill);
-						//fill = portfolioFills.get(fill);
-						//  position.getFills().set(index, portfolioFills.get(fill));
-						// filltest = portfolioFills.get(fill);
-						// fill = portfolioFills.get(fill);
-						//}
-						//index++;
+					synchronized (position.getFills()) {
+						position.getFills().removeAll(Collections.singleton(null));
 					}
+					portfolioPositions.put(position, position);
+					// log.debug("fills" + position.getFills());
+					List<Fill> fillsToBeAdded = new ArrayList<Fill>();
+					List<Fill> fills = new ArrayList<Fill>();
+					int index = 0;
+					synchronized (position.getFills()) {
+						for (Fill fill : position.getFills()) {
+							portfolioFills.put(fill, fill);
+						}
+					}
+
+					//TODO to figure out why this is doubleing/trebbeling meomory
+					synchronized (position.getFills()) {
+						for (Fill fill : position.getFills()) {
+
+							// Fill filltest;
+							//  if (!portfolioFills.containsKey(fill)) {
+							context.getInjector().injectMembers(fill);
+							log.debug("Portfolio: findOrCreate Loading all child order for fill " + fill.getId());
+							fill.loadAllChildOrdersByFill(fill, portfolioOrders, portfolioFills);
+							log.debug("Portfolio: findOrCreate Loading all child order for fill order " + fill.getOrder().getId());
+							if (fill.getOrder().getPortfolio().equals(myPort))
+								fill.getOrder().setPortfolio(myPort);
+							fill.getOrder().loadAllChildOrdersByParentOrder(fill.getOrder(), portfolioOrders, portfolioFills);
+							log.debug("Portfolio: findOrCreate loaded all child order for fill order " + fill.getOrder().getId());
+							//  } else {
+							//    filltest = portfolioFills.get(fill);
+							//fill = portfolioFills.get(fill);
+							//  position.getFills().set(index, portfolioFills.get(fill));
+							// filltest = portfolioFills.get(fill);
+							// fill = portfolioFills.get(fill);
+							//}
+							//index++;
+						}
+					}
+					// when we are loading posiitons we need to link the fill to that position
+
+					//loop over all fills in the position
+					// then we load all order by child fill, for each order we load the fills, if the fill belongs to the posiont we get a differnt reference but same id.
+					// so when we load any fills, we need to see if we have them loaded somwehere else in the tree,
+					// we need to set the loaded fill to the parent fill
+
+					/*
+					 * UUID orderId; Fill fillWithChildren = EM.namedQueryZeroOne(Fill.class, "Fill.findFill", withChildOrderHints, fill.getId()); if
+					 * (fillWithChildren != null) fill.setFillChildOrders(fillWithChildren.getFillChildOrders()); Order orderWithFills; Order orderWithChildren;
+					 * Order orderWithTransactions; // so for each fill in the open position we need to load the whole order tree // getorder, then get all
+					 * childe orders, then for each child, load child orders, so on and so forth. // load all child orders, and theri child ordres // load all
+					 * parent orders and thier parent orders // need to laod all parent fills, their child orders, and their children // get a list of all
+					 * orders in the tree then load orderId = fill.getOrder().getId(); try { orderWithFills = EM.namedQueryZeroOne(Order.class,
+					 * "Order.findOrder", withFillsHints, orderId); orderWithChildren = EM.namedQueryZeroOne(Order.class, "Order.findOrder", withChildrenHints,
+					 * orderId); orderWithTransactions = EM.namedQueryZeroOne(Order.class, "Order.findOrder", withTransHints, orderId); } catch (Error |
+					 * Exception ex) { log.error("Portfolio:findOrCreate unable to get order for orderID: " + orderId); continue; } if ((orderWithFills != null
+					 * && orderWithFills instanceof SpecificOrder && orderWithFills.getId().equals(orderId)) && (orderWithTransactions != null &&
+					 * orderWithTransactions instanceof SpecificOrder && orderWithTransactions.getId() .equals(orderId)) && (orderWithChildren != null &&
+					 * orderWithChildren instanceof SpecificOrder && orderWithChildren.getId().equals(orderId))) { SpecificOrder order = (SpecificOrder)
+					 * orderWithFills; order.setTransactions(orderWithTransactions.getTransactions());
+					 * order.setOrderChildren(orderWithChildren.getOrderChildren()); fill.setOrder(order);
+					 * log.error("Portfolio:findOrCreate found order for orderID: " + orderId); } }
+					 */
 				}
-				// when we are loading posiitons we need to link the fill to that position
+				log.info("org.cryptocoinpartners.schema.Portfolio:findOrCreate removing empty positions.");
 
-				//loop over all fills in the position
-				// then we load all order by child fill, for each order we load the fills, if the fill belongs to the posiont we get a differnt reference but same id.
-				// so when we load any fills, we need to see if we have them loaded somwehere else in the tree,
-				// we need to set the loaded fill to the parent fill
-
-				/*
-				 * UUID orderId; Fill fillWithChildren = EM.namedQueryZeroOne(Fill.class, "Fill.findFill", withChildOrderHints, fill.getId()); if
-				 * (fillWithChildren != null) fill.setFillChildOrders(fillWithChildren.getFillChildOrders()); Order orderWithFills; Order orderWithChildren;
-				 * Order orderWithTransactions; // so for each fill in the open position we need to load the whole order tree // getorder, then get all
-				 * childe orders, then for each child, load child orders, so on and so forth. // load all child orders, and theri child ordres // load all
-				 * parent orders and thier parent orders // need to laod all parent fills, their child orders, and their children // get a list of all
-				 * orders in the tree then load orderId = fill.getOrder().getId(); try { orderWithFills = EM.namedQueryZeroOne(Order.class,
-				 * "Order.findOrder", withFillsHints, orderId); orderWithChildren = EM.namedQueryZeroOne(Order.class, "Order.findOrder", withChildrenHints,
-				 * orderId); orderWithTransactions = EM.namedQueryZeroOne(Order.class, "Order.findOrder", withTransHints, orderId); } catch (Error |
-				 * Exception ex) { log.error("Portfolio:findOrCreate unable to get order for orderID: " + orderId); continue; } if ((orderWithFills != null
-				 * && orderWithFills instanceof SpecificOrder && orderWithFills.getId().equals(orderId)) && (orderWithTransactions != null &&
-				 * orderWithTransactions instanceof SpecificOrder && orderWithTransactions.getId() .equals(orderId)) && (orderWithChildren != null &&
-				 * orderWithChildren instanceof SpecificOrder && orderWithChildren.getId().equals(orderId))) { SpecificOrder order = (SpecificOrder)
-				 * orderWithFills; order.setTransactions(orderWithTransactions.getTransactions());
-				 * order.setOrderChildren(orderWithChildren.getOrderChildren()); fill.setOrder(order);
-				 * log.error("Portfolio:findOrCreate found order for orderID: " + orderId); } }
-				 */
+				myPort.getPositions().remove(Collections.singleton(null));
+				log.debug("positions" + myPort.getPositions());
 			}
-
-			myPort.getPositions().remove(Collections.singleton(null));
-			log.debug("positions" + myPort.getPositions());
-
 			System.gc();
 			for (Order order : myPort.getAllOrders()) {
 				log.trace("loding members for order:" + order.getId());

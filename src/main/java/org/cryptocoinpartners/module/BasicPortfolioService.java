@@ -155,42 +155,43 @@ public class BasicPortfolioService implements PortfolioService {
 			//  List<Position> positions = EM.queryList(Position.class, queryStr, hints, portfolio);
 			List<Fill> fills = new ArrayList<Fill>();
 			log.debug("Loading Positions:" + portfolio.getPositions().toString());
-
-			for (Position position : portfolio.getPositions()) {
-				if (position == null)
-					continue;
-				log.debug("Loading Fills from positions:" + position.getFills());
-
-				context.getInjector().injectMembers(position);
-				position.setMarket((Market) portfolio.addMarket(position.getMarket()));
-
-				if (!position.hasFills()) {
-					emptyPositions.add(position);
-					continue;
-				}
-
-				//  position.getDao(localPositionDao);
-				// portfolio.addPosition(position);
-				//position.setPortfolio(portfolio);
-				//  log.debug("Loading Fills:" + position.getFills().toString());
-				for (Fill fill : position.getFills()) {
-					if (fill == null)
+			synchronized (portfolio) {
+				for (Position position : portfolio.getPositions()) {
+					if (position == null)
 						continue;
-					// Map fillHints = new HashMap();
-					// UUID portfolioID = EM.queryOne(UUID.class, queryStr, portfolioName);
-					//fillHints.put("javax.persistence.fetchgraph", "fillsWithChildOrders");
+					log.debug("Loading Fills from positions:" + position.getFills());
 
-					//Fill detailedFill = EM.namedQueryZeroOne(Fill.class, "Fills.findFillsById", fillHints, fill.getId());
+					context.getInjector().injectMembers(position);
+					position.setMarket((Market) portfolio.addMarket(position.getMarket()));
 
-					context.getInjector().injectMembers(fill);
-					fill.setMarket((Market) portfolio.addMarket(fill.getMarket()));
-					if (!fill.getOpenVolume().isZero()) {
-						fills.add(fill);
+					if (!position.hasFills()) {
+						emptyPositions.add(position);
+						continue;
 					}
-					// portfolio.merge(fill);
+
+					//  position.getDao(localPositionDao);
+					// portfolio.addPosition(position);
+					//position.setPortfolio(portfolio);
+					//  log.debug("Loading Fills:" + position.getFills().toString());
+					for (Fill fill : position.getFills()) {
+						if (fill == null)
+							continue;
+						// Map fillHints = new HashMap();
+						// UUID portfolioID = EM.queryOne(UUID.class, queryStr, portfolioName);
+						//fillHints.put("javax.persistence.fetchgraph", "fillsWithChildOrders");
+
+						//Fill detailedFill = EM.namedQueryZeroOne(Fill.class, "Fills.findFillsById", fillHints, fill.getId());
+
+						context.getInjector().injectMembers(fill);
+						fill.setMarket((Market) portfolio.addMarket(fill.getMarket()));
+						if (!fill.getOpenVolume().isZero()) {
+							fills.add(fill);
+						}
+						// portfolio.merge(fill);
+
+					}
 
 				}
-
 			}
 
 			portfolio.removePositions(emptyPositions);
@@ -216,10 +217,12 @@ public class BasicPortfolioService implements PortfolioService {
 		}
 		//publish position update as the merge will only merge fills.
 		for (Portfolio portfolio : portfolios) {
+			synchronized (portfolio) {
 
-			for (Position position : portfolio.getPositions()) {
-				log.info(this.getClass().getSimpleName() + ":findPositions - Pulishing position update for " + position);
-				portfolio.publishPositionUpdate(position, (position.isLong()) ? PositionType.LONG : PositionType.SHORT, position.getMarket(), 0);
+				for (Position position : portfolio.getPositions()) {
+					log.info(this.getClass().getSimpleName() + ":findPositions - Pulishing position update for " + position);
+					portfolio.publishPositionUpdate(position, (position.isLong()) ? PositionType.LONG : PositionType.SHORT, position.getMarket(), 0);
+				}
 			}
 		}
 
@@ -235,7 +238,7 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Nullable
-	public synchronized Collection<Position> getPositions() {
+	public Collection<Position> getPositions() {
 		Collection<Position> AllPositions = new ArrayList<Position>();
 		for (Portfolio portfolio : getPortfolios()) {
 			for (Position position : portfolio.getNetPositions())

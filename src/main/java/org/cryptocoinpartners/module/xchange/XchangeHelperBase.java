@@ -2,6 +2,8 @@ package org.cryptocoinpartners.module.xchange;
 
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
@@ -40,6 +42,12 @@ public class XchangeHelperBase implements XchangeData.Helper {
 	@Override
 	public SpecificOrder adjustOrder(SpecificOrder specificOrder) {
 		return specificOrder;
+	}
+
+	@Override
+	public OrderType getOrderType(SpecificOrder specificOrder) {
+		return specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
+
 	}
 
 }

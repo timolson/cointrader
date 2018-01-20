@@ -65,8 +65,8 @@ public class SaveMarketData {
 
 		//  if (future == null || future.isDone()) {
 		//Future future = 
-		//log.trace("book recieved: " + m.getId() + " thread: " + Thread.currentThread().getName());
-		//bookService.submit(new saveBookRunnable(m));
+		log.trace("book recieved: " + m.getId() + " thread: " + Thread.currentThread().getName());
+		bookService.submit(new saveBookRunnable(m));
 
 	}
 

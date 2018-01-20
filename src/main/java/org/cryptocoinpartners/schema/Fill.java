@@ -769,10 +769,13 @@ public class Fill extends RemoteEvent {
 		//   .loadAllChildOrdersByParentOrder()
 
 		if (parentFill.getPortfolio().getPositions().contains(parentFill.getPosition())) {
-			for (Position fillPosition : parentFill.getPortfolio().getPositions()) {
-				if (fillPosition.equals(parentFill.getPosition())) {
-					parentFill.setPosition(fillPosition);
-					break;
+			synchronized (parentFill.getPortfolio()) {
+
+				for (Position fillPosition : parentFill.getPortfolio().getPositions()) {
+					if (fillPosition.equals(parentFill.getPosition())) {
+						parentFill.setPosition(fillPosition);
+						break;
+					}
 				}
 			}
 		}
@@ -791,11 +794,13 @@ public class Fill extends RemoteEvent {
 				if (order.getParentFill() != null && order.getParentFill().getPortfolio().equals(parentFill.getPortfolio()))
 					order.getParentFill().setPortfolio(parentFill.getPortfolio());
 				if (order.getPortfolio().getPositions().contains(order.getParentFill().getPosition())) {
-					for (Position fillPosition : order.getPortfolio().getPositions()) {
-						if (fillPosition.equals(order.getParentFill().getPosition())) {
-							order.getParentFill().setPosition(fillPosition);
+					synchronized (order.getPortfolio()) {
+						for (Position fillPosition : order.getPortfolio().getPositions()) {
+							if (fillPosition.equals(order.getParentFill().getPosition())) {
+								order.getParentFill().setPosition(fillPosition);
 
-							break;
+								break;
+							}
 						}
 					}
 				}

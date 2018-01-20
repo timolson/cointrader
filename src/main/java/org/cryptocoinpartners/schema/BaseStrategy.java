@@ -24,193 +24,193 @@ import org.slf4j.LoggerFactory;
  */
 public class BaseStrategy implements Strategy {
 
-  protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.baseStrategy");
-  static HashMap<Tradeable, Double> marketAllocations = new HashMap<Tradeable, Double>();
+	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.baseStrategy");
+	static HashMap<Tradeable, Double> marketAllocations = new HashMap<Tradeable, Double>();
 
-  @Override
-  public synchronized void setPortfolio(Portfolio portfolio) {
-    // portfolioService
-    //    this.portfolio = portfolio;
-    this.portfolio = portfolio;
-    // 
-    if (getMarkets() != null) {
-      for (Tradeable market : getMarkets())
-        portfolio.addMarket(market);
+	@Override
+	public synchronized void setPortfolio(Portfolio portfolio) {
+		// portfolioService
+		//    this.portfolio = portfolio;
+		this.portfolio = portfolio;
+		// 
+		if (getMarkets() != null) {
+			for (Tradeable market : getMarkets())
+				portfolio.addMarket(market);
 
-      portfolio.merge();
+			portfolio.merge();
 
-    }
+		}
 
-    //  if (getMarket() != null && getMarket().getExchange() != null && (getMarket().getExchange().getBalances() == null)
-    //        || getMarket().getExchange().getBalances().isEmpty())
+		//  if (getMarket() != null && getMarket().getExchange() != null && (getMarket().getExchange().getBalances() == null)
+		//        || getMarket().getExchange().getBalances().isEmpty())
 
-    //  getMarket().getExchange().loadBalances(portfolio);
+		//  getMarket().getExchange().loadBalances(portfolio);
 
-    SubscribePortfolio portfolioSubcribeEvent = new SubscribePortfolio(portfolio);
-    portfolio.getContext().publish(portfolioSubcribeEvent);
-    originalBaseNotionalBalance = portfolio.getBaseNotionalBalance();
-    // originalNotionalBalanceUSD
-    startingOriginalBaseNotionalBalance = portfolio.getBaseNotionalBalance();
+		SubscribePortfolio portfolioSubcribeEvent = new SubscribePortfolio(portfolio);
+		portfolio.getContext().publish(portfolioSubcribeEvent);
+		originalBaseNotionalBalance = portfolio.getBaseNotionalBalance();
+		// originalNotionalBalanceUSD
+		startingOriginalBaseNotionalBalance = portfolio.getBaseNotionalBalance();
 
-    // PersistUtil.insert(portfolio);
-    //  order = new OrderBuilder(portfolio, orderService);
-    log = portfolio.getLogger();
-  }
+		// PersistUtil.insert(portfolio);
+		//  order = new OrderBuilder(portfolio, orderService);
+		log = portfolio.getLogger();
+	}
 
-  // @Inject
-  protected synchronized void setPortfolioService(PortfolioService portfolioService) {
-    this.portfolioService = portfolioService;
-  }
+	// @Inject
+	protected synchronized void setPortfolioService(PortfolioService portfolioService) {
+		this.portfolioService = portfolioService;
+	}
 
-  protected synchronized void setQuotes(QuoteService quotes) {
-    this.quotes = quotes;
-  }
+	protected synchronized void setQuotes(QuoteService quotes) {
+		this.quotes = quotes;
+	}
 
-  protected synchronized void setOrderService(OrderService orderService) {
-    this.orderService = orderService;
-  }
+	protected synchronized void setOrderService(OrderService orderService) {
+		this.orderService = orderService;
+	}
 
-  @Transient
-  protected PortfolioService getPortfolioService() {
-    return this.portfolioService;
-  }
+	@Transient
+	protected PortfolioService getPortfolioService() {
+		return this.portfolioService;
+	}
 
-  @Transient
-  protected OrderService getOrderService() {
-    return this.orderService;
-  }
+	@Transient
+	protected OrderService getOrderService() {
+		return this.orderService;
+	}
 
-  @Transient
-  protected QuoteService getQuotes() {
-    return this.quotes;
-  }
+	@Transient
+	protected QuoteService getQuotes() {
+		return this.quotes;
+	}
 
-  @Override
-  @Transient
-  public Portfolio getPortfolio() {
-    return this.portfolio;
-  }
+	@Override
+	@Transient
+	public Portfolio getPortfolio() {
+		return this.portfolio;
+	}
 
-  @Transient
-  public static Collection<Tradeable> getMarkets() {
+	@Transient
+	public static Collection<Tradeable> getMarkets() {
 
-    return getMarketAllocations().keySet();
+		return getMarketAllocations().keySet();
 
-  }
+	}
 
-  @Transient
-  public static HashMap<Tradeable, Double> getMarketAllocations() {
+	@Transient
+	public static HashMap<Tradeable, Double> getMarketAllocations() {
 
-    return marketAllocations;
+		return marketAllocations;
 
-  }
+	}
 
-  @Transient
-  public static Double getMarketAllocation(Tradeable market) {
+	@Transient
+	public static Double getMarketAllocation(Tradeable market) {
 
-    return marketAllocations.get(market);
+		return marketAllocations.get(market);
 
-  }
+	}
 
-  @Transient
-  public static Tradeable getMarket(Tradeable market) {
-    for (Tradeable strategyMarket : getMarkets())
-      if (market.equals(strategyMarket))
+	@Transient
+	public static Tradeable getMarket(Tradeable market) {
+		for (Tradeable strategyMarket : getMarkets())
+			if (market.equals(strategyMarket))
 
-        return strategyMarket;
-    return null;
+				return strategyMarket;
+		return null;
 
-  }
+	}
 
-  @Transient
-  public boolean hasMarkets() {
-    return (getMarkets() != null && !getMarkets().isEmpty());
-  }
+	@Transient
+	public boolean hasMarkets() {
+		return (getMarkets() != null && !getMarkets().isEmpty());
+	}
 
-  public synchronized Tradeable addMarket(Tradeable market, Double allocation) {
-    //   synchronized (lock) {
-    if (!getMarkets().contains(market)) {
-      getMarketAllocations().put(market, allocation);
+	public synchronized Tradeable addMarket(Tradeable market, Double allocation) {
+		//   synchronized (lock) {
+		if (market != null && !getMarkets().contains(market)) {
+			getMarketAllocations().put(market, allocation);
 
-    }
-    if (market != null)
-      return getMarket(market);
-    else
-      return null;
-  }
+		}
+		if (market != null)
+			return getMarket(market);
+		else
+			return null;
+	}
 
-  public synchronized void addMarket(Collection<Market> markets) {
-    getMarkets().addAll(markets);
+	public synchronized void addMarket(Collection<Market> markets) {
+		getMarkets().addAll(markets);
 
-  }
+	}
 
-  public synchronized void removeMarkets(Collection<Market> removedMarkets) {
-    if (getMarkets().removeAll(removedMarkets))
-      getMarketAllocations().remove(removedMarkets);
-  }
+	public synchronized void removeMarkets(Collection<Market> removedMarkets) {
+		if (getMarkets().removeAll(removedMarkets))
+			getMarketAllocations().remove(removedMarkets);
+	}
 
-  public synchronized void removeAllMarkets() {
+	public synchronized void removeAllMarkets() {
 
-    getMarkets().clear();
-    getMarketAllocations().clear();
+		getMarkets().clear();
+		getMarketAllocations().clear();
 
-  }
+	}
 
-  public synchronized void removeMarket(Market market) {
-    log.info("removing market: " + market + " from portfolio: " + this);
-    if (getMarkets().remove(market)) {
-      getMarketAllocations().remove(market);
+	public synchronized void removeMarket(Market market) {
+		log.info("removing market: " + market + " from portfolio: " + this);
+		if (getMarkets().remove(market)) {
+			getMarketAllocations().remove(market);
 
-      log.info("removed market: " + market + " from portfolio: " + this);
-    }
+			log.info("removed market: " + market + " from portfolio: " + this);
+		}
 
-  }
+	}
 
-  /** This tracks the assets you have for trading */
+	/** This tracks the assets you have for trading */
 
-  /**
-   * This is what you use to place orders:
-   * 
-   * <pre>
-   * order.create(Listing.BTC_USD, 1.00).withLimit(651.538).place();
-   * </pre>
-   */
-  protected static OrderBuilder order;
-  public static Amount originalBaseNotionalBalance;
-  public static Amount startingOriginalBaseNotionalBalance;
+	/**
+	 * This is what you use to place orders:
+	 * 
+	 * <pre>
+	 * order.create(Listing.BTC_USD, 1.00).withLimit(651.538).place();
+	 * </pre>
+	 */
+	protected static OrderBuilder order;
+	public static Amount originalBaseNotionalBalance;
+	public static Amount startingOriginalBaseNotionalBalance;
 
-  /** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
-  @Inject
-  protected transient QuoteService quotes;
-  @Inject
-  protected transient Portfolio portfolio;
-  @Inject
-  protected transient Context context;
-  @Inject
-  protected transient OrderService orderService;
-  @Inject
-  protected transient PortfolioService portfolioService;
-  @Inject
-  protected transient GeneralOrderFactory generalOrderFactory;
+	/** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
+	@Inject
+	protected transient QuoteService quotes;
+	@Inject
+	protected transient Portfolio portfolio;
+	@Inject
+	protected transient Context context;
+	@Inject
+	protected transient OrderService orderService;
+	@Inject
+	protected transient PortfolioService portfolioService;
+	@Inject
+	protected transient GeneralOrderFactory generalOrderFactory;
 
-  @Inject
-  protected transient SpecificOrderFactory specificOrderFactory;
+	@Inject
+	protected transient SpecificOrderFactory specificOrderFactory;
 
-  @Inject
-  protected transient TransactionFactory transactionFactory;
+	@Inject
+	protected transient TransactionFactory transactionFactory;
 
-  @Inject
-  protected transient ExchangeFactory exchangeFactory;
+	@Inject
+	protected transient ExchangeFactory exchangeFactory;
 
-  @Inject
-  protected transient static TradeFactory tradeFactory;
+	@Inject
+	protected transient static TradeFactory tradeFactory;
 
-  //   @Inject
+	//   @Inject
 
-  @Override
-  public void init() {
-    portfolioService.init();
-    orderService.init();
+	@Override
+	public void init() {
+		portfolioService.init();
+		orderService.init();
 
-  }
+	}
 }

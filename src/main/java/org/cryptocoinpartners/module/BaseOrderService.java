@@ -393,12 +393,13 @@ public abstract class BaseOrderService implements OrderService {
 					missingPortfolioOrder.getParentFill().setPortfolio(portfolio);
 				if (missingPortfolioOrder.getParentFill() != null
 						&& missingPortfolioOrder.getPortfolio().getPositions().contains(missingPortfolioOrder.getParentFill().getPosition())) {
-					for (Position fillPosition : missingPortfolioOrder.getPortfolio().getPositions())
-						if (fillPosition.equals(missingPortfolioOrder.getParentFill().getPosition())) {
-							missingPortfolioOrder.getParentFill().setPosition(fillPosition);
-							break;
-						}
-
+					synchronized (missingPortfolioOrder.getPortfolio()) {
+						for (Position fillPosition : missingPortfolioOrder.getPortfolio().getPositions())
+							if (fillPosition.equals(missingPortfolioOrder.getParentFill().getPosition())) {
+								missingPortfolioOrder.getParentFill().setPosition(fillPosition);
+								break;
+							}
+					}
 				}
 
 				log.debug("Loading all child order for missing portfolio " + missingPortfolioOrder.getClass().getSimpleName() + " :"
@@ -2293,10 +2294,10 @@ public abstract class BaseOrderService implements OrderService {
 		//	if (!triggerOrderState.isOpen())
 		//	return triggeredOrder;
 		if (!orderFound || (triggerOrderState == null)
-				|| (triggerOrderState != null && !triggeredOrder.getUsePosition() && !triggerOrderState.equals(OrderState.TRIGGER))
-				|| (triggerOrderState != null && triggeredOrder.getUsePosition() && triggerOrderState.isWorking())) {
+				|| (triggerOrderState != null && !triggeredOrder.getUsePosition() && !triggerOrderState.equals(OrderState.TRIGGER))) {
 			log.debug(this.getClass().getSimpleName() + " : triggerOrder unable to trigger order " + triggeredOrder.getId() + " with state "
-					+ triggerOrderState + " found state: " + orderFound + " as parent fill position type is exiting or not present in trigger Orders: ");
+					+ triggerOrderState + " found state: " + orderFound + " as not triggered state.");
+			//TODO what should we do here? as it just loops as the order has been triggered and is part filled!
 			return null;
 		}
 
@@ -2366,7 +2367,7 @@ public abstract class BaseOrderService implements OrderService {
 					//	triggeredOrders.add(triggeredOrder);
 					triggeredOrders.add(triggeredOrder);
 
-					updateOrderState(triggeredOrder, OrderState.REJECTED, true);
+					updateOrderState(triggeredOrder, OrderState.ERROR, true);
 
 					return triggeredOrder;
 				}
@@ -2407,28 +2408,7 @@ public abstract class BaseOrderService implements OrderService {
 				specificOrder.setComment(comment);
 				specificOrder.persit();
 				triggeredOrder.merge();
-				/*
-				 * if (triggeredOrder.getPositionEffect() == (PositionEffect.OPEN)) { specificOrder.setPositionEffect(PositionEffect.OPEN);
-				 * specificOrder.setFillType(FillType.LIMIT); //specificOrder.setFillType(FillType.MARKET); //specificOrder.setLimitPriceCount(0); } else {
-				 * specificOrder.setPositionEffect(PositionEffect.CLOSE); specificOrder.setFillType(FillType.MARKET); specificOrder.setLimitPriceCount(0); }
-				 */
-				// we need to set the sepecifc order children to any working open orders.
 				//TODO: loop over open order by parent fill and link them so we know to cancel them is this get's filled first.
-				// specificOrder.addChild(this);
-				// this.setParentOrder(specificOrder);
-				//specificOrder.setFillType(FillType.MARKET);
-
-				//
-
-				//   updateOrderState(specificOrder, OrderState.NEW, true);
-
-				//TODO need 
-				// placeOrder(specificOrder);
-				//   OrderState newState = order.isFilled() ? OrderState.FILLED : OrderState.PARTFILLED;
-				// updateOrderState(triggeredOrder, OrderState.ROUTED);
-				//context.route(new PositionUpdate(null, specificOrder.getMarket(), PositionType.SHORT, PositionType.EXITING));
-
-				// need to cancel any order with same parent fill id
 				log.info("Cancelling working orders for parent fill: "
 						+ (triggeredOrder.getParentFill() != null ? triggeredOrder.getParentFill().getId() : " "));
 				try {
@@ -2436,6 +2416,8 @@ public abstract class BaseOrderService implements OrderService {
 						if (triggeredOrder.getParentFill() != null && !handleCancelSpecificOrderByParentFill(triggeredOrder.getParentFill())) {
 							log.info("UpdateRestingOrders: unable to cancell all orders by parent fill:" + triggeredOrder.getParentFill().getId());
 							updateOrderState(specificOrder, OrderState.ERROR, true);
+							updateOrderState(triggeredOrder, OrderState.ERROR, true);
+
 							// triggerOrderLock.unlock();
 							return triggeredOrder;
 						}
@@ -2448,7 +2430,7 @@ public abstract class BaseOrderService implements OrderService {
 						// triggerOrders.remove(triggeredOrder);
 						triggeredOrders.add(triggeredOrder);
 
-						updateOrderState(specificOrder, OrderState.EXPIRED, true);
+						updateOrderState(triggeredOrder, OrderState.EXPIRED, true);
 						//		triggeredOrders.add(triggeredOrder);
 						//     itto.remove();
 						return triggeredOrder;
@@ -2486,13 +2468,14 @@ public abstract class BaseOrderService implements OrderService {
 				} catch (OrderNotFoundException e) {
 					log.info("order not found");
 					triggeredOrders.add(triggeredOrder);
-
+					updateOrderState(triggeredOrder, OrderState.REJECTED, true);
 					updateOrderState(specificOrder, OrderState.REJECTED, true);
 				} catch (Throwable e) {
 					log.error("Unable to place trigged order " + specificOrder.getId() + " ", e);
 					triggeredOrders.add(triggeredOrder);
 
 					updateOrderState(specificOrder, OrderState.REJECTED, true);
+					updateOrderState(triggeredOrder, OrderState.REJECTED, true);
 
 				}
 			} else {
@@ -2903,7 +2886,6 @@ public abstract class BaseOrderService implements OrderService {
 			 * (Event parent : triggeredParents) triggerOrders.remove(parent);
 			 */
 
-			Set<Event> triggeredParents = new HashSet<Event>();
 			//   log.debug(this.getClass().getSimpleName() + " : UpdateRestingOrders to called from stack " + Thread.currentThread().getStackTrace()[2]);
 
 			// synchronized (triggerOrders) {
@@ -2926,6 +2908,8 @@ public abstract class BaseOrderService implements OrderService {
 
 					synchronized (triggerOrders.get(market).get(triggerInterval).get(TransactionType.BUY).get(fillType)) {
 						HashMap<Order, String> triggeredBuyOrders = new HashMap<Order, String>();
+						Set<Order> expiredBuyOrders = new HashSet<Order>();
+						Set<Order> cancelledBuyOrders = new HashSet<Order>();
 
 						Iterator<Order> itto = triggerOrders.get(market).get(triggerInterval).get(TransactionType.BUY).get(fillType).iterator();
 						//  int size = triggerOrders.get(tr).get(triggerInterval).get(TransactionType.BUY).size();
@@ -2939,6 +2923,7 @@ public abstract class BaseOrderService implements OrderService {
 
 							if (triggeredOrder.getExpiryTime() != null && context.getTime().isAfter(triggeredOrder.getExpiryTime())) {
 								log.info("Trigger order Expired, cancelling general Order:" + triggeredOrder);
+								expiredBuyOrders.add(triggeredOrder);
 								itto.remove();
 								continue;
 							}
@@ -2989,6 +2974,7 @@ public abstract class BaseOrderService implements OrderService {
 								}
 							}
 						}
+
 						ArrayList<Order> triggeredOrders = new ArrayList<Order>();
 						for (Order orderToTrigger : triggeredBuyOrders.keySet()) {
 							triggerOrder(orderToTrigger, triggeredBuyOrders.get(orderToTrigger), triggeredOrders);
@@ -2999,6 +2985,13 @@ public abstract class BaseOrderService implements OrderService {
 							removeTriggerOrders(market, triggeredOrders);
 
 						}
+						for (Order expiredOrder : expiredBuyOrders) {
+							updateOrderState(expiredOrder, OrderState.EXPIRED, true);
+							log.info(this.getClass().getSimpleName() + ":Expired buy Trigger Order: " + expiredOrder);
+							if (expiredOrder.getParentFill() != null)
+								handleCancelAllTriggerOrdersByParentFill(expiredOrder.getParentFill());
+						}
+
 					}
 				}
 			}
@@ -3019,6 +3012,7 @@ public abstract class BaseOrderService implements OrderService {
 					synchronized (triggerOrders.get(market).get(triggerInterval).get(TransactionType.SELL).get(fillType)) {
 						Iterator<Order> itto = triggerOrders.get(market).get(triggerInterval).get(TransactionType.SELL).get(fillType).iterator();
 						HashMap<Order, String> triggeredSellOrders = new HashMap<Order, String>();
+						Set<Order> expiredSellOrders = new HashSet<Order>();
 
 						while (itto.hasNext()) {
 							Order triggeredOrder = itto.next();
@@ -3040,6 +3034,7 @@ public abstract class BaseOrderService implements OrderService {
 								log.info("Trigger order Expired, cancelling general Order:" + triggeredOrder);
 								// addTriggerOrder(triggeredOrder)
 								//  triggerOrders.remove(triggeredOrder);
+								expiredSellOrders.add(triggeredOrder);
 								itto.remove();
 								//  itto.remove();
 								//  itto.remove();
@@ -3142,6 +3137,12 @@ public abstract class BaseOrderService implements OrderService {
 							removeTriggerOrders(market, triggeredOrders);
 
 						}
+						for (Order expiredOrder : expiredSellOrders) {
+							updateOrderState(expiredOrder, OrderState.EXPIRED, true);
+							log.info(this.getClass().getSimpleName() + ":Expired sell Trigger Order: " + expiredOrder);
+							if (expiredOrder.getParentFill() != null)
+								handleCancelAllTriggerOrdersByParentFill(expiredOrder.getParentFill());
+						}
 					}
 				}
 			}
@@ -3159,7 +3160,6 @@ public abstract class BaseOrderService implements OrderService {
 			synchronized (trailingTriggerOrders.get(market).get(triggerInterval).get(TransactionType.BUY)) {
 				Iterator<Order> ittto = trailingTriggerOrders.get(market).get(triggerInterval).get(TransactionType.BUY).iterator();
 				Set<Order> trailingTriggeredBuyOrders = new HashSet<Order>();
-
 				while (ittto.hasNext()) {
 					Order trailingTriggerOrder = ittto.next();
 
@@ -3238,6 +3238,14 @@ public abstract class BaseOrderService implements OrderService {
 						} catch (Throwable ex) {
 							log.info("BaseOrderService: UpdateRestingOrders - Unable to process trigger orders", ex);
 							removeTriggerOrders(market, trailingTriggeredBuyOrders);
+							for (Order cancelledOrder : trailingTriggeredBuyOrders) {
+								updateOrderState(cancelledOrder, OrderState.ERROR, true);
+								log.info("handleCancelAllLongOpeningGeneralOrders called from class " + Thread.currentThread().getStackTrace()[2]
+										+ "Cancelled Long Opening Trigger Order: " + cancelledOrder);
+
+								if (cancelledOrder.getParentFill() != null)
+									handleCancelAllTriggerOrdersByParentFill(cancelledOrder.getParentFill());
+							}
 							unlockTriggerOrders();
 							throw ex;
 						}
@@ -3245,6 +3253,14 @@ public abstract class BaseOrderService implements OrderService {
 
 				}
 				removeTriggerOrders(market, trailingTriggeredBuyOrders);
+				for (Order cancelledOrder : trailingTriggeredBuyOrders) {
+					updateOrderState(cancelledOrder, OrderState.CANCELLED, true);
+					log.info("handleCancelAllLongOpeningGeneralOrders called from class " + Thread.currentThread().getStackTrace()[2]
+							+ "Cancelled Long Opening Trigger Order: " + cancelledOrder);
+
+					if (cancelledOrder.getParentFill() != null)
+						handleCancelAllTriggerOrdersByParentFill(cancelledOrder.getParentFill());
+				}
 			}
 			if (updatedOrders) {
 				sortOrders(triggerOrders.get(market).get(triggerInterval).get(TransactionType.BUY).get(FillType.STOP_LIMIT), TransactionType.BUY, market,
@@ -3347,6 +3363,14 @@ public abstract class BaseOrderService implements OrderService {
 						} catch (Throwable ex) {
 							log.info("BaseOrderService: UpdateRestingOrders - Unable to process trigger orders", ex);
 							removeTriggerOrders(market, trailingTriggeredSellOrders);
+							for (Order cancelledOrder : trailingTriggeredSellOrders) {
+								updateOrderState(cancelledOrder, OrderState.ERROR, true);
+								log.info("handleCancelAllLongOpeningGeneralOrders called from class " + Thread.currentThread().getStackTrace()[2]
+										+ "Cancelled Long Opening Trigger Order: " + cancelledOrder);
+								if (cancelledOrder.getParentFill() != null)
+									handleCancelAllTriggerOrdersByParentFill(cancelledOrder.getParentFill());
+
+							}
 							unlockTriggerOrders();
 							throw ex;
 						}
@@ -3354,6 +3378,14 @@ public abstract class BaseOrderService implements OrderService {
 
 				}
 				removeTriggerOrders(market, trailingTriggeredSellOrders);
+				for (Order cancelledOrder : trailingTriggeredSellOrders) {
+					updateOrderState(cancelledOrder, OrderState.CANCELLED, true);
+					log.info("handleCancelAllLongOpeningGeneralOrders called from class " + Thread.currentThread().getStackTrace()[2]
+							+ "Cancelled Long Opening Trigger Order: " + cancelledOrder);
+					if (cancelledOrder.getParentFill() != null)
+						handleCancelAllTriggerOrdersByParentFill(cancelledOrder.getParentFill());
+
+				}
 
 			}
 			if (updatedOrders) {

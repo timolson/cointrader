@@ -3,15 +3,27 @@ package org.cryptocoinpartners.module.xchange;
 import java.io.IOException;
 
 import org.cryptocoinpartners.enumeration.ExecutionInstruction;
+import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.util.XchangeUtil;
+import org.knowm.xchange.dto.Order;
+import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.okcoin.dto.trade.OkCoinPriceLimit;
 import org.knowm.xchange.okcoin.service.OkCoinFuturesTradeService;
 import org.knowm.xchange.service.trade.TradeService;
 
 @SuppressWarnings("UnusedDeclaration")
 public class OKCoinHelper extends XchangeHelperBase {
+
+	@Override
+	public OrderType getOrderType(SpecificOrder specificOrder) {
+		if (specificOrder.getPositionEffect() == null || specificOrder.getPositionEffect() == PositionEffect.OPEN)
+			return specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
+		else if (specificOrder.getPositionEffect() == PositionEffect.CLOSE)
+			return specificOrder.isAsk() ? Order.OrderType.EXIT_BID : Order.OrderType.EXIT_ASK;
+		return null;
+	}
 
 	@Override
 	public SpecificOrder adjustOrder(SpecificOrder specificOrder) {

@@ -3,6 +3,7 @@ grammar Base;
 @header {
     import java.util.Set;
     import java.util.HashSet;
+    import java.util.Arrays;
 }
 
 @lexer::members {
@@ -21,6 +22,7 @@ grammar Base;
             setType(Prompt);
         else if( exchangeSymbols.contains(getText().toUpperCase()) )
             setType(Exchange);
+               
     }
 
     private static Set<String> marketSymbols;
@@ -28,7 +30,7 @@ grammar Base;
     private static Set<String> exchangeSymbols;
     private static Set<String> currencySymbols;
     private static Set<String> promptSymbols;
-
+   
     static {
         marketSymbols = new HashSet<String>(org.cryptocoinpartners.schema.Market.allSymbols());
         listingSymbols = new HashSet<String>(org.cryptocoinpartners.schema.Listing.allSymbols());
@@ -45,6 +47,10 @@ Amount
 | [0-9]* '.' [0-9]+
 ;
 
+PositionEffect
+: [a-zA-Z_][a-zA-Z_]* 
+;
+
 Ident
 : [a-zA-Z_][a-zA-Z_]* { ident(); }
 ;
@@ -54,6 +60,7 @@ Listing: Currency '.' Currency | Currency '.' Currency '.' Prompt ;
 Prompt: Ident; // set by ident();
 Currency: Ident; // set by ident();
 Exchange: Ident; // set by ident();
+
 
 fragment
 Alpha

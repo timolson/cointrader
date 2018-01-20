@@ -121,7 +121,7 @@ public class JMXManager implements JMXManagerMBean {
 		orderCommand.setPortfolio(portfolio);
 		orderCommand.setLimit(new BigDecimal(limitPrice));
 		orderCommand.setStop(new BigDecimal(stopAmount));
-		orderCommand.setPositionEffect(positionEffect);
+		orderCommand.setPosition(positionEffect);
 		orderCommand.setComment(comment);
 		orderCommand.setMarket(market);
 		orderCommand.setVolume(new BigDecimal(volume));

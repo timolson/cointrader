@@ -544,10 +544,12 @@ public abstract class Order extends Event {
 				if (fill.getOrder().getParentOrder() != null && fill.getOrder().getParentOrder().getPortfolio().equals(parentOrder.getPortfolio()))
 					fill.getOrder().getParentOrder().setPortfolio(parentOrder.getPortfolio());
 				if (parentOrder.getPortfolio().getPositions().contains(fill.getPosition())) {
-					for (Position fillPosition : parentOrder.getPortfolio().getPositions()) {
-						if (fillPosition.equals(fill.getPosition())) {
-							fill.setPosition(fillPosition);
-							break;
+					synchronized (parentOrder.getPortfolio()) {
+						for (Position fillPosition : parentOrder.getPortfolio().getPositions()) {
+							if (fillPosition.equals(fill.getPosition())) {
+								fill.setPosition(fillPosition);
+								break;
+							}
 						}
 					}
 				}

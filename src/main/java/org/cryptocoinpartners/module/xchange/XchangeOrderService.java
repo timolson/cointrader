@@ -2,6 +2,7 @@ package org.cryptocoinpartners.module.xchange;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.SocketTimeoutException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -24,7 +25,6 @@ import org.apache.commons.configuration.Configuration;
 import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.enumeration.OrderState;
-import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.exceptions.OrderNotFoundException;
 import org.cryptocoinpartners.exceptions.UnknownOrderStateException;
 import org.cryptocoinpartners.module.BaseOrderService;
@@ -170,19 +170,24 @@ public class XchangeOrderService extends BaseOrderService {
 
 	@Override
 	protected void handleSpecificOrder(SpecificOrder specificOrder) throws Throwable {
-		Order.OrderType orderType = null;
+		Order.OrderType orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
 		org.knowm.xchange.Exchange exchange = XchangeUtil.getExchangeForMarket(specificOrder.getMarket().getExchange());
 		TradeService tradeService = exchange.getTradeService();
 		if (specificOrder.getLimitPrice() != null && specificOrder.getStopPrice() != null) {
 			specificOrder.persit();
 			reject(specificOrder, "Stop-limit orders are not supported");
 		}
-		if (specificOrder.getPositionEffect() == null || specificOrder.getPositionEffect() == PositionEffect.OPEN)
-			orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
-		else if (specificOrder.getPositionEffect() == PositionEffect.CLOSE)
-			// if order volume is < 0 && it is closing, then I am exiting Bid, else I am exit bid
-			//  orderType = specificOrder.isBid() ? Order.OrderType.BID : Order.OrderType.ASK;
-			orderType = specificOrder.isAsk() ? Order.OrderType.EXIT_BID : Order.OrderType.EXIT_ASK;
+
+		//Use a helper here are xchange exchanges support differnt order types.
+		if (XchangeUtil.getHelperForExchange(specificOrder.getMarket().getExchange()) != null) {
+			log.info(this.getClass().getSimpleName() + ":handleSpecificOrder Adjusting order type for " + specificOrder + " with helper "
+					+ XchangeUtil.getHelperForExchange(specificOrder.getMarket().getExchange()).getClass().getSimpleName() + ":getOrderType");
+
+			Order.OrderType helpderOrderType = XchangeUtil.getHelperForExchange(specificOrder.getMarket().getExchange()).getOrderType(specificOrder);
+			if (helpderOrderType != null)
+				orderType = helpderOrderType;
+		}
+
 		BigDecimal tradeableVolume = specificOrder.getVolume().abs().asBigDecimal();
 		CurrencyPair currencyPair = XchangeUtil.getCurrencyPairForListing(specificOrder.getMarket().getListing());
 		String id = specificOrder.getId().toString();
@@ -214,6 +219,7 @@ public class XchangeOrderService extends BaseOrderService {
 
 					specificOrder.setRemoteKey(tradeService.placeLimitOrder(limitOrder));
 				}
+				specificOrder.setPlacementCount(1);
 				updateOrderState(specificOrder, OrderState.PLACED, true);
 			} catch (ExchangeException ex) {
 				//Let's try placing it as a market order!
@@ -222,7 +228,11 @@ public class XchangeOrderService extends BaseOrderService {
 				specificOrder.setFillType(FillType.MARKET);
 				specificOrder.setExecutionInstruction(ExecutionInstruction.TAKER);
 				specificOrder.setLimitPriceCount(0);
-				placeOrder(specificOrder);
+				specificOrder.setPlacementCount(specificOrder.getPlacementCount() + 1);
+				if (specificOrder.getPlacementCount() <= 3)
+					placeOrder(specificOrder);
+				else
+					throw ex;
 
 				// todo retry until expiration or reject as invalid
 			} catch (Exception | Error e) {
@@ -276,7 +286,11 @@ public class XchangeOrderService extends BaseOrderService {
 
 				specificOrder.setFillType(FillType.LIMIT);
 				specificOrder.setExecutionInstruction(ExecutionInstruction.MAKER);
-				placeOrder(specificOrder);
+				specificOrder.setPlacementCount(specificOrder.getPlacementCount() + 1);
+				if (specificOrder.getPlacementCount() <= 3)
+					placeOrder(specificOrder);
+				else
+					throw ex;
 
 			} catch (Exception | Error e) {
 				specificOrder.persit();
@@ -834,8 +848,7 @@ public class XchangeOrderService extends BaseOrderService {
 		DecimalAmount averagePrice = new DecimalAmount(exchangeOrder.getAveragePrice());
 
 		Amount fillVolume = (order.isAsk()) ? (order.getUnfilledVolume().abs().minus(exchangeUnfilledVolume)).negate() : (order.getUnfilledVolume().abs()
-				.minus(exchangeUnfilledVolume));
-		//  if (order.isAsk())
+				.minus(exchangeUnfilledVolume)); //  if (order.isAsk())
 
 		//  new DiscreteAmount(DiscreteAmount.roundedCountForBasis(exchangeOrder.getAveragePrice(), order.getMarket().getPriceBasis());
 
@@ -1001,9 +1014,14 @@ public class XchangeOrderService extends BaseOrderService {
 		} catch (HttpStatusIOException hse) {
 			log.error(this.getClass().getSimpleName() + "cancelSpecificOrder: Unable to cancel order :" + order + "with trade service"
 					+ tradeService.hashCode() + " due to " + hse + ". Resetting Trade Service Connection.");
-			org.knowm.xchange.Exchange xchangeExchange = XchangeUtil.resetExchange(order.getMarket().getExchange());
+			XchangeUtil.resetExchange(order.getMarket().getExchange());
 			return deleted;
 
+		} catch (SocketTimeoutException ste) {
+			log.error(this.getClass().getSimpleName() + "cancelSpecificOrder: Unable to cancel order :" + order + "with trade service"
+					+ tradeService.hashCode() + " due to " + ste + ". Resetting Trade Service Connection.");
+			XchangeUtil.resetExchange(order.getMarket().getExchange());
+			return deleted;
 		} catch (Error | Exception e) {
 			log.error("Unable to cancel order :" + order + "with trade service" + tradeService.hashCode() + " due to " + e);
 			throw e;

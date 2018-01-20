@@ -31,7 +31,7 @@ import com.google.inject.assistedinject.AssistedInject;
 @Entity
 //@Cacheable(false)
 //@Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived"), @Index(columnList = "market") })
-@Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived") })
+@Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived"), @Index(columnList = "market") })
 public class Trade extends PriceData {
 
 	@Inject

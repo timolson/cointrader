@@ -840,7 +840,7 @@ public class Position extends Holding {
 		//   synchronized (this.getPortfolio().getPositions()) {
 
 		try {
-			log.debug("Position - delete : Delete of Position " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+			log.trace("Position - delete : Delete of Position " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 			//  if (this.getPortfolio() != null)
 			//  if (this.getPortfolio().removePosition(this)) {
 

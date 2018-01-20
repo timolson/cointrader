@@ -4,9 +4,9 @@ import Base;
 
 args:
 
-volume (market|listing) ('stop' stopPrice)? ('limit' limitPrice)? ('position' positionEffect)? 
-;
+volume (market|listing) ('stop' stopPrice)? ('limit' limitPrice)? ('position' positionEffect)?
 
+;
 
 market : Market;
 
@@ -18,4 +18,4 @@ stopPrice : Amount;
 
 limitPrice : Amount;
 
-positionEffect : String;
+positionEffect : PositionEffect;
