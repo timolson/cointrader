@@ -208,6 +208,11 @@
             <artifactId>xchange-binance</artifactId>
             <version>${xchange.version}</version>
         </dependency>
+                        <dependency>
+            <groupId>org.knowm.xchange</groupId>
+            <artifactId>xchange-bitmex</artifactId>
+            <version>${xchange.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.knowm.xchange</groupId>
             <artifactId>xchange-bitfinex</artifactId>

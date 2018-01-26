@@ -15,7 +15,6 @@ import org.cryptocoinpartners.schema.Listing;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
-import org.knowm.xchange.okcoin.FuturesContract;
 
 import com.google.common.collect.HashBiMap;
 
@@ -83,13 +82,6 @@ public class XchangeUtil {
 
 	public static CurrencyPair getCurrencyPairForListing(Listing listing) {
 		return new CurrencyPair(listing.getBase().getSymbol(), listing.getQuote().getSymbol());
-	}
-
-	public static FuturesContract getContractForListing(Listing listing) {
-
-		//String prompt = StringUtils.remove(WordUtils.capitalizeFully(listing.getPrompt().toString(), new char[] { '_' }), "_");
-
-		return FuturesContract.valueOfIgnoreCase(FuturesContract.class, listing.getPrompt().getSymbol());
 	}
 
 	private static HashBiMap<Exchange, org.knowm.xchange.Exchange> exchangesByMarket;

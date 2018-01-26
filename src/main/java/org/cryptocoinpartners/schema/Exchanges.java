@@ -34,4 +34,6 @@ public class Exchanges {
 			FeeMethod.PercentagePerUnit, true);
 	public static final Exchange BINANCE = Exchange.forSymbolOrCreate("BINANCE", 3, 0.0016, 0.0026, 0.00000001, 0.01, FeeMethod.PercentagePerUnit, 0.0003, 0,
 			FeeMethod.PercentagePerUnit, true);
+	public static final Exchange BITMEX = Exchange.forSymbolOrCreate("BITMEX", 1, 0.002, 0.002, 0, 0, FeeMethod.PercentagePerUnit, 0.25, 0,
+			FeeMethod.PercentagePerUnit, false);
 }

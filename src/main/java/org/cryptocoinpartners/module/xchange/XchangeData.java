@@ -38,7 +38,6 @@ import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.LimitOrder;
-import org.knowm.xchange.okcoin.FuturesContract;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,11 +89,13 @@ public class XchangeData {
 	 * if you leave out the package name it is assumed to be the same as the XchangeData class (i.e. the xchange module package).
 	 */
 	public interface Helper {
-		Object[] getTradesParameters(CurrencyPair pair, long lastTradeTime, long lastTradeId);
+		Object[] getTradesParameters(Listing listing, long lastTradeTime, long lastTradeId);
 
-		TradeHistoryParams getTradeHistoryParameters(CurrencyPair pair, long lastTradeTime, long lastTradeId);
+		TradeHistoryParams getTradeHistoryParameters(Listing listing, long lastTradeTime, long lastTradeId);
 
-		Object[] getOrderBookParameters(CurrencyPair pair);
+		Object[] getOrderBookParameters(Listing listing);
+
+		Object getContractForListing(Listing listing);
 
 		org.knowm.xchange.dto.Order adjustOrder(SpecificOrder specificOrder, org.knowm.xchange.dto.Order xchangeOrder);
 
@@ -183,7 +184,9 @@ public class XchangeData {
 		Prompt prompt = market.getListing().getPrompt();
 		ArrayList<org.cryptocoinpartners.schema.Trade> ourTrades = new ArrayList<org.cryptocoinpartners.schema.Trade>();
 		CurrencyPair pair = XchangeUtil.getCurrencyPairForListing(market.getListing());
-		FuturesContract contract = prompt == null ? null : XchangeUtil.getContractForListing(market.getListing());
+		Object contract = null;
+		if (XchangeUtil.getHelperForExchange(coinTraderExchange) != null && prompt != null)
+			contract = XchangeUtil.getHelperForExchange(coinTraderExchange).getContractForListing(market.getListing());
 		if (lastTradeTimes.get(market) == null || lastTradeTimes.get(market) == 0 || lastTradeIds.get(market) == null || lastTradeIds.get(market) == 0) {
 			try {
 
@@ -228,7 +231,8 @@ public class XchangeData {
 		try {
 			Object params[];
 			if (XchangeUtil.getHelperForExchange(coinTraderExchange) != null)
-				params = XchangeUtil.getHelperForExchange(coinTraderExchange).getTradesParameters(pair, lastTradeTimes.get(market), lastTradeIds.get(market));
+				params = XchangeUtil.getHelperForExchange(coinTraderExchange).getTradesParameters(market.getListing(), lastTradeTimes.get(market),
+						lastTradeIds.get(market));
 			else {
 				if (contract == null)
 					params = new Object[] {};
@@ -257,7 +261,9 @@ public class XchangeData {
 				 * Calendar cal = GregorianCalendar.getInstance(); cal.setTimeInMillis(trade.getTimestamp().getTime()); cal.set(Calendar.MILLISECOND, 0);
 				 * cal.set(Calendar.SECOND, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.HOUR_OF_DAY, 0); // long remoteId = cal.getTime().getTime() +
 				 * Long.valueOf(trade.getId());
-				 */long remoteId = Long.valueOf(trade.getId());
+				 */
+				long remoteId = Long.valueOf(trade.getId());
+
 				//   long remoteId = trade.getTimestamp().getTime() + Long.valueOf(trade.getId());
 
 				//  trade.getId().longValue();
@@ -334,12 +340,14 @@ public class XchangeData {
 	public Book getBook(Market market, Exchange coinTraderExchange) throws Exception {
 		Prompt prompt = market.getListing().getPrompt();
 		CurrencyPair pair = XchangeUtil.getCurrencyPairForListing(market.getListing());
-		FuturesContract contract = prompt == null ? null : XchangeUtil.getContractForListing(market.getListing());
+		Object contract = null;
+		if (prompt != null)
+			contract = XchangeUtil.getHelperForExchange(coinTraderExchange).getContractForListing(market.getListing());
 
 		try {
 			Object params[];
 			if (XchangeUtil.getHelperForExchange(coinTraderExchange) != null)
-				params = XchangeUtil.getHelperForExchange(coinTraderExchange).getOrderBookParameters(pair);
+				params = XchangeUtil.getHelperForExchange(coinTraderExchange).getOrderBookParameters(market.getListing());
 			else {
 				if (contract == null)
 					params = new Object[] {};
