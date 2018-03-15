@@ -13,7 +13,10 @@ import javax.persistence.TypedQuery;
 
 import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.module.ApplicationInitializer;
+import org.cryptocoinpartners.schema.Bar;
+import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.EntityBase;
+import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.Visitor;
 import org.hibernate.PersistentObjectException;
@@ -87,8 +90,8 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 				if (list.isEmpty())
 					return;
 				for (Object row : list) {
-					if (row.getClass().isArray() && !handler.handleItem((Object[]) row) || !row.getClass().isArray()
-							&& !handler.handleItem(new Object[] { row }))
+					if (row.getClass().isArray() && !handler.handleItem((Object[]) row)
+							|| !row.getClass().isArray() && !handler.handleItem(new Object[] { row }))
 						return;
 				}
 			}
@@ -346,17 +349,20 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 			try {
 				//   long revision = entity.findRevisionById();
 				// if (entity.getRevision() > revision) {
-				insert(entity);
-				persisted = true;
+				if (!entity.getPersisted()) {
+					insert(entity);
+					entity.setPersisted(true);
+					if (entity.getOriginalEntity() != null)
+						entity.getOriginalEntity().setPersisted(true);
+					persisted = true;
+				} else
+					mergeEntities(entity);
 				//} else {
 				//  log.trace("DapJpa - persistEntities: " + entity.getClass().getSimpleName() + " not peristed as entity revision " + entity.getRevision()
 				//        + " is not greater than peristed revision " + revision + ". Entity " + entity.getId());
 				// }
 
 			} catch (OptimisticLockException | StaleObjectStateException ole) {
-				attempt = entity.getAttempt() + 1;
-				entity.setAttempt(attempt);
-
 				if (attempt >= retry) {
 					log.error(" " + this.getClass().getSimpleName() + ":persist attempt:" + entity.getAttempt() + " for " + entity + " " + retry
 							+ ", full stack trace follows:", ole);
@@ -364,15 +370,45 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					entity.setAttempt(0);
 
 					throw ole;
-				} else {
-					log.trace(this.getClass().getSimpleName() + ":persist Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId()
-							+ " already persisted. Persist attempt " + entity.getAttempt() + " of " + retry);
-
-					entity.setAttempt(0);
-					entity.setPeristanceAction(PersistanceAction.NEW);
-					application.getInsertQueue().add(entity);
-					//      persist(false, entity);
 				}
+				attempt = entity.getAttempt() + 1;
+				entity.setAttempt(attempt);
+				try {
+					EntityBase dbEntity = restore(entity);
+					//log.debug("ole");
+
+					if (dbEntity != null)
+						entity.setVersion(dbEntity.getVersion());
+					entity.setPeristanceAction(PersistanceAction.MERGE);
+					if (entity instanceof Book)
+						application.getMergeBookQueue().add((Book) entity);
+					else if (entity instanceof Trade)
+						application.getMergeTradeQueue().add((Trade) entity);
+					else if (entity instanceof Bar)
+						application.getMergeBarQueue().add((Bar) entity);
+					else
+						application.getMergeQueue().add(entity);
+
+					//   merge(false, entity);
+
+				} catch (Exception | Error ex) {
+
+					//
+					//	entity.setPeristanceAction(PersistanceAction.MERGE);
+					//	application.getMergeQueue().add(entity);
+					//    merge(false, entity);
+					//	}
+
+				}
+				//else {
+				//		log.debug(this.getClass().getSimpleName() + ":persist Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId()
+				//				+ " already persisted. Persist attempt " + entity.getAttempt() + " of " + retry);
+				//
+				//					entity.setAttempt(0);
+				//					entity.setPeristanceAction(PersistanceAction.NEW);
+				//					application.getInsertQueue().add(entity);
+				//      persist(false, entity);
+				//				}
 
 			} catch (LockTimeoutException lte) {
 
@@ -387,11 +423,19 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					entity.setAttempt(0);
 					throw lte;
 				} else {
-					log.info("Record locked version of " + entity.getClass().getSimpleName() + " id: " + entity.getId()
-							+ " already persisted. Persist attempt " + entity.getAttempt() + " of " + retry);
+					log.info("Record locked version of " + entity.getClass().getSimpleName() + " id: " + entity.getId() + " already persisted. Persist attempt "
+							+ entity.getAttempt() + " of " + retry);
 					//               entity.setRevision(0);
 					entity.setPeristanceAction(PersistanceAction.NEW);
-					application.getInsertQueue().add(entity);
+					if (entity instanceof Book)
+						application.getInsertBookQueue().add((Book) entity);
+					else if (entity instanceof Trade)
+						application.getInsertTradeQueue().add((Trade) entity);
+					else if (entity instanceof Bar)
+						application.getInsertBarQueue().add((Bar) entity);
+					else
+						application.getInsertQueue().add(entity);
+
 					//  persist(false, entity);
 
 				}
@@ -420,7 +464,15 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 						entity.persitParents();
 						entity.prePersist();
 						entity.setPeristanceAction(PersistanceAction.NEW);
-						application.getInsertQueue().add(entity);
+						if (entity instanceof Book)
+							application.getInsertBookQueue().add((Book) entity);
+						else if (entity instanceof Trade)
+							application.getInsertTradeQueue().add((Trade) entity);
+						else if (entity instanceof Bar)
+							application.getInsertBarQueue().add((Bar) entity);
+						else
+							application.getInsertQueue().add(entity);
+
 						//    persist(false, entity);
 						//  persist(false, entity);
 						// attempt++;
@@ -448,7 +500,17 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 						// entity.setAttempt(0);
 						//                      entity.setRevision(0);
 						entity.setPeristanceAction(PersistanceAction.MERGE);
-						application.getMergeQueue().add(entity);
+						entity.setPersisted(true);
+						if (entity.getOriginalEntity() != null)
+							entity.getOriginalEntity().setPersisted(true);
+						if (entity instanceof Book)
+							application.getMergeBookQueue().add((Book) entity);
+						else if (entity instanceof Trade)
+							application.getMergeTradeQueue().add((Trade) entity);
+						else if (entity instanceof Bar)
+							application.getMergeBarQueue().add((Bar) entity);
+						else
+							application.getMergeQueue().add(entity);
 						// merge(false, entity);
 					}
 
@@ -474,7 +536,16 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 						//                        entity.setAttempt(0);
 						//                     entity.setRevision(0);
 						entity.setPeristanceAction(PersistanceAction.MERGE);
-						application.getMergeQueue().add(entity);
+
+						if (entity instanceof Book)
+							application.getMergeBookQueue().add((Book) entity);
+						else if (entity instanceof Trade)
+							application.getMergeTradeQueue().add((Trade) entity);
+						else if (entity instanceof Bar)
+							application.getMergeBarQueue().add((Bar) entity);
+						else
+							application.getMergeQueue().add(entity);
+
 						//   merge(false, entity);
 					}
 
@@ -497,7 +568,15 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 								+ " :persist, primary key for version " + entity.getVersion() + "  already present in db with version " + dbEntity.getVersion()
 								+ ". Persist attempt " + entity.getAttempt() + " of " + retry);
 						entity.setPeristanceAction(PersistanceAction.MERGE);
-						application.getMergeQueue().add(entity);
+						if (entity instanceof Book)
+							application.getMergeBookQueue().add((Book) entity);
+						else if (entity instanceof Trade)
+							application.getMergeTradeQueue().add((Trade) entity);
+						else if (entity instanceof Bar)
+							application.getMergeBarQueue().add((Bar) entity);
+						else
+							application.getMergeQueue().add(entity);
+
 						// merge(false, entity);
 
 					}
@@ -518,19 +597,19 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 
 			} finally {
 
-				if (persisted)
-
-					if (persisted) {
-						entity.setAttempt(0);
-
-						log.trace(" " + this.getClass().getSimpleName() + ":persist. Succefully persisted " + entity.getClass().getSimpleName() + " "
-								+ entity.getId());
-					}
+				if (persisted) {
+					entity.setAttempt(0);
+					entity.setPersisted(true);
+					if (entity.getOriginalEntity() != null)
+						entity.getOriginalEntity().setPersisted(true);
+					log.trace(" " + this.getClass().getSimpleName() + ":persist. Succefully persisted " + entity.getClass().getSimpleName() + " " + entity);
+				}
 
 			}
 			// break;
 			// }
 		}
+
 	}
 
 	//   unitOfWork.end();
@@ -541,14 +620,64 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 	//  @Override
 	@Override
 	public void persist(EntityBase... entities) {
-		for (EntityBase entity : entities)
-			log.trace("DaoJpa - Persist : Persit of " + entity.getClass().getSimpleName() + " " + entity.getId() + " called from class "
+		for (EntityBase entity : entities) {
+			log.debug("DaoJpa - Persist : Persit of " + entity.getClass().getSimpleName() + " " + entity.getId() + " called from class "
 					+ Thread.currentThread().getStackTrace()[2]);
-		//let's clone the object as it could update and cause issues 
-		//  SerializationUtils.clone(Object);
+			//let's clone the object as it could update and cause issues 
+			//  SerializationUtils.clone(Object);
+			if (entity.getPersisted())
+				persist(true, entity);
+			else
+				merge(true, entity);
+		}
 
-		persist(true, entities);
+	}
 
+	@Override
+	public void persist(Book... books) {
+		try {
+			for (Book book : books) {
+				if (book != null & !book.isPersisted()) {
+					book.setPeristanceAction(PersistanceAction.NEW);
+					application.getInsertBookQueue().add(book);
+					log.trace("persisting " + book.getClass().getSimpleName() + " id:" + book.getId());
+				}
+			}
+		} catch (Throwable e) {
+			log.error("Unable to resubmit insert request in " + this.getClass().getSimpleName() + "insert, full stack trace follows:", e);
+		}
+
+	}
+
+	@Override
+	public void persist(Bar... bars) {
+		try {
+			for (Bar bar : bars) {
+				if (bar != null && !bar.isPersisted()) {
+					bar.setPeristanceAction(PersistanceAction.NEW);
+					application.getInsertBarQueue().add(bar);
+					log.trace("persisting " + bar.getClass().getSimpleName() + " id:" + bar.getId());
+				}
+			}
+		} catch (Throwable e) {
+			log.error("Unable to resubmit insert request in " + this.getClass().getSimpleName() + "insert, full stack trace follows:", e);
+		}
+
+	}
+
+	@Override
+	public void persist(Trade... trades) {
+		try {
+			for (Trade trade : trades) {
+				if (trade != null && !trade.isPersisted()) {
+					trade.setPeristanceAction(PersistanceAction.NEW);
+					application.getInsertTradeQueue().add(trade);
+					log.trace("persisting " + trade.getClass().getSimpleName() + " id:" + trade.getId());
+				}
+			}
+		} catch (Throwable e) {
+			log.error("Unable to resubmit insert request in " + this.getClass().getSimpleName() + "insert, full stack trace follows:", e);
+		}
 	}
 
 	private void persist(boolean increment, EntityBase... entities) {
@@ -557,7 +686,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 			for (EntityBase entity : entities) {
 				//    entity.getDao().persistEntities(entity);
 				// synchronized (entity) {
-				if (entity != null) {
+				if (entity != null && !entity.isPersisted()) {
 					entity.setPeristanceAction(PersistanceAction.NEW);
 					//      if (increment)
 					// entity.getDao().persistEntities(entity);
@@ -565,13 +694,14 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					synchronized (entity) {
 						EntityBase entityClone = entity.clone();
 						entityClone.setDao(entity.getDao());
+						entityClone.setOriginalEntity(entity);
 						application.getInsertQueue().add(entityClone);
 					}
 
 					//  } else {
 					//    application.getInsertQueue().addFirst(entity);
 					//}
-					log.trace("persisting " + entity.getClass().getSimpleName() + " id:" + entity.getId());
+					log.debug("persisting " + entity.getClass().getSimpleName() + " id:" + entity.getId());
 				}
 				// }
 			}
@@ -579,8 +709,6 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 		} catch (Throwable e) {
 			log.error("Unable to resubmit insert request in " + this.getClass().getSimpleName() + "insert, full stack trace follows:", e);
 			//  e.printStackTrace();
-
-		} finally {
 
 		}
 
@@ -662,10 +790,71 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 	@Override
 	public void merge(EntityBase... entities) {
 		for (EntityBase entity : entities)
-			log.trace("DaoJpa - Merge : Merge of " + entity.getClass().getSimpleName() + " " + entity.getId() + " called from class "
+			log.debug("DaoJpa - Merge : Merge of " + entity.getClass().getSimpleName() + " " + entity.getId() + " called from class "
 					+ Thread.currentThread().getStackTrace()[2]);
 
 		merge(false, entities);
+	}
+
+	@Override
+	public void merge(Book... books) {
+		try {
+			for (Book book : books) {
+				if (book != null && book.isPersisted()) {
+					book.setPeristanceAction(PersistanceAction.MERGE);
+					application.getMergeBookQueue().add(book);
+
+					log.trace("merging " + book.getClass().getSimpleName() + " id:" + book.getId());
+				} else {
+					book.setPeristanceAction(PersistanceAction.NEW);
+					application.getInsertBookQueue().add(book);
+
+					log.trace("persisting " + book.getClass().getSimpleName() + " id:" + book.getId());
+				}
+			}
+		} catch (Throwable e) {
+			log.error("Unable to resubmit merge request in " + this.getClass().getSimpleName() + " merge, full stack trace follows:", e);
+
+		}
+	}
+
+	@Override
+	public void merge(Trade... trades) {
+		try {
+			for (Trade trade : trades) {
+				if (trade != null) {
+					trade.setPeristanceAction(PersistanceAction.MERGE);
+					application.getMergeTradeQueue().add(trade);
+
+					log.trace("merging " + trade.getClass().getSimpleName() + " id:" + trade.getId());
+				}
+			}
+		} catch (Throwable e) {
+			log.error("Unable to resubmit merge request in " + this.getClass().getSimpleName() + " merge, full stack trace follows:", e);
+
+		}
+	}
+
+	@Override
+	public void merge(Bar... bars) {
+		try {
+			for (Bar bar : bars) {
+				if (bar != null && bar.isPersisted()) {
+					bar.setPeristanceAction(PersistanceAction.MERGE);
+					application.getMergeBarQueue().add(bar);
+
+					log.trace("merging " + bar.getClass().getSimpleName() + " id:" + bar.getId());
+				} else {
+					bar.setPeristanceAction(PersistanceAction.NEW);
+					application.getInsertBarQueue().add(bar);
+
+					log.trace("persisting " + bar.getClass().getSimpleName() + " id:" + bar.getId());
+				}
+			}
+		} catch (Throwable e) {
+			log.error("Unable to resubmit merge request in " + this.getClass().getSimpleName() + " merge, full stack trace follows:", e);
+
+		}
 	}
 
 	// @Override
@@ -674,32 +863,19 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 		try {
 			for (EntityBase entity : entities) {
 				// synchronized (entity) {
-				if (entity != null) {
+				if (entity != null && entity.isPersisted()) {
 					entity.setPeristanceAction(PersistanceAction.MERGE);
-					// if (increment)
-					//  entity.setRevision(entity.getRevision() + 1);
-					//    entity.getDao().mergeEntities(entity);
-					// we should only add to quuee to front of queue
-					//   EntityBase entityClone = SerializationUtils.clone(entity);
-					// entityClone.setDao(entity.getDao());
 					synchronized (entity) {
 						EntityBase entityClone = entity.clone();
 
 						entityClone.setDao(entity.getDao());
+						entityClone.setOriginalEntity(entity);
 						application.getMergeQueue().add(entityClone);
 					}
-					//   application.getMergeQueue().add(entityClone);
-					//  .add(c);
-					// entity.getDao().mergeEntities(entity);
-					//  application.getMergeQueue().put(entity);
 
-					// }
-
-					// else {
-					//   application.getInsertQueue().addFirst(entity);
-					//}
-
-					log.trace("merging " + entity.getClass().getSimpleName() + " id:" + entity.getId());
+					log.debug("merging " + entity.getClass().getSimpleName() + " id:" + entity.getId());
+				} else {
+					persist(increment, entities);
 				}
 				// }
 			}
@@ -717,24 +893,10 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 	@Transactional
 	public void insert(EntityBase entity) throws Throwable {
 
-		// try {
-		//entityManager.get().lock(entity, LockModeType.PESSIMISTIC_WRITE);
-		//  synchronized (entity) {
 		synchronized (entity) {
 
 			entityManager.get().persist(entity);
 		}
-		// }
-		//entityManager.get().flush();
-		//} catch (Error | Exception ex) {
-		//   log.error("Unable to perform request in " + this.getClass().getSimpleName() + ":getReference, full stack trace follows:", ex);
-
-		//  throw ex;
-		// }
-
-		// entityManager.get().getTransaction().commit();
-		// entityManager.get().flush();
-		// TODO Auto-generated method stub
 
 	}
 
@@ -793,22 +955,12 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 	}
 
 	@Transactional
-	public void update(EntityBase entity) {
-		// try {
-		// entityManager.get().lock(entity, LockModeType.PESSIMISTIC_WRITE);
-
-		//   entity.getUpdateLock();
+	public void update(EntityBase entity) throws Throwable {
 
 		synchronized (entity) {
 			entityManager.get().merge(entity);
 
 		}
-
-		// } catch (Error | Exception ex) {
-		//   throw ex;
-		// }
-
-		// TODO Auto-generated method stub
 
 	}
 
@@ -856,7 +1008,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					remove(entity);
 					deleted = true;
 				} else {
-					log.trace("DapJpa - deleteEntities: " + entity.getClass().getSimpleName() + " not peristed as entity revision " + entity.getRevision()
+					log.debug("DapJpa - deleteEntities: " + entity.getClass().getSimpleName() + " not peristed as entity revision " + entity.getRevision()
 							+ " is not greater than peristed revision " + revision + ". Entity " + entity.getId());
 				}
 
@@ -900,8 +1052,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 				attempt = entity.getAttempt() + 1;
 				entity.setAttempt(attempt);
 				if (attempt >= retry) {
-					log.error(
-							" " + this.getClass().getSimpleName() + ":delete attempt:" + entity.getAttempt() + " of " + retry + ", full stack trace follows:",
+					log.error(" " + this.getClass().getSimpleName() + ":delete attempt:" + entity.getAttempt() + " of " + retry + ", full stack trace follows:",
 							ie);
 
 					entity.setAttempt(0);
@@ -931,8 +1082,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 				entity.setAttempt(attempt);
 
 				if (attempt >= retry) {
-					log.error(
-							" " + this.getClass().getSimpleName() + ":delete attempt:" + entity.getAttempt() + " of " + retry + ", full stack trace follows:",
+					log.error(" " + this.getClass().getSimpleName() + ":delete attempt:" + entity.getAttempt() + " of " + retry + ", full stack trace follows:",
 							ole);
 
 					entity.setAttempt(0);
@@ -965,7 +1115,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					// deleted = true;
 				}
 
-				log.trace(this.getClass().getSimpleName() + ":delete - Later version of " + entity.getClass().getSimpleName() + " id: " + entity
+				log.debug(this.getClass().getSimpleName() + ":delete - Later version of " + entity.getClass().getSimpleName() + " id: " + entity
 						+ " already merged. Delete attempt " + entity.getAttempt() + " of " + retry);
 
 			}
@@ -1015,7 +1165,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 
 				}
 				if (attempt >= retry) {
-					// log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
+					log.error(" " + this.getClass().getSimpleName() + ":merge, full stack trace follows:", ex);
 					for (EntityBase entity : entities) {
 						entity.setAttempt(0);
 
@@ -1072,7 +1222,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 
 					entity.setStartTime(entity.getDelay());
 
-					log.trace(this.getClass().getSimpleName() + ":delete - Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId()
+					log.debug(this.getClass().getSimpleName() + ":delete - Later version of " + entity.getClass().getSimpleName() + " id: " + entity.getId()
 							+ " already in database. Delete attempt " + entity.getAttempt() + " of " + retry);
 				}
 
@@ -1131,17 +1281,21 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 	}
 
 	@Override
-	public void mergeEntities(EntityBase... entities) {
+	public void mergeEntities(EntityBase... entities) throws Throwable {
 		int attempt = 0;
 		boolean merged = false;
 		try {
 			for (EntityBase entity : entities) {
 				long revision = entity.findRevisionById();
 				if (entity.getRevision() > revision) {
+					//	entity.setVersion(entity.getRevision());
 					update(entity);
+					entity.setPersisted(true);
+					if (entity.getOriginalEntity() != null)
+						entity.getOriginalEntity().setPersisted(true);
 					merged = true;
 				} else {
-					log.trace("DapJpa - mergeEntities: " + entity.getClass().getSimpleName() + " not peristed as entity revision " + entity.getRevision()
+					log.debug("DapJpa - mergeEntities: " + entity.getClass().getSimpleName() + " not peristed as entity revision " + entity.getRevision()
 							+ " is not greater than peristed revision " + revision + ". Entity " + entity.getId());
 				}
 
@@ -1172,7 +1326,14 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					// }
 					entity.prePersist();
 					entity.setPeristanceAction(PersistanceAction.MERGE);
-					application.getMergeQueue().add(entity);
+					if (entity instanceof Book)
+						application.getMergeBookQueue().add((Book) entity);
+					else if (entity instanceof Trade)
+						application.getMergeTradeQueue().add((Trade) entity);
+					else if (entity instanceof Bar)
+						application.getMergeBarQueue().add((Bar) entity);
+					else
+						application.getMergeQueue().add(entity);
 					//   persist(false, entity);
 					//  EntityBase dbEntity = null;
 					/*
@@ -1208,21 +1369,31 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 
 			//     unitOfWork.end();
 			for (EntityBase entity : entities) {
-				attempt = entity.getAttempt() + 1;
-				entity.setAttempt(attempt);
-				if (attempt >= retry) {
-					log.error(this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " for " + entity + " " + retry
-							+ ", full stack trace follows:", ole);
+				if (entity.getAttempt() >= retry) {
+
+					log.debug(" " + this.getClass().getSimpleName() + " " + entity.getClass().getSimpleName() + ":" + entity.getId()
+							+ " :merge, primary key for version " + entity.getVersion() + "  already present in db with higher version. Merge attempt "
+							+ entity.getAttempt() + " of " + retry);
 					entity.setAttempt(0);
-					throw ole;
+
+					//throw ole;
 				} else {
 					EntityBase dbEntity = null;
 					try {
 						dbEntity = restore(entity);
+
 						if (dbEntity != null)
 							entity.setVersion(dbEntity.getVersion());
 						entity.setPeristanceAction(PersistanceAction.MERGE);
-						application.getMergeQueue().add(entity);
+
+						if (entity instanceof Book)
+							application.getMergeBookQueue().add((Book) entity);
+						else if (entity instanceof Trade)
+							application.getMergeTradeQueue().add((Trade) entity);
+						else if (entity instanceof Bar)
+							application.getMergeBarQueue().add((Bar) entity);
+						else
+							application.getMergeQueue().add(entity);
 
 						//   merge(false, entity);
 
@@ -1230,9 +1401,20 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 
 						//
 						entity.setPeristanceAction(PersistanceAction.MERGE);
-						application.getMergeQueue().add(entity);
+						if (entity instanceof Book)
+							application.getMergeBookQueue().add((Book) entity);
+						else if (entity instanceof Trade)
+							application.getMergeTradeQueue().add((Trade) entity);
+						else if (entity instanceof Bar)
+							application.getMergeBarQueue().add((Bar) entity);
+						else
+							application.getMergeQueue().add(entity);
+
 						//    merge(false, entity);
 					}
+					attempt = entity.getAttempt() + 1;
+					entity.setAttempt(attempt);
+
 					//     return;
 
 					//  log.error("error", ex);
@@ -1265,24 +1447,25 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					//  } //else
 					// entity.setVersion(entity.getVersion() + 1);
 					/*
-					 * if (attempt >= retry) { log.error(this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " of " + retry +
-					 * ", unable to merge " + entity.getClass().getSimpleName() + " with id " + entity.getId()); entity.setAttempt(0); // throw ole; } else {
-					 * //} //for (EntityBase entity : entities) { entity.setVersion(Math.max(entity.findVersionById() + 1, entity.getVersion() + 1));
-					 *///  entity.setStartTime(entity.getDelay() * 2);
+					* if (attempt >= retry) { log.error(this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " of " + retry +
+					* ", unable to merge " + entity.getClass().getSimpleName() + " with id " + entity.getId()); entity.setAttempt(0); // throw ole; } else {
+					* //} //for (EntityBase entity : entities) { entity.setVersion(Math.max(entity.findVersionById() + 1, entity.getVersion() + 1));
+					*///  entity.setStartTime(entity.getDelay() * 2);
 						//   entity.setAttempt(0);
-					log.trace(this.getClass().getSimpleName() + ":merge - Later version of " + entity.getClass().getSimpleName() + " id: " + entity
-							+ " already merged. Merge attempt " + entity.getAttempt() + " of " + retry);
-					//  entity.setRevision(0);
-					//   merge(false, entity);
-					// mergeEntities(entities);
-					//update(entity);
-					//       entity.setPeristanceAction(PersistanceAction.MERGE);
-					// merge(entity);
-					// merge(false, entity);
+						//			log.debug(this.getClass().getSimpleName() + ":merge - Later version of " + entity.getClass().getSimpleName() + " id: " + entity
+						//					+ " already merged. Merge attempt " + entity.getAttempt() + " of " + retry);
+						//  entity.setRevision(0);
+						//   merge(false, entity);
+						// mergeEntities(entities);
+						//update(entity);
+						//       entity.setPeristanceAction(PersistanceAction.MERGE);
+						// merge(entity);
+						// merge(false, entity);
+
 				}
 			}
 
-		} catch (Exception | Error ex) {
+		} catch (Throwable ex) {
 			//    log.debug(" cause: " + ex.getCause() + "cause casuse" + ex.getCause().getCause() + "ex" + ex);
 			if (ex.getCause() != null && ex.getCause() instanceof TransientPropertyValueException
 					|| (ex.getCause() != null && ex.getCause().getCause() != null && ex.getCause().getCause() instanceof TransientPropertyValueException)) {
@@ -1310,8 +1493,15 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 						//                   entity.setRevision(0);
 						entity.prePersist();
 						entity.setPeristanceAction(PersistanceAction.MERGE);
+						if (entity instanceof Book)
+							application.getMergeBookQueue().add((Book) entity);
+						else if (entity instanceof Trade)
+							application.getMergeTradeQueue().add((Trade) entity);
+						else if (entity instanceof Bar)
+							application.getMergeBarQueue().add((Bar) entity);
+						else
+							application.getMergeQueue().add(entity);
 
-						application.getMergeQueue().add(entity);
 						//     merge(false, entities);
 
 					}
@@ -1335,8 +1525,18 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					} else {
 						//      entity.setRevision(0);
 						entity.setPeristanceAction(PersistanceAction.MERGE);
+						entity.setPersisted(true);
+						if (entity.getOriginalEntity() != null)
+							entity.getOriginalEntity().setPersisted(true);
+						if (entity instanceof Book)
+							application.getMergeBookQueue().add((Book) entity);
+						else if (entity instanceof Trade)
+							application.getMergeTradeQueue().add((Trade) entity);
+						else if (entity instanceof Bar)
+							application.getMergeBarQueue().add((Bar) entity);
+						else
+							application.getMergeQueue().add(entity);
 
-						application.getMergeQueue().add(entity);
 						//    merge(false, entities);
 					}
 				}
@@ -1347,7 +1547,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					entity.setAttempt(attempt);
 
 					log.debug(" " + this.getClass().getSimpleName() + " " + entity.getClass().getSimpleName() + ":" + entity.getId()
-							+ " :merge, issue with accessing proerpties, retrying merge. Persist attempt " + entity.getAttempt() + " of " + retry);
+							+ " :merge, issue with accessing proerpties, retrying merge. Persist attempt " + entity.getAttempt() + " of " + retry, ex);
 
 					if (attempt >= retry) {
 						log.error(" " + this.getClass().getSimpleName() + ":merge attempt:" + entity.getAttempt() + " for " + entity + " " + retry
@@ -1359,8 +1559,15 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					} else {
 						//     entity.setRevision(0);
 						entity.setPeristanceAction(PersistanceAction.MERGE);
+						if (entity instanceof Book)
+							application.getMergeBookQueue().add((Book) entity);
+						else if (entity instanceof Trade)
+							application.getMergeTradeQueue().add((Trade) entity);
+						else if (entity instanceof Bar)
+							application.getMergeBarQueue().add((Bar) entity);
+						else
+							application.getMergeQueue().add(entity);
 
-						application.getMergeQueue().add(entity);
 						//  merge(false, entities);
 					}
 				}
@@ -1378,9 +1585,19 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 						EntityBase dbEntity = null;
 						try {
 							dbEntity = restore(entity);
+							if (dbEntity != null)
+								entity.setVersion(dbEntity.getVersion());
 						} catch (Exception | Error ex1) {
 							entity.setPeristanceAction(PersistanceAction.MERGE);
-							application.getMergeQueue().add(entity);
+							if (entity instanceof Book)
+								application.getMergeBookQueue().add((Book) entity);
+							else if (entity instanceof Trade)
+								application.getMergeTradeQueue().add((Trade) entity);
+							else if (entity instanceof Bar)
+								application.getMergeBarQueue().add((Bar) entity);
+							else
+								application.getMergeQueue().add(entity);
+
 							//   merge(false, entity);
 							return;
 
@@ -1400,13 +1617,13 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 						//     if (dbEntity != null)
 						//   dbEntity.setVersion(0);
 						// merge(false, dbEntity);
-						entity.setVersion(dbEntity.getVersion());
+						//entity.setVersion(dbEntity.getVersion());
 						//  update(dbEntity);
 
 						// entity.setStartTime(entity.getDelay() * 2);
 						//  entity.setAttempt(0);
-						log.trace(this.getClass().getSimpleName() + ":merge - Later version of " + entity.getClass().getSimpleName() + " id: " + entity
-								+ " caused by already merged. Merge attempt " + entity.getAttempt() + " of " + retry);
+						//	log.debug(this.getClass().getSimpleName() + ":merge - Later version of " + entity.getClass().getSimpleName() + " id: " + entity
+						//			+ " caused by already merged. Merge attempt " + entity.getAttempt() + " of " + retry);
 						//           entity.setRevision(0);
 						//  entity.setPeristanceAction(PersistanceAction.MERGE);
 
@@ -1430,7 +1647,6 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 		} finally {
 			if (merged)
 				for (EntityBase entity : entities) {
-
 					entity.setAttempt(0);
 					log.trace(" " + this.getClass().getSimpleName() + ":merge. Succefully merged " + entity.getClass().getSimpleName() + " " + entity);
 				}

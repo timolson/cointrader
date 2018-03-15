@@ -1,6 +1,8 @@
 package org.cryptocoinpartners.bin;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Semaphore;
 
 import javax.inject.Inject;
@@ -11,6 +13,7 @@ import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.JMXManager;
 import org.cryptocoinpartners.module.MockOrderService;
 import org.cryptocoinpartners.module.xchange.XchangeAccountService;
+import org.cryptocoinpartners.schema.Position;
 import org.cryptocoinpartners.schema.ReplayFactory;
 import org.cryptocoinpartners.schema.StrategyInstance;
 import org.cryptocoinpartners.service.OrderService;
@@ -39,26 +42,18 @@ public class BacktestRunMode extends RunMode {
 	Semaphore backTestSemaphore = new Semaphore(0);
 
 	// aws replay (LTC/BTC)
-	//private final Instant start = new DateTime(2017, 6, 10, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
-	//private final Instant end = new DateTime(2017, 9, 18, 0, 0, 0, DateTimeZone.UTC).toInstant();//
-
-	// aws replay (ALL)
-	//	private final Instant start = new DateTime(2017, 9, 1, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
-	//private final Instant end = new DateTime(2017, 11, 19, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
-
-	///private final Instant start = new DateTime(2017, 07, 03, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
-	//	private final Instant end = new DateTime(2017, 10, 19, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
-
-	//private final Instant end = new DateTime(2017, 11, 16, 0, 0, 0, DateTimeZone.UTC).toInstant();
-
-	//back tester (from 2014-01-07 to 2017-06-05)
-	//private final Instant start = new DateTime(2014, 10, 25, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();//
+	//private final Instant start = new DateTime(2016, 4, 22, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+	//private final Instant end = new DateTime(2017, 11, 30, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
 
 	private final Instant start = new DateTime(2014, 01, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();//
-	private final Instant end = new DateTime(2015, 11, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();//
+	//private final Instant start = new DateTime(2014, 01, 07, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();//
+
+	private final Instant end = new DateTime(2015, 11, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();
+	private final Set<StrategyInstance> strategyInstances = new HashSet<StrategyInstance>();
+	//
 	//out of sample tester (from 2014-01-07 to 2017-06-05)
-	//	private final Instant start = new DateTime(2016, 06, 10, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();//
-	//private final Instant end = new DateTime(2017, 12, 01, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();//
+	//private final Instant start = new DateTime(2016, 06, 10, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();//
+	//private final Instant end = new DateTime(2017, 11, 15, 0, 0, 0, 0, DateTimeZone.UTC).toInstant();//
 
 	@Parameter(names = { "-" }, description = "No-op switch used to end list of positions before supplying the strategy name")
 	boolean noop = false;
@@ -70,7 +65,7 @@ public class BacktestRunMode extends RunMode {
 		//Replay replay = Replay.between(start, end, true);  
 		//  Replay replay;
 		// if (ConfigUtil.combined().getBoolean("randomticker", false))
-		Replay replay = replayFactory.between(start, end, false, backTestSemaphore, ConfigUtil.combined().getBoolean("randomticker", false), true, false);
+		Replay replay = replayFactory.between(start, end, false, backTestSemaphore, ConfigUtil.combined().getBoolean("randomticker", false), true, false, null);
 
 		//else
 		//  replay = replayFactory.between(start, end, false, backTestSemaphore);
@@ -97,7 +92,9 @@ public class BacktestRunMode extends RunMode {
 			StrategyInstance strategyInstance = new StrategyInstance(strategyName);
 			context.attachInstance(strategyInstance);
 			strategyInstance.getStrategy().init();
+			strategyInstances.add(strategyInstance);
 
+			//strategyInstance.getP
 			//setUpInitialPortfolio(strategyInstance);
 
 			// context.getInjector().getInstance(cls)
@@ -119,6 +116,30 @@ public class BacktestRunMode extends RunMode {
 		}
 
 		log.info("Back test completed");
+		for (StrategyInstance strategyInstance : strategyInstances) {
+			log.info(this.getClass().getSimpleName() + ":run - Portfolio: " + strategyInstance.getPortfolio() + " Total Cash Value ("
+					+ strategyInstance.getPortfolio().getBaseAsset() + "):"
+					+ strategyInstance.getPortfolioService().getBaseCashBalance(strategyInstance.getPortfolio().getBaseAsset())
+							.plus(strategyInstance.getPortfolioService().getBaseUnrealisedPnL(strategyInstance.getPortfolio().getBaseAsset()))
+					+ ", Total Notional Value (" + strategyInstance.getPortfolio().getBaseAsset() + "):"
+					+ strategyInstance.getPortfolio().getStartingBaseNotionalBalance()
+							.plus(strategyInstance.getPortfolioService().getBaseCashBalance(strategyInstance.getPortfolio().getBaseAsset()))
+							.plus(strategyInstance.getPortfolioService().getBaseUnrealisedPnL(strategyInstance.getPortfolio().getBaseAsset()))
+							.minus(strategyInstance.getPortfolio().getStartingBaseCashBalance())
+					+ " (Cash Balance:" + strategyInstance.getPortfolioService().getBaseCashBalance(strategyInstance.getPortfolio().getBaseAsset())
+					+ " Realised PnL (M2M):" + strategyInstance.getPortfolioService().getBaseRealisedPnL(strategyInstance.getPortfolio().getBaseAsset())
+					+ " Open Trade Equity:" + strategyInstance.getPortfolioService().getBaseUnrealisedPnL(strategyInstance.getPortfolio().getBaseAsset())
+					+ " MarketValue:" + strategyInstance.getPortfolioService().getBaseMarketValue(strategyInstance.getPortfolio().getBaseAsset()) + ")");
+			for (Position position : strategyInstance.getPortfolio().getNetPositions()) {
+				log.info(this.getClass().getSimpleName() + ":run - Portfolio: " + strategyInstance.getPortfolio() + " Instrument: " + position.getAsset()
+						+ " Position: " + position.toString());
+				log.info(this.getClass().getSimpleName() + ":run - Portfolio: " + strategyInstance.getPortfolio() + " Instrument: " + position.getAsset()
+						+ " position: " + position.getId() + " fills: " + position.getFills());
+
+			}
+
+		}
+
 		// todo report P&L, etc.
 	}
 

@@ -5,54 +5,69 @@ import java.util.UUID;
 
 import javax.persistence.NoResultException;
 
+import org.cryptocoinpartners.schema.Bar;
+import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.EntityBase;
+import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.util.Visitor;
 
 public interface Dao {
-    void persist(EntityBase... entities);
+	void persist(EntityBase... entities);
 
-    void detach(EntityBase... entities);
+	void persist(Book... book);
 
-    EntityBase refresh(EntityBase... entities);
+	void persist(Trade... trade);
 
-    void merge(EntityBase... entities);
+	void persist(Bar... bar);
 
-    void persistEntities(EntityBase... entities) throws Throwable;
+	void detach(EntityBase... entities);
 
-    void mergeEntities(EntityBase... entities) throws Throwable;
+	EntityBase refresh(EntityBase... entities);
 
-    void deleteEntities(EntityBase... entities);
+	void merge(EntityBase... entities);
 
-    void delete(EntityBase... entities);
+	void merge(Book... book);
 
-    <T> T find(Class<T> resultType, UUID id);
+	void merge(Trade... trade);
 
-    boolean contains(EntityBase entity);
+	void merge(Bar... bar);
 
-    <T> T queryZeroOne(Class<T> resultType, String queryStr, Object... params);
+	void persistEntities(EntityBase... entities) throws Throwable;
 
-    <T> List<T> queryList(Class<T> resultType, String queryStr, Object... params);
+	void mergeEntities(EntityBase... entities) throws Throwable;
 
-    <T> T namedQueryOne(Class<T> resultType, String namedQuery, Object... params) throws NoResultException;
+	void deleteEntities(EntityBase... entities);
 
-    <T extends EntityBase> T findById(Class<T> resultType, UUID id) throws NoResultException;
+	void delete(EntityBase... entities);
 
-    void queryEach(Visitor<Object[]> handler, String queryStr, Object... params);
+	<T> T find(Class<T> resultType, UUID id);
 
-    <T> void queryEach(Class<T> resultType, Visitor<T> handler, int batchSize, String queryStr, Object... params);
+	boolean contains(EntityBase entity);
 
-    <T> void queryEach(Class<T> resultType, Visitor<T> handler, String queryStr, Object... params);
+	<T> T queryZeroOne(Class<T> resultType, String queryStr, Object... params);
 
-    void queryEach(Visitor<Object[]> handler, int batchSize, String queryStr, Object... params);
+	<T> List<T> queryList(Class<T> resultType, String queryStr, Object... params);
 
-    <T> Long findRevisionById(Class<T> resultType, UUID id) throws NoResultException;
+	<T> T namedQueryOne(Class<T> resultType, String namedQuery, Object... params) throws NoResultException;
 
-    <T> Long findVersionById(Class<T> resultType, UUID id) throws NoResultException;
+	<T extends EntityBase> T findById(Class<T> resultType, UUID id) throws NoResultException;
 
-    // T queryZeroOne(Class<T> resultType, String queryStr, Object[] params);
+	void queryEach(Visitor<Object[]> handler, String queryStr, Object... params);
 
-    //  T queryZeroOne(Class<T> resultType, String queryStr, Object[] params);
+	<T> void queryEach(Class<T> resultType, Visitor<T> handler, int batchSize, String queryStr, Object... params);
 
-    //public <T> T queryOne(Class<T> resultType, String queryStr, Object... params);
+	<T> void queryEach(Class<T> resultType, Visitor<T> handler, String queryStr, Object... params);
+
+	void queryEach(Visitor<Object[]> handler, int batchSize, String queryStr, Object... params);
+
+	<T> Long findRevisionById(Class<T> resultType, UUID id) throws NoResultException;
+
+	<T> Long findVersionById(Class<T> resultType, UUID id) throws NoResultException;
+
+	// T queryZeroOne(Class<T> resultType, String queryStr, Object[] params);
+
+	//  T queryZeroOne(Class<T> resultType, String queryStr, Object[] params);
+
+	//public <T> T queryOne(Class<T> resultType, String queryStr, Object... params);
 
 }

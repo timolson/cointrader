@@ -29,7 +29,6 @@ import org.cryptocoinpartners.schema.ExchangeFactory;
 import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
-import org.cryptocoinpartners.schema.Offer;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.Position;
 import org.cryptocoinpartners.schema.RemoteEvent;
@@ -109,10 +108,11 @@ public class BasicPortfolioService implements PortfolioService {
 							continue;
 						// market.getExchange().getBalances().get(balanceAsset);
 						DiscreteAmount price = new DiscreteAmount(0, balanceAsset.getBasis());
-						TransactionType transactionType = (market.getExchange().getBalances().get(balanceAsset).getAmount().isNegative()) ? TransactionType.DEBIT
+						TransactionType transactionType = (market.getExchange().getBalances().get(balanceAsset).getAmount().isNegative())
+								? TransactionType.DEBIT
 								: TransactionType.CREDIT;
-						Transaction initialCredit = transactionFactory.create(portfolio, market.getExchange(), balanceAsset, transactionType, market
-								.getExchange().getBalances().get(balanceAsset).getAmount(), price);
+						Transaction initialCredit = transactionFactory.create(portfolio, market.getExchange(), balanceAsset, transactionType,
+								market.getExchange().getBalances().get(balanceAsset).getAmount(), price);
 						//TODI when support multiple protfoiols,we might need to credit each port folio with the same amount per exchange.Prbbaly better to not make it protfoio based and have all portfolio access the same exchange balance.
 						//
 						log.info(this.getClass().getSimpleName() + " creating transaction balance for exchange : " + market.getExchange() + " and portfolio "
@@ -126,8 +126,8 @@ public class BasicPortfolioService implements PortfolioService {
 				}
 				Amount cashBalance = getBaseCashBalance(portfolio.getBaseAsset());
 				if (cashBalance != null && !cashBalance.isZero())
-					portfolio.setStartingBaseCashBalanceCount(getBaseCashBalance(portfolio.getBaseAsset()).toBasis(portfolio.getBaseAsset().getBasis(),
-							Remainder.ROUND_EVEN).getCount());
+					portfolio.setStartingBaseCashBalanceCount(
+							getBaseCashBalance(portfolio.getBaseAsset()).toBasis(portfolio.getBaseAsset().getBasis(), Remainder.ROUND_EVEN).getCount());
 
 			}
 		}
@@ -573,20 +573,27 @@ public class BasicPortfolioService implements PortfolioService {
 	@Override
 	@Transient
 	@SuppressWarnings("ConstantConditions")
-	public synchronized Trade getMarketPrice(Position postion) {
+	public synchronized Trade getMarketPrice(Listing listing) {
 		Trade price;
-		if (postion == null)
+		if (listing == null)
 			return null;
 
 		else {
 
-			if (quotes.getLastTrade(postion.getMarket()) != null) {
-				price = quotes.getLastTrade(postion.getMarket());
+			if (quotes.getLastTrade(listing) != null) {
+				price = quotes.getLastTrade(listing);
 			} else {
-				price = tradeFactory.create(postion.getMarket(), context.getTime(), "0", BigDecimal.ZERO, BigDecimal.ZERO);
+
+				String marketSymbol = ("SELF:" + listing.getSymbol());
+				Market selfMarket = (Market) Market.forSymbol(marketSymbol);
+				if (selfMarket == null) {
+					Exchange exchange = Exchange.forSymbol("SELF");
+					selfMarket = Market.findOrCreate(exchange, listing);
+				}
+
+				price = tradeFactory.create(selfMarket, context.getTime(), "0", BigDecimal.ZERO, BigDecimal.ZERO);
 				//  price = new DiscreteAmount(0, postion.getMarket().getVolumeBasis());
-				log.debug(this.getClass().getSimpleName() + ":getMarketPrice - Uable to retrieve last trade price from quote service for market "
-						+ postion.getMarket());
+				log.debug(this.getClass().getSimpleName() + ":getMarketPrice - Uable to retrieve last trade price from quote service for market " + listing);
 
 			}
 
@@ -597,16 +604,54 @@ public class BasicPortfolioService implements PortfolioService {
 
 	@Override
 	@Transient
+	@SuppressWarnings("ConstantConditions")
+	public synchronized Trade getMarketPrice(Market market) {
+		Trade price;
+		if (market == null)
+			return null;
+
+		else {
+
+			if (quotes.getLastTrade(market) != null) {
+				price = quotes.getLastTrade(market);
+			} else {
+				price = tradeFactory.create(market, context.getTime(), "0", BigDecimal.ZERO, BigDecimal.ZERO);
+				//  price = new DiscreteAmount(0, postion.getMarket().getVolumeBasis());
+				log.debug(this.getClass().getSimpleName() + ":getMarketPrice - Uable to retrieve last trade price from quote service for market " + market);
+
+			}
+
+			return price;
+
+		}
+	}
+
+	@Override
+	@Transient
+	@SuppressWarnings("ConstantConditions")
+	public synchronized Trade getMarketPrice(Position postion) {
+		return getMarketPrice(postion.getMarket());
+
+	}
+
+	@Override
+	@Transient
 	public synchronized Amount getMarketValue(Position position) {
 		Amount marketPrice = getMarketPrice(position).getPrice();
-		Amount marketValue;
+		Amount marketValue = null;
 		//   position.getAvgPrice()
 
 		if (position.isOpen() && marketPrice != null && !marketPrice.isZero()) {
-			if (position.getMarket().getContractSize(position.getMarket()) == 1D)
+			if (position.getMarket().getContractSize(position.getMarket()) == 1D) {
 				marketValue = position.getVolume().times(marketPrice, Remainder.ROUND_EVEN);
-			else
+				log.debug(this.getClass().getSimpleName() + ":getMarketValue - Cacluated market value of " + marketValue + " with market price " + marketPrice
+						+ " for position " + position);
+			} else {
 				marketValue = (position.getVolume().times(position.getMarket().getContractSize(position.getMarket()), Remainder.ROUND_EVEN));
+				log.debug(this.getClass().getSimpleName() + ":getMarketValue - Cacluated market value of " + marketValue + " with market price " + marketPrice
+						+ " and contract size " + position.getMarket().getContractSize(position.getMarket()) + " for position " + position);
+
+			}
 			return marketValue;
 			//   Amount multiplier = position.getMarket().getMultiplier(position.getMarket(), marketPrice, DecimalAmount.ONE);
 
@@ -629,11 +674,16 @@ public class BasicPortfolioService implements PortfolioService {
 		//have to invert her
 		Amount avgPrice = position.getAvgPrice();
 		Trade lastTrade = getMarketPrice(position);
-		Amount marketPrice = markToMarketPrice == null || (markToMarketPrice != null && markToMarketPrice.isZero()) ? (lastTrade.getPrice().isZero() ? avgPrice
-				: lastTrade.getPrice()) : markToMarketPrice;
+		Amount marketPrice = markToMarketPrice == null || (markToMarketPrice != null && markToMarketPrice.isZero())
+				? (lastTrade.getPrice().isZero() ? avgPrice : lastTrade.getPrice())
+				: markToMarketPrice;
 
-		log.trace(this.getClass().getSimpleName() + ":getUnrealisedPnL - Calculating unrealised PnL with opening price:" + avgPrice + " and closing price:"
-				+ marketPrice + " from " + lastTrade.getTime() + " for position " + position);
+		Amount unrealisedPnl = (position.isFlat()) ? new DiscreteAmount(0, position.getMarket().getVolumeBasis())
+				: ((marketPrice.minus(avgPrice)).times(position.getVolume(), Remainder.ROUND_EVEN))
+						.times(position.getMarket().getMultiplier(position.getMarket(), avgPrice, marketPrice), Remainder.ROUND_EVEN)
+						.times(position.getMarket().getContractSize(position.getMarket()), Remainder.ROUND_EVEN);
+		log.debug(this.getClass().getSimpleName() + ":getUnrealisedPnL - Calculated unrealised PnL of " + unrealisedPnl + " with opening price:" + avgPrice
+				+ " and closing price:" + marketPrice + " from " + lastTrade.getTime() + " for position " + position);
 
 		// avgPrice = position.getMarket().getMultiplier(position.getMarket(), avgPrice, DecimalAmount.ONE);
 
@@ -648,9 +698,7 @@ public class BasicPortfolioService implements PortfolioService {
 		//        Remainder.ROUND_EVEN).times(position.getMarket().getContractSize(position.getMarket()), Remainder.ROUND_EVEN);
 
 		//cash should be exit price - entry price, so marketepric-average price
-		return (position.isFlat()) ? new DiscreteAmount(0, position.getMarket().getVolumeBasis()) : ((marketPrice.minus(avgPrice)).times(position.getVolume(),
-				Remainder.ROUND_EVEN)).times(position.getMarket().getMultiplier(position.getMarket(), avgPrice, marketPrice), Remainder.ROUND_EVEN).times(
-				position.getMarket().getContractSize(position.getMarket()), Remainder.ROUND_EVEN);
+		return unrealisedPnl;
 
 	}
 
@@ -674,8 +722,8 @@ public class BasicPortfolioService implements PortfolioService {
 						marketValue = marketValues.get(position.getAsset());
 					}
 					marketValue = marketValue.plus(getMarketValue(position));
-					Asset tradedCCY = (position.getMarket().getTradedCurrency(position.getMarket()) == null) ? position.getMarket().getBase() : position
-							.getMarket().getTradedCurrency(position.getMarket());
+					Asset tradedCCY = (position.getMarket().getTradedCurrency(position.getMarket()) == null) ? position.getMarket().getBase()
+							: position.getMarket().getTradedCurrency(position.getMarket());
 					marketValues.put(tradedCCY, marketValue);
 
 				}
@@ -701,11 +749,9 @@ public class BasicPortfolioService implements PortfolioService {
 				//  for (Fill pos : getFills()) {
 				Position position = itf.next();
 				if (position.getMarket().equals(market)) {
-					Asset currency = (position.getMarket().getTradedCurrency(position.getMarket()) == null) ? position.getMarket().getQuote() : position
-							.getMarket().getTradedCurrency(position.getMarket());
+					Asset currency = (position.getMarket().getTradedCurrency(position.getMarket()) == null) ? position.getMarket().getQuote()
+							: position.getMarket().getTradedCurrency(position.getMarket());
 					if (position.isOpen()) {
-						if (position.getMarket().getSymbol().equals("OKCOIN_THISWEEK:LTC.USD.THISWEEK"))
-							log.error("incorrect pnl");
 						if (unrealisedPnLs.get(position.getAsset()) != null) {
 							unrealisedPnL = unrealisedPnLs.get(position.getAsset());
 						}
@@ -736,8 +782,8 @@ public class BasicPortfolioService implements PortfolioService {
 				Amount unrealisedPnL = DecimalAmount.ZERO;
 
 				Position position = itf.next();
-				Asset currency = (position.getMarket().getTradedCurrency(position.getMarket()) == null) ? position.getMarket().getQuote() : position
-						.getMarket().getTradedCurrency(position.getMarket());
+				Asset currency = (position.getMarket().getTradedCurrency(position.getMarket()) == null) ? position.getMarket().getQuote()
+						: position.getMarket().getTradedCurrency(position.getMarket());
 				if (position.isOpen()) {
 					if (unrealisedPnLs.get(position.getAsset()) != null) {
 						unrealisedPnL = unrealisedPnLs.get(position.getAsset());
@@ -769,8 +815,8 @@ public class BasicPortfolioService implements PortfolioService {
 				Position position = itf.next();
 				if (!position.getExchange().equals(exchange))
 					continue;
-				Asset currency = (position.getMarket().getTradedCurrency(position.getMarket()) == null) ? position.getMarket().getQuote() : position
-						.getMarket().getTradedCurrency(position.getMarket());
+				Asset currency = (position.getMarket().getTradedCurrency(position.getMarket()) == null) ? position.getMarket().getQuote()
+						: position.getMarket().getTradedCurrency(position.getMarket());
 				if (position.isOpen()) {
 					if (position.getMarket().getSymbol().equals("OKCOIN_THISWEEK:LTC.USD.THISWEEK"))
 						log.error("incorrect pnl");
@@ -804,8 +850,8 @@ public class BasicPortfolioService implements PortfolioService {
 				Position position = itf.next();
 				if (!position.getExchange().equals(exchange))
 					continue;
-				Asset currency = (position.getMarket().getTradedCurrency(position.getMarket()) == null) ? position.getMarket().getQuote() : position
-						.getMarket().getTradedCurrency(position.getMarket());
+				Asset currency = (position.getMarket().getTradedCurrency(position.getMarket()) == null) ? position.getMarket().getQuote()
+						: position.getMarket().getTradedCurrency(position.getMarket());
 				if (position.isOpen()) {
 					if (position.getMarket().getSymbol().equals("OKCOIN_THISWEEK:LTC.USD.THISWEEK"))
 						log.error("incorrect pnl");
@@ -840,12 +886,13 @@ public class BasicPortfolioService implements PortfolioService {
 		Map<Asset, Amount> marketValues = getMarketValues();
 		for (Asset baseAsset : marketValues.keySet()) {
 			Listing listing = Listing.forPair(baseAsset, quoteAsset);
-			Offer rate = quotes.getImpliedBestAskForListing(listing);
-			if (rate != null) {
-				log.trace(this.getClass().getSimpleName() + ":getBaseMarketValue - Calculating base market value balance " + marketValues.get(baseAsset)
-						+ " with " + quoteAsset + "/" + baseAsset + ":" + rate.getPrice());
+			Trade rate = getMarketPrice(listing);
+			if (rate != null && !rate.getPrice().isZero()) {
 
 				baseMarketValue = baseMarketValue.plus(marketValues.get(baseAsset).times(rate.getPrice(), Remainder.ROUND_EVEN));
+				log.debug(this.getClass().getSimpleName() + ":getBaseMarketValue - Calculated base market " + baseMarketValue + " value balance "
+						+ marketValues.get(baseAsset) + " with " + quoteAsset + "/" + baseAsset + " rate " + rate);
+
 			}
 
 		}
@@ -872,6 +919,9 @@ public class BasicPortfolioService implements PortfolioService {
 
 			if (baseAsset.equals(quoteAsset)) {
 				marketValue = marketValue.plus(marketValues.get(baseAsset));
+				log.debug(this.getClass().getSimpleName() + ":getMarketValue - Calculated  market value" + marketValue + " with balance "
+						+ marketValues.get(baseAsset) + " for asset " + quoteAsset + " with " + quoteAsset + "/" + baseAsset);
+
 			}
 
 		}
@@ -891,13 +941,13 @@ public class BasicPortfolioService implements PortfolioService {
 		//  Amount baseMarketValue = new DiscreteAmount(0, 0.01);
 		Amount baseUnrealisedPnL = DecimalAmount.ZERO;
 
-		Map<Asset, Amount> unrealisedPnLs = getUnrealisedPnLs();
+		Map<Asset, Amount> unrealisedPnLs = getUnrealisedPnLs(market);
 		for (Asset baseAsset : unrealisedPnLs.keySet()) {
 			Listing listing = Listing.forPair(baseAsset, quoteAsset);
-			Offer rate = quotes.getImpliedBestAskForListing(listing);
-			if (rate != null) {
-				log.trace(this.getClass().getSimpleName() + ":getBaseUnrealisedPnL - Calculating base unrealised PnL" + unrealisedPnLs.get(baseAsset)
-						+ " with " + quoteAsset + "/" + baseAsset + ":" + rate.getPrice() + " from " + rate.getTime());
+			Trade rate = getMarketPrice(listing);
+			if (rate != null && !rate.getPrice().isZero()) {
+				log.debug(this.getClass().getSimpleName() + ":getBaseUnrealisedPnL - Calculating base unrealised PnL" + unrealisedPnLs.get(baseAsset) + " with "
+						+ quoteAsset + "/" + baseAsset + " with " + rate);
 
 				baseUnrealisedPnL = baseUnrealisedPnL.plus(unrealisedPnLs.get(baseAsset).times(rate.getPrice(), Remainder.ROUND_EVEN));
 			}
@@ -922,10 +972,10 @@ public class BasicPortfolioService implements PortfolioService {
 		Map<Asset, Amount> unrealisedPnLs = getUnrealisedPnLs();
 		for (Asset baseAsset : unrealisedPnLs.keySet()) {
 			Listing listing = Listing.forPair(baseAsset, quoteAsset);
-			Offer rate = quotes.getImpliedBestAskForListing(listing);
-			if (rate != null) {
-				log.debug(this.getClass().getSimpleName() + ":getBaseUnrealisedPnL - Calculating base unrealised PnL" + unrealisedPnLs.get(baseAsset)
-						+ " with " + quoteAsset + "/" + baseAsset + ":" + rate.getPrice());
+			Trade rate = getMarketPrice(listing);
+			if (rate != null && !rate.getPrice().isZero()) {
+				log.debug(this.getClass().getSimpleName() + ":getBaseUnrealisedPnL - Calculating base unrealised PnL" + unrealisedPnLs.get(baseAsset) + " with "
+						+ quoteAsset + "/" + baseAsset + " with " + rate.getPrice());
 
 				baseUnrealisedPnL = baseUnrealisedPnL.plus(unrealisedPnLs.get(baseAsset).times(rate.getPrice(), Remainder.ROUND_EVEN));
 			}
@@ -942,10 +992,10 @@ public class BasicPortfolioService implements PortfolioService {
 
 		Amount unrealisedPnL = getUnrealisedPnL(position, null);
 		Listing listing = Listing.forPair(position.getAsset(), quoteAsset);
-		Offer rate = quotes.getImpliedBestAskForListing(listing);
-		if (rate != null) {
+		Trade rate = getMarketPrice(listing);
+		if (rate != null && !rate.getPrice().isZero()) {
 			log.trace(this.getClass().getSimpleName() + ":getBaseUnrealisedPnL - Calculating base unrealised PnL" + unrealisedPnL + " with " + quoteAsset + "/"
-					+ position.getAsset() + ":" + rate.getPrice());
+					+ position.getAsset() + " rate " + rate);
 
 			baseUnrealisedPnL = unrealisedPnL.times(rate.getPrice(), Remainder.ROUND_EVEN);
 		}
@@ -959,14 +1009,14 @@ public class BasicPortfolioService implements PortfolioService {
 		Amount baseUnrealisedPnL = DecimalAmount.ZERO;
 
 		Amount unrealisedPnL = getUnrealisedPnL(position, marketPrice);
-		Asset tradedCurrency = position.getMarket().getTradedCurrency(position.getMarket()) == null ? position.getMarket().getQuote() : position.getMarket()
-				.getTradedCurrency(position.getMarket());
+		Asset tradedCurrency = position.getMarket().getTradedCurrency(position.getMarket()) == null ? position.getMarket().getQuote()
+				: position.getMarket().getTradedCurrency(position.getMarket());
 		Listing listing = Listing.forPair(tradedCurrency, quoteAsset);
 
-		Offer rate = quotes.getImpliedBestAskForListing(listing);
-		if (rate != null) {
+		Trade rate = getMarketPrice(listing);
+		if (rate != null && !rate.getPrice().isZero()) {
 			log.trace(this.getClass().getSimpleName() + ":getBaseUnrealisedPnL - Calculating base unrealised PnL" + unrealisedPnL + " with " + quoteAsset + "/"
-					+ position.getAsset() + ":" + rate.getPrice());
+					+ position.getAsset() + " rate " + rate);
 
 			baseUnrealisedPnL = unrealisedPnL.times(rate.getPrice(), Remainder.ROUND_EVEN);
 		}
@@ -981,12 +1031,12 @@ public class BasicPortfolioService implements PortfolioService {
 
 		Amount marketValue = getMarketValue(position);
 		Listing listing = Listing.forPair(position.getMarket().getQuote(), quoteAsset);
-		Offer rate = quotes.getImpliedBestAskForListing(listing);
-		if (rate != null) {
-			log.trace(this.getClass().getSimpleName() + ":getMarketValue - Calculating market value" + marketValue + " with " + quoteAsset + "/"
-					+ position.getAsset() + ":" + rate.getPrice());
-
+		Trade rate = getMarketPrice(listing);
+		if (rate != null && !rate.getPrice().isZero()) {
 			baseMarketValue = marketValue.times(rate.getPrice(), Remainder.ROUND_EVEN);
+			log.debug(this.getClass().getSimpleName() + ":getMarketValue - Calculated based market value " + baseMarketValue + " marketValue " + marketValue
+					+ " with " + quoteAsset + "/" + position.getAsset() + " rate " + rate);
+
 		}
 
 		return baseMarketValue;
@@ -1031,11 +1081,11 @@ public class BasicPortfolioService implements PortfolioService {
 		Map<Asset, Amount> realisedPnLs = getRealisedPnLs();
 		for (Asset baseAsset : realisedPnLs.keySet()) {
 			Listing listing = Listing.forPair(baseAsset, quoteAsset);
-			Offer rate = quotes.getImpliedBestAskForListing(listing);
-			if (rate != null) {
+			Trade rate = getMarketPrice(listing);
+			if (rate != null && !rate.getPrice().isZero()) {
 				Amount localPnL = realisedPnLs.get(baseAsset);
 				log.trace(this.getClass().getSimpleName() + ":getBaseRealisedPnL - Calculating base unrealised PnL " + localPnL + " with " + quoteAsset + "/"
-						+ baseAsset + ":" + rate.getPrice() + " from time " + rate.getTime());
+						+ baseAsset + " rate " + rate);
 
 				Amount basePnL = localPnL.times(rate.getPrice(), Remainder.ROUND_EVEN);
 				baseRealisedPnL = baseRealisedPnL.plus(basePnL);
@@ -1059,11 +1109,11 @@ public class BasicPortfolioService implements PortfolioService {
 		Map<Asset, Amount> realisedPnLs = getRealisedPnLs(market);
 		for (Asset baseAsset : realisedPnLs.keySet()) {
 			Listing listing = Listing.forPair(baseAsset, quoteAsset);
-			Offer rate = quotes.getImpliedBestAskForListing(listing);
-			if (rate != null) {
+			Trade rate = getMarketPrice(listing);
+			if (rate != null && !rate.getPrice().isZero()) {
 				Amount localPnL = realisedPnLs.get(baseAsset);
 				log.trace(this.getClass().getSimpleName() + ":getBaseRealisedPnL - Calculating base unrealised PnL for " + market + " " + localPnL + " with "
-						+ quoteAsset + "/" + baseAsset + ":" + rate.getPrice());
+						+ quoteAsset + "/" + baseAsset + " rate " + rate);
 
 				Amount basePnL = localPnL.times(rate.getPrice(), Remainder.ROUND_EVEN);
 				baseRealisedPnL = baseRealisedPnL.plus(basePnL);
@@ -1136,16 +1186,19 @@ public class BasicPortfolioService implements PortfolioService {
 			for (Asset currency : exchangeBalances.keySet()) {
 				Listing listing = Listing.forPair(currency, quoteAsset);
 				// Trade lastTrade = quotes.getLastTrade(listing);
-				Offer rate = quotes.getImpliedBestAskForListing(listing);
-				if (!currency.equals(quoteAsset) && rate == null)
+				Trade rate = getMarketPrice(listing);
+
+				//dsfasdfasdf
+				//Offer rate = quotes.getImpliedBestAskForListing(listing);
+				if ((!currency.equals(quoteAsset) && rate == null) || (rate != null && rate.getPrice().isZero()))
 					continue;
 				//  return DecimalAmount.ZERO;
 
 				//we have no prices so let's pull one.
 
 				cashBalance = cashBalance.plus(exchangeBalances.get(currency).getAmount().times(rate.getPrice(), Remainder.ROUND_EVEN));
-				log.trace(this.getClass().getSimpleName() + " getBaseCashBalance: Calculating cash balances with rate " + rate + " exchangeAsset " + listing
-						+ " balance " + exchangeBalances.get(currency));
+				log.debug(this.getClass().getSimpleName() + " getBaseCashBalance: Calculating cash balances with rate " + rate + " exchangeAsset " + listing
+						+ "for  exchange " + exchange + " in " + currency + ": " + exchangeBalances.get(currency));
 
 			}
 
@@ -1185,8 +1238,8 @@ public class BasicPortfolioService implements PortfolioService {
 		Map<Asset, Amount> margins = getMargins(quoteAsset);
 		for (Asset baseAsset : margins.keySet()) {
 			Listing listing = Listing.forPair(baseAsset, quoteAsset);
-			Offer rate = quotes.getImpliedBestAskForListing(listing);
-			if (rate != null) {
+			Trade rate = getMarketPrice(listing);
+			if (rate != null && !rate.getPrice().isZero()) {
 				Amount localMargin = margins.get(baseAsset);
 				Amount baseMargin = localMargin.times(rate.getPrice(), Remainder.ROUND_EVEN);
 				marginBalance = marginBalance.plus(baseMargin);
@@ -1211,8 +1264,8 @@ public class BasicPortfolioService implements PortfolioService {
 
 				//  for (Fill pos : getFills()) {
 				Position position = itf.next();
-				Asset baseAsset = (position.getMarket().getTradedCurrency(position.getMarket()) == null) ? position.getMarket().getBase() : position
-						.getMarket().getTradedCurrency(position.getMarket());
+				Asset baseAsset = (position.getMarket().getTradedCurrency(position.getMarket()) == null) ? position.getMarket().getBase()
+						: position.getMarket().getTradedCurrency(position.getMarket());
 				//Asset baseAsset = position.getMarket().getTradedCurrency(position.getMarket());
 				if (position.isOpen() && baseAsset.equals(quoteAsset)) {
 					// calucate total margin
@@ -1358,10 +1411,10 @@ public class BasicPortfolioService implements PortfolioService {
 		// Balance exhcangeBalance;
 		for (Asset exchangeAsset : exchange.getBalances().keySet()) {
 			Listing listing = Listing.forPair(exchangeAsset, quoteAsset);
-			Offer rate = quotes.getImpliedBestAskForListing(listing);
-			if (rate != null) {
-				Amount existingBalance = (exchange.getBalances() == null || exchange.getBalances().get(exchangeAsset) == null) ? DecimalAmount.ZERO : exchange
-						.getBalances().get(exchangeAsset).getAmount();
+			Trade rate = getMarketPrice(listing);
+			if (rate != null && !rate.getPrice().isZero()) {
+				Amount existingBalance = (exchange.getBalances() == null || exchange.getBalances().get(exchangeAsset) == null) ? DecimalAmount.ZERO
+						: exchange.getBalances().get(exchangeAsset).getAmount();
 				Map<Asset, Balance> bals;
 				//	log.debug(this.getClass().getSimpleName() + " getAvailableBaseBalance: Calculating Available balance with rate " + rate + " exchangeAsset "
 				//		+ exchangeAsset + " existingBalances  " + existingBalance);
@@ -1377,8 +1430,8 @@ public class BasicPortfolioService implements PortfolioService {
 		for (Asset marginCurrency : margins.keySet()) {
 
 			Listing listing = Listing.forPair(marginCurrency, quoteAsset);
-			Offer rate = quotes.getImpliedBestAskForListing(listing);
-			if (rate != null) {
+			Trade rate = getMarketPrice(listing);
+			if (rate != null && !rate.getPrice().isZero()) {
 				baseMargin = baseMargin.plus(margins.get(marginCurrency).times(rate.getPrice(), Remainder.ROUND_EVEN));
 				//	log.debug(this.getClass().getSimpleName() + " getAvailableBaseBalance: Calculating margins with rate " + rate + " exchangeAsset "
 				//		+ marginCurrency + " margin " + margins.get(marginCurrency));
@@ -1388,13 +1441,13 @@ public class BasicPortfolioService implements PortfolioService {
 
 		DecimalAmount marginRatio = baseExchangeBalance.isZero() ? DecimalAmount.ZERO : baseMargin.abs().divide(baseExchangeBalance, Remainder.ROUND_CEILING);
 		//   if (marginRatio.compareTo(DecimalAmount.of("0.8")) > 0)
-		log.debug(this.getClass().getSimpleName() + " getAvailableBaseBalance: Ratio of margin to " + exchange + " " + quoteAsset + " balance is "
-				+ marginRatio + ", " + exchange + "  " + quoteAsset + " balance: " + baseExchangeBalance + ", utlised " + quoteAsset + " margin " + baseMargin);
+		log.debug(this.getClass().getSimpleName() + " getAvailableBaseBalance: Ratio of margin to " + exchange + " " + quoteAsset + " balance is " + marginRatio
+				+ ", " + exchange + "  " + quoteAsset + " balance: " + baseExchangeBalance + ", utlised " + quoteAsset + " margin " + baseMargin);
 		Map<Asset, Amount> unrealisedPnLs = getUnrealisedPnLs(exchange);
 		for (Asset currency : unrealisedPnLs.keySet()) {
 			Listing listing = Listing.forPair(currency, quoteAsset);
-			Offer rate = quotes.getImpliedBestAskForListing(listing);
-			if (rate != null) {
+			Trade rate = getMarketPrice(listing);
+			if (rate != null && !rate.getPrice().isZero()) {
 				baseUnrealisedPnL = baseUnrealisedPnL.plus(unrealisedPnLs.get(currency).times(rate.getPrice(), Remainder.ROUND_EVEN));
 				//		log.debug(this.getClass().getSimpleName() + " getAvailableBaseBalance: Calculating unrealisedPnLs with rate " + rate + " exchangeAsset "
 				//			+ listing + " unrealisedPnL " + unrealisedPnLs.get(currency));

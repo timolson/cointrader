@@ -8,7 +8,6 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
-import javax.persistence.OneToOne;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.PersistanceAction;
@@ -108,7 +107,13 @@ public class Balance extends Holding {
 	}
 
 	@Override
-	@OneToOne(optional = true, fetch = FetchType.EAGER)
+	//@OneToOne(optional = true, fetch = FetchType.EAGER, mappedBy = "balance")
+	//@JoinColumn(name = "asset", nullable = false)
+	//@ManyToOne(fetch = FetchType.EAGER)
+	//@JoinColumn(name = "asset")
+	//, columnDefinition = "BINARY(16)")
+	@ManyToOne(optional = true, fetch = FetchType.EAGER)
+	@JoinColumn(name = "asset")
 	public Asset getAsset() {
 		return asset;
 	}
@@ -171,6 +176,8 @@ public class Balance extends Holding {
 		}
 	}
 
+	//@ManyToOne
+	//@JoinColumn(name = "exchange")
 	@Override
 	@ManyToOne
 	@JoinColumn(name = "exchange")
@@ -187,6 +194,7 @@ public class Balance extends Holding {
 	}
 
 	@Override
+	@Transient
 	public synchronized void setExchange(Exchange exchange) {
 		this.exchange = exchange;
 	}

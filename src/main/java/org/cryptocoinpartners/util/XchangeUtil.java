@@ -15,6 +15,8 @@ import org.cryptocoinpartners.schema.Listing;
 import org.knowm.xchange.ExchangeFactory;
 import org.knowm.xchange.ExchangeSpecification;
 import org.knowm.xchange.currency.CurrencyPair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.HashBiMap;
 
@@ -22,6 +24,8 @@ import com.google.common.collect.HashBiMap;
  * @author Tim Olson
  */
 public class XchangeUtil {
+
+	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.xchangeUtil");
 
 	public static Exchange getExchangeForTag(String tag) {
 		return Exchange.forSymbolOrCreate(tag.toUpperCase());
@@ -141,8 +145,13 @@ public class XchangeUtil {
 
 				}
 				if (!exchangesByMarket.containsKey(getExchangeForTag(exchangeTag))) {
-					org.knowm.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
-					exchangesByMarket.put(getExchangeForTag(exchangeTag), exchange);
+					try {
+						org.knowm.xchange.Exchange exchange = ExchangeFactory.INSTANCE.createExchange(spec);
+						exchangesByMarket.put(getExchangeForTag(exchangeTag), exchange);
+					} catch (Error | Exception ex) {
+						log.error("XchangeUtil: Unable to initialze exchange " + exchangeTag + " due to error", ex);
+					}
+
 				}
 			}
 

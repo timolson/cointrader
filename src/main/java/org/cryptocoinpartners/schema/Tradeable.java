@@ -1,11 +1,12 @@
 package org.cryptocoinpartners.schema;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-import javax.persistence.Basic;
 import javax.persistence.Cacheable;
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
@@ -28,171 +29,173 @@ import com.google.inject.Inject;
 @Entity
 @Cacheable
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
-@SuppressWarnings({"JpaDataSourceORMInspection", "UnusedDeclaration"})
+@SuppressWarnings({ "JpaDataSourceORMInspection", "UnusedDeclaration" })
 //@NamedQuery(name = "Market.findByMarket", query = "select m from Market m where exchange=?1 and listing=?2", hints = { @QueryHint(name = "org.hibernate.cacheable", value = "true") })
 //@Table(indexes = { @Index(columnList = "exchange"), @Index(columnList = "listing"), @Index(columnList = "active"), @Index(columnList = "version"),
 //      @Index(columnList = "revision") })
 public abstract class Tradeable extends EntityBase {
 
-  /**
-     * 
-     */
-  private static final long serialVersionUID = 3040864081511509663L;
-  @Inject
-  protected transient TradeableDao tradeableDao;
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 3040864081511509663L;
+	private static Map<String, Tradeable> tradeableMap = new HashMap<String, Tradeable>();
 
-  @Override
-  public synchronized void persit() {
+	@Inject
+	protected transient TradeableDao tradeableDao;
 
-    this.setPeristanceAction(PersistanceAction.NEW);
+	@Override
+	public synchronized void persit() {
 
-    this.setRevision(this.getRevision() + 1);
-    tradeableDao.persist(this);
-  }
+		this.setPeristanceAction(PersistanceAction.NEW);
 
-  @Override
-  public synchronized EntityBase refresh() {
-    return tradeableDao.refresh(this);
-  }
+		this.setRevision(this.getRevision() + 1);
+		tradeableDao.persist(this);
+	}
 
-  @Override
-  public synchronized void detach() {
-    tradeableDao.detach(this);
+	@Override
+	public synchronized EntityBase refresh() {
+		return tradeableDao.refresh(this);
+	}
 
-  }
+	@Override
+	public synchronized void detach() {
+		tradeableDao.detach(this);
 
-  @Override
-  public synchronized void merge() {
+	}
 
-    this.setPeristanceAction(PersistanceAction.MERGE);
+	@Override
+	public synchronized void merge() {
 
-    this.setRevision(this.getRevision() + 1);
-    tradeableDao.merge(this);
+		this.setPeristanceAction(PersistanceAction.MERGE);
 
-  }
+		this.setRevision(this.getRevision() + 1);
+		tradeableDao.merge(this);
 
-  @Override
-  @Transient
-  public Dao getDao() {
-    return tradeableDao;
-  }
+	}
 
-  @Override
-  @Transient
-  public synchronized void setDao(Dao dao) {
-    tradeableDao = (TradeableDao) dao;
-    // TODO Auto-generated method stub
-    //  return null;
-  }
+	@Override
+	@Transient
+	public Dao getDao() {
+		return tradeableDao;
+	}
 
-  @Override
-  public void delete() {
-    // TODO Auto-generated method stub
+	@Override
+	@Transient
+	public synchronized void setDao(Dao dao) {
+		tradeableDao = (TradeableDao) dao;
+		// TODO Auto-generated method stub
+		//  return null;
+	}
 
-  }
+	@Override
+	public void delete() {
+		// TODO Auto-generated method stub
 
-  public static List<Tradeable> findAll() {
-    // return EM.queryList(Market.class, "select m from Market m");
-    ArrayList<Tradeable> markets = new ArrayList<Tradeable>();
-    for (Tradeable tradeable : EM.queryList(Tradeable.class, "select m from Tradeable m")) {
-      // market.getExchange();
-      // forSymbolOrCreate
-      // Exchange injectedExchange = exchangeFactory.create(market.getExchange().getSymbol());
-      if (!tradeable.isSynthetic()) {
-        Market market = (Market) tradeable;
-        market.setExchange(market.getExchange().forSymbolOrCreate(market.getExchange().getSymbol()));
-        markets.add(market);
-      } else {
-        //lets load all the markets and return it.
-        SyntheticMarket synthetic = (SyntheticMarket) tradeable;
+	}
 
-        markets.add(synthetic);
+	public static Collection<Tradeable> findAll() {
+		// return EM.queryList(Market.class, "select m from Market m");
+		if (tradeableMap == null || tradeableMap.isEmpty()) {
+			for (Tradeable tradeable : EM.queryList(Tradeable.class, "select m from Tradeable m")) {
+				// market.getExchange();
+				// forSymbolOrCreate
+				// Exchange injectedExchange = exchangeFactory.create(market.getExchange().getSymbol());
+				if (!tradeable.isSynthetic()) {
+					Market market = (Market) tradeable;
+					market.setExchange(market.getExchange().forSymbolOrCreate(market.getExchange().getSymbol()));
+					if (!tradeableMap.containsKey(market.getSymbol().toUpperCase()))
+						tradeableMap.put(market.getSymbol().toUpperCase(), market);
 
-      }
+				} else {
+					//lets load all the markets and return it.
+					SyntheticMarket synthetic = (SyntheticMarket) tradeable;
+					if (!tradeableMap.containsKey(synthetic.getSymbol().toUpperCase()))
+						tradeableMap.put(synthetic.getSymbol().toUpperCase(), synthetic);
 
-    }
+				}
 
-    return markets;
-  }
+			}
+		}
+		return tradeableMap.values();
+	}
 
-  /** @return true iff the Listing is currently traded at the Exchange. The Market could have been retired. */
-  public boolean isActive() {
-    return active;
-  }
+	/** @return true iff the Listing is currently traded at the Exchange. The Market could have been retired. */
+	public boolean isActive() {
+		return active;
+	}
 
-  @Transient
-  public abstract Amount getBalance(Asset currency);
+	@Transient
+	public abstract Amount getBalance(Asset currency);
 
-  @Transient
-  public abstract boolean isSynthetic();
+	@Transient
+	public abstract boolean isSynthetic();
 
-  @Override
-  @PrePersist
-  public abstract void prePersist();
+	@Override
+	@PrePersist
+	public abstract void prePersist();
 
-  @Override
-  @PostPersist
-  public abstract void postPersist();
+	@Override
+	@PostPersist
+	public abstract void postPersist();
 
-  @Transient
-  public abstract String getSymbol();
+	@Transient
+	public abstract String getSymbol();
 
-  @Override
-  public abstract String toString();
+	@Override
+	public abstract String toString();
 
-  public static Tradeable forSymbol(String marketSymbol) {
-    for (Tradeable market : findAll()) {
-      if (market.getSymbol().equalsIgnoreCase(marketSymbol)) {
-        return market;
-      }
-    }
-    return null;
-  }
+	public static Tradeable forSymbol(String marketSymbol) {
+		if (tradeableMap.get(marketSymbol.toUpperCase()) == null)
+			findAll();
 
-  public static List<String> allSymbols() {
-    List<String> result = new ArrayList<>();
-    List<Market> markets = EM.queryList(Market.class, "select m from Market m");
-    for (Market market : markets)
-      result.add((market.getSymbol()));
-    return result;
-  }
+		return tradeableMap.get(marketSymbol.toUpperCase());
+	}
 
-  public static class MarketAmountBuilder {
-  }
+	public static List<String> allSymbols() {
+		List<String> result = new ArrayList<>();
+		List<Market> markets = EM.queryList(Market.class, "select m from Market m");
+		for (Market market : markets)
+			result.add((market.getSymbol()));
+		return result;
+	}
 
-  protected synchronized void setPriceBasis(double quoteBasis) {
-    this.priceBasis = quoteBasis;
-  }
+	public static class MarketAmountBuilder {
+	}
 
-  protected synchronized void setVolumeBasis(double volumeBasis) {
-    this.volumeBasis = volumeBasis;
-  }
+	protected synchronized void setPriceBasis(double quoteBasis) {
+		this.priceBasis = quoteBasis;
+	}
 
-  @Basic(optional = false)
-  @Column(insertable = false, updatable = false)
-  public abstract double getVolumeBasis();
+	protected synchronized void setVolumeBasis(double volumeBasis) {
+		this.volumeBasis = volumeBasis;
+	}
 
-  @Basic(optional = false)
-  @Column(insertable = false, updatable = false)
-  public abstract double getPriceBasis();
+	//@Basic(optional = false)
+	//@Column(insertable = false, updatable = false)
+	public abstract double getVolumeBasis();
 
-  @Transient
-  public int getScale() {
+	//@Basic(optional = false)
+	//@Column(insertable = false, updatable = false)
+	public abstract double getPriceBasis();
 
-    int length = (int) (Math.log10(getPriceBasis()));
-    return length;
-  }
+	@Transient
+	public int getScale() {
 
-  // JPA
-  protected Tradeable() {
-  }
+		int length = (int) (Math.log10(getPriceBasis()));
+		return length;
+	}
 
-  protected synchronized void setActive(boolean active) {
-    this.active = active;
-  }
+	// JPA
+	protected Tradeable() {
+	}
 
-  protected boolean active;
-  protected double priceBasis;
-  protected double volumeBasis;
+	protected synchronized void setActive(boolean active) {
+		this.active = active;
+	}
+
+	protected boolean active;
+	protected double priceBasis;
+	protected double volumeBasis;
 
 }

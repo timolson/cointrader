@@ -12,6 +12,7 @@ import javax.inject.Singleton;
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Bar;
 import org.cryptocoinpartners.schema.Book;
+import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Exchanges;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
@@ -71,9 +72,13 @@ public class BasicQuoteService implements QuoteService {
 		 * e) { // TODO Auto-generated catch block log.error(this.getClass().getSimpleName() +
 		 * ": getLastTrade - Unable to retrive latest trades for market", e); } }
 		 */
+
 		if (lastTradeByListing.get(listing.getSymbol()) != null)
 			return lastTradeByListing.get(listing.getSymbol());
 		else {
+			//		log.debug(this.getClass().getSimpleName()
+			//				+ ":getLastTrade - Unabled to get trade directly from listings, calcuating implied price from impliedTradeMatrix " + impliedTradeMatrix);
+
 			return getLastImpliedTrade(listing);
 		}
 	}
@@ -83,7 +88,7 @@ public class BasicQuoteService implements QuoteService {
 		if (listing == null)
 			return null;
 		try {
-			long impliedPriceCount = impliedTradeMatrix.getRate(listing.getBase(), listing.getQuote());
+			long impliedPriceCount = impliedTradeMatrix.getRate(listing.getBase(), listing.getQuote()).getCount();
 			Market market = context.getInjector().getInstance(Market.class).findOrCreate(Exchanges.SELF, listing);
 			return new Trade(market, Instant.now(), Instant.now().toString(), impliedPriceCount, 0L);
 		} catch (java.lang.IllegalArgumentException e) {
@@ -128,8 +133,7 @@ public class BasicQuoteService implements QuoteService {
 	 * @return null if no Books for the given listing have been received yet
 	 */
 	@Override
-	public @Nullable
-	Offer getBestBidForListing(Listing listing) {
+	public @Nullable Offer getBestBidForListing(Listing listing) {
 		Offer bestBid = null;
 		for (Market market : marketsByListing.get(listing.getSymbol())) {
 			Book book = bestBidByMarket.get(market.getSymbol());
@@ -145,8 +149,7 @@ public class BasicQuoteService implements QuoteService {
 	}
 
 	@Override
-	public @Nullable
-	Offer getLastBidForMarket(Tradeable market) {
+	public @Nullable Offer getLastBidForMarket(Tradeable market) {
 		if (market == null)
 			return null;
 		Offer bestBid = null;
@@ -176,8 +179,7 @@ public class BasicQuoteService implements QuoteService {
 	 * @return null if no Books for the given listing have been received yet
 	 */
 	@Override
-	public @Nullable
-	Offer getBestAskForListing(Listing listing) {
+	public @Nullable Offer getBestAskForListing(Listing listing) {
 		Offer bestAsk = null;
 		if (marketsByListing.get(listing.getSymbol()) != null) {
 			for (Market market : marketsByListing.get(listing.getSymbol())) {
@@ -199,12 +201,11 @@ public class BasicQuoteService implements QuoteService {
 
 	@Override
 	//TODO keep a map of markets so we don't hit the db each time.
-	public @Nullable
-	Offer getImpliedBestAskForListing(Listing listing) {
+	public @Nullable Offer getImpliedBestAskForListing(Listing listing) {
 		if (listing == null)
 			return null;
 		try {
-			long bestImpliedAsk = impliedAskMatrix.getRate(listing.getBase(), listing.getQuote());
+			long bestImpliedAsk = impliedAskMatrix.getRate(listing.getBase(), listing.getQuote()).getCount();
 			Market market = context.getInjector().getInstance(Market.class).findOrCreate(Exchanges.SELF, listing);
 			return new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
 		} catch (java.lang.IllegalArgumentException e) {
@@ -219,12 +220,11 @@ public class BasicQuoteService implements QuoteService {
 	}
 
 	@Override
-	public @Nullable
-	Offer getImpliedBestBidForListing(Listing listing) {
+	public @Nullable Offer getImpliedBestBidForListing(Listing listing) {
 		if (listing == null)
 			return null;
 		try {
-			long bestImpliedBid = impliedBidMatrix.getRate(listing.getBase(), listing.getQuote());
+			long bestImpliedBid = impliedBidMatrix.getRate(listing.getBase(), listing.getQuote()).getCount();
 			Market market = context.getInjector().getInstance(Market.class).findOrCreate(Exchanges.SELF, listing);
 			return new Offer(market, Instant.now(), Instant.now(), bestImpliedBid, 0L);
 		} catch (java.lang.IllegalArgumentException e) {
@@ -241,8 +241,7 @@ public class BasicQuoteService implements QuoteService {
 	}
 
 	@Override
-	public @Nullable
-	Offer getLastAskForMarket(Tradeable market) {
+	public @Nullable Offer getLastAskForMarket(Tradeable market) {
 		if (market == null)
 			return null;
 		Offer bestAsk = null;
@@ -264,7 +263,7 @@ public class BasicQuoteService implements QuoteService {
 	}
 
 	//@Priority(10)
-	@When("@Priority(9) @Audit select * from Book(Book.bidVolumeAsDouble>0, Book.askVolumeAsDouble<0)")
+	@When("@Priority(9) @Audit select * from LastBookWindow")
 	private void recordBook(Book b) {
 		Tradeable market = b.getMarket();
 		if (!market.isSynthetic()) {
@@ -277,18 +276,18 @@ public class BasicQuoteService implements QuoteService {
 			if (lastBookForListing == null || !lastBookForListing.getTime().isAfter(b.getTime()))
 				lastBookByListing.put(listingSymbol, b);
 			try {
-				impliedBidMatrix.updateRates(marketToHandel.getBase(), marketToHandel.getQuote(), b.getBidPrice().getCount());
+				impliedBidMatrix.updateRates(marketToHandel.getBase(), marketToHandel.getQuote(), b.getBidPrice());
 			} catch (java.lang.IllegalArgumentException e) {
 				try {
-					impliedBidMatrix.addAsset(marketToHandel.getBase(), marketToHandel.getQuote(), b.getBidPrice().getCount());
+					impliedBidMatrix.addAsset(marketToHandel.getBase(), marketToHandel.getQuote(), b.getBidPrice());
 				} catch (java.lang.IllegalArgumentException e2) {
 				}
 			}
 			try {
-				impliedAskMatrix.updateRates(marketToHandel.getBase(), marketToHandel.getQuote(), b.getAskPrice().getCount());
+				impliedAskMatrix.updateRates(marketToHandel.getBase(), marketToHandel.getQuote(), b.getAskPrice());
 			} catch (java.lang.IllegalArgumentException e) {
 				try {
-					impliedAskMatrix.addAsset(marketToHandel.getBase(), marketToHandel.getQuote(), b.getAskPrice().getCount());
+					impliedAskMatrix.addAsset(marketToHandel.getBase(), marketToHandel.getQuote(), b.getAskPrice());
 				} catch (java.lang.IllegalArgumentException e2) {
 					log.error("Threw a Execption, full stack trace follows:", e2);
 
@@ -318,35 +317,69 @@ public class BasicQuoteService implements QuoteService {
 
 	}
 
-	@When("@Priority(9) @Audit select * from Trade (Trade.volumeCount!=0)")
+	@When("@Priority(9) @Audit select * from LastTradeWindow")
 	private void recordTrade(Trade t) {
+
 		Tradeable market = t.getMarket();
+		Listing inverseListing = null;
+		DiscreteAmount inversePrice = null;
+		Market inverseMarket = null;
+		Trade it = null;
 		if (!market.isSynthetic()) {
 			Market marketToHandle = (Market) market;
 
 			handleMarket(marketToHandle);
-
+			if (marketToHandle.getSymbol().equals("BITMEX:ADA.BTC.QUARTERLY"))
+				log.debug("test");
 			String listingSymbol = marketToHandle.getListing().getSymbol();
 			Trade lastTradeForListing = lastTradeByListing.get(listingSymbol);
-			if (lastTradeForListing == null || !lastTradeForListing.getTime().isAfter(t.getTime()))
+			if (!t.getPrice().isZero()
+					&& (lastTradeForListing == null || (lastTradeForListing != null && !lastTradeForListing.getTime().isAfter(t.getTime())))) {
+
 				lastTradeByListing.put(listingSymbol, t);
+				//long impliedPriceCount = impliedTradeMatrix.getRate(listing.getBase(), listing.getQuote()).getCount();
+
+				/*				if (marketToHandle.getListing().getPrompt() == null)
+									inverseListing = Listing
+											.forSymbol(marketToHandle.getListing().getQuote().getSymbol() + "." + marketToHandle.getListing().getBase().getSymbol());
+				
+								else
+									inverseListing = Listing.forSymbol(marketToHandle.getListing().getQuote().getSymbol() + "."
+											+ marketToHandle.getListing().getBase().getSymbol() + "." + marketToHandle.getListing().getPrompt().getSymbol());
+				
+								inverseMarket = context.getInjector().getInstance(Market.class).findOrCreate(marketToHandle.getExchange(), inverseListing);
+								inversePrice = new DiscreteAmount(
+										DiscreteAmount.roundedCountForBasis(t.getPrice().invert().asBigDecimal(), marketToHandle.getListing().getBase().getBasis()),
+										marketToHandle.getListing().getBase().getBasis());
+								inversePrice.toIBasis((long) marketToHandle.getListing().getBase().getBasis(), Remainder.ROUND_EVEN);
+								it = new Trade(inverseMarket, t.getTimeReceived(), t.getRemoteKey(), inversePrice.getCount(), t.getVolume().getCount());
+								lastTradeByListing.put(inverseListing.getSymbol(), it);*/
+
+			}
 
 			try {
-				impliedTradeMatrix.updateRates(marketToHandle.getBase(), marketToHandle.getQuote(), t.getPriceCount());
+				impliedTradeMatrix.updateRates(marketToHandle.getBase(), marketToHandle.getQuote(), t.getPrice());
 			} catch (java.lang.IllegalArgumentException e) {
 				try {
-					impliedTradeMatrix.addAsset(marketToHandle.getBase(), marketToHandle.getQuote(), t.getPriceCount());
+					impliedTradeMatrix.addAsset(marketToHandle.getBase(), marketToHandle.getQuote(), t.getPrice());
 				} catch (java.lang.IllegalArgumentException e2) {
+
+					log.error("Threw a Execption, full stack trace follows:", e2);
+
 				}
 			}
 		}
+
 		String marketSymbol = market.getSymbol();
 		Trade lastTradeForMarket = lastTradeByMarket.get(marketSymbol);
-		if (lastTradeForMarket == null || !lastTradeForMarket.getTime().isAfter(t.getTime()))
+		if (lastTradeForMarket == null || !lastTradeForMarket.getTime().isAfter(t.getTime())) {
 			lastTradeByMarket.put(marketSymbol, t);
+			if (inverseMarket != null && it != null)
+				lastTradeByMarket.put(inverseMarket.getSymbol(), it);
+		}
 	}
 
-	@When("@Priority(9) @Audit select * from LastBarWindow group by market,interval")
+	@When("@Priority(9) @Audit select * from LastBarWindow")
 	private void recordBar(Bar b) {
 		Tradeable market = b.getMarket();
 		double interval = b.getInterval();
@@ -356,8 +389,8 @@ public class BasicQuoteService implements QuoteService {
 			handleMarket(marketToHandle);
 
 			String listingSymbol = marketToHandle.getListing().getSymbol();
-			Bar lastBarForListing = lastBarByListing.get(listingSymbol) == null || lastBarByListing.get(listingSymbol).isEmpty() ? null : lastBarByListing.get(
-					listingSymbol).get(interval);
+			Bar lastBarForListing = lastBarByListing.get(listingSymbol) == null || lastBarByListing.get(listingSymbol).isEmpty() ? null
+					: lastBarByListing.get(listingSymbol).get(interval);
 
 			if (lastBarForListing == null || !lastBarForListing.getTime().isAfter(b.getTime())) {
 				Map<Double, Bar> barInterval = new ConcurrentHashMap<Double, Bar>();
@@ -372,8 +405,8 @@ public class BasicQuoteService implements QuoteService {
 		}
 
 		String marketSymbol = market.getSymbol();
-		Bar lastBarForMarket = lastBarByMarket.get(marketSymbol) == null || lastBarByMarket.get(marketSymbol).isEmpty() ? null : lastBarByMarket.get(
-				marketSymbol).get(interval);
+		Bar lastBarForMarket = lastBarByMarket.get(marketSymbol) == null || lastBarByMarket.get(marketSymbol).isEmpty() ? null
+				: lastBarByMarket.get(marketSymbol).get(interval);
 
 		// Bar lastBarForMarket = lastBarByMarket.get(marketSymbol).get(interval);
 		if (lastBarForMarket == null || !lastBarForMarket.getTime().isAfter(b.getTime())) {
@@ -393,13 +426,23 @@ public class BasicQuoteService implements QuoteService {
 	private void handleMarket(Market market) {
 		final Listing listing = market.getListing();
 		final String listingSymbol = listing.getSymbol();
+		boolean found = false;
 		Set<Market> markets = marketsByListing.get(listingSymbol);
 		if (markets == null) {
 			markets = new HashSet<>();
 			markets.add(market);
 			marketsByListing.put(listingSymbol, markets);
-		} else
+			found = true;
+		} else {
+			for (Market mappdMarket : markets) {
+				if (mappdMarket.equals(market))
+					found = true;
+
+			}
+		}
+		if (!found) {
 			markets.add(market);
+		}
 
 	}
 

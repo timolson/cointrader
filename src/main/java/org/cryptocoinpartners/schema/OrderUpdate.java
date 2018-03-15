@@ -53,17 +53,18 @@ import com.google.inject.assistedinject.AssistedInject;
 		@NamedQuery(name = "orderUpdate.findOrdersByState", query = "select ou from OrderUpdate ou where  ou.state = (select max(ouu.state) from OrderUpdate ouu where ouu.order = ou.order) and state in (?1) and  ou.order.portfolio =?2"),
 		@NamedQuery(name = "orderUpdate.findStateByOrder", query = "select ou from OrderUpdate ou where  ou.state = (select max(ouu.state) from OrderUpdate ouu where ouu.order = ou.order) and order in (?1)") })
 @NamedEntityGraphs({
-// @NamedEntityGraph(name = "orderUpdateWithTransactions", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithTransactions") }, subgraphs = { @NamedSubgraph(name = "orderWithTransactions", attributeNodes = { @NamedAttributeNode("transactions") }) }),
-// @NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithFills") }, subgraphs = { @NamedSubgraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
-//@NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode("order.fills") })
-@NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithFills") }, subgraphs = { @NamedSubgraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
+		// @NamedEntityGraph(name = "orderUpdateWithTransactions", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithTransactions") }, subgraphs = { @NamedSubgraph(name = "orderWithTransactions", attributeNodes = { @NamedAttributeNode("transactions") }) }),
+		// @NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithFills") }, subgraphs = { @NamedSubgraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
+		//@NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode("order.fills") })
+		@NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithFills") }, subgraphs = {
+				@NamedSubgraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
 
-//attributeNodes = @NamedAttributeNode(value = "items", subgraph = "items"), 
-//subgraphs = @NamedSubgraph(name = "items", attributeNodes = @NamedAttributeNode("product")))
-//  @NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithFills") }, subgraphs = { @NamedSubgraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
+		//attributeNodes = @NamedAttributeNode(value = "items", subgraph = "items"), 
+		//subgraphs = @NamedSubgraph(name = "items", attributeNodes = @NamedAttributeNode("product")))
+		//  @NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithFills") }, subgraphs = { @NamedSubgraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
 
-// @NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "order"))
-//,@NamedSubgraph(name = "order", attributeNodes = @NamedAttributeNode("order")) 
+		// @NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "order"))
+		//,@NamedSubgraph(name = "order", attributeNodes = @NamedAttributeNode("order")) 
 })
 public class OrderUpdate extends Event {
 
@@ -134,8 +135,7 @@ public class OrderUpdate extends Event {
 	//Ordres added to state mape before placned on exchange.
 	public @ManyToOne
 	//(cascade = { CascadeType.MERGE })
-	@JoinColumn(name = "`order`")
-	Order getOrder() {
+	@JoinColumn(name = "`order`") Order getOrder() {
 		return order;
 	}
 
@@ -171,34 +171,25 @@ public class OrderUpdate extends Event {
 
 	@Override
 	public synchronized void persit() {
+
+		try {
+			log.debug(this.getClass().getSimpleName() + " - Persist : Persit of Order Update " + this.getId() + " called from class "
+					+ Thread.currentThread().getStackTrace()[2]);
+
+			this.setPeristanceAction(PersistanceAction.NEW);
+			this.setRevision(this.getRevision() + 1);
+
+			orderUpdateDao.persist(this);
+
+			//if (duplicate == null || duplicate.isEmpty())
+		} catch (Exception | Error ex) {
+
+			System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":persist, full stack trace follows:" + ex);
+			// ex.printStackTrace();
+
+		}
+
 		//  try {
-
-		this.setPeristanceAction(PersistanceAction.NEW);
-
-		this.setRevision(this.getRevision() + 1);
-		orderUpdateDao.persist(this);
-		//if (duplicate == null || duplicate.isEmpty())
-		//  } catch (Exception | Error ex) {
-
-		//     System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":persist, full stack trace follows:" + ex);
-		// ex.printStackTrace();
-
-		// }
-		//  if (getOrder() != null)
-		//    getOrder().persit();
-
-		// final Trade duplicate = PersistUtil.queryZeroOne(Trade.class, "select t from Trade t where market=?1 and remoteKey=?2 and time=?3",
-		//       trade.getMarket(), trade.getRemoteKey(), trade.getTime());
-		//  List<OrderUpdate> duplicate = orderUpdateDao.queryList(OrderUpdate.class, "select ou from OrderUpdate ou where id=?1 and sequence=?2", this.getId(),
-		//        this.getSequence());
-
-		// OrderUpdate duplicate = PersistUtil.queryZeroOne(OrderUpdate.class, "select ou from OrderUpdate ou where ou=?1 and sequence=?2", this,
-		//         this.getSequence());
-		//if (duplicate == null || duplicate.isEmpty())
-		// orderUpdateDao.persist(this);
-		//PersistUtil.insert(this);
-		// else
-		//   PersistUtil.merge(this);
 
 	}
 
@@ -245,12 +236,22 @@ public class OrderUpdate extends Event {
 	@Override
 	public synchronized void merge() {
 
-		this.setPeristanceAction(PersistanceAction.MERGE);
+		try {
+			log.debug(this.getClass().getSimpleName() + " - Merge : Merge of Order Update " + this.getId() + " called from class "
+					+ Thread.currentThread().getStackTrace()[2]);
 
-		this.setRevision(this.getRevision() + 1);
-		orderUpdateDao.merge(this);
-		// TODO Auto-generated method stub
+			this.setPeristanceAction(PersistanceAction.NEW);
+			this.setRevision(this.getRevision() + 1);
 
+			orderUpdateDao.merge(this);
+
+			//if (duplicate == null || duplicate.isEmpty())
+		} catch (Exception | Error ex) {
+
+			System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":merge, full stack trace follows:" + ex);
+			// ex.printStackTrace();
+
+		}
 	}
 
 	@Override
@@ -281,7 +282,8 @@ public class OrderUpdate extends Event {
 
 	@Override
 	public void persitParents() {
-		// TODO Auto-generated method stub
+		if (getOrder() != null)
+			getDao().merge(getOrder());
 
 	}
 

@@ -12,7 +12,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import javax.inject.Singleton;
 import javax.persistence.ElementCollection;
 
+import org.cryptocoinpartners.schema.Bar;
+import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.EntityBase;
+import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.Injector;
 import org.slf4j.Logger;
@@ -28,10 +31,15 @@ import com.google.inject.persist.PersistService;
 public class ApplicationInitializer implements Context.AttachListener, Serializable {
 	private Map<String, String> config;
 	private static int persistanceThreadCount = ConfigUtil.combined().getInt("db.writer.threads", 1);
+	private static int persistanceBookThreadCount = ConfigUtil.combined().getInt("db.book.writer.threads", 1);
+	private static int persistanceTradeThreadCount = ConfigUtil.combined().getInt("db.trade.writer.threads", 1);
+	private static int persistanceBarThreadCount = ConfigUtil.combined().getInt("db.bar.writer.threads", 1);
+
 	private static ListeningExecutorService insertPool = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
 	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.applicationInitalizer");
 
-	private static ExecutorService mergeService = Executors.newFixedThreadPool(persistanceThreadCount);
+	private static ExecutorService mergeService = Executors
+			.newFixedThreadPool(persistanceThreadCount + persistanceBookThreadCount + persistanceTradeThreadCount + persistanceBarThreadCount);
 	private static ExecutorService deleteService = mergeService;
 
 	private static ExecutorService insertService = mergeService;
@@ -39,8 +47,13 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 	//private static BlockingQueue insertQueue = new DelayQueue();
 	//private static BlockingQueue mergeQueue = new DelayQueue();
 	private static LinkedBlockingQueue<EntityBase> mergeQueue = new LinkedBlockingQueue<EntityBase>();
-
+	private static LinkedBlockingQueue<Book> mergeBookQueue = new LinkedBlockingQueue<Book>();
+	private static LinkedBlockingQueue<Trade> mergeTradeQueue = new LinkedBlockingQueue<Trade>();
+	private static LinkedBlockingQueue<Bar> mergeBarQueue = new LinkedBlockingQueue<Bar>();
 	private static LinkedBlockingQueue<EntityBase> insertQueue = mergeQueue;
+	private static LinkedBlockingQueue<Book> insertBookQueue = mergeBookQueue;
+	private static LinkedBlockingQueue<Trade> insertTradeQueue = mergeTradeQueue;
+	private static LinkedBlockingQueue<Bar> insertBarQueue = mergeBarQueue;
 	private static LinkedBlockingQueue<EntityBase> deleteQueue = mergeQueue;
 
 	//new LinkedBlockingDeque<EntityBase>();;
@@ -54,13 +67,19 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 	@Inject
 	ApplicationInitializer(PersistService service) {
 		service.start();
-		for (int i = 0; i < persistanceThreadCount; i++) {
+		for (int i = 0; i < persistanceThreadCount; i++)
 			//  insertService.submit(new persistRunnable(insertQueue));
 			mergeService.submit(new mergeRunnable(mergeQueue));
-			log.debug(this.getClass() + "- ApplicationInitializer started merege peristnace thread");
-			//   deleteService.submit(new deleteRunnable(deleteQueue));
 
-		}
+		//   deleteService.submit(new deleteRunnable(deleteQueue));
+
+		for (int i = 0; i < persistanceBookThreadCount; i++)
+			mergeService.submit(new mergeRunnable(mergeBookQueue));
+		for (int i = 0; i < persistanceTradeThreadCount; i++)
+			mergeService.submit(new mergeRunnable(mergeTradeQueue));
+		for (int i = 0; i < persistanceBarThreadCount; i++)
+			mergeService.submit(new mergeRunnable(mergeBarQueue));
+		log.debug(this.getClass() + "- ApplicationInitializer started merege peristnace thread");
 		//Future insertFuture = insertService.submit(new persistRunnable(insertQueue));
 
 		// Future<Void> insertFuture = insertService.submit(new persistRunnable(insertQueue));
@@ -96,6 +115,30 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 		this.mergeQueue = mergeQueue;
 	}
 
+	protected void setInsertBookQueue(LinkedBlockingQueue<Book> insertBookQueue) {
+		this.insertBookQueue = insertBookQueue;
+	}
+
+	protected void setInsertBarQueue(LinkedBlockingQueue<Bar> insertBarQueue) {
+		this.insertBarQueue = insertBarQueue;
+	}
+
+	protected void setMergeBookQueue(LinkedBlockingQueue<Book> mergeBookQueue) {
+		this.mergeBookQueue = mergeBookQueue;
+	}
+
+	protected void setMergeBarQueue(LinkedBlockingQueue<Bar> mergeBarkQueue) {
+		this.mergeBarQueue = mergeBarQueue;
+	}
+
+	protected void setInsertTradeQueue(LinkedBlockingQueue<Trade> insertTradeQueue) {
+		this.insertTradeQueue = insertTradeQueue;
+	}
+
+	protected void setMergeTradeQueue(LinkedBlockingQueue<Trade> mergeTradeQueue) {
+		this.mergeTradeQueue = mergeTradeQueue;
+	}
+
 	protected void setDeleteQueue(LinkedBlockingQueue<EntityBase> deleteQueue) {
 		this.deleteQueue = deleteQueue;
 	}
@@ -104,8 +147,32 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 		return mergeQueue;
 	}
 
+	public LinkedBlockingQueue<Book> getMergeBookQueue() {
+		return mergeBookQueue;
+	}
+
+	public LinkedBlockingQueue<Bar> getMergeBarQueue() {
+		return mergeBarQueue;
+	}
+
+	public LinkedBlockingQueue<Trade> getMergeTradeQueue() {
+		return mergeTradeQueue;
+	}
+
 	public LinkedBlockingQueue<EntityBase> getInsertQueue() {
 		return insertQueue;
+	}
+
+	public LinkedBlockingQueue<Book> getInsertBookQueue() {
+		return insertBookQueue;
+	}
+
+	public LinkedBlockingQueue<Trade> getInsertTradeQueue() {
+		return insertTradeQueue;
+	}
+
+	public LinkedBlockingQueue<Bar> getInsertBarQueue() {
+		return insertBarQueue;
 	}
 
 	public LinkedBlockingQueue<EntityBase> getDeleteQueue() {
@@ -162,27 +229,26 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 					//  return;
 					if (entity.getPeristanceAction() != null) {
 						switch (entity.getPeristanceAction()) {
-						//  entity.getDao().persistEntities(entity);
+							//  entity.getDao().persistEntities(entity);
 							case NEW:
 
-									entity.getDao().persistEntities(entity);
+								entity.getDao().persistEntities(entity);
 
 								// TODO Auto-generated catch block
 								break;
 							case MERGE:
-									entity.getDao().mergeEntities(entity);
+								entity.getDao().mergeEntities(entity);
 								break;
 							case DELETE:
 								entity.getDao().deleteEntities(entity);
 								break;
 							default:
-									entity.getDao().persistEntities(entity);
+								entity.getDao().persistEntities(entity);
 								break;
 						}
-					}
-					else
+					} else
 
-					entity.getDao().persistEntities(entity);
+						entity.getDao().persistEntities(entity);
 					//  EntityBase[] entities = peristQueue.take();
 					// for (EntityBase entity : entities)
 
@@ -234,13 +300,13 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 					if (entity.getPeristanceAction() != null) {
 						switch (entity.getPeristanceAction()) {
 							case NEW:
-									entity.getDao().persistEntities(entity);
+								entity.getDao().persistEntities(entity);
 								break;
 							case MERGE:
 								entity.getDao().mergeEntities(entity);
 								break;
 							case DELETE:
-									entity.getDao().deleteEntities(entity);
+								entity.getDao().deleteEntities(entity);
 								break;
 							default:
 								entity.getDao().mergeEntities(entity);
@@ -283,10 +349,10 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 						if (entity.getPeristanceAction() != null) {
 							switch (entity.getPeristanceAction()) {
 								case NEW:
-										entity.getDao().persistEntities(entity);
+									entity.getDao().persistEntities(entity);
 									break;
 								case MERGE:
-											entity.getDao().mergeEntities(entity);
+									entity.getDao().mergeEntities(entity);
 									break;
 								case DELETE:
 									entity.getDao().deleteEntities(entity);

@@ -18,7 +18,6 @@ import org.cryptocoinpartners.schema.dao.BookJpaDao;
 import org.cryptocoinpartners.schema.dao.MarketDataJpaDao;
 import org.cryptocoinpartners.schema.dao.TradeJpaDao;
 import org.cryptocoinpartners.util.ConfigUtil;
-import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.Injector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,12 +109,14 @@ public class SaveMarketData {
 		public void saveData() {
 			// issues is when we have mutlipe thread persisting , we have persitance contect per thread that is not updated.
 			try {
-				Trade duplicate = (trade.getDao() == null) ? EM.queryZeroOne(Trade.class, "select t from Trade t where market=?1 and remoteKey=?2 and time=?3",
-						trade.getMarket(), trade.getRemoteKey(), trade.getTime()) : trade.queryZeroOne(Trade.class,
-						"select t from Trade t where market=?1 and remoteKey=?2 and time=?3", trade.getMarket(), trade.getRemoteKey(), trade.getTime());
+				//	Trade duplicate = (trade.getDao() == null)
+				//			? EM.queryZeroOne(Trade.class, "select t from Trade t where market=?1 and remoteKey=?2 and time=?3", trade.getMarket(),
+				//					trade.getRemoteKey(), trade.getTime())
+				//			: trade.queryZeroOne(Trade.class, "select t from Trade t where market=?1 and remoteKey=?2 and time=?3", trade.getMarket(),
+				//					trade.getRemoteKey(), trade.getTime());
 
-				if (duplicate == null)
-					trade.persit();
+				//	if (duplicate == null)
+				trade.persit();
 			} catch (Error | Exception ex) {
 				log.debug("SaveTradeRunnable:saveData - Trade " + trade + " not persisted");
 
@@ -140,17 +141,17 @@ public class SaveMarketData {
 
 			UUID duplicate = null;
 			try {
-				if (book.getId() != null)
-					duplicate = (book.getDao() == null) ? (EM.queryZeroOne(UUID.class, "select b.id from Book b where b.id=?1", book.getId())) : (book
-							.queryZeroOne(UUID.class, "select b.id from Book b where b.id=?1", book.getId()));
+				//if (book.getId() != null)
+				//	duplicate = (book.getDao() == null) ? (EM.queryZeroOne(UUID.class, "select b.id from Book b where b.id=?1", book.getId())) : (book
+				//			.queryZeroOne(UUID.class, "select b.id from Book b where b.id=?1", book.getId()));
 
-				if (duplicate == null) {
-					//try {
-					//      log.info("persiting book: " + book.getId());
-					book.persit();
-				}
+				//if (duplicate == null) {
+				//try {
+				//      log.info("persiting book: " + book.getId());
+				book.persit();
+				//}
 			} catch (Error | Exception ex) {
-				log.debug("SaveBookRunnableData:saveData - Book " + book + " not persisted");
+				log.debug("SaveBookRunnableData:saveData - Book " + book + " not persisted" + ex);
 
 			}
 		}
@@ -178,12 +179,14 @@ public class SaveMarketData {
 
 			try {
 
-				Bar duplicate = (bar.getDao() == null) ? EM.queryZeroOne(Bar.class, "select b from Bar b where market=?1 and interval=?2 and time=?3",
-						bar.getMarket(), bar.getInterval(), bar.getTime()) : bar.queryZeroOne(Bar.class,
-						"select b from Bar b where market=?1 and interval=?2 and time=?3", bar.getMarket(), bar.getInterval(), bar.getTime());
+				//Bar duplicate = (bar.getDao() == null)
+				//		? EM.queryZeroOne(Bar.class, "select b from Bar b where market=?1 and interval=?2 and time=?3", bar.getMarket(), bar.getInterval(),
+				//				bar.getTime())
+				//		: bar.queryZeroOne(Bar.class, "select b from Bar b where market=?1 and interval=?2 and time=?3", bar.getMarket(), bar.getInterval(),
+				//				bar.getTime());
 
-				if (duplicate == null)
-					bar.persit();
+				//if (duplicate == null)
+				bar.persit();
 			} catch (Error | Exception ex) {
 				log.debug("SaveBarRunnableData:saveData - Book " + bar + " not persisted");
 

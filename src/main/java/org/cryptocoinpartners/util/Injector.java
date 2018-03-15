@@ -108,12 +108,13 @@ public class Injector {
 		//daretryCount = ConfigUtil.combined().getInt("db.persist.retry");
 
 		properties.put("hibernate.hbm2ddl.auto", "update");
+		properties.put("show_sql", "true");
 		properties.put("hibernate.connection.driver_class", ConfigUtil.combined().getString("db.driver"));
 		properties.put("hibernate.dialect", ConfigUtil.combined().getString("db.dialect"));
 		properties.put("hibernate.connection.url", ConfigUtil.combined().getString("db.url"));
 		properties.put("hibernate.connection.username", ConfigUtil.combined().getString("db.username"));
 		properties.put("hibernate.connection.password", ConfigUtil.combined().getString("db.password"));
-		properties.put("hibernate.ejb.naming_strategy", "org.hibernate.cfg.ImprovedNamingStrategy");
+		properties.put("hibernate.physical_naming_strategy", "org.cryptocoinpartners.util.PhysicalNamingStrategyImpl");
 
 		properties.put("hibernate.connection.autocommit", "false");
 		properties.put("hibernate.flushMode", "COMMIT");
@@ -147,7 +148,7 @@ public class Injector {
 		// properties.put("hibernate.c3p0.maxIdleTimeExcessConnections", "2");
 		// properties.put("hibernate.c3p0.timeout", "300");
 		// properties.put("hibernate.c3p0.maxIdleTime", "21600");
-		properties.put("hibernate.c3p0.idle_test_period", ConfigUtil.combined().getString("db.idle.test.period", "60"));
+		properties.put("hibernate.c3p0.idle_test_period", ConfigUtil.combined().getString("db.idle.test.period", "0"));
 
 		//properties.put("hibernate.c3p0.checkoutTimeout", "500");
 		properties.put("hibernate.c3p0.preferredTestQuery", "SELECT 1 from exchange");
@@ -158,7 +159,7 @@ public class Injector {
 		properties.put("hibernate.c3p0.acquireRetryDelay", ConfigUtil.combined().getString("db.acquire_retry_delay", "5000"));
 		properties.put("hibernate.c3p0.acquireRetryAttempts", ConfigUtil.combined().getString("db.acquire_retry_attempts", "30"));
 		properties.put("hibernate.c3p0.breakAfterAcquireFailure", ConfigUtil.combined().getString("db.break_after_acquire_failure", "false"));
-		//  properties.put("hibernate.c3p0.checkoutTimeout", ConfigUtil.combined().getString("db.checkout_timeout", "0"));
+		properties.put("hibernate.c3p0.checkoutTimeout", ConfigUtil.combined().getString("db.checkout_timeout", "0"));
 		properties.put("hibernate.c3p0.idleConnectionTestPeriod", ConfigUtil.combined().getString("db.idle_connection_test_period", "0"));
 		properties.put("hibernate.c3p0.numHelperThreads", ConfigUtil.combined().getString("db.num_helper_threads", "10"));
 		properties.put("hibernate.c3p0.unreturnedConnectionTimeout", ConfigUtil.combined().getString("db.unreturned_connection_timeout", "0"));
@@ -174,13 +175,14 @@ public class Injector {
 		// properties.put("hibernate.c3p0.validate", "true");
 
 		properties.put("javax.persistence.sharedCache.mode", "NONE");
-		// properties.put("javax.persistence.query.timeout", ConfigUtil.combined().getString("db.query_timeout", "5000"));
+		properties.put("javax.persistence.query.timeout", ConfigUtil.combined().getString("db.query_timeout", "9999999"));
 
 		properties.put("javax.persistence.LockModeType", "OPTIMISTIC");
 
 		// root = new Injector(Guice.createInjector(new LogInjector(), new PersistanceModule()), ConfigUtil.combined());
 		//  new JpaPersistModule("org.cryptocoinpartners.schema")
-		root = new Injector(Guice.createInjector(new LogInjector(), new JpaPersistModule("org.cryptocoinpartners.schema").properties(properties),
-				new PersistanceModule()), ConfigUtil.combined());
+		root = new Injector(
+				Guice.createInjector(new LogInjector(), new JpaPersistModule("org.cryptocoinpartners.schema").properties(properties), new PersistanceModule()),
+				ConfigUtil.combined());
 	}
 }

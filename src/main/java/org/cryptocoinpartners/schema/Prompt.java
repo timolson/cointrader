@@ -1,11 +1,15 @@
 package org.cryptocoinpartners.schema;
 
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.Nullable;
 import javax.persistence.Basic;
 import javax.persistence.Cacheable;
 import javax.persistence.Entity;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.NoResultException;
 import javax.persistence.Transient;
@@ -28,9 +32,18 @@ import com.google.inject.Inject;
 public class Prompt extends EntityBase {
 	@Inject
 	protected transient static PromptJpaDao promptDao;
+	private static Map<String, Prompt> promptMap = new HashMap<String, Prompt>();
 
 	public static Prompt forSymbol(String symbol) {
-		return EM.queryOne(Prompt.class, "select c from Prompt c where symbol=?1", symbol);
+		if (promptMap.isEmpty())
+			allSymbols();
+		if (promptMap.get(symbol) == null) {
+			Prompt prompt = EM.queryOne(Prompt.class, "select c from Prompt c where symbol=?1", symbol);
+			if (prompt != null)
+				promptMap.put(symbol, prompt);
+		}
+		return promptMap.get(symbol);
+
 	}
 
 	@Override
@@ -40,8 +53,14 @@ public class Prompt extends EntityBase {
 		return null;
 	}
 
-	public static List<String> allSymbols() {
-		return EM.queryList(String.class, "select symbol from Prompt");
+	public static Collection<String> allSymbols() {
+		if (promptMap.isEmpty()) {
+			List<Prompt> prompts = EM.queryList(Prompt.class, "select p from Prompt p");
+			for (Prompt prompt : prompts)
+				promptMap.put(prompt.getSymbol(), prompt);
+		}
+		return promptMap.keySet();
+
 	}
 
 	// JPA
@@ -187,11 +206,12 @@ public class Prompt extends EntityBase {
 	}
 
 	@ManyToOne(optional = true)
+	@JoinColumn(name = "tradedCurrency")
 	private Asset getTradedCurrency() {
 		return this.tradedCurrency;
 	}
 
-	@ManyToOne(optional = true)
+	@Transient
 	public Asset getTradedCurrency(Market market) {
 		if (getTradedCurrency() == null)
 			return market.getListing().getBase();
@@ -223,8 +243,8 @@ public class Prompt extends EntityBase {
 		}
 	}
 
-	static Prompt forSymbolOrCreate(String symbol, double tickValue, double tickSize, double volumeBasis, double priceBasis, int margin,
-			FeeMethod marginMethod, double makerfeeRate, double takerfeeRate, FeeMethod feeMethod, FeeMethod marginFeeMethod) {
+	static Prompt forSymbolOrCreate(String symbol, double tickValue, double tickSize, double volumeBasis, double priceBasis, int margin, FeeMethod marginMethod,
+			double makerfeeRate, double takerfeeRate, FeeMethod feeMethod, FeeMethod marginFeeMethod) {
 		try {
 			return forSymbol(symbol);
 		} catch (NoResultException e) {

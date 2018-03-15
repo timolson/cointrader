@@ -12,7 +12,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.Nullable;
 import javax.persistence.Basic;
 import javax.persistence.Cacheable;
-import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
 import javax.persistence.Entity;
 import javax.persistence.Index;
@@ -64,8 +63,7 @@ import com.google.inject.Inject;
 //@MappedSuperclass
 @Cacheable
 @Table(name = "\"Order\"", indexes = { @Index(columnList = "Order_Type"), @Index(columnList = "fillType"), @Index(columnList = "portfolio"),
-		@Index(columnList = "market"), @Index(columnList = "parentFill"), @Index(columnList = "parentOrder"), @Index(columnList = "version"),
-		@Index(columnList = "revision") })
+		@Index(columnList = "parentFill"), @Index(columnList = "parentOrder"), @Index(columnList = "version"), @Index(columnList = "revision") })
 //, @Index(columnList = "portfolio") })
 // This is required because ORDER is a SQL keyword and must be escaped
 @DiscriminatorColumn(name = "Order_Type")
@@ -78,10 +76,11 @@ import com.google.inject.Inject;
 		// @NamedEntityGraph(name = "orderWithParentFill", attributeNodes = { @NamedAttributeNode(value = "parentFill", subgraph = "orderWithParentFillDetails") }, subgraphs = { @NamedSubgraph(name = "orderWithParentFillDetails", attributeNodes = { @NamedAttributeNode("children") }) }),
 		@NamedEntityGraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode(value = "fills") }),
 		@NamedEntityGraph(name = "orderWithTransactions", attributeNodes = { @NamedAttributeNode(value = "transactions") }),
-		@NamedEntityGraph(name = "orderWithChildOrders", attributeNodes = { @NamedAttributeNode(value = "orderChildren") })
+		@NamedEntityGraph(name = "orderWithChildOrders", attributeNodes = { @NamedAttributeNode(value = "orderChildren") }),
+		@NamedEntityGraph(name = "orderWithOrderUpdates", attributeNodes = { @NamedAttributeNode(value = "orderUpdates") })
 
-//@NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "order"))
-//,@NamedSubgraph(name = "order", attributeNodes = @NamedAttributeNode("order")) 
+		//@NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "order"))
+		//,@NamedSubgraph(name = "order", attributeNodes = @NamedAttributeNode("order")) 
 })
 public abstract class Order extends Event {
 	@Inject
@@ -96,6 +95,7 @@ public abstract class Order extends Event {
 	// private static final SimpleDateFormat FORMAT = new SimpleDateFormat("dd.MM.yyyy kk:mm:ss");
 	protected static final String SEPARATOR = ",";
 
+	@Nullable
 	@ManyToOne(optional = true)
 	@JoinColumn(name = "parentOrder")
 	//, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
@@ -137,6 +137,7 @@ public abstract class Order extends Event {
 	}
 
 	@ManyToOne(optional = false)
+	@JoinColumn(name = "portfolio")
 	//@Transient
 	public Portfolio getPortfolio() {
 		return portfolio;
@@ -158,15 +159,17 @@ public abstract class Order extends Event {
 
 	}
 
-	@Nullable
-	@Column(insertable = false, updatable = false)
+	//	@Nullable
+	//	@Column(insertable = false, updatable = false)
 	@Transient
 	public abstract Amount getLimitPrice();
 
-	@Nullable
-	@Column(insertable = false, updatable = false)
+	//@Nullable
+	//@Column(insertable = false, updatable = false)
 	@Transient
 	public abstract Amount getMarketPrice();
+
+	public abstract void addFill(Fill fill);
 
 	public abstract Order withLimitPrice(String price);
 
@@ -181,65 +184,68 @@ public abstract class Order extends Event {
 	public abstract Order withMarketPrice(DiscreteAmount price);
 
 	@ManyToOne(optional = true)
-	@JoinColumn(insertable = false, updatable = false)
+	@JoinColumn(name = "market")
 	public abstract Market getMarket();
 
 	@Nullable
-	@Column(insertable = false, updatable = false)
+	//@Column(insertable = false, updatable = false)
 	@Transient
 	public abstract Amount getStopAmount();
 
 	@Nullable
-	@Column(insertable = false, updatable = false)
+	//@Column(insertable = false, updatable = false)
 	@Transient
 	public abstract double getStopPercentage();
 
 	@Nullable
-	@Column(insertable = false, updatable = false)
+	//@Column(insertable = false, updatable = false)
 	@Transient
 	public abstract double getTargetPercentage();
 
 	@Nullable
-	@Column(insertable = false, updatable = false)
+	//@Column(insertable = false, updatable = false)
 	@Transient
 	public abstract double getTriggerInterval();
 
 	@Nullable
-	@Column(insertable = false, updatable = false)
+	//	@Column(insertable = false, updatable = false)
 	@Transient
 	public abstract Amount getTrailingStopAmount();
 
 	@Nullable
-	@Column(insertable = false, updatable = false)
+	//@Column(insertable = false, updatable = false)
 	@Transient
 	public abstract Amount getTargetAmount();
 
 	@Nullable
-	@Column(insertable = false, updatable = false)
+	//@Column(insertable = false, updatable = false)
 	@Transient
 	public abstract Amount getStopPrice();
 
 	@Nullable
-	@Column(insertable = false, updatable = false)
+	//@Column(insertable = false, updatable = false)
 	@Transient
 	public abstract Amount getLastBestPrice();
 
 	@Nullable
-	@Column(insertable = false, updatable = false)
+	//@Column(insertable = false, updatable = false)
 	@Transient
 	public abstract Amount getTargetPrice();
 
 	@Nullable
-	@Column(insertable = false, updatable = false)
+	//@Column(insertable = false, updatable = false)
 	@Transient
 	public abstract Amount getTrailingStopPrice();
 
-	@Column(insertable = false, updatable = false)
+	//@Column(insertable = false, updatable = false)
 	@Transient
 	public abstract Amount getVolume();
 
 	@Transient
 	public abstract Amount getUnfilledVolume();
+
+	@Transient
+	public abstract Amount getOpenVolume();
 
 	public abstract void setStopAmount(DecimalAmount stopAmount);
 
@@ -284,14 +290,20 @@ public abstract class Order extends Event {
 	}
 
 	public synchronized void setParentOrder(Order order) {
-		if (order == null || (order != null && !order.equals(this)))
+		if (order != null)
+			log.trace("Order:setParentOrder - setting parent order to " + order.getId() + " / " + System.identityHashCode(order) + " for order " + this.getId()
+					+ " / " + System.identityHashCode(this) + ". Calling class " + Thread.currentThread().getStackTrace()[2]);
+
+		if (order == null || (order != null && !order.equals(this))) {
+
 			this.parentOrder = order;
+		}
 	}
 
 	public synchronized void setParentFill(Fill fill) {
 		if (fill != null) {
-			log.trace("Order:setParentFill setting parent fill to " + fill.getId() + " / " + System.identityHashCode(fill) + " for order " + getId() + " / "
-					+ System.identityHashCode(this) + ". Calling class " + Thread.currentThread().getStackTrace()[2]);
+			log.trace("Order:setParentFill setting parent fill to " + fill.getId() + " / " + System.identityHashCode(fill) + " for order " + this.getId()
+					+ " / " + System.identityHashCode(this) + ". Calling class " + Thread.currentThread().getStackTrace()[2]);
 			//   for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
 			//     log.error(ste.toString());
 			//}
@@ -349,6 +361,28 @@ public abstract class Order extends Event {
 		return emulation;
 	}
 
+	@Override
+	public void persitParents() {
+
+		if (getPortfolio() != null)
+			getDao().persist(getPortfolio());
+
+		if (getParentOrder() != null)
+			getDao().persist(getParentOrder());
+
+		if (getParentFill() != null)
+			getDao().persist(getParentFill());
+
+		for (Transaction transaction : getTransactions())
+			getDao().persist(transaction);
+
+		for (Order childOrder : getOrderChildren())
+			getDao().persist(childOrder);
+		for (OrderUpdate orderUpdate : getOrderUpdates())
+			getDao().persist(orderUpdate);
+
+	}
+
 	// @Transient
 	@Nullable
 	@OneToMany
@@ -404,9 +438,9 @@ public abstract class Order extends Event {
 		for (Order order : orders) {
 			//  for (Fill pos : getFills()) {
 
-			avgPrice = (cumVolume.plus(order.getUnfilledVolume())).isZero() ? avgPrice : ((avgPrice.times(cumVolume, Remainder.ROUND_EVEN)).plus(order
-					.getUnfilledVolume().times(order.getLimitPrice(), Remainder.ROUND_EVEN))).divide(cumVolume.plus(order.getUnfilledVolume()),
-					Remainder.ROUND_EVEN);
+			avgPrice = (cumVolume.plus(order.getUnfilledVolume())).isZero() ? avgPrice
+					: ((avgPrice.times(cumVolume, Remainder.ROUND_EVEN)).plus(order.getUnfilledVolume().times(order.getLimitPrice(), Remainder.ROUND_EVEN)))
+							.divide(cumVolume.plus(order.getUnfilledVolume()), Remainder.ROUND_EVEN);
 			cumVolume = cumVolume.plus(order.getUnfilledVolume());
 
 		}
@@ -477,9 +511,9 @@ public abstract class Order extends Event {
 			if (stopPrice == null)
 				continue;
 			if (stopPrice != null)
-				avgStopPrice = (cumVolume.plus(order.getUnfilledVolume())).isZero() ? avgStopPrice : ((avgStopPrice.times(cumVolume, Remainder.ROUND_EVEN))
-						.plus(order.getUnfilledVolume().times(stopPrice, Remainder.ROUND_EVEN))).divide(cumVolume.plus(order.getUnfilledVolume()),
-						Remainder.ROUND_EVEN);
+				avgStopPrice = (cumVolume.plus(order.getUnfilledVolume())).isZero() ? avgStopPrice
+						: ((avgStopPrice.times(cumVolume, Remainder.ROUND_EVEN)).plus(order.getUnfilledVolume().times(stopPrice, Remainder.ROUND_EVEN)))
+								.divide(cumVolume.plus(order.getUnfilledVolume()), Remainder.ROUND_EVEN);
 
 			cumVolume = cumVolume.plus(order.getUnfilledVolume());
 		}
@@ -488,11 +522,14 @@ public abstract class Order extends Event {
 	}
 
 	public void loadAllChildOrdersByParentOrder(Order parentOrder, Map<Order, Order> orders, Map<Fill, Fill> fills) {
+		log.debug(this.getClass().getSimpleName() + " - loadAllChildOrdersByParentOrder for " + parentOrder.getId() + "/" + System.identityHashCode(parentOrder)
+				+ " called from class " + Thread.currentThread().getStackTrace()[2]);
+
 		Map withFillsHints = new HashMap();
 		Map withTransHints = new HashMap();
 
 		Map withChildrenHints = new HashMap();
-
+		Map withUpdatesHints = new HashMap();
 		// Map orderHints = new HashMap();
 
 		// UUID portfolioID = EM.queryOne(UUID.class, queryStr, portfolioName);
@@ -500,10 +537,11 @@ public abstract class Order extends Event {
 		withFillsHints.put("javax.persistence.fetchgraph", "orderWithFills");
 		withTransHints.put("javax.persistence.fetchgraph", "orderWithTransactions");
 		withChildrenHints.put("javax.persistence.fetchgraph", "orderWithChildOrders");
-
+		withUpdatesHints.put("javax.persistence.fetchgraph", "orderWithOrderUpdates");
 		Order orderWithFills;
 		Order orderWithChildren;
 		Order orderWithTransactions;
+		Order orderWithUpdates;
 		// so for each fill in the open position we need to load the whole order tree
 		// getorder, then get all childe orders, then for each child, load child orders, so on and so forth.
 
@@ -527,6 +565,7 @@ public abstract class Order extends Event {
 			orderWithFills = EM.namedQueryZeroOne(Order.class, "Order.findOrder", withFillsHints, parentOrder.getId());
 			orderWithChildren = EM.namedQueryZeroOne(Order.class, "Order.findOrder", withChildrenHints, parentOrder.getId());
 			orderWithTransactions = EM.namedQueryZeroOne(Order.class, "Order.findOrder", withTransHints, parentOrder.getId());
+			orderWithUpdates = EM.namedQueryZeroOne(Order.class, "Order.findOrder", withUpdatesHints, parentOrder.getId());
 		} catch (Error | Exception ex) {
 			log.error("Order:loadAllChildOrdersByParentOrdere unable to get order for orderID: " + parentOrder.getId() + ". Full stack trace ", ex);
 			return;
@@ -571,8 +610,33 @@ public abstract class Order extends Event {
 		} else
 			parentOrder.setFills(new CopyOnWriteArrayList<Fill>());
 
-		if (orderWithTransactions != null && orderWithTransactions.getTransactions() != null
-				&& Hibernate.isInitialized(orderWithTransactions.getTransactions()) && orderWithTransactions.getId().equals(parentOrder.getId())) {
+		if (orderWithUpdates != null && orderWithUpdates.getOrderUpdates() != null && Hibernate.isInitialized(orderWithUpdates.getOrderUpdates())
+				&& orderWithUpdates.getId().equals(parentOrder.getId())) {
+
+			for (OrderUpdate orderUpdate : orderWithUpdates.getOrderUpdates()) {
+
+				if (!orders.containsKey(orderUpdate.getOrder())) {
+					orders.put(orderUpdate.getOrder(), orderUpdate.getOrder());
+					if (orderUpdate.getOrder().getPortfolio().equals(parentOrder.getPortfolio()))
+						orderUpdate.getOrder().setPortfolio(parentOrder.getPortfolio());
+					if (orderUpdate.getOrder().getPortfolio().equals(parentOrder.getPortfolio()))
+						orderUpdate.getOrder().setPortfolio(parentOrder.getPortfolio());
+					if (orderUpdate.getOrder().getParentOrder() != null
+							&& orderUpdate.getOrder().getParentOrder().getPortfolio().equals(parentOrder.getPortfolio()))
+						orderUpdate.getOrder().getParentOrder().setPortfolio(parentOrder.getPortfolio());
+
+					orderUpdate.getOrder().loadAllChildOrdersByParentOrder(orderUpdate.getOrder(), orders, fills);
+				} else
+					orderUpdate.setOrder(orders.get(orderUpdate.getOrder()));
+
+			}
+
+			parentOrder.setOrderUpdates(orderWithUpdates.getOrderUpdates());
+		} else
+			parentOrder.setOrderUpdates(new CopyOnWriteArrayList<OrderUpdate>());
+
+		if (orderWithTransactions != null && orderWithTransactions.getTransactions() != null && Hibernate.isInitialized(orderWithTransactions.getTransactions())
+				&& orderWithTransactions.getId().equals(parentOrder.getId())) {
 
 			for (Transaction transaction : orderWithTransactions.getTransactions()) {
 				if (transaction.getPortfolio().equals(parentOrder.getPortfolio()))
@@ -600,26 +664,30 @@ public abstract class Order extends Event {
 			parentOrder.setTransactions(orderWithTransactions.getTransactions());
 		} else
 			parentOrder.setTransactions(new CopyOnWriteArrayList<Transaction>());
+
 		if (orderWithChildren != null && orderWithChildren.getOrderChildren() != null && Hibernate.isInitialized(orderWithChildren.getOrderChildren())
 				&& orderWithChildren.getId().equals(parentOrder.getId())) {
 			int index = 0;
 			for (Order order : orderWithChildren.getOrderChildren()) {
-
+				//if (order.getId().toString().equals("5678a30e-ff17-43b7-be84-f92734f18d86"))
+				//	log.debug("test");
 				if (order.getPortfolio().equals(parentOrder.getPortfolio())) {
-					log.debug("Order:loadAllChildOrdersByParentOrder - Setting order " + order.getId() + " portfolio to: " + parentOrder.getPortfolio() + "/"
-							+ System.identityHashCode(parentOrder.getPortfolio()));
+					log.debug("Order:loadAllChildOrdersByParentOrder - Setting order " + order.getId() + "/" + System.identityHashCode(order)
+							+ " portfolio to: " + parentOrder.getPortfolio() + "/" + System.identityHashCode(parentOrder.getPortfolio()));
 
 					order.setPortfolio(parentOrder.getPortfolio());
 				}
 				if (order.getParentOrder() != null && order.getParentOrder().getPortfolio().equals(parentOrder.getPortfolio())) {
-					log.debug("Order:loadAllChildOrdersByParentOrder - Setting parent order " + order.getParentOrder().getId() + " portfolio to: "
-							+ parentOrder.getPortfolio() + "/" + System.identityHashCode(parentOrder.getPortfolio()));
+					log.debug("Order:loadAllChildOrdersByParentOrder - Setting parent order " + order.getParentOrder().getId() + "/"
+							+ System.identityHashCode(order.getParentOrder()) + " portfolio to: " + parentOrder.getPortfolio() + "/"
+							+ System.identityHashCode(parentOrder.getPortfolio()));
 
 					order.getParentOrder().setPortfolio(parentOrder.getPortfolio());
 				}
 				if (order.getParentFill() != null && order.getParentFill().getPortfolio().equals(parentOrder.getPortfolio())) {
-					log.debug("Order:loadAllChildOrdersByParentOrder - Setting parent fill " + order.getParentFill().getId() + " portfolio to: "
-							+ parentOrder.getPortfolio() + "/" + System.identityHashCode(parentOrder.getPortfolio()));
+					log.debug("Order:loadAllChildOrdersByParentOrder - Setting parent fill " + order.getParentFill().getId() + "/"
+							+ System.identityHashCode(order.getParentFill()) + " portfolio to: " + parentOrder.getPortfolio() + "/"
+							+ System.identityHashCode(parentOrder.getPortfolio()));
 
 					order.getParentFill().setPortfolio(parentOrder.getPortfolio());
 				}
@@ -634,27 +702,28 @@ public abstract class Order extends Event {
 					orderWithChildren.getOrderChildren().set(index, orders.get(order));
 				index++;
 			}
-			log.debug("Order:loadAllChildOrdersByParentOrder - setting orderchildren to " + System.identityHashCode(orderWithChildren.getOrderChildren())
+			log.debug("Order:loadAllChildOrdersByParentOrder - setting orderChildren to " + System.identityHashCode(orderWithChildren.getOrderChildren())
 					+ "for order " + parentOrder.getId() + " /" + System.identityHashCode(parentOrder));
 
 			parentOrder.setOrderChildren(orderWithChildren.getOrderChildren());
 		} else {
-			log.debug("Order:loadAllChildOrdersByParentOrder - setting orderchildren to new array list for order " + parentOrder.getId() + " /"
+			log.debug("Order:loadAllChildOrdersByParentOrder - setting orderChildren to new array list for order " + parentOrder.getId() + " /"
 					+ System.identityHashCode(parentOrder));
 
 			parentOrder.setOrderChildren(new CopyOnWriteArrayList<Order>());
 		}
-		if (orders.containsKey(parentOrder)) {
-			log.debug("Order:loadAllChildOrdersByParentOrder - order " + parentOrder.getId() + " / " + System.identityHashCode(parentOrder)
-					+ " parent order to " + orders.get(parentOrder).getId() + " / " + System.identityHashCode(orders.get(parentOrder)));
+		if (orders.containsKey(parentOrder.getParentOrder())) {
+			log.debug("Order:loadAllChildOrdersByParentOrder -setting parent order for" + parentOrder.getId() + " / " + System.identityHashCode(parentOrder)
+					+ " to parent order " + orders.get(parentOrder.getParentOrder()).getId() + " / "
+					+ System.identityHashCode(orders.get(parentOrder.getParentOrder())));
 
-			setParentOrder(orders.get(parentOrder));
+			setParentOrder(orders.get(parentOrder.getParentOrder()));
 		}
-		if (fills.containsKey(getParentFill())) {
-			log.debug("Order:loadAllChildOrdersByParentOrder - order " + parentOrder.getId() + " / " + System.identityHashCode(parentOrder)
-					+ " setting parent fill to  order to " + fills.get(getParentFill()).getId() + " / " + System.identityHashCode(fills.get(getParentFill())));
+		if (fills.containsKey(parentOrder.getParentFill())) {
+			log.debug("Order:loadAllChildOrdersByParentOrder - setting parent fill for " + parentOrder.getId() + " / " + System.identityHashCode(parentOrder)
+					+ " to fill  " + fills.get(parentOrder.getParentFill()).getId() + " / " + System.identityHashCode(fills.get(parentOrder.getParentFill())));
 
-			setParentFill(fills.get(getParentFill()));
+			setParentFill(fills.get(parentOrder.getParentFill()));
 		}
 
 		// System.gc();
@@ -1169,13 +1238,21 @@ public abstract class Order extends Event {
 		//  }
 	}
 
-	public synchronized void addFill(Fill fill) {
+	@Override
+	public Order clone() {
+		Order clone = null;
+		try {
+			clone = (Order) super.clone();
+			clone.transactions = new ArrayList(this.transactions);
+			clone.children = new ArrayList(this.children);
+			clone.fills = new ArrayList(this.getFills());
+			clone.orderUpdates = new ArrayList(this.getOrderUpdates());
 
-		if (!getFills().contains(fill))
-			synchronized (getFills()) {
-				getFills().add(fill);
-			}
-
+			//deep copying 
+		} catch (CloneNotSupportedException cns) {
+			log.error("Error while cloning fill", cns);
+		}
+		return clone;
 	}
 
 	public synchronized void addOrderUpdate(OrderUpdate orderUpdate) {
@@ -1192,6 +1269,8 @@ public abstract class Order extends Event {
 	}
 
 	public synchronized void addChildOrder(Order order) {
+		log.debug(this.getClass().getSimpleName() + "addChildOrder - adding child order " + order.getId() + "/" + System.identityHashCode(order) + " to order "
+				+ this.getId() + "/" + System.identityHashCode(order));
 		if (!getOrderChildren().contains(order) && order != null && !order.equals(this))
 			synchronized (getOrderChildren()) {
 				getOrderChildren().add(order);

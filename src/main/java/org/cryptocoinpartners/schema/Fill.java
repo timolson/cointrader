@@ -65,8 +65,8 @@ import com.google.inject.assistedinject.Assisted;
 		@NamedEntityGraph(name = "fillWithChildOrders", attributeNodes = { @NamedAttributeNode("fillChildOrders") }),
 		@NamedEntityGraph(name = "fillWithTransactions", attributeNodes = { @NamedAttributeNode("transactions") })
 
-//@NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "order"))
-//,@NamedSubgraph(name = "order", attributeNodes = @NamedAttributeNode("order")) 
+		//@NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "order"))
+		//,@NamedSubgraph(name = "order", attributeNodes = @NamedAttributeNode("order")) 
 })
 //})
 //, subgraph = "childrenWithFills") }, subgraphs = { @NamedSubgraph(name = "childrenWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
@@ -160,9 +160,7 @@ public class Fill extends RemoteEvent {
 	}
 
 	// public @ManyToOne(cascade = { CascadeType.MERGE, CascadeType.REMOVE, CascadeType.REFRESH })
-	public @ManyToOne
-	@JoinColumn(name = "`order`")
-	SpecificOrder getOrder() {
+	public @ManyToOne @JoinColumn(name = "`order`") SpecificOrder getOrder() {
 		return order;
 	}
 
@@ -180,7 +178,8 @@ public class Fill extends RemoteEvent {
 			this.setPeristanceAction(PersistanceAction.MERGE);
 
 			this.setRevision(this.getRevision() + 1);
-			log.debug("Fill - Merge : Merge of Fill " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+			log.debug("Fill - Merge : Merge of Fill " + this.getId() + " OpenVolumeCount:" + this.getOpenVolumeCount() + " called from class "
+					+ Thread.currentThread().getStackTrace()[2]);
 
 			fillDao.merge(this);
 			//if (duplicate == null || duplicate.isEmpty())
@@ -228,7 +227,8 @@ public class Fill extends RemoteEvent {
 		//    childOrder.p
 		//  childOrder.persit();
 		// try {
-		log.debug("Fill - Persist : Persit of Fill " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+		log.debug("Fill - Persist : Persit of Fill " + this.getId() + " OpenVolumeCount:" + this.getOpenVolumeCount() + " called from class "
+				+ Thread.currentThread().getStackTrace()[2]);
 		fillDao.persist(this);
 		//  } catch (Exception | Error ex) {
 		//   fillDao.merge(this);
@@ -332,50 +332,26 @@ public class Fill extends RemoteEvent {
 	@PrePersist
 	@Override
 	public synchronized void prePersist() {
-		if (getDao() != null) {
+		//this.persitParents();
 
-			EntityBase dbPortfolio = null;
-			EntityBase dbOrder = null;
-			EntityBase dbPosition = null;
-			/*
-			 * if (getPortfolio() != null) { try { dbPortfolio = getDao().find(getPortfolio().getClass(), getPortfolio().getId()); if (dbPortfolio != null
-			 * && dbPortfolio.getVersion() != getPortfolio().getVersion()) { getPortfolio().setVersion(dbPortfolio.getVersion()); if
-			 * (getPortfolio().getRevision() > dbPortfolio.getRevision()) { // getPortfolio().setPeristanceAction(PersistanceAction.MERGE);
-			 * getDao().merge(getPortfolio()); } } else if (dbPortfolio == null) { getPortfolio().setPeristanceAction(PersistanceAction.NEW);
-			 * getDao().persist(getPortfolio()); } } catch (Exception | Error ex) { if (dbPortfolio != null) if (getPortfolio().getRevision() >
-			 * dbPortfolio.getRevision()) { // getPortfolio().setPeristanceAction(PersistanceAction.MERGE); getDao().merge(getPortfolio()); } else { //
-			 * getPortfolio().setPeristanceAction(PersistanceAction.NEW); getDao().persist(getPortfolio()); } } }
-			 */
+		//for (Order childorder : getFillChildOrders())
+		//	getDao().merge(childorder);
 
-			if (getPosition() != null) {
-				getDao().merge(getPosition());
-				/*
-				 * try { dbPosition = getDao().find(getPosition().getClass(), getPosition().getId()); if (dbPosition != null && dbPosition.getVersion() !=
-				 * getPosition().getVersion()) { getPosition().setVersion(dbPosition.getVersion()); if (getPosition().getRevision() >
-				 * dbPosition.getRevision()) { getPosition().setPeristanceAction(PersistanceAction.MERGE); getDao().merge(getPosition()); } } else if
-				 * (dbPosition == null) { getPosition().setPeristanceAction(PersistanceAction.NEW); getDao().persist(getPosition()); } } catch (Exception |
-				 * Error ex) { if (dbPosition != null) if (getPosition().getRevision() > dbPosition.getRevision()) {
-				 * getPosition().setPeristanceAction(PersistanceAction.MERGE); getDao().merge(getPosition()); } else {
-				 * getPosition().setPeristanceAction(PersistanceAction.NEW); getDao().persist(getPosition()); } }
-				 */
-			}
+	}
 
-			if (getOrder() != null) {
-				getDao().merge(getOrder());
-				/*
-				 * try { dbOrder = getDao().find(getOrder().getClass(), getOrder().getId()); if (dbOrder != null && dbOrder.getVersion() !=
-				 * getOrder().getVersion()) { getOrder().setVersion(dbOrder.getVersion()); if (getOrder().getRevision() > dbOrder.getRevision()) { //
-				 * getOrder().setPeristanceAction(PersistanceAction.MERGE); getDao().merge(getOrder()); } } else if (dbOrder == null) {
-				 * getOrder().setPeristanceAction(PersistanceAction.NEW); getDao().persist(getOrder()); } } catch (Exception | Error ex) { if (dbOrder !=
-				 * null) if (getOrder().getRevision() > dbOrder.getRevision()) { // getOrder().setPeristanceAction(PersistanceAction.MERGE);
-				 * getDao().merge(getOrder()); } else { // getOrder().setPeristanceAction(PersistanceAction.NEW); getDao().persist(getOrder()); } }
-				 */
-			}
-			for (Order childorder : getFillChildOrders())
-				getDao().merge(childorder);
+	@Override
+	public Fill clone() {
+		Fill clone = null;
+		try {
+			clone = (Fill) super.clone();
+			clone.transactions = new ArrayList(this.transactions);
+			clone.fillChildOrders = new ArrayList(this.fillChildOrders);
 
+			//deep copying 
+		} catch (CloneNotSupportedException cns) {
+			log.error("Error while cloning fill", cns);
 		}
-
+		return clone;
 	}
 
 	@Override
@@ -409,7 +385,7 @@ public class Fill extends RemoteEvent {
 	@OrderBy
 	public List<Order> getFillChildOrders() {
 		if (fillChildOrders == null)
-			return new CopyOnWriteArrayList<Order>();
+			fillChildOrders = new CopyOnWriteArrayList<Order>();
 		//  synchronized (//) {
 		return fillChildOrders;
 		// }
@@ -459,7 +435,7 @@ public class Fill extends RemoteEvent {
 	@OrderBy
 	public List<Transaction> getTransactions() {
 		if (transactions == null)
-			return new CopyOnWriteArrayList<Transaction>();
+			transactions = new CopyOnWriteArrayList<Transaction>();
 
 		//synchronized (lock) {
 		return transactions;
@@ -494,6 +470,7 @@ public class Fill extends RemoteEvent {
 	}
 
 	@ManyToOne
+	@JoinColumn(name = "market")
 	public Market getMarket() {
 		return market;
 	}
@@ -585,7 +562,9 @@ public class Fill extends RemoteEvent {
 	}
 
 	public long getOpenVolumeCount() {
-		return openVolumeCount.get();
+		if (openVolumeCount != null)
+			return openVolumeCount.get();
+		return 0L;
 	}
 
 	@Transient
@@ -625,6 +604,7 @@ public class Fill extends RemoteEvent {
 	}
 
 	@ManyToOne
+	@JoinColumn(name = "portfolio")
 	public Portfolio getPortfolio() {
 		return portfolio;
 	}
@@ -653,14 +633,14 @@ public class Fill extends RemoteEvent {
 		// getVolume()
 		return "Id=" + (getId() != null ? getId() : "") + SEPARATOR + "version=" + getVersion() + SEPARATOR + "revision=" + getRevision() + SEPARATOR + "time="
 				+ (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "PositionType=" + (getPositionType() != null ? getPositionType() : "")
-				+ SEPARATOR + "Market=" + (market != null ? market : "") + SEPARATOR + "Price=" + (getPrice() != null ? getPrice() : "") + SEPARATOR
-				+ "Volume=" + (getVolume() != null ? getVolume() : "") + SEPARATOR + "Unfilled Volume=" + (hasChildren() ? getUnfilledVolume() : "")
-				+ SEPARATOR + "Open Volume=" + (getOpenVolume() != null ? getOpenVolume() : "") + SEPARATOR + "Open Volume Count=" + getOpenVolumeCount()
-				+ SEPARATOR + "Position Effect=" + (getPositionEffect() != null ? getPositionEffect() : "") + SEPARATOR + "Position="
+				+ SEPARATOR + "Market=" + (market != null ? market : "") + SEPARATOR + "Price=" + (getPrice() != null ? getPrice() : "") + SEPARATOR + "Volume="
+				+ (getVolume() != null ? getVolume() : "") + SEPARATOR + "Unfilled Volume=" + (hasChildren() ? getUnfilledVolume() : "") + SEPARATOR
+				+ "Open Volume=" + (getOpenVolume() != null ? getOpenVolume() : "") + SEPARATOR + "Open Volume Count=" + getOpenVolumeCount() + SEPARATOR
+				+ "Position Effect=" + (getPositionEffect() != null ? getPositionEffect() : "") + SEPARATOR + "Position="
 				+ (getPosition() != null ? getPosition().getId() : "") + SEPARATOR + "Comment="
 				+ (getOrder() != null && getOrder().getComment() != null ? getOrder().getComment() : "") + SEPARATOR + "Order="
-				+ (getOrder() != null ? getOrder().getId() : "") + SEPARATOR + "Parent Fill="
-				+ ((getOrder() != null && getOrder().getParentFill() != null) ? getOrder().getParentFill().getId() : "");
+				+ (getOrder() != null ? getOrder().getId() : "") + SEPARATOR + "Order group=" + (getOrder() != null ? getOrder().getOrderGroup() : "")
+				+ SEPARATOR + "Parent Fill=" + ((getOrder() != null && getOrder().getParentFill() != null) ? getOrder().getParentFill().getId() : "");
 	}
 
 	// JPA
@@ -786,6 +766,7 @@ public class Fill extends RemoteEvent {
 			for (Order order : fillWithChildren.getFillChildOrders()) {
 				log.debug("Fill:loadAllChildOrdersByFill loading child order " + order.getId() + "/" + System.identityHashCode(order) + " for fill "
 						+ parentFill.getId());
+
 				if (order.getPortfolio().equals(parentFill.getPortfolio()))
 					order.setPortfolio(parentFill.getPortfolio());
 
@@ -817,7 +798,7 @@ public class Fill extends RemoteEvent {
 				}
 				log.debug("Fill:loadAllChildOrdersByFill setting child order index " + index + " to order  " + order.getId() + " / " +
 
-				System.identityHashCode(order) + " for fill" + parentFill.getId() + " /" + System.identityHashCode(parentFill));
+						System.identityHashCode(order) + " for fill" + parentFill.getId() + " /" + System.identityHashCode(parentFill));
 				fillWithChildren.getFillChildOrders().set(index, orders.get(order));
 				log.debug("Fill:loadAllChildOrdersByFill setting parent fill to " + parentFill.getId() + " / " + System.identityHashCode(parentFill)
 						+ " for order " + order.getId() + " / " + System.identityHashCode(order));
@@ -825,8 +806,8 @@ public class Fill extends RemoteEvent {
 
 				index++;
 			}
-			log.debug("Fill:loadAllChildOrdersByFill setting children to " + fillWithChildren.getFillChildOrders().hashCode() + " for fill"
-					+ parentFill.getId());
+			log.debug(
+					"Fill:loadAllChildOrdersByFill setting children to " + fillWithChildren.getFillChildOrders().hashCode() + " for fill" + parentFill.getId());
 
 			parentFill.setFillChildOrders(fillWithChildren.getFillChildOrders());
 		} else
@@ -1021,9 +1002,9 @@ public class Fill extends RemoteEvent {
 		// for (StackTraceElement element : Thread.currentThread().getStackTrace())
 		//   log.debug(element.toString());
 		this.openVolume = null;
-		if (this.position != null)
-			this.position.reset();
-		if (this.openVolumeCount == null)
+		/*		if (this.position != null)
+					this.position.reset();
+		*/ if (this.openVolumeCount == null)
 			this.openVolumeCount = new AtomicLong(openVolumeCount);
 		else
 			this.openVolumeCount.set(openVolumeCount);
@@ -1062,32 +1043,33 @@ public class Fill extends RemoteEvent {
 
 	}
 
-	private volatile List<Order> fillChildOrders;
-	private volatile SpecificOrder order;
-	private volatile Market market;
-	private volatile long priceCount;
-	private volatile long lastBestPriceCount;
+	private List<Order> fillChildOrders;
+	private SpecificOrder order;
+	private Market market;
+	private long priceCount;
+	private long lastBestPriceCount;
 
-	private volatile long stopAmountCount;
-	private volatile long trailingStopAmountCount;
-	private volatile long stopPriceCount;
-	private volatile long originalStopPriceCount;
-	private volatile long trailingStopPriceCount;
-	private volatile long targetAmountCount;
-	private volatile long targetPriceCount;
+	private long stopAmountCount;
+	private long trailingStopAmountCount;
+	private long stopPriceCount;
+	private long originalStopPriceCount;
+	private long trailingStopPriceCount;
+	private long targetAmountCount;
+	private long targetPriceCount;
 	private long volumeCount;
-	private volatile AtomicLong openVolumeCount;
-	private volatile long holdingTime;
-	private volatile DiscreteAmount openVolume;
-	private volatile Amount commission;
-	private volatile Amount margin;
-	private volatile PositionType positionType;
-	private volatile List<Transaction> transactions;
-	private volatile Portfolio portfolio;
-	private volatile Position position;
+	private AtomicLong openVolumeCount;
+	private long holdingTime;
+	private DiscreteAmount openVolume;
+	private Amount commission;
+	private Amount margin;
+	private PositionType positionType;
+	private List<Transaction> transactions;
+	private Portfolio portfolio;
+	private Position position;
 
 	@Override
 	public synchronized void delete() {
+		log.debug("Fill - Delete : Delete of Fill " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 		// TODO Auto-generated method stub
 
 	}
@@ -1101,7 +1083,25 @@ public class Fill extends RemoteEvent {
 
 	@Override
 	public void persitParents() {
-		// TODO Auto-generated method stub
+
+		if (getPortfolio() != null) {
+			getDao().persist(getPortfolio());
+
+		}
+
+		if (getOrder() != null) {
+			getDao().persist(getOrder());
+
+		}
+		if (getPosition() != null) {
+			getDao().persist(getPosition());
+
+		}
+
+		for (Order childorder : getFillChildOrders())
+			getDao().persist(childorder);
+		for (Transaction transaction : getTransactions())
+			getDao().persist(transaction);
 
 	}
 

@@ -12,11 +12,11 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import javax.annotation.Nullable;
 import javax.persistence.Entity;
 import javax.persistence.Index;
+import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.PostLoad;
@@ -24,8 +24,6 @@ import javax.persistence.PostPersist;
 import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.persistence.Transient;
-
-import jline.internal.Log;
 
 import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.schema.dao.BookDao;
@@ -38,6 +36,8 @@ import org.joda.time.Interval;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
 import com.google.inject.assistedinject.AssistedInject;
+
+import jline.internal.Log;
 
 /**
  * Book represents a snapshot of all the limit orders for a Market. Book has a "compact" database representation
@@ -125,7 +125,7 @@ public class Book extends MarketData implements Spread {
 	@Transient
 	public Offer getBestAsk() {
 		if ((getAsks() == null || getAsks().isEmpty())) {
-			return new Offer(getMarket(), getTime(), getTimeReceived(), Long.MAX_VALUE, 0L);
+			return new Offer(getMarket(), getTime(), getTimeReceived(), 0L, 0L);
 		}
 		return getAsks().get(0);
 	}
@@ -199,7 +199,7 @@ public class Book extends MarketData implements Spread {
 	@Transient
 	public DiscreteAmount getAskPrice() {
 		if (getAsks().isEmpty())
-			return new DiscreteAmount(Long.MAX_VALUE, getMarket().getPriceBasis());
+			return new DiscreteAmount(0L, getMarket().getPriceBasis());
 		return getAsks().get(0).getPrice();
 	}
 
@@ -231,7 +231,7 @@ public class Book extends MarketData implements Spread {
 	@Nullable
 	public Double getAskPriceAsDouble() {
 		if (getAsks().isEmpty())
-			return Double.MAX_VALUE;
+			return 0d;
 		return getAsks().get(0).getPriceAsDouble();
 	}
 
@@ -239,7 +239,7 @@ public class Book extends MarketData implements Spread {
 	@Transient
 	public Double getAskPriceCountAsDouble() {
 		if (getAsks().isEmpty())
-			return Double.MAX_VALUE;
+			return 0d;
 		return getAsks().get(0).getPriceCountAsDouble();
 	}
 
@@ -514,6 +514,7 @@ public class Book extends MarketData implements Spread {
 	//cascade = { CascadeType.REFRESH, CascadeType.MERGE }
 	@Override
 	@ManyToOne(optional = true)
+	@JoinColumn(name = "parent")
 	//, cascade = { CascadeType.REFRESH, CascadeType.MERGE, CascadeType.PERSIST })
 	public Book getParent() {
 		return parent;
@@ -536,23 +537,19 @@ public class Book extends MarketData implements Spread {
 	//      }
 	//  }
 
-	protected @Lob
-	byte[] getBidDeletionsBlob() {
+	protected @Lob byte[] getBidDeletionsBlob() {
 		return bidDeletionsBlob;
 	}
 
-	protected @Lob
-	byte[] getAskDeletionsBlob() {
+	protected @Lob byte[] getAskDeletionsBlob() {
 		return askDeletionsBlob;
 	}
 
-	protected @Lob
-	byte[] getBidInsertionsBlob() {
+	protected @Lob byte[] getBidInsertionsBlob() {
 		return bidInsertionsBlob;
 	}
 
-	protected @Lob
-	byte[] getAskInsertionsBlob() {
+	protected @Lob byte[] getAskInsertionsBlob() {
 		return askInsertionsBlob;
 	}
 
@@ -629,12 +626,14 @@ public class Book extends MarketData implements Spread {
 			bidDeletionsBlob = null;
 			askDeletionsBlob = null;
 		} else {
-			if (this.getDao() != null) {
-				UUID duplicate = this.queryZeroOne(UUID.class, "select b.id from Book b where b.id=?1", parent.getId());
+			if (!parent.isPersisted())
+				parent.persit();
+			///if (this.getDao() != null) {
+			//UUID duplicate = this.queryZeroOne(UUID.class, "select b.id from Book b where b.id=?1", parent.getId());
 
-				if (duplicate == null)
-					parent.persit();
-			}
+			//if (duplicate == null)
+			//	parent.persit();
+			//}
 			//PersistUtil.find(getParentBook());
 			//PersistUtil.refresh(this);
 			//PersistUtil.merge(this);
@@ -841,22 +840,48 @@ public class Book extends MarketData implements Spread {
 		return result;
 	}
 
-	private void sortBook() {
-		//  synchronized (lock) {
+	public void sortBook() {
+		//sort price high to low, then by oldest fist, then by largest volumes
 		Collections.sort(bids, new Comparator<Offer>() {
 			@Override
 			@SuppressWarnings("ConstantConditions")
 			public int compare(Offer bid, Offer bid2) {
-				return -bid.getPriceCount().compareTo(bid2.getPriceCount()); // high to low
+
+				int pComp = bid2.getPriceCount().compareTo(bid.getPriceCount()); // high to low
+				if (pComp != 0)
+					return pComp;
+
+				int tComp = bid.getTime().compareTo(bid2.getTime()); // oldest to newest
+				if (tComp != 0)
+					return tComp;
+
+				int vComp = bid2.getVolumeCount().compareTo(bid.getVolumeCount()); // biggest to smallest
+				if (vComp != 0)
+					return vComp;
+
+				return System.identityHashCode(bid) - System.identityHashCode(bid2);
 			}
 		});
 		//    }
-		//    synchronized (lock) {
+		//sort price low to high, then by oldest fist, then by largest volume
 		Collections.sort(asks, new Comparator<Offer>() {
 			@Override
 			@SuppressWarnings("ConstantConditions")
 			public int compare(Offer ask, Offer ask2) {
-				return ask.getPriceCount().compareTo(ask2.getPriceCount()); // low to high
+
+				int pComp = ask.getPriceCount().compareTo(ask2.getPriceCount()); // low to high
+				if (pComp != 0)
+					return pComp;
+
+				int tComp = ask.getTime().compareTo(ask2.getTime()); // oldest to newest
+				if (tComp != 0)
+					return tComp;
+
+				int vComp = ask2.getVolumeCount().compareTo(ask.getVolumeCount()); // biggest to smallest
+				if (vComp != 0)
+					return vComp;
+
+				return System.identityHashCode(ask) - System.identityHashCode(ask2);
 			}
 		});
 		//   }
@@ -965,7 +990,8 @@ public class Book extends MarketData implements Spread {
 
 	@Override
 	public void persitParents() {
-
+		//	if (parent != null)
+		//	parent.persit();
 		//Sometimes the pqrent does not persit, causing all persistance messages to backup and loop.
 		//Just better to restart the order book chain.
 		setParent(null);

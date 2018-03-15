@@ -173,7 +173,7 @@ public class XchangeOrderService extends BaseOrderService {
 		org.knowm.xchange.Exchange exchange = XchangeUtil.getExchangeForMarket(specificOrder.getMarket().getExchange());
 		TradeService tradeService = exchange.getTradeService();
 		if (specificOrder.getLimitPrice() != null && specificOrder.getStopPrice() != null) {
-			specificOrder.persit();
+
 			reject(specificOrder, "Stop-limit orders are not supported");
 		}
 
@@ -219,6 +219,7 @@ public class XchangeOrderService extends BaseOrderService {
 					specificOrder.setRemoteKey(tradeService.placeLimitOrder(limitOrder));
 				}
 				specificOrder.setPlacementCount(1);
+				specificOrder.merge();
 				updateOrderState(specificOrder, OrderState.PLACED, true);
 			} catch (ExchangeException ex) {
 				//Let's try placing it as a market order!
@@ -236,7 +237,6 @@ public class XchangeOrderService extends BaseOrderService {
 				// todo retry until expiration or reject as invalid
 			} catch (Exception | Error e) {
 
-				specificOrder.persit();
 				if (specificOrder.isInternal()) {
 					log.error(
 							this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place limit order " + specificOrder + " with last known state "
@@ -247,8 +247,6 @@ public class XchangeOrderService extends BaseOrderService {
 					throw new UnknownOrderStateException("Unknown state of limit order " + specificOrder.getId(), e);
 				} else
 					updateOrderState(specificOrder, OrderState.PLACED, true);
-			} finally {
-				specificOrder.merge();
 			}
 		} else {
 			if (XchangeUtil.getHelperForExchange(specificOrder.getMarket().getExchange()) != null) {
@@ -275,11 +273,12 @@ public class XchangeOrderService extends BaseOrderService {
 
 					specificOrder.setRemoteKey(tradeService.placeMarketOrder(marketOrder));
 				}
+				specificOrder.merge();
 				updateOrderState(specificOrder, OrderState.PLACED, true);
 			} catch (NotYetImplementedForExchangeException e) {
-				specificOrder.persit();
 				log.warn("XChange adapter " + exchange + " does not support this order: " + specificOrder, e);
 				reject(specificOrder, "XChange adapter " + exchange + " does not support this order");
+
 				throw e;
 			} catch (ExchangeException ex) {
 				log.warn(this.getClass().getSimpleName() + ":handleSpecificOrder Attempting to place limit order as unable to place market order "
@@ -294,7 +293,6 @@ public class XchangeOrderService extends BaseOrderService {
 					throw ex;
 
 			} catch (Exception | Error e) {
-				specificOrder.persit();
 				if (specificOrder.getId().toString().equals(specificOrder.getRemoteKey())) {
 					log.error(
 							this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place market order " + specificOrder + " with last known state "
@@ -305,8 +303,6 @@ public class XchangeOrderService extends BaseOrderService {
 					throw new UnknownOrderStateException("Unknown state of market order " + specificOrder.getId(), e);
 				} else
 					updateOrderState(specificOrder, OrderState.PLACED, true);
-			} finally {
-				specificOrder.merge();
 			}
 		}
 
@@ -969,9 +965,8 @@ public class XchangeOrderService extends BaseOrderService {
 		}
 	};
 
-	@SuppressWarnings("finally")
 	@Override
-	protected boolean cancelSpecificOrder(SpecificOrder order) throws Throwable {
+	protected boolean specificOrderToCancel(SpecificOrder order) throws Throwable {
 		org.knowm.xchange.Exchange exchange;
 		exchange = XchangeUtil.getExchangeForMarket(order.getMarket().getExchange());
 		TradeService tradeService = exchange.getTradeService();
@@ -1023,14 +1018,14 @@ public class XchangeOrderService extends BaseOrderService {
 			// }
 			return deleted;
 		} catch (HttpStatusIOException hse) {
-			log.error(this.getClass().getSimpleName() + "cancelSpecificOrder: Unable to cancel order :" + order + "with trade service" + tradeService.hashCode()
-					+ " due to " + hse + ". Resetting Trade Service Connection.");
+			log.error(this.getClass().getSimpleName() + "specificOrderToCancel: Unable to cancel order :" + order + "with trade service"
+					+ tradeService.hashCode() + " due to " + hse + ". Resetting Trade Service Connection.");
 			XchangeUtil.resetExchange(order.getMarket().getExchange());
 			return deleted;
 
 		} catch (SocketTimeoutException ste) {
-			log.error(this.getClass().getSimpleName() + "cancelSpecificOrder: Unable to cancel order :" + order + "with trade service" + tradeService.hashCode()
-					+ " due to " + ste + ". Resetting Trade Service Connection.");
+			log.error(this.getClass().getSimpleName() + "specificOrderToCancel: Unable to cancel order :" + order + "with trade service"
+					+ tradeService.hashCode() + " due to " + ste + ". Resetting Trade Service Connection.");
 			XchangeUtil.resetExchange(order.getMarket().getExchange());
 			return deleted;
 		} catch (Error | Exception e) {

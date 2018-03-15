@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 public class BaseStrategy implements Strategy {
 
 	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.baseStrategy");
-	static HashMap<Tradeable, Double> marketAllocations = new HashMap<Tradeable, Double>();
+	static HashMap<Tradeable, Double[]> marketAllocations = new HashMap<Tradeable, Double[]>();
 
 	@Override
 	public synchronized void setPortfolio(Portfolio portfolio) {
@@ -99,7 +99,7 @@ public class BaseStrategy implements Strategy {
 	}
 
 	@Transient
-	public static HashMap<Tradeable, Double> getMarketAllocations() {
+	public static HashMap<Tradeable, Double[]> getMarketAllocations() {
 
 		return marketAllocations;
 
@@ -108,7 +108,14 @@ public class BaseStrategy implements Strategy {
 	@Transient
 	public static Double getMarketAllocation(Tradeable market) {
 
-		return marketAllocations.get(market);
+		return marketAllocations.get(market)[0];
+
+	}
+
+	@Transient
+	public static Double getMarginMultiplier(Tradeable market) {
+
+		return marketAllocations.get(market)[1];
 
 	}
 
@@ -130,7 +137,21 @@ public class BaseStrategy implements Strategy {
 	public synchronized Tradeable addMarket(Tradeable market, Double allocation) {
 		//   synchronized (lock) {
 		if (market != null && !getMarkets().contains(market)) {
-			getMarketAllocations().put(market, allocation);
+
+			getMarketAllocations().put(market, new Double[] { allocation, 1d });
+
+		}
+		if (market != null)
+			return getMarket(market);
+		else
+			return null;
+	}
+
+	public synchronized Tradeable addMarket(Tradeable market, Double allocation, Double multiplier) {
+		//   synchronized (lock) {
+		if (market != null && !getMarkets().contains(market)) {
+
+			getMarketAllocations().put(market, new Double[] { allocation, multiplier });
 
 		}
 		if (market != null)

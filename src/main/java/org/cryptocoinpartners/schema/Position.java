@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import javax.annotation.Nullable;
 import javax.persistence.Cacheable;
-import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -46,11 +46,12 @@ import com.google.inject.assistedinject.AssistedInject;
 @Entity
 @Cacheable
 @NamedEntityGraphs({
-		@NamedEntityGraph(name = "graph.Position.fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "fills"), subgraphs = { @NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode("order")) }),
+		@NamedEntityGraph(name = "graph.Position.fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "fills"), subgraphs = {
+				@NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode("order")) }),
 		@NamedEntityGraph(name = "graph.Position.portfolio", attributeNodes = @NamedAttributeNode("portfolio"))
 
-// @NamedAttributeNode("sender"),
-// @NamedAttributeNode("body")
+		// @NamedAttributeNode("sender"),
+		// @NamedAttributeNode("body")
 })
 public class Position extends Holding {
 
@@ -66,6 +67,7 @@ public class Position extends Holding {
 	private Amount longAvgPrice;
 	private Amount longAvgStopPrice;
 	private Amount shortAvgStopPrice;
+	private PositionEffect positionEffect;
 	private Amount originalLongAvgStopPrice;
 	private Amount originalShortAvgStopPrice;
 
@@ -164,6 +166,7 @@ public class Position extends Holding {
 
 	@Override
 	@OneToOne(optional = true, fetch = FetchType.EAGER)
+	@JoinColumn(name = "asset")
 	public Asset getAsset() {
 		return asset;
 	}
@@ -186,6 +189,7 @@ public class Position extends Holding {
 	}
 
 	@ManyToOne(optional = false)
+	@JoinColumn(name = "market")
 	public Market getMarket() {
 		return market;
 	}
@@ -344,9 +348,10 @@ public class Position extends Holding {
 			while (itf.hasNext() && longAvgPrice == null) {
 				Fill pos = itf.next();
 				if (pos.isLong() && pos.getPrice() != null && !pos.getPrice().isZero() && !(longCumVolume.plus(pos.getOpenVolume()).isZero())) {
-					longAvgPriceTmp = longAvgPriceTmp == null ? pos.getPrice() : ((longAvgPriceTmp.times(longCumVolume, Remainder.ROUND_EVEN)).plus(pos
-							.getOpenVolume().times(pos.getPrice(), Remainder.ROUND_EVEN)))
-							.divide(longCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
+					longAvgPriceTmp = longAvgPriceTmp == null ? pos.getPrice()
+							: ((longAvgPriceTmp.times(longCumVolume, Remainder.ROUND_EVEN))
+									.plus(pos.getOpenVolume().times(pos.getPrice(), Remainder.ROUND_EVEN))).divide(longCumVolume.plus(pos.getOpenVolume()),
+											Remainder.ROUND_EVEN);
 					longCumVolume = longCumVolume.plus(pos.getOpenVolume());
 				}
 
@@ -385,9 +390,10 @@ public class Position extends Holding {
 			while (itf.hasNext() && shortAvgPrice == null) {
 				Fill pos = itf.next();
 				if (pos.isShort() && pos.getPrice() != null && !pos.getPrice().isZero() && !(shortCumVolume.plus(pos.getOpenVolume()).isZero())) {
-					shortAvgPriceTmp = shortAvgPriceTmp == null ? pos.getPrice() : ((shortAvgPriceTmp.times(shortCumVolume, Remainder.ROUND_EVEN)).plus(pos
-							.getOpenVolume().times(pos.getPrice(), Remainder.ROUND_EVEN))).dividedBy(shortCumVolume.plus(pos.getOpenVolume()),
-							Remainder.ROUND_EVEN);
+					shortAvgPriceTmp = shortAvgPriceTmp == null ? pos.getPrice()
+							: ((shortAvgPriceTmp.times(shortCumVolume, Remainder.ROUND_EVEN))
+									.plus(pos.getOpenVolume().times(pos.getPrice(), Remainder.ROUND_EVEN))).dividedBy(shortCumVolume.plus(pos.getOpenVolume()),
+											Remainder.ROUND_EVEN);
 					shortCumVolume = shortCumVolume.plus(pos.getOpenVolume());
 
 				}
@@ -425,9 +431,9 @@ public class Position extends Holding {
 									if (childOrder.isAsk() && childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()
 											&& !(longCumVolume.plus(childOrder.getUnfilledVolume()).isZero())) {
 										originalLongAvgStopPriceTmp = originalLongAvgStopPriceTmp == null ? childOrder.getStopPrice()
-												: ((originalLongAvgStopPriceTmp.times(longCumVolume, Remainder.ROUND_EVEN)).plus(childOrder.getUnfilledVolume()
-														.times(childOrder.getStopPrice(), Remainder.ROUND_EVEN))).divide(
-														longCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
+												: ((originalLongAvgStopPriceTmp.times(longCumVolume, Remainder.ROUND_EVEN))
+														.plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(), Remainder.ROUND_EVEN)))
+																.divide(longCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
 										longCumVolume = longCumVolume.plus(childOrder.getUnfilledVolume());
 									}
 								}
@@ -466,9 +472,10 @@ public class Position extends Holding {
 								if (childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()) {
 									if (childOrder.isAsk() && childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()
 											&& !(longCumVolume.plus(childOrder.getUnfilledVolume()).isZero())) {
-										longAvgStopPriceTmp = longAvgStopPriceTmp == null ? childOrder.getStopPrice() : ((longAvgStopPriceTmp.times(
-												longCumVolume, Remainder.ROUND_EVEN)).plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(),
-												Remainder.ROUND_EVEN))).divide(longCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
+										longAvgStopPriceTmp = longAvgStopPriceTmp == null ? childOrder.getStopPrice()
+												: ((longAvgStopPriceTmp.times(longCumVolume, Remainder.ROUND_EVEN))
+														.plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(), Remainder.ROUND_EVEN)))
+																.divide(longCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
 										longCumVolume = longCumVolume.plus(childOrder.getUnfilledVolume());
 									}
 								}
@@ -490,6 +497,27 @@ public class Position extends Holding {
 	public synchronized void setMarket(Market market) {
 		this.market = market;
 		this.exchange = market.getExchange();
+	}
+
+	@Transient
+	public PositionEffect getPositionEffect() {
+		if (positionEffect != null)
+			return positionEffect;
+		PositionEffect positionEffectTmp = PositionEffect.DEFAULT;
+		synchronized (getFills()) {
+			Iterator<Fill> itf = getFills().iterator();
+			while (itf.hasNext()) {
+				Fill pos = itf.next();
+				if (pos.getPositionEffect() != null && positionEffectTmp.equals(PositionEffect.DEFAULT))
+					positionEffectTmp = pos.getPositionEffect();
+				else if (pos.getPositionEffect() != null && !(positionEffectTmp.equals(pos.getPositionEffect()))) {
+					positionEffectTmp = PositionEffect.DEFAULT;
+					break;
+				}
+			}
+		}
+		positionEffect = positionEffectTmp;
+		return positionEffect;
 	}
 
 	@Transient
@@ -515,9 +543,10 @@ public class Position extends Holding {
 								if (childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()) {
 									if (childOrder.isBid() && childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()
 											&& !(shortCumVolume.plus(childOrder.getUnfilledVolume()).isZero())) {
-										shortAvgStopPriceTmp = shortAvgStopPriceTmp == null ? childOrder.getStopPrice() : ((shortAvgStopPriceTmp.times(
-												shortCumVolume, Remainder.ROUND_EVEN)).plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(),
-												Remainder.ROUND_EVEN))).divide(shortCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
+										shortAvgStopPriceTmp = shortAvgStopPriceTmp == null ? childOrder.getStopPrice()
+												: ((shortAvgStopPriceTmp.times(shortCumVolume, Remainder.ROUND_EVEN))
+														.plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(), Remainder.ROUND_EVEN)))
+																.divide(shortCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
 										shortCumVolume = shortCumVolume.plus(childOrder.getUnfilledVolume());
 									}
 								}
@@ -553,9 +582,9 @@ public class Position extends Holding {
 									if (childOrder.isBid() && childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()
 											&& !(shortCumVolume.plus(childOrder.getUnfilledVolume()).isZero())) {
 										originalShortAvgStopPriceTmp = originalShortAvgStopPriceTmp == null ? childOrder.getStopPrice()
-												: ((originalShortAvgStopPriceTmp.times(shortCumVolume, Remainder.ROUND_EVEN)).plus(childOrder
-														.getUnfilledVolume().times(childOrder.getStopPrice(), Remainder.ROUND_EVEN))).divide(
-														shortCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
+												: ((originalShortAvgStopPriceTmp.times(shortCumVolume, Remainder.ROUND_EVEN))
+														.plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(), Remainder.ROUND_EVEN)))
+																.divide(shortCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
 										shortCumVolume = shortCumVolume.plus(childOrder.getUnfilledVolume());
 									}
 								}
@@ -588,6 +617,7 @@ public class Position extends Holding {
 		return "Id=" + (getId() != null ? getId() : "") + SEPARATOR + "Exchange=" + exchange
 				+ (getShortVolume() != null ? (SEPARATOR + ", Short Qty=" + getShortVolume()) : "")
 				+ (getShortAvgPrice() != null ? (SEPARATOR + ", Short Avg Price=" + getShortAvgPrice()) : "")
+				+ (getPositionEffect() != null ? (SEPARATOR + ",PositionEffect=" + getPositionEffect()) : "")
 				+ (getShortAvgStopPrice() != null ? (SEPARATOR + ", Short Avg Stop Price=" + getShortAvgStopPrice()) : "")
 				+ (getOriginalShortAvgStopPrice() != null ? (SEPARATOR + ", Original Short Avg Stop Price=" + getOriginalShortAvgStopPrice()) : "")
 				+ (getLongVolume() != null ? (SEPARATOR + "Long Qty=" + getLongVolume()) : "")
@@ -605,7 +635,7 @@ public class Position extends Holding {
 	@Transient
 	protected synchronized void setVolumeCount(long volumeCount) {
 
-		this.volumeCount = volumeCount;
+		this.volumeCount = new AtomicLong(volumeCount);
 
 		shortAvgPrice = null;
 		longAvgPrice = null;
@@ -616,14 +646,14 @@ public class Position extends Holding {
 		longVolume = null;
 		shortVolume = null;
 		openVolume = null;
-		longVolumeCount = 0;
-		openVolumeCount = 0;
-		shortVolumeCount = 0;
+		longVolumeCount = null;
+		openVolumeCount = null;
+		shortVolumeCount = null;
 	}
 
 	@Transient
 	protected synchronized void setOpenVolumeCount(long openVolumeCount) {
-		this.openVolumeCount = openVolumeCount;
+		this.openVolumeCount = new AtomicLong(openVolumeCount);
 		shortAvgPrice = null;
 		longAvgPrice = null;
 		longAvgStopPrice = null;
@@ -633,15 +663,15 @@ public class Position extends Holding {
 		longVolume = null;
 		shortVolume = null;
 		openVolume = null;
-		longVolumeCount = 0;
-		volumeCount = 0;
+		longVolumeCount = null;
+		volumeCount = null;
 
-		shortVolumeCount = 0;
+		shortVolumeCount = null;
 	}
 
 	@Transient
 	protected synchronized void setLongVolumeCount(long longVolumeCount) {
-		this.longVolumeCount = longVolumeCount;
+		this.longVolumeCount = new AtomicLong(longVolumeCount);
 		shortAvgPrice = null;
 		longAvgPrice = null;
 		longAvgStopPrice = null;
@@ -651,15 +681,15 @@ public class Position extends Holding {
 		longVolume = null;
 		shortVolume = null;
 		openVolume = null;
-		volumeCount = 0;
-		openVolumeCount = 0;
-		shortVolumeCount = 0;
+		volumeCount = null;
+		openVolumeCount = null;
+		shortVolumeCount = null;
 
 	}
 
 	@Transient
 	protected synchronized void setShortVolumeCount(long shortVolumeCount) {
-		this.shortVolumeCount = shortVolumeCount;
+		this.shortVolumeCount = new AtomicLong(shortVolumeCount);
 		shortAvgPrice = null;
 		longAvgPrice = null;
 		longAvgStopPrice = null;
@@ -669,9 +699,9 @@ public class Position extends Holding {
 		longVolume = null;
 		shortVolume = null;
 		openVolume = null;
-		longVolumeCount = 0;
-		volumeCount = 0;
-		openVolumeCount = 0;
+		longVolumeCount = null;
+		volumeCount = null;
+		openVolumeCount = null;
 
 	}
 
@@ -681,7 +711,7 @@ public class Position extends Holding {
 		//    reset();
 		long volumeCountTmp = 0;
 
-		if (hasFills() && volumeCount == 0) {
+		if (volumeCount == null) {
 			synchronized (getFills()) {
 				Iterator<Fill> itf = getFills().iterator();
 				while (itf.hasNext()) {
@@ -692,12 +722,10 @@ public class Position extends Holding {
 
 				}
 			}
+			volumeCount = new AtomicLong(volumeCountTmp);
 		}
-		if (volumeCountTmp == 0 && volumeCount == 0)
-			volumeCount = 0;
-		else if (volumeCountTmp != 0 && volumeCount == 0)
-			volumeCount = volumeCountTmp;
-		return volumeCount;
+
+		return volumeCount.get();
 
 	}
 
@@ -706,10 +734,10 @@ public class Position extends Holding {
 	protected long getOpenVolumeCount() {
 		//    reset();
 		long openVolumeCountTmp = 0;
-		if (hasFills() && openVolumeCount == 0) {
+		if (openVolumeCount == null) {
 			synchronized (getFills()) {
 				Iterator<Fill> itf = getFills().iterator();
-				while (itf.hasNext() && openVolumeCount == 0) {
+				while (itf.hasNext()) {
 
 					//  for (Fill pos : getFills()) {
 					Fill fill = itf.next();
@@ -719,12 +747,11 @@ public class Position extends Holding {
 
 				}
 			}
+			openVolumeCount = new AtomicLong(openVolumeCountTmp);
+
 		}
-		if (openVolumeCountTmp == 0 && openVolumeCount == 0)
-			openVolumeCount = 0;
-		else if (openVolumeCountTmp != 0 && openVolumeCount == 0)
-			openVolumeCount = openVolumeCountTmp;
-		return openVolumeCount;
+
+		return openVolumeCount.get();
 
 	}
 
@@ -735,19 +762,19 @@ public class Position extends Holding {
 		//System.out.println(getFills().toString());
 		long longVolumeCountTmp = 0;
 
-		if (hasFills() && longVolumeCount == 0) {
+		if (longVolumeCount == null) {
 			synchronized (getFills()) {
 				Iterator<Fill> itf = getFills().iterator();
-				while (itf.hasNext() && longVolumeCount == 0) {
+				while (itf.hasNext()) {
 					//  for (Fill pos : getFills()) {
 					Fill fill = itf.next();
 
 					if (fill.getMarket().getListing().getPrompt() != null
-							&& (fill.getPositionEffect() != null && ((fill.getPositionEffect() == PositionEffect.OPEN && fill.isLong()) || (fill
-									.getPositionEffect() == PositionEffect.CLOSE && fill.isShort())))) {
+							&& (fill.getPositionEffect() != null && ((fill.getPositionEffect() == PositionEffect.OPEN && fill.isLong())
+									|| (fill.getPositionEffect() == PositionEffect.CLOSE && fill.isShort())))) {
 						longVolumeCountTmp += fill.getOpenVolumeCount();
-					} else if ((fill.getPositionEffect() == null || (fill.getPositionEffect() != null && fill.getMarket().getContractSize(fill.getMarket()) == 1D))
-							&& fill.isLong())
+					} else if ((fill.getPositionEffect() == null
+							|| (fill.getPositionEffect() != null && fill.getMarket().getContractSize(fill.getMarket()) == 1D)) && fill.isLong())
 						longVolumeCountTmp += fill.getOpenVolumeCount();
 
 					long vol = this.getVolumeCount();
@@ -756,12 +783,10 @@ public class Position extends Holding {
 
 				}
 			}
+			longVolumeCount = new AtomicLong(longVolumeCountTmp);
 		}
-		if (longVolumeCountTmp == 0 && longVolumeCount == 0)
-			longVolumeCount = 0;
-		else if (longVolumeCountTmp != 0 && longVolumeCount == 0)
-			longVolumeCount = longVolumeCountTmp;
-		return longVolumeCount;
+
+		return longVolumeCount.get();
 
 	}
 
@@ -771,31 +796,28 @@ public class Position extends Holding {
 		//  reset();
 		long shortVolumeCountTmp = 0;
 
-		if (hasFills() && shortVolumeCount == 0) {
+		if (shortVolumeCount == null) {
 			synchronized (getFills()) {
 				Iterator<Fill> itf = getFills().iterator();
-				while (itf.hasNext() && shortVolumeCount == 0) {
+				while (itf.hasNext()) {
 					//  for (Fill pos : getFills()) {
 					Fill fill = itf.next();
 					// if it is entering & short or exiting and long
 					if (fill.getMarket().getListing().getPrompt() != null
-							&& (fill.getPositionEffect() != null && ((fill.getPositionEffect() == PositionEffect.OPEN && fill.isShort()) || (fill
-									.getPositionEffect() == PositionEffect.CLOSE && fill.isLong())))) {
+							&& (fill.getPositionEffect() != null && ((fill.getPositionEffect() == PositionEffect.OPEN && fill.isShort())
+									|| (fill.getPositionEffect() == PositionEffect.CLOSE && fill.isLong())))) {
 						shortVolumeCountTmp += fill.getOpenVolumeCount();
 
-					} else if ((fill.getPositionEffect() == null || (fill.getPositionEffect() != null && fill.getMarket().getContractSize(fill.getMarket()) == 1D))
-							&& fill.isShort())
+					} else if ((fill.getPositionEffect() == null
+							|| (fill.getPositionEffect() != null && fill.getMarket().getContractSize(fill.getMarket()) == 1D)) && fill.isShort())
 						shortVolumeCountTmp += fill.getOpenVolumeCount();
 
 				}
 			}
+			shortVolumeCount = new AtomicLong(shortVolumeCountTmp);
 
 		}
-		if (shortVolumeCountTmp == 0 && shortVolumeCount == 0)
-			shortVolumeCount = 0;
-		else if (shortVolumeCountTmp != 0 && shortVolumeCount == 0)
-			shortVolumeCount = shortVolumeCountTmp;
-		return shortVolumeCount;
+		return shortVolumeCount.get();
 
 	}
 
@@ -811,6 +833,21 @@ public class Position extends Holding {
 
 		return this.fills;
 
+	}
+
+	@Override
+	public Position clone() {
+		Position clone = null;
+		try {
+			clone = (Position) super.clone();
+
+			clone.fills = new ArrayList(this.getFills());
+
+			//deep copying 
+		} catch (CloneNotSupportedException cns) {
+			log.error("Error while cloning fill", cns);
+		}
+		return clone;
 	}
 
 	@Override
@@ -840,7 +877,7 @@ public class Position extends Holding {
 		//   synchronized (this.getPortfolio().getPositions()) {
 
 		try {
-			log.trace("Position - delete : Delete of Position " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+			log.debug("Position - delete : Delete of Position " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 			//  if (this.getPortfolio() != null)
 			//  if (this.getPortfolio().removePosition(this)) {
 
@@ -950,10 +987,11 @@ public class Position extends Holding {
 		longVolume = null;
 		shortVolume = null;
 		openVolume = null;
-		longVolumeCount = 0;
-		volumeCount = 0;
-		openVolumeCount = 0;
-		shortVolumeCount = 0;
+		longVolumeCount = null;
+		volumeCount = null;
+		openVolumeCount = null;
+		shortVolumeCount = null;
+		positionEffect = null;
 
 	}
 
@@ -1097,7 +1135,7 @@ public class Position extends Holding {
 	//  public void removeFill(Fill fill) {
 	//  synchronized (lock) {
 	@Nullable
-	@ManyToOne(optional = true, cascade = CascadeType.MERGE)
+	@ManyToOne(optional = true)
 	@JoinColumn(name = "portfolio")
 	public Portfolio getPortfolio() {
 		if (portfolio == null)
@@ -1147,11 +1185,11 @@ public class Position extends Holding {
 	// private Amount longVolume = DecimalAmount.ZERO;
 	//private Amount shortVolume = DecimalAmount.ZERO;
 	//private Amount volume = DecimalAmount.ZERO;
-	private volatile Market market;
-	long longVolumeCount = 0;
-	long volumeCount = 0;
-	long openVolumeCount = 0;
-	long shortVolumeCount = 0;
+	private Market market;
+	AtomicLong longVolumeCount;
+	AtomicLong volumeCount;
+	AtomicLong openVolumeCount;
+	AtomicLong shortVolumeCount;
 
 	//private Amount longAvgPrice = DecimalAmount.ZERO;
 	//private Amount shortAvgPrice = DecimalAmount.ZERO;
@@ -1162,8 +1200,8 @@ public class Position extends Holding {
 	//private long shortVolumeCount;
 	//private long volumeCount;
 	//private SpecificOrder order;
-	private volatile List<Fill> fills;
-	protected volatile Portfolio portfolio;
+	private List<Fill> fills;
+	protected Portfolio portfolio;
 
 	private static Object lock = new Object();
 	private static Object persistanceLock = new Object();
@@ -1223,7 +1261,6 @@ public class Position extends Holding {
 
 	@Override
 	public void persitParents() {
-		// TODO Auto-generated method stub
 
 	}
 

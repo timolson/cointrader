@@ -1,6 +1,9 @@
 package org.cryptocoinpartners.schema;
 
+import java.util.List;
 import java.util.concurrent.Semaphore;
+
+import javax.annotation.Nullable;
 
 import org.cryptocoinpartners.util.Replay;
 import org.joda.time.Instant;
@@ -26,7 +29,7 @@ public interface ReplayFactory {
 
 	Replay between(@Assisted("startTime") Instant start, @Assisted("endTime") Instant end, @Assisted("orderByTimeReceived") boolean orderByTimeReceived,
 			Semaphore semaphore, @Assisted("useRandomData") boolean useRandomData, @Assisted("replayBooks") boolean replayBooks,
-			@Assisted("replayBars") boolean replayBars);
+			@Assisted("replayBars") boolean replayBars, @Assisted("barIntervals") @Nullable List<String> barIntervals);
 
 	Replay during(Interval interval, boolean orderByTimeReceived);
 

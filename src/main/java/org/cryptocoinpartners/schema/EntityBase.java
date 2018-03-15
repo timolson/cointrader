@@ -25,251 +25,294 @@ import org.slf4j.LoggerFactory;
 @MappedSuperclass
 public abstract class EntityBase implements java.io.Serializable, Cloneable, Comparable<EntityBase> {
 
-  /**
-     * 
-     */
-  private static final long serialVersionUID = -7893439827939854533L;
-  protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.entityBase");
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7893439827939854533L;
+	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.entityBase");
 
-  static long delay;
-  private long startTime;
-  private int attempt;
-  private int revision;
-  private PersistanceAction persistanceAction;
-  //Only 1 thread at a time can upda
-  private final transient Semaphore updateLock = new Semaphore(1);
+	static long delay;
+	private long startTime;
+	private int attempt;
+	private int revision;
+	private PersistanceAction persistanceAction;
+	//Only 1 thread at a time can upda
+	private final transient Semaphore updateLock = new Semaphore(1);
 
-  @Transient
-  public long getDelay() {
-    if (delay == 0)
-      return ConfigUtil.combined().getInt("db.writer.delay");
-    return delay;
-  }
+	@Transient
+	public long getDelay() {
+		if (delay == 0)
+			return ConfigUtil.combined().getInt("db.writer.delay");
+		return delay;
+	}
 
-  @Override
-  public EntityBase clone() throws CloneNotSupportedException {
-    return (EntityBase) super.clone();
-  }
+	@Override
+	public EntityBase clone() throws CloneNotSupportedException {
+		return (EntityBase) super.clone();
+	}
 
-  @Transient
-  public void getUpdateLock() throws InterruptedException {
-    log.debug(this.getClass().getSimpleName() + " : getUpdateLock - attempting to get update lock for id " + getId() + " called from class "
-        + Thread.currentThread().getStackTrace()[2]);
-    updateLock.acquire();
-    log.debug(this.getClass().getSimpleName() + " : getUpdateLock - acquired  update lock for id " + getId() + " called from class "
-        + Thread.currentThread().getStackTrace()[2]);
+	@Transient
+	public void getUpdateLock() throws InterruptedException {
+		log.debug(this.getClass().getSimpleName() + " : getUpdateLock - attempting to get update lock for id " + getId() + " called from class "
+				+ Thread.currentThread().getStackTrace()[2]);
+		updateLock.acquire();
+		log.debug(this.getClass().getSimpleName() + " : getUpdateLock - acquired  update lock for id " + getId() + " called from class "
+				+ Thread.currentThread().getStackTrace()[2]);
 
-  }
+	}
 
-  @Transient
-  public void releaseUpdateLock() {
-    // Log.debug(messages)
-    log.debug(this.getClass().getSimpleName() + " : releaseUpdateLock - attempting to release update lock for id " + getId() + " called from class "
-        + Thread.currentThread().getStackTrace()[2]);
+	@Transient
+	public void releaseUpdateLock() {
+		// Log.debug(messages)
+		log.debug(this.getClass().getSimpleName() + " : releaseUpdateLock - attempting to release update lock for id " + getId() + " called from class "
+				+ Thread.currentThread().getStackTrace()[2]);
 
-    updateLock.release();
-    log.debug(this.getClass().getSimpleName() + " : getUpdateLock - released update lock for id " + getId() + " called from class "
-        + Thread.currentThread().getStackTrace()[2]);
+		updateLock.release();
+		log.debug(this.getClass().getSimpleName() + " : getUpdateLock - released update lock for id " + getId() + " called from class "
+				+ Thread.currentThread().getStackTrace()[2]);
 
-  }
+	}
 
-  @Transient
-  public long getDelay(TimeUnit unit) {
-    long diff = startTime - System.currentTimeMillis();
-    return unit.convert(diff, TimeUnit.MILLISECONDS);
-  }
+	@Transient
+	public long getDelay(TimeUnit unit) {
+		long diff = startTime - System.currentTimeMillis();
+		return unit.convert(diff, TimeUnit.MILLISECONDS);
+	}
 
-  /*
-   * @Override public int compareTo(Delayed o) { if (this.startTime < ((EntityBase) o).startTime) { return -1; } if (this.startTime > ((EntityBase)
-   * o).startTime) { return 1; } return 0; }
-   */
+	/*
+	 * @Override public int compareTo(Delayed o) { if (this.startTime < ((EntityBase) o).startTime) { return -1; } if (this.startTime > ((EntityBase)
+	 * o).startTime) { return 1; } return 0; }
+	 */
 
-  @Override
-  public int compareTo(EntityBase entityBase) {
-    //if (this.equals(entityBase)) {
-    int compareRevision = entityBase.getRevision();
-    return (compareRevision - this.revision);
-    //   }
-    // return 1;
-  }
+	@Override
+	public int compareTo(EntityBase entityBase) {
+		//if (this.equals(entityBase)) {
+		int compareRevision = entityBase.getRevision();
+		return (compareRevision - this.revision);
+		//   }
+		// return 1;
+	}
 
-  @Id
-  @Column(columnDefinition = "BINARY(16)", length = 16, updatable = true, nullable = false)
-  public UUID getId() {
-    ensureId();
-    return id;
-  }
+	@Transient
+	public boolean isPersisted() {
 
-  @Version
-  @Column(name = "version", columnDefinition = "integer DEFAULT 0", nullable = false)
-  public long getVersion() {
-    //  if (version == null)
-    //    return 0;
-    return version;
-  }
+		return persisted;
+	}
 
-  @Column(name = "revision", columnDefinition = "integer DEFAULT 0", nullable = false)
-  public int getRevision() {
-    //  if (version == null)
-    //    return 0;
-    return revision;
-  }
+	@Id
+	@Column(columnDefinition = "BINARY(16)", length = 16, updatable = true, nullable = false)
+	public UUID getId() {
+		ensureId();
+		return id;
+	}
 
-  @Transient
-  public int getAttempt() {
-    //  if (version == null)
-    //    return 0;
-    return attempt;
-  }
+	@Version
+	@Column(name = "version", columnDefinition = "integer DEFAULT 0", nullable = false)
+	public long getVersion() {
+		//  if (version == null)
+		//    return 0;
+		return version;
+	}
 
-  public synchronized void setAttempt(int attempt) {
-    this.attempt = attempt;
-  }
+	@Transient
+	public boolean getPersisted() {
+		//  if (version == null)
+		//    return 0;
+		if (originalEntity != null)
+			return originalEntity.getPersisted();
+		return persisted;
+	}
 
-  @Nullable
-  public PersistanceAction getPeristanceAction() {
-    //  if (version == null)
-    //    return 0;
-    return persistanceAction;
-  }
+	@Transient
+	public EntityBase getOriginalEntity() {
+		//  if (version == null)
+		//    return 0;
+		return originalEntity;
+	}
 
-  public synchronized void setPeristanceAction(PersistanceAction persistanceAction) {
-    this.persistanceAction = persistanceAction;
-  }
+	@Column(name = "revision", columnDefinition = "integer DEFAULT 0", nullable = false)
+	public int getRevision() {
+		//  if (version == null)
+		//    return 0;
+		return revision;
+	}
 
-  @Transient
-  public synchronized void setStartTime(long delay) {
-    this.delay = delay;
-    this.startTime = System.currentTimeMillis() + delay;
+	@Transient
+	public int getAttempt() {
+		//  if (version == null)
+		//    return 0;
+		return attempt;
+	}
 
-  }
+	public synchronized void setAttempt(int attempt) {
+		this.attempt = attempt;
+	}
 
-  public synchronized void setVersion(long version) {
-    this.version = version;
-  }
+	@Nullable
+	public PersistanceAction getPeristanceAction() {
+		//  if (version == null)
+		//    return 0;
+		return persistanceAction;
+	}
 
-  public synchronized void setRevision(int revision) {
-    this.revision = revision;
-  }
+	public synchronized void setPeristanceAction(PersistanceAction persistanceAction) {
+		this.persistanceAction = persistanceAction;
+	}
 
-  @Override
-  public String toString() {
-    return "DelayedRunnable [delayMS=" + delay + ",(ms)=" + getDelay(TimeUnit.MILLISECONDS) + "]";
-  }
+	@Transient
+	public synchronized void setStartTime(long delay) {
+		this.delay = delay;
+		this.startTime = System.currentTimeMillis() + delay;
 
-  @Transient
-  public Integer getRetryCount() {
-    if (retryCount == null)
-      return 0;
-    return retryCount;
-  }
+	}
 
-  public synchronized void setRetryCount(Integer retryCount) {
-    this.retryCount = retryCount;
-  }
+	public synchronized void setVersion(long version) {
+		this.version = version;
+	}
 
-  public void incermentRetryCount() {
-    retryCount = getRetryCount() + 1;
-  }
+	public synchronized void setPersisted(Boolean persisted) {
+		if (persisted) {
+			this.setPeristanceAction(PersistanceAction.MERGE);
+			if (this.originalEntity != null)
+				this.originalEntity.setPeristanceAction(PersistanceAction.MERGE);
+		}
+		if (this.originalEntity != null)
+			this.originalEntity.setPersisted(persisted);
 
-  @Override
-  public boolean equals(Object o) {
-    // generated by IDEA
-    if (this == o)
-      return true;
-    if (!(o instanceof EntityBase))
-      return false;
-    EntityBase that = (EntityBase) o;
-    // Need to check these are not null as assinged when persisted so might not yet be present when objects are compared
-    if (id == null || that.id == null)
-      return false;
-    return id.equals(that.id);
+		this.persisted = persisted;
+	}
 
-  }
+	public synchronized void setRevision(int revision) {
+		this.revision = revision;
+	}
 
-  @Override
-  public int hashCode() {
-    // ensureId();
-    //return Objects.hashCode(this.getId());
+	public synchronized void setOriginalEntity(EntityBase originalEntity) {
+		this.originalEntity = originalEntity;
+	}
 
-    return getId().toString().hashCode();
-  }
+	@Override
+	public String toString() {
+		return "DelayedRunnable [delayMS=" + delay + ",(ms)=" + getDelay(TimeUnit.MILLISECONDS) + "]";
+	}
 
-  // JPA
-  protected EntityBase() {
-    startTime = System.currentTimeMillis();
-    //  ensureId();
+	@Transient
+	public Integer getRetryCount() {
+		if (retryCount == null)
+			return 0;
+		return retryCount;
+	}
 
-  }
+	public synchronized void setRetryCount(Integer retryCount) {
+		this.retryCount = retryCount;
+	}
 
-  protected synchronized void setId(UUID id) {
-    if (this.id == null)
-      this.id = id;
-  }
+	public void incermentRetryCount() {
+		retryCount = getRetryCount() + 1;
+	}
 
-  public abstract void postPersist();
+	@Override
+	public boolean equals(Object o) {
+		// generated by IDEA
+		if (this == o)
+			return true;
+		if (!(o instanceof EntityBase))
+			return false;
+		EntityBase that = (EntityBase) o;
+		// Need to check these are not null as assinged when persisted so might not yet be present when objects are compared
+		if (id == null || that.id == null)
+			return false;
+		return id.equals(that.id);
 
-  public abstract void persit();
+	}
 
-  public abstract void persitParents();
+	@Override
+	public int hashCode() {
+		// ensureId();
+		//return Objects.hashCode(this.getId());
 
-  @Transient
-  public abstract EntityBase getParent();
+		return getId().toString().hashCode();
+	}
 
-  public abstract EntityBase refresh();
+	// JPA
+	protected EntityBase() {
+		startTime = System.currentTimeMillis();
+		//  ensureId();
 
-  protected void getParents(EntityBase child, Collection<EntityBase> parents) {
-    if (child.getParent() == null) {
-      parents.add(child);
-      return;
-    }
+	}
 
-    getParents(child.getParent(), parents);
-    parents.add(child);
+	protected synchronized void setId(UUID id) {
+		if (this.id == null)
+			this.id = id;
+	}
 
-  }
+	public abstract void postPersist();
 
-  public long findRevisionById() {
-    try {
-      return getDao().findRevisionById(this.getClass(), this.getId());
-    } catch (NullPointerException npe) {
-      return 0;
-    }
-  }
+	public abstract void persit();
 
-  public long findVersionById() {
-    try {
-      return getDao().findVersionById(this.getClass(), this.getId());
-    } catch (NullPointerException npe) {
-      return 0;
-    }
-  }
+	public abstract void persitParents();
 
-  public abstract void delete();
+	@Transient
+	public abstract EntityBase getParent();
 
-  @Transient
-  public abstract Dao getDao();
+	public abstract EntityBase refresh();
 
-  @Transient
-  public abstract void setDao(Dao dao);
+	protected void getParents(EntityBase child, Collection<EntityBase> parents) {
+		if (child.getParent() == null) {
+			parents.add(child);
+			return;
+		}
 
-  public abstract void detach();
+		getParents(child.getParent(), parents);
+		parents.add(child);
 
-  public abstract void merge();
+	}
 
-  private void ensureId() {
-    if (id == null)
-      setId(UUID.randomUUID());
-    // id = UUID.randomUUID();
+	public long findRevisionById() {
+		try {
+			long intRev = getDao().findRevisionById(this.getClass(), this.getId());
+			this.setPersisted(true);
+			return intRev;
+		} catch (NullPointerException npe) {
+			this.setPersisted(false);
+			return 0;
+		}
+	}
 
-    // if (startTime == 0)
-    //   startTime = System.currentTimeMillis() + delay;
-  }
+	public long findVersionById() {
+		try {
+			return getDao().findVersionById(this.getClass(), this.getId());
+		} catch (NullPointerException npe) {
+			return 0;
+		}
+	}
 
-  protected UUID id;
-  protected long version;
-  protected Integer retryCount;
+	public abstract void delete();
 
-  public abstract void prePersist();
+	@Transient
+	public abstract Dao getDao();
+
+	@Transient
+	public abstract void setDao(Dao dao);
+
+	public abstract void detach();
+
+	public abstract void merge();
+
+	private void ensureId() {
+		if (id == null)
+			setId(UUID.randomUUID());
+		// id = UUID.randomUUID();
+
+		// if (startTime == 0)
+		//   startTime = System.currentTimeMillis() + delay;
+	}
+
+	protected UUID id;
+	protected long version;
+	protected boolean persisted = false;
+	protected EntityBase originalEntity;
+	protected Integer retryCount;
+
+	public abstract void prePersist();
 
 }

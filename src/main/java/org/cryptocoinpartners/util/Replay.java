@@ -14,6 +14,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 
+import javax.annotation.Nullable;
+
 import org.cryptocoinpartners.module.BasicQuoteService;
 import org.cryptocoinpartners.module.Context;
 import org.cryptocoinpartners.module.MockTicker;
@@ -41,6 +43,8 @@ import com.google.inject.assistedinject.AssistedInject;
  * the events.
  */
 public class Replay implements Runnable {
+
+	private Map<Double, Instant> latestBars = new HashMap<Double, Instant>();
 
 	@AssistedInject
 	public Replay(@Assisted boolean orderByTimeReceived) {
@@ -90,8 +94,8 @@ public class Replay implements Runnable {
 	@AssistedInject
 	public Replay(@Assisted("startTime") Instant start, @Assisted("endTime") Instant end, @Assisted("orderByTimeReceived") boolean orderByTimeReceived,
 			@Assisted Semaphore semaphore, @Assisted("useRandomData") boolean useRandomData, @Assisted("replayBooks") boolean replayBooks,
-			@Assisted("replayBars") boolean replayBars) {
-		this(new Interval(start, end), orderByTimeReceived, semaphore, useRandomData, replayBooks, replayBars);
+			@Assisted("replayBars") boolean replayBars, @Assisted("barIntervals") @Nullable List<String> barIntervals) {
+		this(new Interval(start, end), orderByTimeReceived, semaphore, useRandomData, replayBooks, replayBars, barIntervals);
 	}
 
 	//
@@ -126,7 +130,7 @@ public class Replay implements Runnable {
 	}
 
 	public Replay(Interval replayTimeInterval, boolean orderByTimeReceived, @Assisted Semaphore semaphore, boolean useRandomData, boolean replayBooks,
-			boolean replayBars) {
+			boolean replayBars, @Nullable List<String> barIntervals) {
 		this.replayTimeInterval = replayTimeInterval; // set this before creating EventTimeManager
 		this.semaphore = semaphore;
 		this.context = Context.create(new EventTimeManager());
@@ -134,6 +138,7 @@ public class Replay implements Runnable {
 		this.useRandomData = useRandomData;
 		this.replayBooks = replayBooks;
 		this.replayBars = replayBars;
+		this.barIntervals = barIntervals;
 		// this.useRandomData=useRandomData;
 	}
 
@@ -151,11 +156,44 @@ public class Replay implements Runnable {
 
 		final Instant start = replayTimeInterval.getStart().toInstant();
 		final Instant end = replayTimeInterval.getEnd().toInstant();
+		List<Double> intervals = new ArrayList<Double>();
+		Double maxInterval = 0d;
+		Bar lastBar = null;
+		Map<String, Tradeable> markets = new HashMap<String, Tradeable>();
+
+		PortfolioService portfolioService = context.getInjector().getInstance(PortfolioService.class);
+		for (Portfolio portfolio : portfolioService.getPortfolios()) {
+			for (Tradeable tradeable : portfolio.getMarkets())
+				if (tradeable != null)
+					markets.put(tradeable.getSymbol(), tradeable);
+
+		}
+		if (replayBars) {
+			for (String interval : barIntervals) {
+				Double intervalAsDouble = Double.parseDouble(interval);
+				if (!intervals.contains(intervalAsDouble))
+					intervals.add(intervalAsDouble);
+				if (intervalAsDouble > maxInterval)
+					maxInterval = intervalAsDouble;
+			}
+
+			final String maxBarTimeQuery = "select r from Bar r where  market in (?1) and interval= ?2 order by time desc";
+			lastBar = EM.queryLimitOne(Bar.class, maxBarTimeQuery, new ArrayList(markets.values()), maxInterval);
+		}
+		final List<RemoteEvent> events = new ArrayList<>();
+		final List<Book> books = new ArrayList<>();
+		final List<Trade> trades = new ArrayList<>();
+		final List<Bar> bars = new ArrayList<>();
+		//   ArrayList marketsArray = new ArrayList(markets.values());
+		//we could kick these off the book and trade on seperate threads then let them come back before continuing.
+		//trades.addAll(EM.queryList(Trade.class, tradeQuery, new ArrayList(markets.values()), start, stop));
+
 		if (!useRandomData) {
 			int threadCount = 0;
 			CountDownLatch startLatch = null;
 			CountDownLatch stopLatch = null;
 			service = Executors.newFixedThreadPool(dbReaderThreads);
+
 			//   engines = Executors.newFixedThreadPool(1);
 			//    replayTimeInterval.toDuration().
 			// engines.submit(new PublisherRunnable());
@@ -176,7 +214,7 @@ public class Replay implements Runnable {
 							+ stopLatch + ", " + threadCount);
 
 					ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime(), semaphore, startLatch, stopLatch, threadCount,
-							replayBooks, replayBars);
+							replayBooks, replayBars, (lastBar == null ? null : lastBar.getTime()), markets, intervals);
 					startLatch = stopLatch;
 					service.submit(replayStep);
 					// if (threadCount != 0)
@@ -185,12 +223,60 @@ public class Replay implements Runnable {
 
 				}
 				semaphore.release(threadCount);
+				while (semaphore.availablePermits() > 0) {
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						log.debug(this.getClass().getSimpleName() + ": replaying historic prices", e);
+					}
+				}
+				if (replayBars) {
+					threadCount = 0;
+					//context = replay.getContext();
+
+					//	latestBars
+					double lastBarInterval = 0d;
+					for (Double interval : latestBars.keySet())
+						if (interval > lastBarInterval)
+							lastBarInterval = interval;
+					Instant startInstant = latestBars.get(lastBarInterval).toDateTime().plusSeconds((int) lastBarInterval).toInstant();
+					Instant endInstant = new Instant(System.currentTimeMillis());
+
+					for (Instant now = startInstant; !now.isAfter(endInstant);) {
+						final Instant stepEnd = now.plus(timeStep);
+						log.debug("Replay: Run replaying from " + now + " to " + stepEnd);
+						stopLatch = new CountDownLatch(1);
+						log.debug("Replay: ReplayStepRunnable created with: " + now + ", " + context.getRunTime() + ", " + semaphore + ", " + startLatch + ", "
+								+ stopLatch + ", " + threadCount);
+
+						ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime(), semaphore, startLatch, stopLatch,
+								threadCount, false, false, null, markets, intervals);
+						startLatch = stopLatch;
+						service.submit(replayStep);
+						// if (threadCount != 0)
+						threadCount++;
+						now = stepEnd;
+
+					}
+					semaphore.release(threadCount);
+
+				}
+				while (semaphore.availablePermits() > 0) {
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						log.debug(this.getClass().getSimpleName() + ": replaying historic prices", e);
+					}
+				}
+				log.debug("completed");
 
 			} else
-				replayStep(start, end, replayBooks, replayBars);
+				replayStep(start, end, replayBooks, replayBars, null, markets, intervals);
 		} else {
-			new MockTicker(context, ConfigUtil.combined(), start, end, context.getInjector().getInstance(BookFactory.class), context.getInjector().getInstance(
-					BasicQuoteService.class));
+			new MockTicker(context, ConfigUtil.combined(), start, end, context.getInjector().getInstance(BookFactory.class),
+					context.getInjector().getInstance(BasicQuoteService.class));
 
 		}
 
@@ -226,6 +312,10 @@ public class Replay implements Runnable {
 		private final Instant stop;
 		private final boolean replayBooks;
 		private final boolean replayBars;
+		private final Instant barEnd;
+		private Map<String, Tradeable> markets;
+		private List<Double> intervals;
+
 		private final EPRuntime runtime;
 		private final Semaphore semaphore;
 		//  private final CountDownLatch startLatch;
@@ -234,7 +324,8 @@ public class Replay implements Runnable {
 		private final CountDownLatch startLatch;
 
 		public ReplayStepRunnable(Instant start, Instant stop, EPRuntime runtime, Semaphore semaphore, final CountDownLatch startLatch,
-				CountDownLatch stopLatch, int threadCount, boolean replayBooks, boolean replayBars) {
+				CountDownLatch stopLatch, int threadCount, boolean replayBooks, boolean replayBars, Instant barEnd, Map<String, Tradeable> markets,
+				List<Double> intervals) {
 			this.semaphore = semaphore;
 			this.start = start;
 			this.stop = stop;
@@ -244,7 +335,9 @@ public class Replay implements Runnable {
 			this.threadCount = threadCount;
 			this.replayBooks = replayBooks;
 			this.replayBars = replayBars;
-
+			this.barEnd = barEnd;
+			this.markets = markets;
+			this.intervals = intervals;
 		}
 
 		@Override
@@ -254,7 +347,7 @@ public class Replay implements Runnable {
 			try {
 				// perform interesting task
 				log.debug("ReplayStepRunnable: Run querying events from " + start + " to " + stop + " with latch " + startLatch);
-				List<RemoteEvent> events = queryEvents(start, stop, replayBooks, replayBars);
+				List<RemoteEvent> events = queryEvents(start, stop, replayBooks, replayBars, barEnd, markets, intervals);
 
 				// Log.debug(context.getInjector().toString());
 				//PortfolioService port = context.getInjector().getInstance(PortfolioService.class);
@@ -274,6 +367,7 @@ public class Replay implements Runnable {
 					context.publish(event);
 					EM.detach(event);
 				}
+				System.gc();
 				log.debug("ReplayStepRunnable: Published events from " + start + " to " + stop);
 
 				//  } catch (Error | Exception e) {
@@ -323,8 +417,9 @@ public class Replay implements Runnable {
 
 	}
 
-	private void replayStep(Instant start, Instant stop, boolean replayBooks, boolean replayBars) {
-		Iterator<RemoteEvent> ite = queryEvents(start, stop, replayBooks, replayBars).iterator();
+	private void replayStep(Instant start, Instant stop, boolean replayBooks, boolean replayBars, Instant barEnd, Map<String, Tradeable> markets,
+			List<Double> intervals) {
+		Iterator<RemoteEvent> ite = queryEvents(start, stop, replayBooks, replayBars, barEnd, markets, intervals).iterator();
 		while (ite.hasNext()) {
 			RemoteEvent event = ite.next();
 
@@ -332,31 +427,22 @@ public class Replay implements Runnable {
 			event.detach();
 
 		}
+		System.gc();
 		context.advanceTime(stop); // advance to the end of the time window to trigger any timer events
+
 	}
 
-	private List<RemoteEvent> queryEvents(Instant start, Instant stop, boolean replayBooks, boolean replayBars) {
+	private List<RemoteEvent> queryEvents(Instant start, Instant stop, boolean replayBooks, boolean replayBars, Instant barEnd, Map<String, Tradeable> markets,
+			List<Double> intervals) {
 		//  final Market market = 
-		Map<String, Tradeable> markets = new HashMap<String, Tradeable>();
 
-		// markets.add(Market.forSymbol("OKCOIN_THISWEEK:BTC.USD.THISWEEK"));
-
-		//Portfolio portfolio = context.getInjector().getInstance(Portfolio.class);
-
-		PortfolioService portfolioService = context.getInjector().getInstance(PortfolioService.class);
-		for (Portfolio portfolio : portfolioService.getPortfolios()) {
-			for (Tradeable tradeable : portfolio.getMarkets())
-
-				markets.put(tradeable.getSymbol(), tradeable);
-
-		}
 		//.getMarkets();
 
 		final String timeField = timeFieldForOrdering(orderByTimeReceived);
 		//  order in (?1)
-		final String tradeQuery = "select t from Trade t where " + timeField + " >= ?1 and " + timeField + " <= ?2";
-		final String bookQuery = "select b from Book b where " + timeField + " >= ?1 and " + timeField + " <= ?2";
-		final String barQuery = "select r from Bar r where " + timeField + " >= ?1 and " + timeField + " <= ?2";
+		final String tradeQuery = "select t from Trade t where  market in (?1) and " + timeField + " >= ?2 and " + timeField + " <= ?3";
+		final String bookQuery = "select b from Book b where  market in (?1) and " + timeField + " >= ?2 and " + timeField + " <= ?3";
+		final String barQuery = "select r from Bar r where interval in (?1) and market in (?2) and " + timeField + " >= ?3 and " + timeField + " <= ?4";
 
 		final List<RemoteEvent> events = new ArrayList<>();
 		final List<Book> books = new ArrayList<>();
@@ -367,39 +453,50 @@ public class Replay implements Runnable {
 		//trades.addAll(EM.queryList(Trade.class, tradeQuery, new ArrayList(markets.values()), start, stop));
 
 		if (replayBooks) {
-			books.addAll(EM.queryList(Book.class, bookQuery, start, stop));
+			books.addAll(EM.queryList(Book.class, bookQuery, new ArrayList(markets.values()), start, stop));
 			Iterator<Book> itb = books.iterator();
 
 			while (itb.hasNext()) {
 				Book book = itb.next();
+				book.sortBook();
+
+				//book.
 				if (!markets.containsKey(book.getMarket().getSymbol())) {
 					itb.remove();
 					continue;
 				}
 				book.setMarket(markets.get(book.getMarket().getSymbol()));
-
+				book.setPersisted(true);
 			}
 
 			events.addAll(books);
 		}
-		if (replayBars) {
-			bars.addAll(EM.queryList(Bar.class, barQuery, start, stop));
+		if (replayBars && start.isBefore(barEnd)) {
+			if (stop.isAfter(barEnd))
+				stop = barEnd;
+
+			bars.addAll(EM.queryList(Bar.class, barQuery, intervals, new ArrayList(markets.values()), start, stop));
 			Iterator<Bar> itb = bars.iterator();
 
 			while (itb.hasNext()) {
 				Bar bar = itb.next();
+				if (latestBars == null || latestBars.isEmpty() || !latestBars.containsKey(bar.getInterval()))
+					latestBars.put(bar.getInterval(), bar.getTime());
+				else if (latestBars.containsKey(bar.getInterval()) && latestBars.get(bar.getInterval()).isBefore(bar.getTime()))
+					latestBars.put(bar.getInterval(), bar.getTime());
+
 				if (!markets.containsKey(bar.getMarket().getSymbol())) {
 					itb.remove();
 					continue;
 				}
 				bar.setMarket(markets.get(bar.getMarket().getSymbol()));
-
+				bar.setPersisted(true);
 			}
-
+			//I need to publish the trade updates then 
 			events.addAll(bars);
-		} else {
+		} else if (!replayBars || (replayBars && barEnd == null)) {
 			//TODO we need to replay trades for any bars we don't have.
-			trades.addAll(EM.queryList(Trade.class, tradeQuery, start, stop));
+			trades.addAll(EM.queryList(Trade.class, tradeQuery, new ArrayList(markets.values()), start, stop));
 
 			Iterator<Trade> itt = trades.iterator();
 
@@ -410,9 +507,11 @@ public class Replay implements Runnable {
 					continue;
 				}
 				trade.setMarket(markets.get(trade.getMarket().getSymbol()));
+				trade.setPersisted(true);
 			}
+			events.addAll(trades);
+
 		}
-		events.addAll(trades);
 
 		Collections.sort(events, orderByTimeReceived ? timeReceivedComparator : timeHappenedComparator);
 		System.gc();
@@ -511,10 +610,12 @@ public class Replay implements Runnable {
 	private static CountDownLatch endLatch;
 
 	private final Context context;
-	private static final Duration timeStep = Duration.standardHours(12); // how many rows from the DB to gather in one batch
+	private static final Duration timeStep = Duration.standardHours(24); // how many rows from the DB to gather in one batch
 	private final boolean orderByTimeReceived;
 	private final boolean useRandomData;
 	private boolean replayBooks = true;
+	private List<String> barIntervals = new ArrayList<String>();
 	private boolean replayBars = false;
+	private Instant barEnd;
 
 }

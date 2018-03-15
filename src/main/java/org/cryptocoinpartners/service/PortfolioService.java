@@ -127,4 +127,8 @@ public interface PortfolioService {
 
 	Map<Asset, Amount> getUnrealisedPnLs(Exchange exchange);
 
+	Trade getMarketPrice(Listing listing);
+
+	Trade getMarketPrice(Market market);
+
 }

@@ -46,8 +46,8 @@ public class OKCoinHelper extends XchangeHelperBase {
 						getContractForListing(specificOrder.getMarket().getListing()));
 
 				//buy order cannot be placed above the max price
-				if (specificOrder.isBid() && (specificOrder.getLimitPrice() == null
-						|| (specificOrder.getLimitPrice() != null && specificOrder.getLimitPrice().asBigDecimal().compareTo(priceLimits.getHigh()) > 0))) {
+				if (specificOrder.isBid() && (specificOrder.getLimitPrice() == null || (specificOrder.getLimitPrice() != null && priceLimits != null
+						&& specificOrder.getLimitPrice().asBigDecimal().compareTo(priceLimits.getHigh()) > 0))) {
 					DiscreteAmount maxPriceDiscete = new DiscreteAmount(
 							DiscreteAmount.roundedCountForBasis(priceLimits.getHigh(), specificOrder.getMarket().getPriceBasis()),
 							specificOrder.getMarket().getPriceBasis());
@@ -71,6 +71,7 @@ public class OKCoinHelper extends XchangeHelperBase {
 				//sell order cannot be placed below the min price
 
 			} catch (IOException e) {
+
 				// TODO Auto-generated catch block
 
 			}

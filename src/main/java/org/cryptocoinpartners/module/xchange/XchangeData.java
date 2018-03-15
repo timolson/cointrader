@@ -181,17 +181,18 @@ public class XchangeData {
 	}
 
 	public Collection<org.cryptocoinpartners.schema.Trade> getTrades(Market market, Exchange coinTraderExchange) throws Throwable {
+
 		Prompt prompt = market.getListing().getPrompt();
 		ArrayList<org.cryptocoinpartners.schema.Trade> ourTrades = new ArrayList<org.cryptocoinpartners.schema.Trade>();
 		CurrencyPair pair = XchangeUtil.getCurrencyPairForListing(market.getListing());
 		Object contract = null;
 		if (XchangeUtil.getHelperForExchange(coinTraderExchange) != null && prompt != null)
 			contract = XchangeUtil.getHelperForExchange(coinTraderExchange).getContractForListing(market.getListing());
-		if (lastTradeTimes.get(market) == null || lastTradeTimes.get(market) == 0 || lastTradeIds.get(market) == null || lastTradeIds.get(market) == 0) {
+		if (lastTradeTimes.get(market) == null || lastTradeIds.get(market) == null || (lastTradeTimes.get(market) == 0 && lastTradeIds.get(market) == 0)) {
 			try {
 
 				org.cryptocoinpartners.schema.Trade trade = EM.queryLimitOne(org.cryptocoinpartners.schema.Trade.class,
-						"select t from Trade t where market=?1 order by time desc)", market);
+						"select t from Trade t where market=?1 order by time desc", market);
 				//  for (org.cryptocoinpartners.schema.Trade trade : results) {
 				// org.cryptocoinpartners.schema.Trade trade = query.getSingleResult();
 				//long millis = Math.round(trade.getTime().getMillis() / 86400000);
@@ -225,6 +226,8 @@ public class XchangeData {
 				lastTradeIds.put(market, 0L);
 			} catch (Exception | Error e) {
 				log.error(this.getClass().getSimpleName() + ":FetchTradesRunnable Unabel to query last trade id" + e);
+				lastTradeTimes.put(market, 0L);
+				lastTradeIds.put(market, 0L);
 			}
 		}
 
@@ -275,6 +278,7 @@ public class XchangeData {
 					Instant tradeInstant = new Instant(trade.getTimestamp());
 					BigDecimal volume = (trade.getType() == OrderType.ASK) ? trade.getOriginalAmount().negate() : trade.getOriginalAmount();
 					log.trace("Creating new cointrader trades from: " + trade);
+					//TODO need to support contracts where prompt and basis are differnet from the contract basisi
 
 					org.cryptocoinpartners.schema.Trade ourTrade = tradeFactory.create(market, tradeInstant, trade.getId(), trade.getPrice(), volume);
 					ourTrades.add(ourTrade);

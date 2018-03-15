@@ -9,6 +9,7 @@ import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
 import javax.persistence.Index;
+import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import javax.persistence.Transient;
@@ -32,9 +33,8 @@ import com.google.inject.assistedinject.AssistedInject;
 @Entity
 @DiscriminatorValue(value = "GeneralOrder")
 // @Cacheable
-@Table(name = "GeneralOrder", indexes = { @Index(columnList = "fillType"), @Index(columnList = "portfolio"), @Index(columnList = "market"),
-		@Index(columnList = "parentFill"), @Index(columnList = "parentOrder"), @Index(columnList = "listing"), @Index(columnList = "version"),
-		@Index(columnList = "revision") })
+@Table(name = "GeneralOrder", indexes = { @Index(columnList = "fillType"), @Index(columnList = "portfolio"), @Index(columnList = "parentFill"),
+		@Index(columnList = "parentOrder"), @Index(columnList = "listing"), @Index(columnList = "version"), @Index(columnList = "revision") })
 public class GeneralOrder extends Order {
 	@AssistedInject
 	public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Listing listing, @Assisted BigDecimal volume) {
@@ -145,8 +145,9 @@ public class GeneralOrder extends Order {
 		this.listing = market.getListing();
 		double minimumOrderSize = volume.compareTo(BigDecimal.ZERO) < 0 ? market.getMinimumOrderSize(market) * -1 : market.getMinimumOrderSize(market);
 		//set it to the order size or the minumum size for the market.
-		this.volume = (volume.compareTo(BigDecimal.ZERO) != 0 && volume.abs().compareTo(BigDecimal.valueOf(minimumOrderSize).abs()) < 0) ? DecimalAmount
-				.of(BigDecimal.valueOf(minimumOrderSize)) : DecimalAmount.of(volume);
+		this.volume = (volume.compareTo(BigDecimal.ZERO) != 0 && volume.abs().compareTo(BigDecimal.valueOf(minimumOrderSize).abs()) < 0)
+				? DecimalAmount.of(BigDecimal.valueOf(minimumOrderSize))
+				: DecimalAmount.of(volume);
 
 		this.fillType = type;
 		this.positionEffect = PositionEffect.OPEN;
@@ -154,7 +155,8 @@ public class GeneralOrder extends Order {
 	}
 
 	@AssistedInject
-	public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Listing listing, @Assisted BigDecimal volume, @Assisted FillType type) {
+	public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Listing listing, @Assisted BigDecimal volume,
+			@Assisted FillType type) {
 		super(time);
 		this.getId();
 		this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
@@ -191,8 +193,9 @@ public class GeneralOrder extends Order {
 		this.listing = market.getListing();
 		//set it to the order size or the minumum size for the market.
 		double minimumOrderSize = volume.compareTo(BigDecimal.ZERO) < 0 ? market.getMinimumOrderSize(market) * -1 : market.getMinimumOrderSize(market);
-		this.volume = (volume.compareTo(BigDecimal.ZERO) != 0 && volume.abs().compareTo(BigDecimal.valueOf(minimumOrderSize).abs()) < 0) ? DecimalAmount
-				.of(BigDecimal.valueOf(minimumOrderSize)) : DecimalAmount.of(volume);
+		this.volume = (volume.compareTo(BigDecimal.ZERO) != 0 && volume.abs().compareTo(BigDecimal.valueOf(minimumOrderSize).abs()) < 0)
+				? DecimalAmount.of(BigDecimal.valueOf(minimumOrderSize))
+				: DecimalAmount.of(volume);
 		this.fillType = type;
 		this.positionEffect = PositionEffect.OPEN;
 	}
@@ -208,17 +211,17 @@ public class GeneralOrder extends Order {
 
 		this.fills = new CopyOnWriteArrayList<Fill>();
 		this.transactions = new CopyOnWriteArrayList<Transaction>();
-		synchronized (parentFill) {
-			parentFill.addChildOrder(this);
-		}
+		parentFill.addChildOrder(this);
+
 		this.setParentFill(parentFill);
 		this.market = market;
 		this.listing = market.getListing();
 		//set it to the order size or the minumum size for the market.
 		double minimumOrderSize = volume.compareTo(BigDecimal.ZERO) < 0 ? market.getMinimumOrderSize(market) * -1 : market.getMinimumOrderSize(market);
 
-		this.volume = (volume.compareTo(BigDecimal.ZERO) != 0 && volume.abs().compareTo(BigDecimal.valueOf(minimumOrderSize).abs()) < 0) ? DecimalAmount
-				.of(BigDecimal.valueOf(minimumOrderSize)) : DecimalAmount.of(volume);
+		this.volume = (volume.compareTo(BigDecimal.ZERO) != 0 && volume.abs().compareTo(BigDecimal.valueOf(minimumOrderSize).abs()) < 0)
+				? DecimalAmount.of(BigDecimal.valueOf(minimumOrderSize))
+				: DecimalAmount.of(volume);
 		this.fillType = type;
 		this.positionEffect = PositionEffect.OPEN;
 
@@ -244,6 +247,7 @@ public class GeneralOrder extends Order {
 
 	@Nullable
 	@ManyToOne(optional = true)
+	@JoinColumn(name = "listing")
 	public Listing getListing() {
 		return listing;
 	}
@@ -288,6 +292,7 @@ public class GeneralOrder extends Order {
 	@Override
 	@Nullable
 	@ManyToOne(optional = true)
+	@JoinColumn(name = "market")
 	public Market getMarket() {
 		return market;
 	}
@@ -459,6 +464,25 @@ public class GeneralOrder extends Order {
 
 	@Override
 	@Transient
+	public Amount getOpenVolume() {
+		if (this.getParentFill() != null)
+			return this.getParentFill().getOpenVolume();
+		else
+			return DecimalAmount.ZERO;
+
+	}
+
+	public synchronized void addFill(Fill fill) {
+
+		if (!getFills().contains(fill))
+			synchronized (getFills()) {
+				getFills().add(fill);
+			}
+
+	}
+
+	@Override
+	@Transient
 	public boolean isFilled() {
 		return getUnfilledVolume().equals(DecimalAmount.ZERO);
 	}
@@ -487,10 +511,12 @@ public class GeneralOrder extends Order {
 
 	@Override
 	public String toString() {
-		String s = "GeneralOrder{" + "id=" + getId() + ",time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + ", parentOrder="
-				+ (getParentOrder() == null ? "null" : getParentOrder().getId()) + ", parentFill="
-				+ (getParentFill() == null ? "null" : getParentFill().getId()) + ", listing=" + listing + ", volume=" + volume;
+		String s = "GeneralOrder{" + "id=" + getId() + "/" + System.identityHashCode(this) + ",time=" + (getTime() != null ? (FORMAT.print(getTime())) : "")
+				+ ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId() + "/" + System.identityHashCode(getParentOrder()))
+				+ ", parentFill=" + (getParentFill() == null ? "null" : getParentFill().getId()) + ", listing=" + listing + ", volume=" + volume;
 		//+ ", unfilled volume="+ (getUnfilledVolume() == null ? "null" : getUnfilledVolume());
+		if (market != null)
+			s += ", market=" + market;
 		if (limitPrice != null && limitPrice.asBigDecimal() != null)
 			s += ", limitPrice=" + limitPrice;
 		if (stopAmount != null && stopAmount.asBigDecimal() != null)
@@ -585,7 +611,7 @@ public class GeneralOrder extends Order {
 	@Override
 	public synchronized void setStopAmount(DecimalAmount stopAmount) {
 		this.stopAmount = stopAmount;
-		if (getParentFill() != null && stopAmount != null)
+		if (getParentFill() != null && stopAmount != null && this.getMarket() != null && this.getMarket().getPriceBasis() != 0)
 			getParentFill().setStopAmountCount(stopAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
 
 	}
@@ -593,8 +619,9 @@ public class GeneralOrder extends Order {
 	@Override
 	public synchronized void setStopPercentage(double stopPercentage) {
 		this.stopPercentage = stopPercentage;
-		if (getParentFill() != null && stopPercentage != 0)
+		if (getParentFill() != null && stopPercentage != 0 && getLimitPrice() != null)
 			this.setStopAmount((DecimalAmount) getLimitPrice().times(stopPercentage, Remainder.ROUND_EVEN));
+
 		// getParentFill().setStopAmountCount(stopAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
 		//getParentFill().set//StopAmountCount(stopAmount.toBasis(this.getMarket().getPriceBasis(), Remainder.ROUND_EVEN).getCount());
 
@@ -695,18 +722,18 @@ public class GeneralOrder extends Order {
 
 	public synchronized void setListing(Listing listing) {
 		this.listing = listing;
-		this.market = null;
+		//this.market = null;
 	}
 
-	@Override
-	public synchronized void setMarket(Market market) {
-		this.market = market;
-		if (market != null)
-			this.listing = market.getListing();
-	}
+	/*	@Override
+		public synchronized void setMarket(Market market) {
+			this.market = market;
+			if (market != null)
+				this.listing = market.getListing();
+		}*/
 
 	private Listing listing;
-	private volatile Market market;
+	private Market market;
 	private DecimalAmount volume;
 	private DecimalAmount limitPrice;
 	private DecimalAmount marketPrice;
@@ -715,10 +742,10 @@ public class GeneralOrder extends Order {
 	private double targetPercentage;
 	private double triggerInterval;
 	private DecimalAmount trailingStopAmount;
-	private volatile DecimalAmount stopPrice;
-	private volatile DecimalAmount lastBestPrice;
+	private DecimalAmount stopPrice;
+	private DecimalAmount lastBestPrice;
 	private DecimalAmount targetAmount;
-	private volatile DecimalAmount targetPrice;
+	private DecimalAmount targetPrice;
 	private DecimalAmount trailingStopPrice;
 	private Amount forcastedFees;
 
@@ -737,8 +764,8 @@ public class GeneralOrder extends Order {
 	}
 
 	@Override
-	public void persitParents() {
-		// TODO Auto-generated method stub
+	public void setMarket(Market market) {
+		this.market = market;
 
 	}
 

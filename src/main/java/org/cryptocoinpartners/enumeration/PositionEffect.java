@@ -19,116 +19,122 @@ import java.util.Map;
  */
 public enum PositionEffect {
 
-    /** Indicates opening/entering new position */
-    OPEN("OPEN"),
-    /** Indicates closing/exiting existing position */
-    CLOSE("CLOSE");
+	/** Indicates opening/entering new position */
+	OPEN("OPEN"),
+	/** Indicates closing/exiting existing position */
+	CLOSE("CLOSE"),
+	/** Indicates closing/exiting existing position */
+	DEFAULT("DEFAULT");
 
-    private final String enumValue;
+	private final String enumValue;
 
-    /**
-     * The constructor with enumeration literal value allowing
-     * super classes to access it.
-     */
-    private PositionEffect(String value) {
-        this.enumValue = value;
-    }
+	/**
+	 * The constructor with enumeration literal value allowing
+	 * super classes to access it.
+	 */
+	private PositionEffect(String value) {
+		this.enumValue = value;
+	}
 
-    /**
-     * Retrieves an instance of Status from <code>its name</code>.
-     *
-     * @param name the name to create the Status from.
-     * @return The enumeration literal named after the 'name' argument
-     */
-    public static PositionEffect fromString(String name) {
-        return PositionEffect.valueOf(name);
-    }
+	/**
+	 * Retrieves an instance of Status from <code>its name</code>.
+	 *
+	 * @param name the name to create the Status from.
+	 * @return The enumeration literal named after the 'name' argument
+	 */
+	public static PositionEffect fromString(String name) {
+		return PositionEffect.valueOf(name);
+	}
 
-    /**
-     * Returns an enumeration literal String <code>value</code>.
-     * Required by JAXB2 enumeration implementation
-     *
-     * @return String with corresponding value
-     */
-    public String value() {
-        return this.enumValue;
-    }
+	/**
+	 * Returns an enumeration literal String <code>value</code>.
+	 * Required by JAXB2 enumeration implementation
+	 *
+	 * @return String with corresponding value
+	 */
+	public String value() {
+		return this.enumValue;
+	}
 
-    /**
-     * Returns an instance of Status from String <code>value</code>.
-     * Required by JAXB2 enumeration implementation
-     *
-     * @param value the value to create the Status from.
-     * @return static Enumeration with corresponding value
-     */
-    public static PositionEffect fromValue(String value) {
-        for (PositionEffect enumName : PositionEffect.values()) {
-            if (enumName.getValue().equals(value)) {
-                return enumName;
-            }
-        }
-        throw new IllegalArgumentException("Status.fromValue(" + value + ')');
-    }
+	/**
+	 * Returns an instance of Status from String <code>value</code>.
+	 * Required by JAXB2 enumeration implementation
+	 *
+	 * @param value the value to create the Status from.
+	 * @return static Enumeration with corresponding value
+	 */
+	public static PositionEffect fromValue(String value) {
+		for (PositionEffect enumName : PositionEffect.values()) {
+			if (enumName.getValue().equals(value)) {
+				return enumName;
+			}
+		}
+		throw new IllegalArgumentException("Status.fromValue(" + value + ')');
+	}
 
-    /**
-     * Gets the underlying value of this type safe enumeration.
-     * This method is necessary to comply with DaoBase implementation.
-     * @return The name of this literal.
-     */
-    public String getValue() {
-        return this.enumValue;
-    }
+	/**
+	 * Gets the underlying value of this type safe enumeration.
+	 * This method is necessary to comply with DaoBase implementation.
+	 * @return The name of this literal.
+	 */
+	public String getValue() {
+		return this.enumValue;
+	}
 
-    /**
-     * Returns an unmodifiable list containing the literals that are known by this enumeration.
-     *
-     * @return A List containing the actual literals defined by this enumeration, this list
-     *         can not be modified.
-     */
-    public static List<String> literals() {
-        return PositionEffect.literals;
-    }
+	/**
+	 * Returns an unmodifiable list containing the literals that are known by this enumeration.
+	 *
+	 * @return A List containing the actual literals defined by this enumeration, this list
+	 *         can not be modified.
+	 */
+	public static List<String> literals() {
+		return PositionEffect.literals;
+	}
 
-    /**
-     * Returns an unmodifiable list containing the names of the literals that are known
-     * by this enumeration.
-     *
-     * @return A List containing the actual names of the literals defined by this
-     *         enumeration, this list can not be modified.
-     */
-    public static List<String> names() {
-        return PositionEffect.names;
-    }
+	/**
+	 * Returns an unmodifiable list containing the names of the literals that are known
+	 * by this enumeration.
+	 *
+	 * @return A List containing the actual names of the literals defined by this
+	 *         enumeration, this list can not be modified.
+	 */
+	public static List<String> names() {
+		return PositionEffect.names;
+	}
 
-    private static Map<String, PositionEffect> values = new LinkedHashMap<String, PositionEffect>(7, 1);
-    private static List<String> literals = new ArrayList<String>(7);
-    private static List<String> names = new ArrayList<String>(7);
-    private static List<PositionEffect> valueList = new ArrayList<PositionEffect>(7);
+	private static Map<String, PositionEffect> values = new LinkedHashMap<String, PositionEffect>(7, 1);
+	private static List<String> literals = new ArrayList<String>(7);
+	private static List<String> names = new ArrayList<String>(7);
+	private static List<PositionEffect> valueList = new ArrayList<PositionEffect>(7);
 
-    /**
-     * Initializes the values.
-     */
-    static {
-        synchronized (PositionEffect.values) {
-            PositionEffect.values.put(OPEN.enumValue, OPEN);
-            PositionEffect.values.put(CLOSE.enumValue, CLOSE);
+	/**
+	 * Initializes the values.
+	 */
+	static {
+		synchronized (PositionEffect.values) {
+			PositionEffect.values.put(OPEN.enumValue, OPEN);
+			PositionEffect.values.put(CLOSE.enumValue, CLOSE);
+			PositionEffect.values.put(DEFAULT.enumValue, DEFAULT);
 
-        }
-        synchronized (PositionEffect.valueList) {
-            PositionEffect.valueList.add(OPEN);
-            PositionEffect.valueList.add(CLOSE);
-            PositionEffect.valueList = Collections.unmodifiableList(valueList);
-        }
-        synchronized (PositionEffect.literals) {
-            PositionEffect.literals.add(OPEN.enumValue);
-            PositionEffect.literals.add(CLOSE.enumValue);
-            PositionEffect.literals = Collections.unmodifiableList(literals);
-        }
-        synchronized (PositionEffect.names) {
-            PositionEffect.names.add("OPEN");
-            PositionEffect.names.add("CLOSE");
-            PositionEffect.names = Collections.unmodifiableList(names);
-        }
-    }
-    // type-safe-enumeration-object java merge-point
+		}
+		synchronized (PositionEffect.valueList) {
+			PositionEffect.valueList.add(OPEN);
+			PositionEffect.valueList.add(CLOSE);
+			PositionEffect.valueList.add(DEFAULT);
+			PositionEffect.valueList = Collections.unmodifiableList(valueList);
+		}
+		synchronized (PositionEffect.literals) {
+			PositionEffect.literals.add(OPEN.enumValue);
+			PositionEffect.literals.add(CLOSE.enumValue);
+			PositionEffect.literals.add(DEFAULT.enumValue);
+			PositionEffect.literals = Collections.unmodifiableList(literals);
+		}
+		synchronized (PositionEffect.names) {
+			PositionEffect.names.add("OPEN");
+			PositionEffect.names.add("CLOSE");
+			PositionEffect.names.add("DEFAULT");
+			PositionEffect.names = Collections.unmodifiableList(names);
+		}
+	}
+	// type-safe-enumeration-object java merge-point
 }

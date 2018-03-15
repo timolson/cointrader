@@ -73,11 +73,13 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 		Transaction reservation = update.getOrder().getReservation();
 		if (reservation != null && update.getState() != OrderState.NEW) {
 			if (reservation.getType() == (TransactionType.BUY_RESERVATION) || reservation.getType() == (TransactionType.SELL_RESERVATION)) {
-				Amount price = (update.getOrder().getLimitPrice() == null) ? ((update.getOrder().getVolume().isNegative()) ? quotes.getLastBidForMarket(
-						update.getOrder().getMarket()).getPrice() : quotes.getLastAskForMarket(update.getOrder().getMarket()).getPrice()) : update.getOrder()
-						.getLimitPrice();
-				Amount updateAmount = reservation.getType() == (TransactionType.BUY_RESERVATION) ? (update.getOrder().getUnfilledVolume().times(price,
-						Remainder.ROUND_EVEN)).negate() : update.getOrder().getVolume();
+				Amount price = (update.getOrder().getLimitPrice() == null)
+						? ((update.getOrder().getVolume().isNegative()) ? quotes.getLastBidForMarket(update.getOrder().getMarket()).getPrice()
+								: quotes.getLastAskForMarket(update.getOrder().getMarket()).getPrice())
+						: update.getOrder().getLimitPrice();
+				Amount updateAmount = reservation.getType() == (TransactionType.BUY_RESERVATION)
+						? (update.getOrder().getUnfilledVolume().times(price, Remainder.ROUND_EVEN)).negate()
+						: update.getOrder().getVolume();
 				reservation.setAmountDecimal(updateAmount.asBigDecimal());
 				//  reservation.setAsset(reservation.getAsset());
 			}
@@ -193,11 +195,11 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 			portfolio.addTransaction(transaction);
 			if (transaction.getExchange() != null &&
 
-			(transaction.getType().isBookable())) {
+					(transaction.getType().isBookable())) {
 				//  Amount currentBalance =DecimalAmount.ZERO;
-				Amount currentBalance = (transaction.getExchange().getBalances().isEmpty() || transaction.getExchange().getBalances()
-						.get(transaction.getCurrency()) == null) ? DecimalAmount.ZERO : transaction.getExchange().getBalances().get(transaction.getCurrency())
-						.getAmount();
+				Amount currentBalance = (transaction.getExchange().getBalances().isEmpty()
+						|| transaction.getExchange().getBalances().get(transaction.getCurrency()) == null) ? DecimalAmount.ZERO
+								: transaction.getExchange().getBalances().get(transaction.getCurrency()).getAmount();
 				if ((transaction.getExchange().getBalances().isEmpty() || transaction.getExchange().getBalances().get(transaction.getCurrency()) == null)) {
 					Balance updateBalance;
 					if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL) {
@@ -211,13 +213,14 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 						log.debug(this.getClass().getSimpleName() + "- updatePortfolio creating balance for exchange " + transaction.getExchange() + " asset: "
 								+ transaction.getCurrency() + " current balance " + currentBalance + " amount: " + transaction.getAmount());
 
-						updateBalance = (transaction.getType().isDebit() ? balanceFactory.create(transaction.getExchange(), transaction.getCurrency(),
-								(currentBalance.minus(transaction.getAmount()))) : balanceFactory.create(transaction.getExchange(), transaction.getCurrency(),
-								(currentBalance.plus(transaction.getAmount()))));
+						updateBalance = (transaction.getType().isDebit()
+								? balanceFactory.create(transaction.getExchange(), transaction.getCurrency(), (currentBalance.minus(transaction.getAmount())))
+								: balanceFactory.create(transaction.getExchange(), transaction.getCurrency(), (currentBalance.plus(transaction.getAmount()))));
 					}
 					updateBalance.persit();
 
 					transaction.getExchange().getBalances().put(transaction.getCurrency(), updateBalance);
+					transaction.getExchange().merge();
 				} else {
 					Balance updateBalance;
 					Amount updateBalanceAmount;
@@ -275,17 +278,10 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 			QuoteService quoteService = portfolio.context.getInjector().getInstance(QuoteService.class);
 			//      ..getManager().getPortfolioService();
 			//portfolio.getPositions();
-			log.info("Date: "
-					+ (Timestamp != null ? (FORMAT.print(Timestamp)) : "")
-					+ " Portfolio: "
-					+ portfolio
-					+ " Total Cash Value ("
-					+ portfolio.getBaseAsset()
-					+ "):"
+			log.info("Date: " + (Timestamp != null ? (FORMAT.print(Timestamp)) : "") + " Portfolio: " + portfolio + " Total Cash Value ("
+					+ portfolio.getBaseAsset() + "):"
 					+ portfolioService.getBaseCashBalance(portfolio.getBaseAsset()).plus(portfolioService.getBaseUnrealisedPnL(portfolio.getBaseAsset()))
-					+ ", Total Notional Value ("
-					+ portfolio.getBaseAsset()
-					+ "):"
+					+ ", Total Notional Value (" + portfolio.getBaseAsset() + "):"
 					+ portfolio.getStartingBaseNotionalBalance().plus(portfolioService.getBaseCashBalance(portfolio.getBaseAsset()))
 							.plus(portfolioService.getBaseUnrealisedPnL(portfolio.getBaseAsset())).minus(portfolio.getStartingBaseCashBalance())
 					+ " (Cash Balance:" + portfolioService.getBaseCashBalance(portfolio.getBaseAsset()) + " Realised PnL (M2M):"
@@ -298,7 +294,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 						+ (quoteService.getLastTrade(position.getMarket()) == null ? "" : quoteService.getLastTrade(position.getMarket()).getTime())
 						+ " Last book time "
 						+ (quoteService.getLastBook(position.getMarket()) == null ? "" : quoteService.getLastBook(position.getMarket()).getTime())
-						+ " Position: " + position.toString());
+						+ " Position: " + position.toString() + " fills " + position.getFills());
 
 			}
 

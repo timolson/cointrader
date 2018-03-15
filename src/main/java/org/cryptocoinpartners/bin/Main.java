@@ -32,112 +32,112 @@ import com.google.inject.tools.jmx.Manager;
  */
 public class Main {
 
-    static final String DEFAULT_PROPERTIES_FILENAME = "cointrader.properties";
-    private static final Logger log = LoggerFactory.getLogger(Main.class);
-    final static ExecutorService service = Executors.newSingleThreadExecutor();
+	static final String DEFAULT_PROPERTIES_FILENAME = "cointrader.properties";
+	private static final Logger log = LoggerFactory.getLogger(Main.class);
+	final static ExecutorService service = Executors.newSingleThreadExecutor();
 
-    static class MainParams {
-        @SuppressWarnings("UnusedDeclaration")
-        @Parameter(names = { "h", "help", "-h", "-H", "-help", "--help" }, help = true, description = "Show this usage help")
-        boolean help;
+	static class MainParams {
+		@SuppressWarnings("UnusedDeclaration")
+		@Parameter(names = { "h", "help", "-h", "-H", "-help", "--help" }, help = true, description = "Show this usage help")
+		boolean help;
 
-        @Parameter(names = { "-f", "-properties-file" }, description = "location of the cointrader.properties config file")
-        String propertiesFilename = DEFAULT_PROPERTIES_FILENAME;
+		@Parameter(names = { "-f", "-properties-file" }, description = "location of the cointrader.properties config file")
+		String propertiesFilename = DEFAULT_PROPERTIES_FILENAME;
 
-        @DynamicParameter(names = { "-D" }, description = "use the -D flag to set configuration properties \"-Ddb.username=dbuser\"")
-        Map<String, String> definitions = new HashMap<>();
-    }
+		@DynamicParameter(names = { "-D" }, description = "use the -D flag to set configuration properties \"-Ddb.username=dbuser\"")
+		Map<String, String> definitions = new HashMap<>();
+	}
 
-    static class MainParamsOnly extends MainParams {
-        @Parameter
-        List<String> everythingElseIgnored;
-    }
+	static class MainParamsOnly extends MainParams {
+		@Parameter
+		List<String> everythingElseIgnored;
+	}
 
-    public static void main(String[] args) throws ConfigurationException, IllegalAccessException, InstantiationException {
-        // first, parse only the MainParams to get the properties file location and initialize ConfigUtil and rootInjector
-        MainParamsOnly mainParamsOnly = new MainParamsOnly();
-        Semaphore semaphore = new Semaphore(0);
-        JCommander parameterParser = new JCommander(mainParamsOnly);
-        parameterParser.setProgramName(Main.class.getName());
-        try {
-            parameterParser.parse();
-        } catch (Throwable t) {
-            log.error("Threw a Execption, full stack trace follows:", t);
-            t.printStackTrace();
-            System.exit(1);
-        }
-        ConfigUtil.init(mainParamsOnly.propertiesFilename, mainParamsOnly.definitions);
-        Injector rootInjector = Injector.root();
-        rootInjector.getInstance(ApplicationInitializer.class);
-        //  context.getInjector().root().
-        rootInjector.createChildInjector(new StaticInjectionModule());
-        Manager.manage("org.cryptocoinpartners", rootInjector.getInjector());
-        //  rootInjector.getInstance(BookJpaDao.class);
-        // rootInjector.getInstance(BarJpaDao.class);
-        // rootInjector.getInstance(CurrencyJpaDao.class);
-        // rootInjector.getInstance(ExchangeJpaDao.class);
-        //rootInjector.getInstance(FillJpaDao.class);
-        //rootInjector.getInstance(ListingJpaDao.class);
-        // rootInjector.getInstance(MarketJpaDao.class);
-        // rootInjector.getInstance(MarketDataJpaDao.class);
-        // rootInjector.getInstance(OrderJpaDao.class);
-        //rootInjector.getInstance(PortfolioJpaDao.class);
-        // rootInjector.getInstance(PositionJpaDao.class);
-        // rootInjector.getInstance(PromptJpaDao.class);
-        // rootInjector.getInstance(TradeJpaDao.class);
-        //rootInjector.getInstance(TransactionJpaDao.class);
-        //rootInjector.getInstance(OrderUpdateJpaDao.class);
-        PersistUtil.ensureSingletonsExist();
+	public static void main(String[] args) throws ConfigurationException, IllegalAccessException, InstantiationException {
+		// first, parse only the MainParams to get the properties file location and initialize ConfigUtil and rootInjector
+		MainParamsOnly mainParamsOnly = new MainParamsOnly();
+		Semaphore semaphore = new Semaphore(0);
+		JCommander parameterParser = new JCommander(mainParamsOnly);
+		parameterParser.setProgramName(Main.class.getName());
+		try {
+			parameterParser.parse();
+		} catch (Throwable t) {
+			log.error("Threw a Execption, full stack trace follows:", t);
+			t.printStackTrace();
+			System.exit(1);
+		}
+		ConfigUtil.init(mainParamsOnly.propertiesFilename, mainParamsOnly.definitions);
+		Injector rootInjector = Injector.root();
+		rootInjector.getInstance(ApplicationInitializer.class);
+		//  context.getInjector().root().
+		rootInjector.createChildInjector(new StaticInjectionModule());
+		Manager.manage("org.cryptocoinpartners", rootInjector.getInjector());
+		//  rootInjector.getInstance(BookJpaDao.class);
+		// rootInjector.getInstance(BarJpaDao.class);
+		// rootInjector.getInstance(CurrencyJpaDao.class);
+		// rootInjector.getInstance(ExchangeJpaDao.class);
+		//rootInjector.getInstance(FillJpaDao.class);
+		//rootInjector.getInstance(ListingJpaDao.class);
+		// rootInjector.getInstance(MarketJpaDao.class);
+		// rootInjector.getInstance(MarketDataJpaDao.class);
+		// rootInjector.getInstance(OrderJpaDao.class);
+		//rootInjector.getInstance(PortfolioJpaDao.class);
+		// rootInjector.getInstance(PositionJpaDao.class);
+		// rootInjector.getInstance(PromptJpaDao.class);
+		// rootInjector.getInstance(TradeJpaDao.class);
+		//rootInjector.getInstance(TransactionJpaDao.class);
+		//rootInjector.getInstance(OrderUpdateJpaDao.class);
+		PersistUtil.ensureSingletonsExist();
 
-        // now parse the full command line
-        MainParams mainParams = new MainParams();
-        parameterParser = new JCommander(mainParams);
+		// now parse the full command line
+		MainParams mainParams = new MainParams();
+		parameterParser = new JCommander(mainParams);
 
-        // find the commands, register with the parameter parser, and put them into the commandLookup map
-        Map<String, RunMode> runModesByName = new HashMap<>();
-        Set<Class<? extends RunMode>> runModeClasses = ReflectionUtil.getSubtypesOf(RunMode.class);
-        for (Class<? extends RunMode> runModeClass : runModeClasses) {
-            if (Modifier.isAbstract(runModeClass.getModifiers()))
-                continue;
-            Parameters annotation = runModeClass.getAnnotation(Parameters.class);
-            if (annotation == null) {
-                System.err.println("The RunMode subclass " + runModeClass + " must have the com.beust.jcommander.Parameters annotation.");
-                System.exit(1);
-            }
-            //  rootInjector.getInstance(ApplicationInitializer.class);
-            //   new Binder
-            RunMode runMode = rootInjector.getInstance(runModeClass);
-            for (String commandName : annotation.commandNames())
-                runModesByName.put(commandName, runMode);
-            parameterParser.addCommand(runMode);
-        }
+		// find the commands, register with the parameter parser, and put them into the commandLookup map
+		Map<String, RunMode> runModesByName = new HashMap<>();
+		Set<Class<? extends RunMode>> runModeClasses = ReflectionUtil.getSubtypesOf(RunMode.class);
+		for (Class<? extends RunMode> runModeClass : runModeClasses) {
+			if (Modifier.isAbstract(runModeClass.getModifiers()))
+				continue;
+			Parameters annotation = runModeClass.getAnnotation(Parameters.class);
+			if (annotation == null) {
+				System.err.println("The RunMode subclass " + runModeClass + " must have the com.beust.jcommander.Parameters annotation.");
+				System.exit(1);
+			}
+			//  rootInjector.getInstance(ApplicationInitializer.class);
+			//   new Binder
+			RunMode runMode = rootInjector.getInstance(runModeClass);
+			for (String commandName : annotation.commandNames())
+				runModesByName.put(commandName, runMode);
+			parameterParser.addCommand(runMode);
+		}
 
-        // now parse the commandline
-        try {
-            parameterParser.parse(args);
-        } catch (MissingCommandException e) {
-            System.err.println(e.getMessage());
-            parameterParser.usage();
-            System.exit(7002);
-        }
-        String commandName = parameterParser.getParsedCommand();
-        // find the runmode, if any
-        RunMode runMode = runModesByName.get(commandName);
-        if (runMode == null || mainParams.help) {
-            parameterParser.usage();
-            System.exit(7001);
-        }
+		// now parse the commandline
+		try {
+			parameterParser.parse(args);
+		} catch (MissingCommandException e) {
+			System.err.println(e.getMessage());
+			parameterParser.usage();
+			System.exit(7002);
+		}
+		String commandName = parameterParser.getParsedCommand();
+		// find the runmode, if any
+		RunMode runMode = runModesByName.get(commandName);
+		if (runMode == null || mainParams.help) {
+			parameterParser.usage();
+			System.exit(7001);
+		}
 
-        // PersistUtil.init();
-        try {
-            runMode.run(semaphore);
-            semaphore.acquire(1);
-        } catch (Throwable t) {
-            log.error("Uncaught error while running " + runMode.getClass().getSimpleName(), t);
-        } finally {
-            // rootInjector.getInstance(EntityManagerFactory.class).close();
-            //  PersistUtil.shutdown();
-        }
+		// PersistUtil.init();
+		try {
+			runMode.run(semaphore);
+			semaphore.acquire(1);
+		} catch (Throwable t) {
+			log.error("Uncaught error while running " + runMode.getClass().getSimpleName(), t);
+		} finally {
+			// rootInjector.getInstance(EntityManagerFactory.class).close();
+			//  PersistUtil.shutdown();
+		}
 
-    }
+	}
 }

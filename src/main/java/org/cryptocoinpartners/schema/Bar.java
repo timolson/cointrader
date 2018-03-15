@@ -29,6 +29,8 @@ public class Bar extends MarketData {
 	private Double high;
 	private Double low;
 	private Double volume;
+	private Double buyVolume;
+	private Double sellVolume;
 	private static final DateTimeFormatter FORMAT = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
 	@Inject
 	protected transient BarJpaDao barDao;
@@ -37,8 +39,9 @@ public class Bar extends MarketData {
 
 	@AssistedInject
 	public Bar(@Assisted long timestamp, @Assisted("barInterval") Double interval, @Assisted("barOpen") Double open, @Assisted("barClose") Double close,
-			@Assisted("barHigh") Double high, @Assisted("barLow") Double low, @Assisted("barVolume") Double volume, @Assisted Tradeable market) {
-		this(new Instant(timestamp), Instant.now(), null, interval, open, close, high, low, volume, market);
+			@Assisted("barHigh") Double high, @Assisted("barLow") Double low, @Assisted("barVolume") Double volume, @Assisted("barBuyVolume") Double buyVolume,
+			@Assisted("barSellVolume") Double sellVolume, @Assisted Tradeable market) {
+		this(new Instant(timestamp), Instant.now(), null, interval, open, close, high, low, volume, buyVolume, sellVolume, market);
 
 	}
 
@@ -51,13 +54,16 @@ public class Bar extends MarketData {
 		this.high = bar.high;
 		this.low = bar.low;
 		this.volume = bar.volume;
+		this.buyVolume = bar.buyVolume;
+		this.sellVolume = bar.sellVolume;
 
 	}
 
 	@AssistedInject
 	public Bar(@Assisted("barTime") Instant time, @Assisted("barRecievedTime") Instant recievedTime, @Nullable @Assisted String remoteKey,
 			@Assisted("barInterval") Double interval, @Assisted("barOpen") Double open, @Assisted("barClose") Double close, @Assisted("barHigh") Double high,
-			@Assisted("barLow") Double low, @Assisted("barVolume") Double volume, @Assisted Tradeable market) {
+			@Assisted("barLow") Double low, @Assisted("barVolume") Double volume, @Assisted("barBuyVolume") Double buyVolume,
+			@Assisted("barSellVolume") Double sellVolume, @Assisted Tradeable market) {
 		super(time, remoteKey, market);
 		this.interval = interval;
 		this.open = open;
@@ -65,7 +71,8 @@ public class Bar extends MarketData {
 		this.high = high;
 		this.low = low;
 		this.volume = volume;
-
+		this.buyVolume = buyVolume;
+		this.sellVolume = sellVolume;
 	}
 
 	public <T> T queryZeroOne(Class<T> resultType, String queryStr, Object... params) {
@@ -113,6 +120,14 @@ public class Bar extends MarketData {
 		return volume;
 	}
 
+	public Double getBuyVolume() {
+		return buyVolume;
+	}
+
+	public Double getSellVolume() {
+		return sellVolume;
+	}
+
 	public Double getHigh() {
 		return high;
 	}
@@ -137,6 +152,14 @@ public class Bar extends MarketData {
 		this.volume = volume;
 	}
 
+	protected synchronized void setBuyVolume(Double buyVolume) {
+		this.buyVolume = buyVolume;
+	}
+
+	protected synchronized void setSellVolume(Double sellVolume) {
+		this.sellVolume = sellVolume;
+	}
+
 	protected synchronized void setLow(Double low) {
 		this.low = low;
 	}
@@ -153,8 +176,9 @@ public class Bar extends MarketData {
 	public String toString() {
 
 		return "Bar(" + System.identityHashCode(this) + ") Start=" + (getTimestamp() != 0 ? (FORMAT.print(getTimestamp())) : "") + SEPARATOR + "Market="
-				+ getMarket() + SEPARATOR + "Interval=" + getInterval() + SEPARATOR + "Open=" + getOpen() + SEPARATOR + "High=" + getHigh() + SEPARATOR
-				+ "Low=" + getLow() + SEPARATOR + "Close=" + getClose() + SEPARATOR + "Volume=" + getVolume();
+				+ getMarket() + SEPARATOR + "Interval=" + getInterval() + SEPARATOR + "Open=" + getOpen() + SEPARATOR + "High=" + getHigh() + SEPARATOR + "Low="
+				+ getLow() + SEPARATOR + "Close=" + getClose() + SEPARATOR + "Volume=" + getVolume() + SEPARATOR + "Buy Volume=" + getBuyVolume() + SEPARATOR
+				+ "Sell Volume=" + getSellVolume();
 	}
 
 	@Override

@@ -56,6 +56,8 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 	private final Map<Double, Map<Tradeable, Double>> max = new ConcurrentHashMap<Double, Map<Tradeable, Double>>();
 	private final Map<Double, Map<Tradeable, Double>> min = new ConcurrentHashMap<Double, Map<Tradeable, Double>>();
 	private final Map<Double, Map<Tradeable, Double>> vol = new ConcurrentHashMap<Double, Map<Tradeable, Double>>();
+	private final Map<Double, Map<Tradeable, Double>> buyVol = new ConcurrentHashMap<Double, Map<Tradeable, Double>>();
+	private final Map<Double, Map<Tradeable, Double>> sellVol = new ConcurrentHashMap<Double, Map<Tradeable, Double>>();
 	private final Map<Double, Map<Tradeable, Double>> previousLast = new ConcurrentHashMap<Double, Map<Tradeable, Double>>();
 
 	// private Market market;
@@ -176,10 +178,8 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 	}
 
 	protected void setCutoffTimestampMinute(Tradeable market, Double interval, Long cutoff) {
-		if (cutoffTimestampMinute.get(market) == null
-				|| cutoffTimestampMinute.get(market).get(interval) == null
-				|| (cutoffTimestampMinute.get(market) != null && cutoffTimestampMinute.get(market).get(interval) != null && (cutoff != null && cutoff > cutoffTimestampMinute
-						.get(market).get(interval)))) {
+		if (cutoffTimestampMinute.get(market) == null || cutoffTimestampMinute.get(market).get(interval) == null || (cutoffTimestampMinute.get(market) != null
+				&& cutoffTimestampMinute.get(market).get(interval) != null && (cutoff != null && cutoff > cutoffTimestampMinute.get(market).get(interval)))) {
 
 			if (cutoffTimestampMinute.get(market) == null) {
 				Map<Double, Long> intervalTimestampMinute = new ConcurrentHashMap<Double, Long>();
@@ -263,7 +263,28 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 			} else {
 				vol.get(interval).put(market, volume + vol.get(interval).get(market));
 			}
-
+			if (volume < 0) {
+				if (sellVol.get(interval) == null) {
+					Map<Tradeable, Double> intervalVol = new ConcurrentHashMap<Tradeable, Double>();
+					intervalVol.put(market, volume);
+					sellVol.put(interval, intervalVol);
+				} else if (sellVol.get(interval).get(market) == null) {
+					sellVol.get(interval).put(market, volume);
+				} else {
+					sellVol.get(interval).put(market, volume + sellVol.get(interval).get(market));
+				}
+			}
+			if (volume > 0) {
+				if (buyVol.get(interval) == null) {
+					Map<Tradeable, Double> intervalVol = new ConcurrentHashMap<Tradeable, Double>();
+					intervalVol.put(market, volume);
+					buyVol.put(interval, intervalVol);
+				} else if (buyVol.get(interval).get(market) == null) {
+					buyVol.get(interval).put(market, volume);
+				} else {
+					buyVol.get(interval).put(market, volume + buyVol.get(interval).get(market));
+				}
+			}
 		}
 	}
 
@@ -314,7 +335,7 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 				cal.set(Calendar.MINUTE, 0);
 				int modulo = cal.get(Calendar.HOUR_OF_DAY) % hours;
 				if (modulo > 0) {
-
+			
 					cal.add(Calendar.HOUR_OF_DAY, -modulo);
 				
 			}*/
@@ -373,8 +394,8 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 				//        if (extensionServicesContext == null)
 				//        return;
 				log.trace(this.getClass().getSimpleName() + ":scheduledTrigger - triggered at "
-						+ (new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime())) + " :  for interval "
-						+ interval + " with handle " + handle);
+						+ (new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime())) + " :  for interval " + interval
+						+ " with handle " + handle);
 				if (handle.get(interval) != null) {
 					log.trace(this.getClass().getSimpleName() + ":scheduledTrigger at "
 							+ (new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime())) + " :  for interval "
@@ -391,8 +412,8 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 								+ (new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime())) + " :  for interval "
 								+ interval + " posting data as existing previousLast value of " + previousLast);
 
-						OHLCBarPlugInView.this.postData(interval, market, agentInstanceViewFactoryContext.getStatementContext().getSchedulingService()
-								.getTime());
+						OHLCBarPlugInView.this.postData(interval, market,
+								agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime());
 					}
 				}
 				//once we have been triggered we should add oursleves back.
@@ -408,8 +429,8 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 
 				agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().add(scheduleAfterMSec, handle.get(interval), scheduleSlot);
 				log.trace(this.getClass().getSimpleName() + ":scheduledTrigger at "
-						+ (new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime())) + " :  for interval "
-						+ interval + " with handle " + handle + " scheduled call back after " + scheduleAfterMSec + " at "
+						+ (new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime())) + " :  for interval " + interval
+						+ " with handle " + handle + " scheduled call back after " + scheduleAfterMSec + " at "
 						+ new Instant(agentInstanceViewFactoryContext.getStatementContext().getSchedulingService().getTime()).plus(scheduleAfterMSec));
 
 			}
@@ -454,23 +475,27 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 				long currentRemoveSeconds = removeSeconds(currentTime, interval);
 				log.trace(this.getClass().getSimpleName() + ":PostData: generating bar at " + new Instant(currentTime) + " with  currenttimestamp "
 						+ (new Instant(getCurrentTimestampMinute(market, interval))) + " and " + (new Instant(getCurrentTimestampMinute(market, interval))));
-				Double open = (first.get(interval) != null && first.get(interval).get(market) != null) ? first.get(interval).get(market) : previousLast.get(
-						interval).get(market);
-				Double high = (max.get(interval) != null && max.get(interval).get(market) != null) ? max.get(interval).get(market) : previousLast.get(interval)
-						.get(market);
-				Double low = (min.get(interval) != null && min.get(interval).get(market) != null) ? min.get(interval).get(market) : previousLast.get(interval)
-						.get(market);
-				Double close = (last.get(interval) != null && last.get(interval).get(market) != null) ? last.get(interval).get(market) : previousLast.get(
-						interval).get(market);
+				Double open = (first.get(interval) != null && first.get(interval).get(market) != null) ? first.get(interval).get(market)
+						: previousLast.get(interval).get(market);
+				Double high = (max.get(interval) != null && max.get(interval).get(market) != null) ? max.get(interval).get(market)
+						: previousLast.get(interval).get(market);
+				Double low = (min.get(interval) != null && min.get(interval).get(market) != null) ? min.get(interval).get(market)
+						: previousLast.get(interval).get(market);
+				Double close = (last.get(interval) != null && last.get(interval).get(market) != null) ? last.get(interval).get(market)
+						: previousLast.get(interval).get(market);
 				Double volume = (vol.get(interval) != null && vol.get(interval).get(market) != null) ? vol.get(interval).get(market) : 0d;
+				Double buyVolume = (buyVol.get(interval) != null && buyVol.get(interval).get(market) != null) ? buyVol.get(interval).get(market) : 0d;
+				Double sellVolume = (sellVol.get(interval) != null && sellVol.get(interval).get(market) != null) ? sellVol.get(interval).get(market) : 0d;
+
 				if (volume != 0 && currentTimestampMinute.get(market) == null && currentTimestampMinute.get(market).get(interval) == null)
 					log.debug("error");
-				Long timestamp = (currentTimestampMinute.get(market) != null && currentTimestampMinute.get(market).get(interval) != null) ? currentTimestampMinute
-						.get(market).get(interval) : (currentRemoveSeconds - (long) (interval * 1000));
+				Long timestamp = (currentTimestampMinute.get(market) != null && currentTimestampMinute.get(market).get(interval) != null)
+						? currentTimestampMinute.get(market).get(interval)
+						: (currentRemoveSeconds - (long) (interval * 1000));
 
 				//long targetTime = currentRemoveSeconds + (86400 + LATE_EVENT_SLACK_SECONDS) * 1000; // leave some seconds for late comers
 
-				barValue = new Bar(timestamp, interval, open, close, high, low, volume, market);
+				barValue = new Bar(timestamp, interval, open, close, high, low, volume, buyVolume, sellVolume, market);
 			} catch (Exception | Error ex) {
 				log.error(this.getClass().getSimpleName() + ":PostData: Unable to generate " + interval + " bar for market: " + market + " with timestamp:"
 						+ currentTimestampMinute.get(market) + " first:" + first.get(interval) + " high: " + max.get(interval) + " low: " + min.get(interval)
@@ -485,12 +510,10 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 				this.updateChildren(new EventBean[] { outgoing }, null);
 			} else {
 
-				log.trace(this.getClass().getSimpleName()
-						+ ": PostData - updating child outgoing event "
-						+ outgoing.getUnderlying().toString()
-						+ " last event "
-						+ ((lastEvent != null && lastEvent.get(market) != null && lastEvent.get(market).get(interval) != null) ? (lastEvent.get(market)
-								.get(interval).getUnderlying().toString()) : ""));
+				log.trace(this.getClass().getSimpleName() + ": PostData - updating child outgoing event " + outgoing.getUnderlying().toString() + " last event "
+						+ ((lastEvent != null && lastEvent.get(market) != null && lastEvent.get(market).get(interval) != null)
+								? (lastEvent.get(market).get(interval).getUnderlying().toString())
+								: ""));
 
 				this.updateChildren(new EventBean[] { outgoing }, new EventBean[] { lastEvent.get(market).get(interval) });
 			}
@@ -520,6 +543,10 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 				min.get(interval).remove(market);
 			if (vol.get(interval) != null && vol.get(interval).get(market) != null)
 				vol.get(interval).remove(market);
+			if (sellVol.get(interval) != null && sellVol.get(interval).get(market) != null)
+				sellVol.get(interval).remove(market);
+			if (buyVol.get(interval) != null && buyVol.get(interval).get(market) != null)
+				buyVol.get(interval).remove(market);
 			if (currentTimestampMinute.get(market) != null && currentTimestampMinute.get(market).get(interval) != null)
 				currentTimestampMinute.get(market).remove(interval);
 			//if (currentTimestampMinute.get(market) != null && currentTimestampMinute.get(market).get(interval) != null)
@@ -529,8 +556,8 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 		}
 
 		else
-			log.error(this.getClass().getSimpleName() + ":PostData: Unable to generate bar for interval " + interval + "  with market:" + market
-					+ "and first: " + first + " and last: " + last + " and min:" + min + " and max: " + max);
+			log.error(this.getClass().getSimpleName() + ":PostData: Unable to generate bar for interval " + interval + "  with market:" + market + "and first: "
+					+ first + " and last: " + last + " and min:" + min + " and max: " + max);
 
 		//}
 

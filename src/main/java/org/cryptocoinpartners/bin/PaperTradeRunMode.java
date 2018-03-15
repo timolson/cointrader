@@ -1,5 +1,6 @@
 package org.cryptocoinpartners.bin;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -48,6 +49,10 @@ public class PaperTradeRunMode extends RunMode {
 	Long prefeedPeriod = ConfigUtil.combined().getLong("strategy.prefeed.period", 25);
 	Boolean replayBooks = ConfigUtil.combined().getBoolean("strategy.prefeed.books", false);
 	Boolean replayBars = ConfigUtil.combined().getBoolean("strategy.prefeed.bars", false);
+	List<String> barIntervals = ConfigUtil.combined().getList("strategy.prefeed.bar.intervals", new ArrayList<String>());
+
+	//		.getBoolean("strategy.prefeed.bars", false);
+	//strate//gy.prefeed.bar.intervals
 
 	private final Instant start = end.minus(Duration.standardHours(prefeedPeriod)).toInstant();
 
@@ -57,7 +62,7 @@ public class PaperTradeRunMode extends RunMode {
 	public void run(Semaphore semaphore) {
 		//context = Context.create();
 
-		Replay replay = replayFactory.between(start, end, false, paperSemaphore, false, replayBooks, replayBars);
+		Replay replay = replayFactory.between(start, end, false, paperSemaphore, false, replayBooks, replayBars, barIntervals);
 		context = replay.getContext();
 		context.attach(XchangeAccountService.class);
 		context.attach(BasicQuoteService.class);
@@ -77,16 +82,8 @@ public class PaperTradeRunMode extends RunMode {
 		}
 		log.debug(this.getClass().getSimpleName() + ": replaying historic prices");
 		replay.run();
-		while (paperSemaphore.availablePermits() > 0) {
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				log.debug(this.getClass().getSimpleName() + ": replaying historic prices", e);
-			}
-		}
-		log.debug(this.getClass().getSimpleName() + ": replayed historic prices");
 
+		log.debug(this.getClass().getSimpleName() + ": replayed historic prices");
 		//context.esperConfig.getEngineDefaults().getThreading().setInternalTimerEnabled(false);
 		context.setTimeProvider(null);
 		context.publish(new TimerControlEvent(TimerControlEvent.ClockType.CLOCK_INTERNAL));

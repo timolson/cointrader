@@ -92,7 +92,8 @@ public class Transaction extends Event {
 		else
 
 			basis = getCurrency() == null ? getAsset() == null ? 0 : getAsset().getBasis() : getCurrency().getBasis();
-		this.setAmountDecimal(basis == 0 ? DecimalAmount.of(amount).asBigDecimal() : DecimalAmount.of(amount).toBasis(basis, Remainder.ROUND_UP).asBigDecimal());
+		this.setAmountDecimal(
+				basis == 0 ? DecimalAmount.of(amount).asBigDecimal() : DecimalAmount.of(amount).toBasis(basis, Remainder.ROUND_UP).asBigDecimal());
 
 	}
 
@@ -145,7 +146,8 @@ public class Transaction extends Event {
 
 			basis = getCurrency() == null ? getAsset() == null ? 0 : getAsset().getBasis() : getCurrency().getBasis();
 
-		this.setAmountDecimal(basis == 0 ? DecimalAmount.of(amount).asBigDecimal() : DecimalAmount.of(amount).toBasis(basis, Remainder.ROUND_UP).asBigDecimal());
+		this.setAmountDecimal(
+				basis == 0 ? DecimalAmount.of(amount).asBigDecimal() : DecimalAmount.of(amount).toBasis(basis, Remainder.ROUND_UP).asBigDecimal());
 
 	}
 
@@ -189,7 +191,8 @@ public class Transaction extends Event {
 
 			basis = getCurrency() == null ? getAsset() == null ? 0 : getAsset().getBasis() : getCurrency().getBasis();
 
-		this.setAmountDecimal(basis == 0 ? DecimalAmount.of(amount).asBigDecimal() : DecimalAmount.of(amount).toBasis(basis, Remainder.ROUND_UP).asBigDecimal());
+		this.setAmountDecimal(
+				basis == 0 ? DecimalAmount.of(amount).asBigDecimal() : DecimalAmount.of(amount).toBasis(basis, Remainder.ROUND_UP).asBigDecimal());
 
 	}
 
@@ -209,8 +212,8 @@ public class Transaction extends Event {
 			transactionType = TransactionType.REBALANCE;
 		}
 		this.time = creationTime;
-		this.asset = (fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? fill.getMarket().getQuote() : fill.getMarket().getTradedCurrency(
-				fill.getMarket());
+		this.asset = (fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? fill.getMarket().getQuote()
+				: fill.getMarket().getTradedCurrency(fill.getMarket());
 		this.currency = this.asset;
 		this.fill = fill;
 		synchronized (this.fill) {
@@ -260,13 +263,18 @@ public class Transaction extends Event {
 			basis = getCurrency() == null ? getAsset() == null ? 0 : getAsset().getBasis() : getCurrency().getBasis();
 
 		//  this.setAmountDecimal((basis==0 ? ((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (amount.times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal() : amount.asBigDecimal()) : DecimalAmount.of((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (amount.times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal() : amount.asBigDecimal()).asBigDecimal())) ;
-		this.setCommissionDecimal((basis == 0 ? ((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (fill.getCommission().times(getPrice(),
-				Remainder.ROUND_EVEN).asBigDecimal()) : fill.getCommission().asBigDecimal()) : DecimalAmount
-				.of((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (fill.getCommission().times(getPrice(), Remainder.ROUND_EVEN))
-						.asBigDecimal() : fill.getCommission().asBigDecimal()).toBasis(basis, Remainder.ROUND_UP).asBigDecimal()));
-		this.setMarginDecimal((basis == 0 ? ((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (fill.getMargin().times(getPrice(),
-				Remainder.ROUND_EVEN).asBigDecimal()) : fill.getMargin().asBigDecimal()) : DecimalAmount
-				.of((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (fill.getMargin().times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal()
+		this.setCommissionDecimal((basis == 0
+				? ((fill.getMarket().getTradedCurrency(fill.getMarket()) == null)
+						? (fill.getCommission().times(getPrice(), Remainder.ROUND_EVEN).asBigDecimal())
+						: fill.getCommission().asBigDecimal())
+				: DecimalAmount.of((fill.getMarket().getTradedCurrency(fill.getMarket()) == null)
+						? (fill.getCommission().times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal()
+						: fill.getCommission().asBigDecimal()).toBasis(basis, Remainder.ROUND_UP).asBigDecimal()));
+		this.setMarginDecimal((basis == 0
+				? ((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (fill.getMargin().times(getPrice(), Remainder.ROUND_EVEN).asBigDecimal())
+						: fill.getMargin().asBigDecimal())
+				: DecimalAmount.of((fill.getMarket().getTradedCurrency(fill.getMarket()) == null)
+						? (fill.getMargin().times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal()
 						: fill.getMargin().asBigDecimal()).toBasis(basis, Remainder.ROUND_UP).asBigDecimal()));
 		this.assetAmount = this.getCommission().plus(this.getMargin());
 
@@ -287,8 +295,8 @@ public class Transaction extends Event {
 			this.order.addTransaction(this);
 		}
 		this.time = creationTime;
-		this.asset = (order.getMarket().getTradedCurrency(order.getMarket()) == null) ? order.getMarket().getBase() : order.getMarket().getTradedCurrency(
-				order.getMarket());
+		this.asset = (order.getMarket().getTradedCurrency(order.getMarket()) == null) ? order.getMarket().getBase()
+				: order.getMarket().getTradedCurrency(order.getMarket());
 
 		//  this.asset = order.getMarket().getTradedCurrency(order.getMarket());
 
@@ -340,14 +348,20 @@ public class Transaction extends Event {
 			basis = getCurrency() == null ? getAsset() == null ? 0 : getAsset().getBasis() : getCurrency().getBasis();
 
 		//  this.setAmountDecimal((basis==0 ? ((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (amount.times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal() : amount.asBigDecimal()) : DecimalAmount.of((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (amount.times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal() : amount.asBigDecimal()).asBigDecimal())) ;
-		this.setCommissionDecimal((basis == 0 ? ((order.getMarket().getTradedCurrency(order.getMarket()) == null) ? (order.getForcastedCommission().times(
-				getPrice(), Remainder.ROUND_EVEN).asBigDecimal()) : order.getForcastedCommission().asBigDecimal()) : DecimalAmount
-				.of((order.getMarket().getTradedCurrency(order.getMarket()) == null) ? (order.getForcastedCommission().times(getPrice(), Remainder.ROUND_EVEN))
-						.asBigDecimal() : order.getForcastedCommission().asBigDecimal()).toBasis(basis, Remainder.ROUND_UP).asBigDecimal()));
-		this.setMarginDecimal((basis == 0 ? ((order.getMarket().getTradedCurrency(order.getMarket()) == null) ? (order.getForcastedMargin().times(getPrice(),
-				Remainder.ROUND_EVEN).asBigDecimal()) : order.getForcastedMargin().asBigDecimal()) : DecimalAmount
-				.of((order.getMarket().getTradedCurrency(order.getMarket()) == null) ? (order.getForcastedMargin().times(getPrice(), Remainder.ROUND_EVEN))
-						.asBigDecimal() : order.getForcastedMargin().asBigDecimal()).toBasis(basis, Remainder.ROUND_UP).asBigDecimal()));
+		this.setCommissionDecimal((basis == 0
+				? ((order.getMarket().getTradedCurrency(order.getMarket()) == null)
+						? (order.getForcastedCommission().times(getPrice(), Remainder.ROUND_EVEN).asBigDecimal())
+						: order.getForcastedCommission().asBigDecimal())
+				: DecimalAmount.of((order.getMarket().getTradedCurrency(order.getMarket()) == null)
+						? (order.getForcastedCommission().times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal()
+						: order.getForcastedCommission().asBigDecimal()).toBasis(basis, Remainder.ROUND_UP).asBigDecimal()));
+		this.setMarginDecimal((basis == 0
+				? ((order.getMarket().getTradedCurrency(order.getMarket()) == null)
+						? (order.getForcastedMargin().times(getPrice(), Remainder.ROUND_EVEN).asBigDecimal())
+						: order.getForcastedMargin().asBigDecimal())
+				: DecimalAmount.of((order.getMarket().getTradedCurrency(order.getMarket()) == null)
+						? (order.getForcastedMargin().times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal()
+						: order.getForcastedMargin().asBigDecimal()).toBasis(basis, Remainder.ROUND_UP).asBigDecimal()));
 
 		this.assetAmount = this.getCommission().plus(this.getMargin());
 
@@ -417,17 +431,16 @@ public class Transaction extends Event {
 
 	@Nullable
 	@ManyToOne(optional = true)
+	@JoinColumn(name = "asset")
 	public Asset getAsset() {
 		return asset;
 	}
 
-	public @Nullable
-	Long getPriceCount() {
+	public @Nullable Long getPriceCount() {
 		return priceCount;
 	}
 
-	public @Nullable
-	Long getBaseRateCount() {
+	public @Nullable Long getBaseRateCount() {
 		return baseRateCount;
 	}
 
@@ -468,6 +481,7 @@ public class Transaction extends Event {
 
 	@Nullable
 	@ManyToOne(optional = true)
+	@JoinColumn(name = "market")
 	public Market getMarket() {
 		return market;
 	}
@@ -475,6 +489,7 @@ public class Transaction extends Event {
 	private Asset currency;
 
 	@ManyToOne(optional = false)
+	@JoinColumn(name = "currency")
 	public Asset getCurrency() {
 		return currency;
 	}
@@ -561,14 +576,14 @@ public class Transaction extends Event {
 
 	@Nullable
 	@ManyToOne(optional = true)
+	@JoinColumn(name = "commissionCurrency")
 	public Asset getCommissionCurrency() {
 		return commissionCurrency;
 	}
 
 	public @ManyToOne(optional = true)
 	//, cascade = { CascadeType.MERGE, CascadeType.REMOVE })
-	@JoinColumn(name = "`order`")
-	Order getOrder() {
+	@JoinColumn(name = "`order`") Order getOrder() {
 		return order;
 	}
 
@@ -648,8 +663,7 @@ public class Transaction extends Event {
 
 	}
 
-	public @ManyToOne(optional = true)
-	@JoinColumn(name = "fill")
+	public @ManyToOne(optional = true) @JoinColumn(name = "fill")
 	//, cascade = { CascadeType.MERGE, CascadeType.REFRESH })
 	Fill getFill() {
 		return fill;
@@ -710,6 +724,7 @@ public class Transaction extends Event {
 	}
 
 	@ManyToOne(optional = false)
+	@JoinColumn(name = "portfolio")
 	public Portfolio getPortfolio() {
 		return portfolio;
 	}
@@ -746,6 +761,7 @@ public class Transaction extends Event {
 
 	@Nullable
 	@ManyToOne(optional = true)
+	@JoinColumn(name = "exchange")
 	public Exchange getExchange() {
 
 		return exchange;
@@ -761,8 +777,7 @@ public class Transaction extends Event {
 				+ (getPrice() == null || getPrice() != DecimalAmount.ZERO ? getPrice() : "")
 				+ (getCurrency() != null ? (SEPARATOR + "currency=" + getCurrency()) : "")
 				+ (getCommission() != null ? (SEPARATOR + "commission=" + getCommission()) : "")
-				+ (getMargin() != null ? (SEPARATOR + "margin=" + getMargin()) : "")
-				+ (getBaseRate() != null ? (SEPARATOR + "base rate=" + getBaseRate()) : "")
+				+ (getMargin() != null ? (SEPARATOR + "margin=" + getMargin()) : "") + (getBaseRate() != null ? (SEPARATOR + "base rate=" + getBaseRate()) : "")
 				+ (getBaseCommissionRate() != null ? (SEPARATOR + "getBaseCommissionRate=" + getBaseCommissionRate()) : "");
 	}
 
@@ -883,6 +898,7 @@ public class Transaction extends Event {
 
 	@Override
 	public synchronized void delete() {
+		log.debug("Transaction - Delete : Delete of Transaction " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 		// TODO Auto-generated method stub
 
 	}
