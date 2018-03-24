@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory;
 public class BaseStrategy implements Strategy {
 
 	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.baseStrategy");
-	static HashMap<Tradeable, Double[]> marketAllocations = new HashMap<Tradeable, Double[]>();
+	protected static HashMap<Tradeable, Double[]> marketAllocations = new HashMap<Tradeable, Double[]>();
 
 	@Override
 	public synchronized void setPortfolio(Portfolio portfolio) {

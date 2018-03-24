@@ -2517,7 +2517,7 @@ public abstract class BaseOrderService implements OrderService {
 	}
 
 	@SuppressWarnings("ConstantConditions")
-	private void updateRestingOrders(Event event, Double triggerInterval) {
+	private synchronized void updateRestingOrders(Event event, Double triggerInterval) {
 		//TODO If we trigger an order and it get's rejected by the exchange, the trigger order also get's rejeccted, should we place it back into a triggered state so it can trigger again?
 
 		//TODO if there is a miminimum order size, we might need to cancel all stops then place a bigger order above the imunum size.

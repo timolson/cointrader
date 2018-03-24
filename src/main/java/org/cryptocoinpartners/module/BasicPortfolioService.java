@@ -29,6 +29,7 @@ import org.cryptocoinpartners.schema.ExchangeFactory;
 import org.cryptocoinpartners.schema.Fill;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
+import org.cryptocoinpartners.schema.Offer;
 import org.cryptocoinpartners.schema.Portfolio;
 import org.cryptocoinpartners.schema.Position;
 import org.cryptocoinpartners.schema.RemoteEvent;
@@ -266,6 +267,9 @@ public class BasicPortfolioService implements PortfolioService {
 			while (itf.hasNext()) {
 				//  for (Fill pos : getFills()) {
 				Asset asset = itf.next();
+				log.debug(this.getClass().getSimpleName() + ":getRealisedPnLs - Calculated realised PnL of " + portfolio.getRealisedPnLs().get(asset)
+						+ " for position " + asset);
+
 				if (AllRealisedPnLs.get(asset) == null)
 					AllRealisedPnLs.put(asset, portfolio.getRealisedPnLs().get(asset));
 				else
@@ -992,7 +996,7 @@ public class BasicPortfolioService implements PortfolioService {
 
 		Amount unrealisedPnL = getUnrealisedPnL(position, null);
 		Listing listing = Listing.forPair(position.getAsset(), quoteAsset);
-		Trade rate = getMarketPrice(listing);
+		Offer rate = quotes.getImpliedBestAskForListing(listing);
 		if (rate != null && !rate.getPrice().isZero()) {
 			log.trace(this.getClass().getSimpleName() + ":getBaseUnrealisedPnL - Calculating base unrealised PnL" + unrealisedPnL + " with " + quoteAsset + "/"
 					+ position.getAsset() + " rate " + rate);
@@ -1084,7 +1088,7 @@ public class BasicPortfolioService implements PortfolioService {
 			Trade rate = getMarketPrice(listing);
 			if (rate != null && !rate.getPrice().isZero()) {
 				Amount localPnL = realisedPnLs.get(baseAsset);
-				log.trace(this.getClass().getSimpleName() + ":getBaseRealisedPnL - Calculating base unrealised PnL " + localPnL + " with " + quoteAsset + "/"
+				log.debug(this.getClass().getSimpleName() + ":getBaseRealisedPnL - Calculating base realised PnL " + localPnL + " with " + quoteAsset + "/"
 						+ baseAsset + " rate " + rate);
 
 				Amount basePnL = localPnL.times(rate.getPrice(), Remainder.ROUND_EVEN);
@@ -1186,12 +1190,17 @@ public class BasicPortfolioService implements PortfolioService {
 			for (Asset currency : exchangeBalances.keySet()) {
 				Listing listing = Listing.forPair(currency, quoteAsset);
 				// Trade lastTrade = quotes.getLastTrade(listing);
-				Trade rate = getMarketPrice(listing);
+				Offer rate = quotes.getImpliedBestAskForListing(listing);
 
 				//dsfasdfasdf
 				//Offer rate = quotes.getImpliedBestAskForListing(listing);
-				if ((!currency.equals(quoteAsset) && rate == null) || (rate != null && rate.getPrice().isZero()))
+				if ((!currency.equals(quoteAsset) && rate == null) || (rate != null && rate.getPrice().isZero())) {
+
+					log.error(this.getClass().getSimpleName() + ":getBaseCashBalance - unable to calcuated balances with rate " + rate + " for listing "
+							+ listing);
+
 					continue;
+				}
 				//  return DecimalAmount.ZERO;
 
 				//we have no prices so let's pull one.

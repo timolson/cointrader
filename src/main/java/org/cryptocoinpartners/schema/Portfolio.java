@@ -1458,10 +1458,6 @@ public class Portfolio extends EntityBase {
 																							+ " with closing postion: " + closePosition);
 																				if (!RealisedPnL.isZero()) {
 																					this.getBaseAsset();
-																					Listing listing = Listing.forPair(currency, this.getBaseAsset());
-																					Offer rate = quoteService.getImpliedBestAskForListing(listing);
-																					Amount baseRealisedPnL = RealisedPnL.times(rate.getPrice(),
-																							Remainder.ROUND_EVEN);
 																					Transaction trans = transactionFactory.create(closePosition, this,
 																							closePosition.getMarket().getExchange(), currency,
 																							TransactionType.REALISED_PROFIT_LOSS, RealisedPnL,
