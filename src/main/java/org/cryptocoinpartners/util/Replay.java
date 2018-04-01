@@ -177,9 +177,10 @@ public class Replay implements Runnable {
 					maxInterval = intervalAsDouble;
 			}
 
-			final String maxBarTimeQuery = "select r from Bar r where  market in (?1) and interval= ?2 order by time desc";
+			final String maxBarTimeQuery = "select r from Bar r where  market in (?1) and interval= ?2  and volume<>0 order by time desc";
 			lastBar = EM.queryLimitOne(Bar.class, maxBarTimeQuery, new ArrayList(markets.values()), maxInterval);
 		}
+		//got the start time of the 115200 which would have been  2018-03-20 08:00:00 and run time was 2018-03-21 07:36:49 
 		final List<RemoteEvent> events = new ArrayList<>();
 		final List<Book> books = new ArrayList<>();
 		final List<Trade> trades = new ArrayList<>();
@@ -208,13 +209,14 @@ public class Replay implements Runnable {
 
 				for (Instant now = start; !now.isAfter(end);) {
 					final Instant stepEnd = now.plus(timeStep);
-					log.debug("Replay: Run replaying from " + now + " to " + stepEnd);
+					Instant lastBarEnd = lastBar == null ? null : lastBar.getTime().toDateTime().plusSeconds(lastBar.getInterval().intValue()).toInstant();
+					log.debug("Replay: Run replaying from " + now + " to " + stepEnd + (lastBarEnd == null ? "" : "with last bar start time of " + lastBarEnd));
 					stopLatch = new CountDownLatch(1);
 					log.debug("Replay: ReplayStepRunnable created with: " + now + ", " + context.getRunTime() + ", " + semaphore + ", " + startLatch + ", "
 							+ stopLatch + ", " + threadCount);
 
 					ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime(), semaphore, startLatch, stopLatch, threadCount,
-							replayBooks, replayBars, (lastBar == null ? null : lastBar.getTime()), markets, intervals);
+							replayBooks, replayBars, (lastBarEnd == null ? null : lastBarEnd), markets, intervals);
 					startLatch = stopLatch;
 					service.submit(replayStep);
 					// if (threadCount != 0)
@@ -434,10 +436,6 @@ public class Replay implements Runnable {
 
 	private List<RemoteEvent> queryEvents(Instant start, Instant stop, boolean replayBooks, boolean replayBars, Instant barEnd, Map<String, Tradeable> markets,
 			List<Double> intervals) {
-		//  final Market market = 
-
-		//.getMarkets();
-
 		final String timeField = timeFieldForOrdering(orderByTimeReceived);
 		//  order in (?1)
 		final String tradeQuery = "select t from Trade t where  market in (?1) and " + timeField + " >= ?2 and " + timeField + " <= ?3";
@@ -471,6 +469,15 @@ public class Replay implements Runnable {
 
 			events.addAll(books);
 		}
+		//got the start time of the 115200 which would have been  2018-03-20 08:00:00 and run time was 2018-03-21 07:36:49 
+		//now -32 => 19/03/2018 23:36
+		//2135:2018-03-21 07:25:06 [pool-27-thread-2] DEBUG org.cryptocoinpartners.replay - ReplayStepRunnable: Run querying events from 2018-03-16T21:24:45.910Z to 2018-03-17T21:24:45.910Z with latch java.util.concurrent.CountDownLatch@54a24078[Count = 1]
+		//		2905:2018-03-21 07:25:07 [pool-27-thread-3] DEBUG org.cryptocoinpartners.replay - ReplayStepRunnable: Run querying events from 2018-03-17T21:24:45.910Z to 2018-03-18T21:24:45.910Z with latch java.util.concurrent.CountDownLatch@7f09c683[Count = 1]
+		//		3683:2018-03-21 07:25:07 [pool-27-thread-4] DEBUG org.cryptocoinpartners.replay - ReplayStepRunnable: Run querying events from 2018-03-18T21:24:45.910Z to 2018-03-19T21:24:45.910Z with latch java.util.concurrent.CountDownLatch@2a05469c[Count = 1]
+		//		4453:2018-03-21 07:25:08 [pool-27-thread-5] DEBUG org.cryptocoinpartners.replay - ReplayStepRunnable: Run querying events from 2018-03-19T21:24:45.910Z to 2018-03-20T21:24:45.910Z with latch java.util.concurrent.CountDownLatch@5260231b[Count = 1]			
+
+		//	so between 2018-03-17T21:24:45.910Z to 2018-03-18T21:24:45.910 at 2018-03-21 07:25:29 no envents?
+
 		if (replayBars && start.isBefore(barEnd)) {
 			if (stop.isAfter(barEnd))
 				stop = barEnd;
