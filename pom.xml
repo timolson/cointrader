@@ -307,6 +307,16 @@
 			<artifactId>jep</artifactId>
 			<version>3.7.0</version>
 		</dependency>
+	<dependency>
+		<groupId>org.knowm.xchange</groupId>
+		<artifactId>xchange-coinbase</artifactId>
+		<version>4.3.5-SNAPSHOT</version>
+	</dependency>
+	<dependency>
+		<groupId>org.knowm.xchange</groupId>
+		<artifactId>xchange-cryptopia</artifactId>
+		<version>4.3.5-SNAPSHOT</version>
+	</dependency>
     </dependencies>
 
 
