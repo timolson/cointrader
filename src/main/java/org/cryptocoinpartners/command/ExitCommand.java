@@ -24,9 +24,14 @@ public class ExitCommand extends CommandBase {
 
     @Override
     public Object call() {
-        PersistUtil.shutdown();
-        System.exit(0);
-        return true;
+    	try {
+    		PersistUtil.shutdown();
+    	} catch  (Exception e) {
+    		e.printStackTrace();
+    	} finally {
+            System.exit(0);
+            return true;
+		}
     }
 
 }
