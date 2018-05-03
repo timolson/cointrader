@@ -91,6 +91,8 @@ public abstract class Temporal extends EntityBase {
 	protected synchronized void setTime(Instant time) {
 		this.time = time;
 		this.dateTime = time.toDate();
+		this.time = time;
+		setUpdateTime(time);
 		setTimestamp(time.getMillis());
 	}
 

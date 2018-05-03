@@ -31,6 +31,7 @@ import javax.persistence.Table;
 import javax.persistence.Transient;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.cryptocoinpartners.enumeration.ContingencyType;
 import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.enumeration.PersistanceAction;
@@ -314,6 +315,10 @@ public abstract class Order extends Event {
 
 	public FillType getFillType() {
 		return fillType;
+	}
+
+	public ContingencyType getContingencyType() {
+		return contingencyType;
 	}
 
 	public PositionEffect getPositionEffect() {
@@ -788,6 +793,12 @@ public abstract class Order extends Event {
 
 	public Order withFillType(FillType fillType) {
 		this.setFillType(fillType);
+		return this;
+
+	}
+
+	public Order withContingencyType(ContingencyType contingencyType) {
+		this.setContingencyType(contingencyType);
 		return this;
 
 	}
@@ -1333,6 +1344,10 @@ public abstract class Order extends Event {
 		this.fillType = fillType;
 	}
 
+	public synchronized void setContingencyType(ContingencyType contingencyType) {
+		this.contingencyType = contingencyType;
+	}
+
 	public synchronized void setOrderGroup(double orderGroup) {
 		this.orderGroup = orderGroup;
 	}
@@ -1416,6 +1431,7 @@ public abstract class Order extends Event {
 	protected List<Transaction> transactions;
 	protected FillType fillType;
 	protected MarginType marginType;
+	protected ContingencyType contingencyType = ContingencyType.DEFAULT;
 	protected Amount commission;
 	protected Amount margin;
 	protected String comment;

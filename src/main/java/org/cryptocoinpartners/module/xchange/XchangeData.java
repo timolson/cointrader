@@ -38,6 +38,7 @@ import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Trade;
 import org.knowm.xchange.dto.marketdata.Trades;
 import org.knowm.xchange.dto.trade.LimitOrder;
+import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -102,6 +103,8 @@ public class XchangeData {
 		SpecificOrder adjustOrder(SpecificOrder specificOrder);
 
 		OrderType getOrderType(SpecificOrder specificOrder);
+
+		Collection<org.knowm.xchange.dto.Order> getOrder(TradeService tradeService, long period, String... orderIds) throws Exception;
 
 		void handleTrades(Trades tradeSpec);
 

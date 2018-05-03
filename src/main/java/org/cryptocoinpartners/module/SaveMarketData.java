@@ -51,10 +51,10 @@ public class SaveMarketData {
 	@Inject
 	protected BarJpaDao barDao;
 	static {
-		tradeService = Executors.newFixedThreadPool(ConfigUtil.combined().getInt("db.trade.writer.threads"));
-		bookService = Executors.newFixedThreadPool(ConfigUtil.combined().getInt("db.book.writer.threads"));
+		tradeService = Executors.newFixedThreadPool(ConfigUtil.combined().getInt("db.trade.writer.threads", 1));
+		bookService = Executors.newFixedThreadPool(ConfigUtil.combined().getInt("db.book.writer.threads", 1));
 
-		barService = Executors.newFixedThreadPool(ConfigUtil.combined().getInt("db.bar.writer.threads"));
+		barService = Executors.newFixedThreadPool(ConfigUtil.combined().getInt("db.bar.writer.threads", 1));
 	}
 
 	//@When("select * from MarketData")

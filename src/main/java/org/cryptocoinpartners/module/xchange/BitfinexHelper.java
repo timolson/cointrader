@@ -1,13 +1,18 @@
 package org.cryptocoinpartners.module.xchange;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 
 import org.cryptocoinpartners.enumeration.PositionEffect;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.util.XchangeUtil;
 import org.knowm.xchange.bitfinex.v1.dto.trade.BitfinexOrderFlags;
+import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsAll;
 
@@ -34,6 +39,27 @@ public class BitfinexHelper extends XchangeHelperBase {
 
 		all.setStartTime(new Date(lastTradeTime));
 		return all;
+
+	}
+
+	@Override
+	public synchronized Collection<Order> getOrder(TradeService tradeService, long period, String... orderIds) throws Exception {
+		//we need to batch into periods and query 1 group per second.
+		//5 means every 5 seconds 
+		List<Order> openOrders = new ArrayList<Order>();
+		int count = 0;
+		for (String orderId : orderIds) {
+			try {
+				count++;
+				openOrders.addAll(tradeService.getOrder(orderId));
+				if (count < orderIds.length)
+					Thread.sleep(period * 100);
+			} catch (InterruptedException e) {
+
+				return openOrders;
+			}
+		}
+		return openOrders;
 
 	}
 

@@ -31,7 +31,6 @@ import org.cryptocoinpartners.schema.Trade;
 import org.cryptocoinpartners.schema.Tradeable;
 import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.EM;
-import org.cryptocoinpartners.util.Remainder;
 
 /**
  * MockOrderService simulates the Filling of Orders by looking at broadcast Book data for price and volume information.
@@ -58,11 +57,7 @@ public class MockOrderService extends BaseOrderService {
 		}
 		specificOrder.setEntryTime(context.getTime());
 		//if we are trading the cash market, let's take off the fees.
-		if (specificOrder.getMarket().getListing().getPrompt() == null) {
-			long netAmountCount = specificOrder.getVolume().minus(specificOrder.getForcastedCommission().abs())
-					.toBasis(specificOrder.getMarket().getVolumeBasis(), Remainder.ROUND_UP).getCount();
-			specificOrder.setVolumeCount(netAmountCount);
-		}
+
 		addOrder(specificOrder);
 
 		updateOrderState(specificOrder, OrderState.PLACED, true);

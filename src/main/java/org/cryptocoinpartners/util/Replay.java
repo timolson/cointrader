@@ -178,7 +178,11 @@ public class Replay implements Runnable {
 			}
 
 			final String maxBarTimeQuery = "select r from Bar r where  market in (?1) and interval= ?2  and volume<>0 order by time desc";
-			lastBar = EM.queryLimitOne(Bar.class, maxBarTimeQuery, new ArrayList(markets.values()), maxInterval);
+			try {
+				lastBar = EM.queryLimitOne(Bar.class, maxBarTimeQuery, new ArrayList(markets.values()), maxInterval);
+			} catch (Exception | Error ex) {
+				lastBar = null;
+			}
 		}
 		//got the start time of the 115200 which would have been  2018-03-20 08:00:00 and run time was 2018-03-21 07:36:49 
 		final List<RemoteEvent> events = new ArrayList<>();
@@ -242,8 +246,10 @@ public class Replay implements Runnable {
 					for (Double interval : latestBars.keySet())
 						if (interval > lastBarInterval)
 							lastBarInterval = interval;
-					Instant startInstant = latestBars.get(lastBarInterval).toDateTime().plusSeconds((int) lastBarInterval).toInstant();
 					Instant endInstant = new Instant(System.currentTimeMillis());
+					Instant startInstant = (latestBars.get(lastBarInterval) != null)
+							? latestBars.get(lastBarInterval).toDateTime().plusSeconds((int) lastBarInterval).toInstant()
+							: endInstant.toDateTime().minusSeconds(maxInterval.intValue()).toInstant();
 
 					for (Instant now = startInstant; !now.isAfter(endInstant);) {
 						final Instant stepEnd = now.plus(timeStep);

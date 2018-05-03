@@ -36,11 +36,12 @@ public enum OrderState {
 
 	/** return true iff NEW || ROUTED || PLACED || PARTFILLED */
 	public boolean isOpen() {
-		return this == OrderState.NEW || this == OrderState.TRIGGER || this == OrderState.ROUTED || this == OrderState.PLACED || this == OrderState.PARTFILLED;
+		return this == OrderState.NEW || this == OrderState.TRIGGER || this == OrderState.ROUTED || this == OrderState.PLACED || this == OrderState.PARTFILLED
+				|| this == OrderState.CANCELLING;
 	}
 
 	public boolean isWorking() {
-		return this == OrderState.PLACED || this == OrderState.PARTFILLED;
+		return this == OrderState.PLACED || this == OrderState.PARTFILLED || this == OrderState.CANCELLING;
 	}
 
 	public boolean isCancelled() {

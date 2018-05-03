@@ -96,10 +96,9 @@ public class MockTicker {
 	private double nextVolume(Market market) {
 		// double meanVolume = averageVolumeCount;
 
-		int volume = MathUtil.getPoissonRandom(averageVolumeCount);
-		double volumeAsDouble = (market.getVolumeBasis() < 1) ? (Double.parseDouble("1.0") / volume) * averageVolumeCount
-				: (Double.parseDouble("1.0") / volume) * averageVolumeCount * averageVolumeCount;
-		DiscreteAmount volumeDiscrete = new DiscreteAmount((long) (volumeAsDouble / market.getVolumeBasis()), market.getVolumeBasis());
+		int volume = MathUtil.getPoissonRandom(averageVolumeCount) * (Math.random() > 0.5 ? 1 : -1);
+		long volumeCountAsDouble = (long) (volume / market.getVolumeBasis());
+		DiscreteAmount volumeDiscrete = new DiscreteAmount(volumeCountAsDouble, market.getVolumeBasis());
 		volumeDiscrete.asDouble();
 		return volumeDiscrete.asDouble();
 	}

@@ -1,11 +1,14 @@
 package org.cryptocoinpartners.module.xchange;
 
+import java.util.Collection;
+
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.knowm.xchange.dto.Order;
 import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.dto.marketdata.OrderBook;
 import org.knowm.xchange.dto.marketdata.Trades;
+import org.knowm.xchange.service.trade.TradeService;
 import org.knowm.xchange.service.trade.params.TradeHistoryParams;
 import org.knowm.xchange.service.trade.params.TradeHistoryParamsAll;
 
@@ -19,6 +22,12 @@ public class XchangeHelperBase implements XchangeData.Helper {
 	@Override
 	public TradeHistoryParams getTradeHistoryParameters(Listing listing, long lastTradeTime, long lastTradeId) {
 		return new TradeHistoryParamsAll();
+	}
+
+	@Override
+	public Collection<Order> getOrder(TradeService tradeService, long period, String... orderIds) throws Exception {
+		return tradeService.getOrder(orderIds);
+
 	}
 
 	@Override

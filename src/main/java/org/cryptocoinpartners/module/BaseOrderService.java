@@ -29,6 +29,7 @@ import javax.inject.Inject;
 import javax.persistence.Transient;
 
 import org.apache.commons.lang.NotImplementedException;
+import org.cryptocoinpartners.enumeration.ContingencyType;
 import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.FillType;
 import org.cryptocoinpartners.enumeration.OrderState;
@@ -202,7 +203,7 @@ public abstract class BaseOrderService implements OrderService {
 			double minOrderSize = specificOrder.getMarket().getMinimumOrderSize(specificOrder.getMarket());
 			long minOrderSizeCount = (long) (minOrderSize * (1 / specificOrder.getMarket().getVolumeBasis()));
 
-			if (Math.abs(specificOrder.getUnfilledVolume().getCount()) < minOrderSizeCount) {
+			if (Math.abs(specificOrder.getUnfilledVolume().getCount()) < minOrderSizeCount && specificOrder.getPositionEffect().equals(PositionEffect.OPEN)) {
 				log.info(this.getClass().getSimpleName() + ":placeOrder - Unable to palce specific order " + specificOrder + " with state "
 						+ getOrderState(specificOrder) + " as unfilled volume is less than mininum order size " + minOrderSize);
 
@@ -250,7 +251,7 @@ public abstract class BaseOrderService implements OrderService {
 											DiscreteAmount.roundedCountForBasis(workingVolume.asBigDecimal(), specificOrder.getMarket().getVolumeBasis()),
 											specificOrder.getMarket().getVolumeBasis()));
 						} else {
-							log.info("placeOrder: setting fill type to market for order " + specificOrder);
+							log.info("placeOrder: setting fill type to limit for order " + specificOrder);
 							specificOrder.withFillType(FillType.LIMIT);
 
 							bestOffer = (specificOrder.isBid())
@@ -1348,8 +1349,7 @@ public abstract class BaseOrderService implements OrderService {
 
 				// orderStateMap.put(order, orderState);
 
-				if (order.getParentOrder() != null
-						&& (order.getFillType() != FillType.ONE_CANCELS_OTHER || order.getFillType() != FillType.COMPLETED_CANCELS_OTHER))
+				if (order.getParentOrder() != null && (order.getContingencyType() != ContingencyType.ONE_CANCELS_OTHER))
 					updateParentOrderState(order.getParentOrder(), order, orderState);
 
 				//TODO Order persitantce, keep getting TransientPropertyValueException  errors
@@ -1527,6 +1527,7 @@ public abstract class BaseOrderService implements OrderService {
 		log.debug("handleFill: Updated position for fill " + fill);
 
 		FillType fillType = null;
+		ContingencyType contingencyType = null;
 		List<Order> allChildOrders = new ArrayList<Order>();
 
 		if (order.getParentOrder() != null || (order.getOrderChildren() != null && !order.getOrderChildren().isEmpty())) {
@@ -1548,6 +1549,23 @@ public abstract class BaseOrderService implements OrderService {
 				case STOP_LIMIT:
 					break;
 
+				case STOP_LOSS:
+					//Place a stop order at the stop price
+
+					break;
+				case TRAILING_STOP_LOSS:
+					//Place a stop order at the stop price
+
+					break;
+				default:
+					break;
+
+			}
+			contingencyType = order.getContingencyType();
+			if (contingencyType == null)
+				contingencyType = (order.getParentOrder() != null) ? order.getParentOrder().getContingencyType() : order.getContingencyType();
+
+			switch (contingencyType) {
 				case ONE_CANCELS_OTHER:
 					SpecificOrder otherOrder;
 					GeneralOrder otherGeneralOrder;
@@ -1645,68 +1663,8 @@ public abstract class BaseOrderService implements OrderService {
 
 						}
 					break;
-				case COMPLETED_CANCELS_OTHER:
-					// GeneralOrder{id=99fc7f08-a48a-4701-8e84-7455e1f2b419, parentOrder=null, parentFill=a4276654-cc17-4b4e-ab05-8a0e93021f05, listing=BTC.USD.THISWEEK, volume=-44, unfilled volume=-44, limitPrice=233.62, comment=Stop Order with Price Target, position effect=CLOSE, type=STOP_LIMIT, execution instruction=MAKER, stop price=233.64, target price=244.46} Stop trade Entered at 233.64
-					// needs to be cancelled when this is filled
-					// SpecificOrder{ time=2015-02-16 06:22:31,id=7461a1d7-6230-4927-afc1-c4ccfa5498f5,remote key=7461a1d7-6230-4927-afc1-c4ccfa5498f5,parentOrder=99fc7f08-a48a-4701-8e84-7455e1f2b419,parentFill=
-					//{Id=a4276654-cc17-4b4e-ab05-8a0e93021f05,time=2015-02-16 06:21:51,PositionType=EXITING,Market=OKCOIN_THISWEEK:BTC.USD.THISWEEK,Price=235.44,Volume=44,Open Volume=44,Position Effect=OPEN,Comment=Long Entry Order,Order=eeff7554-6269-4a15-9c42-3132338bf14a,Parent Fill=}
-					//,portfolio=MarketMakerStrategy,market=OKCOIN_THISWEEK:BTC.USD.THISWEEK,unfilled volume=0,volumeCount=-44,limitPriceCount=235.61,PlacementCount=1,Comment=Long Exit with resting stop,Order Type=COMPLETED_CANCELS_OTHER,Position Effect=CLOSE,Execution Instruction=MAKER,averageFillPrice=235.9897727272727272727272727272727}
-
-					order.getParentFill().getAllOrdersByParentFill(allChildOrders);
-					for (Order childOrder : allChildOrders)
-						if (childOrder != order && childOrder.getFillType() == (FillType.COMPLETED_CANCELS_OTHER))
-							if ((getOrderState(childOrder).isOpen()) && order.getUnfilledVolumeCount() == 0)
-								if (childOrder instanceof SpecificOrder) {
-									SpecificOrder pairSpecificOrder = (SpecificOrder) childOrder;
-
-									try {
-										if (handleCancelSpecificOrder(pairSpecificOrder))
-											log.info("handleFill cancelled specific pairSpecificOrder Order: " + pairSpecificOrder);
-										else
-											log.info("handleFill ubale to cancel specific pairSpecificOrder Order: " + pairSpecificOrder);
-
-									} catch (OrderNotFoundException onfe) {
-										log.info("Order Not Found:" + pairSpecificOrder);
-									} catch (Exception | Error e) {
-										log.info("cancel spceific order " + pairSpecificOrder + ". Full stack trace", e);
-										throw e;
-									}
-								}
-
-								else if (childOrder instanceof GeneralOrder) {
-
-									GeneralOrder pairGeneralOrder = (GeneralOrder) childOrder;
-
-									try {
-										if (handleCancelGeneralOrder(pairGeneralOrder))
-											log.info("handleFill cancelled specific pairGeneralOrder Order: " + pairGeneralOrder);
-										else
-											log.info("handleFill ubale to cancel specific pairGeneralOrder Order: " + pairGeneralOrder);
-
-									} catch (OrderNotFoundException onfe) {
-										log.info("Order Not Found:" + pairGeneralOrder);
-									} catch (IllegalStateException onfe) {
-										log.info("Order Not Placed:" + pairGeneralOrder);
-									} catch (Exception | Error e) {
-										log.info("cancel general order " + pairGeneralOrder + ". Full stack trace", e);
-										throw e;
-									}
-
-								}
-
-					break;
-
-				case STOP_LOSS:
-					//Place a stop order at the stop price
-
-					break;
-				case TRAILING_STOP_LOSS:
-					//Place a stop order at the stop price
-
-					break;
 				default:
 					break;
-
 			}
 		}
 		// always create teh stops
@@ -2053,36 +2011,7 @@ public abstract class BaseOrderService implements OrderService {
 					throw new NotImplementedException();
 				case CANCEL_REMAINDER:
 					throw new NotImplementedException();
-				case ONE_CANCELS_OTHER:
-					specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
-					specificOrder.withParentOrder(generalOrder);
-					specificOrder.withParentFill(generalOrder.getParentFill());
 
-					if (specificOrder == null)
-						break;
-					//  specificOrder.withParentFill(generalOrder.getParentFill());
-					specificOrder.persit();
-					updateOrderState(specificOrder, OrderState.NEW, true);
-					updateOrderState(generalOrder, OrderState.ROUTED, true);
-					log.info("Routing OCO order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
-					placeOrder(specificOrder);
-
-					break;
-				case COMPLETED_CANCELS_OTHER:
-					specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
-					specificOrder.withParentOrder(generalOrder);
-					specificOrder.withParentFill(generalOrder.getParentFill());
-
-					if (specificOrder == null)
-						break;
-					//  specificOrder.withParentFill(generalOrder.getParentFill());
-					specificOrder.persit();
-					updateOrderState(specificOrder, OrderState.NEW, true);
-					updateOrderState(generalOrder, OrderState.ROUTED, true);
-					log.info("Routing CCO order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
-					placeOrder(specificOrder);
-
-					break;
 				case LIMIT:
 					specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
 					specificOrder.withParentOrder(generalOrder);
@@ -2183,6 +2112,25 @@ public abstract class BaseOrderService implements OrderService {
 						}
 						break;
 					}
+			}
+			switch (generalOrder.getContingencyType()) {
+				case ONE_CANCELS_OTHER:
+					specificOrder = convertGeneralOrderToSpecific(generalOrder, generalOrder.getMarket());
+					specificOrder.withParentOrder(generalOrder);
+					specificOrder.withParentFill(generalOrder.getParentFill());
+
+					if (specificOrder == null)
+						break;
+					//  specificOrder.withParentFill(generalOrder.getParentFill());
+					specificOrder.persit();
+					updateOrderState(specificOrder, OrderState.NEW, true);
+					updateOrderState(generalOrder, OrderState.ROUTED, true);
+					log.info("Routing OCO order " + generalOrder + " to " + generalOrder.getMarket().getExchange().getSymbol());
+					placeOrder(specificOrder);
+
+					break;
+				default:
+					break;
 			}
 		} catch (Throwable e) {
 			updateOrderState(generalOrder, OrderState.REJECTED, true);
@@ -2750,7 +2698,8 @@ public abstract class BaseOrderService implements OrderService {
 						// limitPrice = (limitPrice.compareTo(updatedlimitPrice) > 0 ? limitPrice : updatedlimitPrice);
 						// what about if 
 						//TODO  we only need to do this is the best bid/best ask has changed vs previous
-						log.debug("replacing existing market order with fill type " + pendingOrder.getFillType() + " expirty time "
+						log.debug(this.getClass().getSimpleName() + ":updateRestingOrders - At " + context.getTime()
+								+ " replacing existing market order with fill type " + pendingOrder.getFillType() + " expirty time "
 								+ pendingOrder.getExpiryTime() == null ? "null" : pendingOrder.getExpiryTime() + ":" + pendingOrder);
 						SpecificOrder replaceOrder = specificOrderFactory.create(pendingOrder);
 
@@ -2782,7 +2731,8 @@ public abstract class BaseOrderService implements OrderService {
 									long minOrderSizeCount = (long) (minOrderSize * (1 / pendingOrder.getMarket().getVolumeBasis()));
 
 									if (pendingOrder.getUnfilledVolume().getCount() == 0
-											|| Math.abs(pendingOrder.getUnfilledVolume().getCount()) < minOrderSizeCount) {
+											|| (Math.abs(pendingOrder.getUnfilledVolume().getCount()) < minOrderSizeCount
+													&& pendingOrder.getPositionEffect().equals(PositionEffect.OPEN))) {
 										log.info(this.getClass().getSimpleName() + ":updateRestingOrders - Skipping replacing pending order " + pendingOrder
 												+ " with state " + getOrderState(pendingOrder)
 												+ " as fully filled or working volume is less than mininum order size " + minOrderSize
@@ -3596,6 +3546,10 @@ public abstract class BaseOrderService implements OrderService {
 					generalOrder.setLastBestPriceDecimal(discreteMarket.asBigDecimal());
 				}
 				break;
+
+		}
+		switch (generalOrder.getContingencyType()) {
+
 			case ONE_CANCELS_OTHER:
 				//  builder.withFillType(FillType.ONE_CANCELS_OTHER);
 				if (limitPrice != null) {
@@ -3609,19 +3563,7 @@ public abstract class BaseOrderService implements OrderService {
 				}
 
 				break;
-			case COMPLETED_CANCELS_OTHER:
-				//  builder.withFillType(FillType.COMPLETED_CANCELS_OTHER);
-
-				if (limitPrice != null) {
-					discreteLimit = limitPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
-					specificOrder.withLimitPrice(discreteLimit);
-					generalOrder.setLastBestPriceDecimal(discreteLimit.asBigDecimal());
-				} else {
-					discreteMarket = marketPrice.toBasis(market.getPriceBasis(), priceRemainderHandler);
-					specificOrder.withMarketPrice(discreteMarket);
-					generalOrder.setLastBestPriceDecimal(discreteMarket.asBigDecimal());
-				}
-
+			default:
 				break;
 		}
 
@@ -4976,25 +4918,24 @@ public abstract class BaseOrderService implements OrderService {
 			try {
 
 				int attempt = 1;
-				while (cancelled != true) {
-					if (attempt <= maxAttempts) {
-						log.error(this.getClass().getSimpleName() + ":call. Attempting to cancel order " + specificOrder + " after " + attempt
-								+ " attempts. Waiting " + delayPeriod * attempt + " seconds before retrying.");
+				while (attempt <= maxAttempts) {
+					log.error(this.getClass().getSimpleName() + ":call. Attempting to cancel order " + specificOrder + " after " + attempt
+							+ " attempts. Waiting " + delayPeriod * attempt + " seconds before retrying.");
 
-						Thread.sleep(delayPeriod * 1000 * attempt);
-						if (specificOrderToCancel(specificOrder)) {
-							cancelled = true;
-							break;
-						}
-
-						attempt++;
-
-					} else {
-						log.error(this.getClass().getSimpleName() + ":call. Unable to cancel order " + specificOrder + " after " + attempt + " attempts.");
-						updateOrderState(specificOrder, OrderState.PLACED, true);
-						return cancelled;
-
+					Thread.sleep(delayPeriod * 1000 * attempt);
+					if (specificOrderToCancel(specificOrder)) {
+						cancelled = true;
+						break;
 					}
+
+					attempt++;
+
+				}
+				if (!cancelled) {
+					log.error(this.getClass().getSimpleName() + ":call. Unable to cancel order " + specificOrder + " after " + attempt + " attempts.");
+					updateOrderState(specificOrder, OrderState.PLACED, true);
+					return cancelled;
+
 				}
 				return cancelled;
 

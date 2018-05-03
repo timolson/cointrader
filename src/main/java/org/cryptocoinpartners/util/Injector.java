@@ -171,7 +171,10 @@ public class Injector {
 				ConfigUtil.combined().getString("db.debug_unreturned_connection_stack_traces", "true"));
 		//  properties.put("hibernate.c3p0.max_statements", "0");", "false"));. debug_unreturned_connection_stack_traces
 		//  properties.put("hibernate.c3p0.max_statements", "0");
-		//  properties.put("hibernate.c3p0.maxStatementsPerConnection", "100");
+		properties.put("hibernate.c3p0.maxStatementsPerConnection", ConfigUtil.combined().getString("db.max_statements_per_connection", "0"));
+		properties.put("hibernate.c3p0.statementCacheNumDeferredCloseThreads",
+				ConfigUtil.combined().getString("db.statement_cache_num_deferred_close_threads", "1"));
+		properties.put("hibernate.c3p0.maxStatements", ConfigUtil.combined().getString("db.max_statements", "0"));
 		// properties.put("hibernate.c3p0.validate", "true");
 
 		properties.put("javax.persistence.sharedCache.mode", "NONE");

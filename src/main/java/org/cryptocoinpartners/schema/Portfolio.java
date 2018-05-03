@@ -1313,7 +1313,8 @@ public class Portfolio extends EntityBase {
 											if (closePosition.getOpenVolumeCount() != 0) {
 												if (closePosition.getPositionEffect() != null)
 													openingPositionEffect = (closePosition.getPositionEffect() == (PositionEffect.CLOSE)) ? PositionEffect.OPEN
-															: PositionEffect.CLOSE;
+															: ((closePosition.getPositionEffect() == (PositionEffect.OPEN)) ? PositionEffect.CLOSE
+																	: PositionEffect.DEFAULT);
 												synchronized (openingListingPositions) {
 													Iterator<Position> olpitr = openingListingPositions.iterator();
 													OPENPOSITIONSLOOP: while (olpitr.hasNext() && !closedFillBreak) {
@@ -1350,10 +1351,10 @@ public class Portfolio extends EntityBase {
 																	if (openPosition.getOpenVolumeCount() != 0) {
 																		realisedPnL = DecimalAmount.ZERO;
 																		closingVolumeCount = 0;
-																		if (openPosition.getMarket().getListing().getPrompt() == null || (openPosition
-																				.getMarket().getListing().getPrompt() != null
-																				&& (openPosition.getPositionEffect() == null
-																						|| openPosition.getPositionEffect() == openingPositionEffect))) {
+																		if ((closePosition.getPositionEffect().equals(PositionEffect.DEFAULT)
+																				&& openPosition.getPositionEffect().equals(PositionEffect.DEFAULT))
+																				|| (!openPosition.getPositionEffect()
+																						.equals(closePosition.getPositionEffect()))) {
 																			//		if(oenPostion.getOrder)
 																			exitPrice = openPosition.getPrice();
 																			entryPrice = closePosition.getPrice();

@@ -62,8 +62,8 @@ public class SpecificOrder extends Order {
 		//set it to the order size or the minumum size for the market.
 
 		double minimumOrderSize = volumeCount < 0 ? market.getMinimumOrderSize(market) * -1 : market.getMinimumOrderSize(market);
-		long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
-		this.setVolumeCount((volumeCount != 0 && (Math.abs(volumeCount) < Math.abs(minOrderSizeCount))) ? minOrderSizeCount : volumeCount);
+		//	long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+		this.setVolumeCount(volumeCount);
 		this.setUnfilledVolumeCount(this.getVolumeCount());
 		super.setPortfolio(portfolio);
 		this.placementCount = 1;
@@ -89,8 +89,8 @@ public class SpecificOrder extends Order {
 		this.market = market;
 		//set it to the order size or the minumum size for the market.
 		double minimumOrderSize = volumeCount < 0 ? market.getMinimumOrderSize(market) * -1 : market.getMinimumOrderSize(market);
-		long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
-		this.setVolumeCount((volumeCount != 0 && (Math.abs(volumeCount) < Math.abs(minOrderSizeCount))) ? minOrderSizeCount : volumeCount);
+		//	long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+		this.setVolumeCount(volumeCount);
 		this.setUnfilledVolumeCount(this.getVolumeCount());
 		super.setComment(comment);
 		super.setPortfolio(portfolio);
@@ -119,8 +119,8 @@ public class SpecificOrder extends Order {
 		this.market = market;
 		//set it to the order size or the minumum size for the market.
 		double minimumOrderSize = volumeCount < 0 ? market.getMinimumOrderSize(market) * -1 : market.getMinimumOrderSize(market);
-		long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
-		this.setVolumeCount((volumeCount != 0 && Math.abs(volumeCount) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount : volumeCount);
+		//long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+		this.setVolumeCount(volumeCount);
 		this.setUnfilledVolumeCount(this.getVolumeCount());
 		if (comment != null)
 			super.setComment(comment);
@@ -154,8 +154,8 @@ public class SpecificOrder extends Order {
 		this.market = market;
 		//set it to the order size or the minumum size for the market.
 		double minimumOrderSize = volumeCount < 0 ? market.getMinimumOrderSize(market) * -1 : market.getMinimumOrderSize(market);
-		long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
-		this.setVolumeCount((volumeCount != 0 && (Math.abs(volumeCount) < Math.abs(minOrderSizeCount))) ? minOrderSizeCount : volumeCount);
+		//long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+		this.setVolumeCount(volumeCount);
 		this.setUnfilledVolumeCount(this.getVolumeCount());
 		synchronized (parentOrder) {
 			parentOrder.addChildOrder(this);
@@ -186,9 +186,10 @@ public class SpecificOrder extends Order {
 		this.limitPriceCount = new AtomicLong(0L);
 		long unadjustedVolumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
 		double minimumOrderSize = unadjustedVolumeCount < 0 ? market.getMinimumOrderSize(market) * -1 : market.getMinimumOrderSize(market);
-		long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
-		this.setVolumeCount(
-				(unadjustedVolumeCount != 0 && (Math.abs(unadjustedVolumeCount) < Math.abs(minOrderSizeCount))) ? minOrderSizeCount : unadjustedVolumeCount);
+		//	long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+		this.setVolumeCount(unadjustedVolumeCount);
+
+		//			(unadjustedVolumeCount != 0 && (Math.abs(unadjustedVolumeCount) < Math.abs(minOrderSizeCount)) &&) ? minOrderSizeCount : unadjustedVolumeCount);
 		this.setUnfilledVolumeCount(this.getVolumeCount());
 		super.setComment(comment);
 		super.setPortfolio(portfolio);
@@ -225,9 +226,9 @@ public class SpecificOrder extends Order {
 		//set it to the order size or the minumum size for the market.
 		long unadjustedVolumeCount = new DiscreteAmount(vol, market.getPriceBasis()).toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
 		double minimumOrderSize = unadjustedVolumeCount < 0 ? market.getMinimumOrderSize(market) * -1 : market.getMinimumOrderSize(market);
-		long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
-		this.setVolumeCount(
-				(unadjustedVolumeCount != 0 && (Math.abs(unadjustedVolumeCount)) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount : unadjustedVolumeCount);
+		//	long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+		this.setVolumeCount(unadjustedVolumeCount);
+		//		(unadjustedVolumeCount != 0 && (Math.abs(unadjustedVolumeCount)) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount : unadjustedVolumeCount);
 		this.setUnfilledVolumeCount(this.getVolumeCount());
 		this.positionEffect = PositionEffect.OPEN;
 		super.setComment(comment);
@@ -261,9 +262,9 @@ public class SpecificOrder extends Order {
 
 		long unadjustedVolumeCount = volume.toBasis(market.getVolumeBasis(), Remainder.DISCARD).getCount();
 		double minimumOrderSize = unadjustedVolumeCount < 0 ? market.getMinimumOrderSize(market) * -1 : market.getMinimumOrderSize(market);
-		long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
-		this.setVolumeCount(
-				(unadjustedVolumeCount != 0 && (Math.abs(unadjustedVolumeCount) < Math.abs(minOrderSizeCount))) ? minOrderSizeCount : unadjustedVolumeCount);
+		//	long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+		this.setVolumeCount(unadjustedVolumeCount);
+		//		(unadjustedVolumeCount != 0 && (Math.abs(unadjustedVolumeCount) < Math.abs(minOrderSizeCount))) ? minOrderSizeCount : unadjustedVolumeCount);
 		this.setUnfilledVolumeCount(this.getVolumeCount());
 		this.marketPriceCount = new AtomicLong(0L);
 		super.setComment(comment);
@@ -300,10 +301,11 @@ public class SpecificOrder extends Order {
 
 		//set it to the order size or the minumum size for the market.
 		double minimumOrderSize = specficOrder.getUnfilledVolumeCount() < 0 ? market.getMinimumOrderSize(market) * -1 : market.getMinimumOrderSize(market);
-		long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
-		this.setVolumeCount((specficOrder.getUnfilledVolumeCount() != 0 && Math.abs(specficOrder.getUnfilledVolumeCount()) < Math.abs(minOrderSizeCount))
-				? minOrderSizeCount
-				: specficOrder.getUnfilledVolumeCount());
+		//	long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+		this.setVolumeCount(specficOrder.getUnfilledVolumeCount());
+		//(specficOrder.getUnfilledVolumeCount() != 0 && Math.abs(specficOrder.getUnfilledVolumeCount()) < Math.abs(minOrderSizeCount))
+		//		? minOrderSizeCount
+		//		: specficOrder.getUnfilledVolumeCount());
 		//  this.volumeCount = specficOrder.getOpenVolumeCount();
 		this.setUnfilledVolumeCount(this.getVolumeCount());
 		if (specficOrder.getComment() != null)
@@ -350,9 +352,9 @@ public class SpecificOrder extends Order {
 						: exchangeOrder.getOriginalAmount()),
 				market.getVolumeBasis());
 		double minimumOrderSize = unadjustedVolumeCount < 0 ? market.getMinimumOrderSize(market) * -1 : market.getMinimumOrderSize(market);
-		long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
-		this.setVolumeCount(
-				unadjustedVolumeCount != 0 && (Math.abs(unadjustedVolumeCount) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount : unadjustedVolumeCount);
+		//long minOrderSizeCount = (long) (minimumOrderSize * (1 / market.getVolumeBasis()));
+		this.setVolumeCount(unadjustedVolumeCount);
+		//		unadjustedVolumeCount != 0 && (Math.abs(unadjustedVolumeCount) < Math.abs(minOrderSizeCount)) ? minOrderSizeCount : unadjustedVolumeCount);
 		this.setUnfilledVolumeCount(this.getVolumeCount());
 		super.setPortfolio(portfolio);
 		this.placementCount = 1;
@@ -421,6 +423,8 @@ public class SpecificOrder extends Order {
 	}
 
 	protected void setVolume(DiscreteAmount volume) {
+		log.trace(this.getClass().getSimpleName() + " : setVolume to " + volume + "for " + this.getId() + "called from stack "
+				+ Thread.currentThread().getStackTrace()[2]);
 		this.volume = volume;
 	}
 
@@ -644,6 +648,9 @@ public class SpecificOrder extends Order {
 	}
 
 	public synchronized void setVolumeCount(long volumeCount) {
+		log.trace(this.getClass().getSimpleName() + " : setVolumeCount to " + volumeCount + "for " + this.getId() + "called from stack "
+				+ Thread.currentThread().getStackTrace()[2]);
+
 		this.volumeCount = new AtomicLong(volumeCount);
 		this.unfilledVolumeCount = new AtomicLong(volumeCount);
 		volume = null;
@@ -652,6 +659,9 @@ public class SpecificOrder extends Order {
 
 	@Transient
 	public synchronized void setUnfilledVolumeCount(long unfilledVolumeCount) {
+		log.trace(this.getClass().getSimpleName() + " : setUnfilledVolumeCount to " + unfilledVolumeCount + "for " + this.getId() + "called from stack "
+				+ Thread.currentThread().getStackTrace()[2]);
+
 		this.unfilledVolumeCount = new AtomicLong(unfilledVolumeCount);
 		unfilledVolume = null;
 	}

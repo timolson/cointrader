@@ -9,7 +9,9 @@ import javax.inject.Inject;
 import org.apache.commons.configuration.Configuration;
 import org.cryptocoinpartners.enumeration.PositionType;
 import org.cryptocoinpartners.esper.annotation.When;
+import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.Fill;
+import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderBuilder.CommonOrderBuilder;
@@ -33,6 +35,18 @@ public class ConsoleStrategy extends SimpleStatefulStrategy {
 
 	@Inject
 	public ConsoleStrategy(Context context, Configuration config) {
+		String marketSymbol = ("OKCOIN_QUARTER:BTC.USD.QUARTER");
+
+		Market btcMarket = (Market) Market.forSymbol(marketSymbol);
+		if (btcMarket == null) {
+			Exchange exchange = Exchange.forSymbol("OKCOIN_QUARTER");
+			Listing listing = Listing.forSymbol("BTC.USD.QUARTER");
+			btcMarket = Market.findOrCreate(exchange, listing);
+
+		}
+		//addMarket(btcMarket, 0.23, 4.0);
+		//
+		addMarket(btcMarket, 1.0, 1.0);
 
 	}
 

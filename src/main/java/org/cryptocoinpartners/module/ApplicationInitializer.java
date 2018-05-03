@@ -254,6 +254,12 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 
 					//  }
 
+				} catch (RuntimeException e) {
+					log.error(" " + this.getClass().getSimpleName() + ":persistRunnable, resubmitting thread due to "
+							+ (entity == null ? "null entity" : entity.getId()) + " full stack trace follows:", e);
+
+					insertService.submit(this);
+					throw e;
 				} catch (Throwable e) {
 
 					log.error(" " + this.getClass().getSimpleName() + ":persistRunnable, " + (entity == null ? "null entity" : entity.getId())
@@ -316,12 +322,15 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 						entity.getDao().mergeEntities(entity);
 					//  }
 
+				} catch (RuntimeException e) {
+					log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, resubmitting thread due to "
+							+ (entity == null ? "null entity" : entity.getId()) + " full stack trace follows:", e);
+
+					mergeService.submit(this);
+					throw e;
 				} catch (Throwable e) {
 					log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, " + (entity == null ? "null entity" : entity.getId())
 							+ " full stack trace follows:", e);
-					//entity.getDao();
-					//  Dao myDao = entity.getDao();
-					// log.error(" " + this.getClass().getSimpleName() + ":call, " + entity + " full stack trace follows:", e);
 
 				}
 
@@ -368,6 +377,11 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 						// dao.mergeEntities(entities);
 
 					}
+				} catch (RuntimeException e) {
+					log.error(" " + this.getClass().getSimpleName() + ":deleteRunnable, resubmitting thread due to "
+							+ (entity == null ? "null entity" : entity.getId()) + " full stack trace follows:", e);
+					deleteService.submit(this);
+					throw e;
 				} catch (Throwable e) {
 					log.error(" " + this.getClass().getSimpleName() + ":deleteRunnable, " + (entity == null ? "null entity" : entity.getId())
 							+ " full stack trace follows:", e);
