@@ -691,12 +691,11 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					//      if (increment)
 					// entity.getDao().persistEntities(entity);
 					//  SerializationUtils.clone(entity);
-					synchronized (entity) {
-						EntityBase entityClone = entity.clone();
-						entityClone.setDao(entity.getDao());
-						entityClone.setOriginalEntity(entity);
-						application.getInsertQueue().add(entityClone);
-					}
+
+					//	EntityBase entityClone = entity.clone();
+					entity.setDao(entity.getDao());
+					entity.setOriginalEntity(entity);
+					application.getInsertQueue().add(entity);
 
 					//  } else {
 					//    application.getInsertQueue().addFirst(entity);
@@ -865,13 +864,11 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 				// synchronized (entity) {
 				if (entity != null && entity.isPersisted()) {
 					entity.setPeristanceAction(PersistanceAction.MERGE);
-					synchronized (entity) {
-						EntityBase entityClone = entity.clone();
+					//		EntityBase entityClone = entity.clone();
 
-						entityClone.setDao(entity.getDao());
-						entityClone.setOriginalEntity(entity);
-						application.getMergeQueue().add(entityClone);
-					}
+					entity.setDao(entity.getDao());
+					entity.setOriginalEntity(entity);
+					application.getMergeQueue().add(entity);
 
 					log.debug("merging " + entity.getClass().getSimpleName() + " id:" + entity.getId());
 				} else {
@@ -893,10 +890,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 	@Transactional
 	public void insert(EntityBase entity) throws Throwable {
 
-		synchronized (entity) {
-
-			entityManager.get().persist(entity);
-		}
+		entityManager.get().persist(entity);
 
 	}
 
@@ -917,15 +911,13 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 			// newEntity.setVersion(entity.getVersion());
 			// EntityBase newEntityDecrement = entityManager.get().merge(localEntity);
 			entity.setVersion(localEntity.getVersion());
-			synchronized (entity) {
-				entityManager.get().merge(entity);
-			}
+
+			entityManager.get().merge(entity);
+
 		}
 
 		else {
-			synchronized (entity) {
-				entityManager.get().persist(entity);
-			}
+			entityManager.get().persist(entity);
 
 		}
 
@@ -957,10 +949,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 	@Transactional
 	public void update(EntityBase entity) throws Throwable {
 
-		synchronized (entity) {
-			entityManager.get().merge(entity);
-
-		}
+		entityManager.get().merge(entity);
 
 	}
 
@@ -968,9 +957,9 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 	public void evict(EntityBase entity) {
 		try {
 			// entityManager.get().(entity);
-			synchronized (entity) {
-				entityManager.get().detach(entity);
-			}
+
+			entityManager.get().detach(entity);
+
 		} catch (Error | Exception ex) {
 			throw ex;
 		}
@@ -1714,10 +1703,9 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 
 		//   if (localEntity != null)
 		// entityManager.get().refresh(target);
-		synchronized (entity) {
 
-			entityManager.get().remove(entityManager.get().contains(entity) ? entity : entityManager.get().merge(entity));
-		}
+		entityManager.get().remove(entityManager.get().contains(entity) ? entity : entityManager.get().merge(entity));
+
 		// entityManager.get().remove(entity);
 		// }
 	}

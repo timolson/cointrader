@@ -119,7 +119,7 @@ public abstract class EntityBase implements java.io.Serializable, Cloneable, Com
 		//  if (version == null)
 		//    return 0;
 		if (originalEntity != null)
-			return originalEntity.getPersisted();
+			return originalEntity.persisted;
 		return persisted;
 	}
 
@@ -177,7 +177,7 @@ public abstract class EntityBase implements java.io.Serializable, Cloneable, Com
 				this.originalEntity.setPeristanceAction(PersistanceAction.MERGE);
 		}
 		if (this.originalEntity != null)
-			this.originalEntity.setPersisted(persisted);
+			this.originalEntity.persisted = persisted;
 
 		this.persisted = persisted;
 	}
