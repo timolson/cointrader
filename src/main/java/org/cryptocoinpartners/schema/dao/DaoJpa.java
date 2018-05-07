@@ -351,9 +351,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 				// if (entity.getRevision() > revision) {
 				if (!entity.getPersisted()) {
 					insert(entity);
-					entity.setPersisted(true);
-					if (entity.getOriginalEntity() != null)
-						entity.getOriginalEntity().setPersisted(true);
+
 					persisted = true;
 				} else
 					mergeEntities(entity);
@@ -598,11 +596,16 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 			} finally {
 
 				if (persisted) {
+					log.trace(" " + this.getClass().getSimpleName() + ":persist. Succefully persisted " + entity.getClass().getSimpleName() + " " + entity);
+
 					entity.setAttempt(0);
 					entity.setPersisted(true);
-					if (entity.getOriginalEntity() != null)
+					if (entity.getOriginalEntity() != null) {
 						entity.getOriginalEntity().setPersisted(true);
-					log.trace(" " + this.getClass().getSimpleName() + ":persist. Succefully persisted " + entity.getClass().getSimpleName() + " " + entity);
+						entity.setOriginalEntity(null);
+						entity = null;
+					}
+
 				}
 
 			}
@@ -691,11 +694,12 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					//      if (increment)
 					// entity.getDao().persistEntities(entity);
 					//  SerializationUtils.clone(entity);
-
-					//	EntityBase entityClone = entity.clone();
-					entity.setDao(entity.getDao());
-					entity.setOriginalEntity(entity);
-					application.getInsertQueue().add(entity);
+					synchronized (entity) {
+						EntityBase entityClone = entity.clone();
+						entityClone.setDao(entity.getDao());
+						entityClone.setOriginalEntity(entity);
+						application.getInsertQueue().add(entityClone);
+					}
 
 					//  } else {
 					//    application.getInsertQueue().addFirst(entity);
@@ -864,11 +868,13 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 				// synchronized (entity) {
 				if (entity != null && entity.isPersisted()) {
 					entity.setPeristanceAction(PersistanceAction.MERGE);
-					//		EntityBase entityClone = entity.clone();
+					synchronized (entity) {
+						EntityBase entityClone = entity.clone();
 
-					entity.setDao(entity.getDao());
-					entity.setOriginalEntity(entity);
-					application.getMergeQueue().add(entity);
+						entityClone.setDao(entity.getDao());
+						entityClone.setOriginalEntity(entity);
+						application.getMergeQueue().add(entityClone);
+					}
 
 					log.debug("merging " + entity.getClass().getSimpleName() + " id:" + entity.getId());
 				} else {
@@ -890,7 +896,10 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 	@Transactional
 	public void insert(EntityBase entity) throws Throwable {
 
-		entityManager.get().persist(entity);
+		synchronized (entity) {
+
+			entityManager.get().persist(entity);
+		}
 
 	}
 
@@ -911,13 +920,15 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 			// newEntity.setVersion(entity.getVersion());
 			// EntityBase newEntityDecrement = entityManager.get().merge(localEntity);
 			entity.setVersion(localEntity.getVersion());
-
-			entityManager.get().merge(entity);
-
+			synchronized (entity) {
+				entityManager.get().merge(entity);
+			}
 		}
 
 		else {
-			entityManager.get().persist(entity);
+			synchronized (entity) {
+				entityManager.get().persist(entity);
+			}
 
 		}
 
@@ -949,7 +960,10 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 	@Transactional
 	public void update(EntityBase entity) throws Throwable {
 
-		entityManager.get().merge(entity);
+		synchronized (entity) {
+			entityManager.get().merge(entity);
+
+		}
 
 	}
 
@@ -957,9 +971,9 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 	public void evict(EntityBase entity) {
 		try {
 			// entityManager.get().(entity);
-
-			entityManager.get().detach(entity);
-
+			synchronized (entity) {
+				entityManager.get().detach(entity);
+			}
 		} catch (Error | Exception ex) {
 			throw ex;
 		}
@@ -1279,9 +1293,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 				if (entity.getRevision() > revision) {
 					//	entity.setVersion(entity.getRevision());
 					update(entity);
-					entity.setPersisted(true);
-					if (entity.getOriginalEntity() != null)
-						entity.getOriginalEntity().setPersisted(true);
+
 					merged = true;
 				} else {
 					log.debug("DapJpa - mergeEntities: " + entity.getClass().getSimpleName() + " not peristed as entity revision " + entity.getRevision()
@@ -1634,11 +1646,21 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 			//     unitOfWork.end();
 
 		} finally {
-			if (merged)
+			if (merged) {
 				for (EntityBase entity : entities) {
-					entity.setAttempt(0);
 					log.trace(" " + this.getClass().getSimpleName() + ":merge. Succefully merged " + entity.getClass().getSimpleName() + " " + entity);
+
+					entity.setAttempt(0);
+					entity.setPersisted(true);
+
+					if (entity.getOriginalEntity() != null) {
+						entity.getOriginalEntity().setPersisted(true);
+						entity.setOriginalEntity(null);
+						entity = null;
+					}
+
 				}
+			}
 
 		}
 
@@ -1703,9 +1725,10 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 
 		//   if (localEntity != null)
 		// entityManager.get().refresh(target);
+		synchronized (entity) {
 
-		entityManager.get().remove(entityManager.get().contains(entity) ? entity : entityManager.get().merge(entity));
-
+			entityManager.get().remove(entityManager.get().contains(entity) ? entity : entityManager.get().merge(entity));
+		}
 		// entityManager.get().remove(entity);
 		// }
 	}
