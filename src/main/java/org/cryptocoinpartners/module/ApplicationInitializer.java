@@ -2,12 +2,12 @@ package org.cryptocoinpartners.module;
 
 import java.io.Serializable;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.inject.Singleton;
 import javax.persistence.ElementCollection;
@@ -34,6 +34,7 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 	private static int persistanceBookThreadCount = ConfigUtil.combined().getInt("db.book.writer.threads", 1);
 	private static int persistanceTradeThreadCount = ConfigUtil.combined().getInt("db.trade.writer.threads", 1);
 	private static int persistanceBarThreadCount = ConfigUtil.combined().getInt("db.bar.writer.threads", 1);
+	private static int queueSize = ConfigUtil.combined().getInt("db.writer.queue.length", 10000);
 
 	private static ListeningExecutorService insertPool = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
 	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.applicationInitalizer");
@@ -46,15 +47,15 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 	//     ;;Executors.newFixedThreadPool(persistanceThreadCount);
 	//private static BlockingQueue insertQueue = new DelayQueue();
 	//private static BlockingQueue mergeQueue = new DelayQueue();
-	private static LinkedBlockingQueue<EntityBase> mergeQueue = new LinkedBlockingQueue<EntityBase>();
-	private static LinkedBlockingQueue<Book> mergeBookQueue = new LinkedBlockingQueue<Book>();
-	private static LinkedBlockingQueue<Trade> mergeTradeQueue = new LinkedBlockingQueue<Trade>();
-	private static LinkedBlockingQueue<Bar> mergeBarQueue = new LinkedBlockingQueue<Bar>();
-	private static LinkedBlockingQueue<EntityBase> insertQueue = mergeQueue;
-	private static LinkedBlockingQueue<Book> insertBookQueue = mergeBookQueue;
-	private static LinkedBlockingQueue<Trade> insertTradeQueue = mergeTradeQueue;
-	private static LinkedBlockingQueue<Bar> insertBarQueue = mergeBarQueue;
-	private static LinkedBlockingQueue<EntityBase> deleteQueue = mergeQueue;
+	private static BlockingQueue<EntityBase> mergeQueue = new ArrayBlockingQueue<EntityBase>(queueSize);
+	private static BlockingQueue<Book> mergeBookQueue = new ArrayBlockingQueue<Book>(queueSize);
+	private static BlockingQueue<Trade> mergeTradeQueue = new ArrayBlockingQueue<Trade>(queueSize);
+	private static BlockingQueue<Bar> mergeBarQueue = new ArrayBlockingQueue<Bar>(queueSize);
+	private static BlockingQueue<EntityBase> insertQueue = mergeQueue;
+	private static BlockingQueue<Book> insertBookQueue = mergeBookQueue;
+	private static BlockingQueue<Trade> insertTradeQueue = mergeTradeQueue;
+	private static BlockingQueue<Bar> insertBarQueue = mergeBarQueue;
+	private static BlockingQueue<EntityBase> deleteQueue = mergeQueue;
 
 	//new LinkedBlockingDeque<EntityBase>();;
 	//new LinkedBlockingDeque<EntityBase>();;
@@ -107,75 +108,75 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 		// other application initializations if necessary
 	}
 
-	protected void setInsertQueue(LinkedBlockingQueue<EntityBase> insertQueue) {
+	protected void setInsertQueue(BlockingQueue<EntityBase> insertQueue) {
 		this.insertQueue = insertQueue;
 	}
 
-	protected void setMergeQueue(LinkedBlockingQueue<EntityBase> mergeQueue) {
+	protected void setMergeQueue(BlockingQueue<EntityBase> mergeQueue) {
 		this.mergeQueue = mergeQueue;
 	}
 
-	protected void setInsertBookQueue(LinkedBlockingQueue<Book> insertBookQueue) {
+	protected void setInsertBookQueue(BlockingQueue<Book> insertBookQueue) {
 		this.insertBookQueue = insertBookQueue;
 	}
 
-	protected void setInsertBarQueue(LinkedBlockingQueue<Bar> insertBarQueue) {
+	protected void setInsertBarQueue(BlockingQueue<Bar> insertBarQueue) {
 		this.insertBarQueue = insertBarQueue;
 	}
 
-	protected void setMergeBookQueue(LinkedBlockingQueue<Book> mergeBookQueue) {
+	protected void setMergeBookQueue(BlockingQueue<Book> mergeBookQueue) {
 		this.mergeBookQueue = mergeBookQueue;
 	}
 
-	protected void setMergeBarQueue(LinkedBlockingQueue<Bar> mergeBarkQueue) {
+	protected void setMergeBarQueue(BlockingQueue<Bar> mergeBarkQueue) {
 		this.mergeBarQueue = mergeBarQueue;
 	}
 
-	protected void setInsertTradeQueue(LinkedBlockingQueue<Trade> insertTradeQueue) {
+	protected void setInsertTradeQueue(BlockingQueue<Trade> insertTradeQueue) {
 		this.insertTradeQueue = insertTradeQueue;
 	}
 
-	protected void setMergeTradeQueue(LinkedBlockingQueue<Trade> mergeTradeQueue) {
+	protected void setMergeTradeQueue(BlockingQueue<Trade> mergeTradeQueue) {
 		this.mergeTradeQueue = mergeTradeQueue;
 	}
 
-	protected void setDeleteQueue(LinkedBlockingQueue<EntityBase> deleteQueue) {
+	protected void setDeleteQueue(BlockingQueue<EntityBase> deleteQueue) {
 		this.deleteQueue = deleteQueue;
 	}
 
-	public LinkedBlockingQueue<EntityBase> getMergeQueue() {
+	public BlockingQueue<EntityBase> getMergeQueue() {
 		return mergeQueue;
 	}
 
-	public LinkedBlockingQueue<Book> getMergeBookQueue() {
+	public BlockingQueue<Book> getMergeBookQueue() {
 		return mergeBookQueue;
 	}
 
-	public LinkedBlockingQueue<Bar> getMergeBarQueue() {
+	public BlockingQueue<Bar> getMergeBarQueue() {
 		return mergeBarQueue;
 	}
 
-	public LinkedBlockingQueue<Trade> getMergeTradeQueue() {
+	public BlockingQueue<Trade> getMergeTradeQueue() {
 		return mergeTradeQueue;
 	}
 
-	public LinkedBlockingQueue<EntityBase> getInsertQueue() {
+	public BlockingQueue<EntityBase> getInsertQueue() {
 		return insertQueue;
 	}
 
-	public LinkedBlockingQueue<Book> getInsertBookQueue() {
+	public BlockingQueue<Book> getInsertBookQueue() {
 		return insertBookQueue;
 	}
 
-	public LinkedBlockingQueue<Trade> getInsertTradeQueue() {
+	public BlockingQueue<Trade> getInsertTradeQueue() {
 		return insertTradeQueue;
 	}
 
-	public LinkedBlockingQueue<Bar> getInsertBarQueue() {
+	public BlockingQueue<Bar> getInsertBarQueue() {
 		return insertBarQueue;
 	}
 
-	public LinkedBlockingQueue<EntityBase> getDeleteQueue() {
+	public BlockingQueue<EntityBase> getDeleteQueue() {
 		return deleteQueue;
 	}
 
@@ -204,15 +205,19 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 
 	public class persistRunnable implements Callable {
 
-		private final LinkedBlockingQueue peristQueue;
+		private final BlockingQueue peristQueue;
 
 		@Override
 		public Void call() {
+
 			EntityBase entity = null;
 			while (true) {
+
 				try {
 					entity = (EntityBase) peristQueue.take();
-					//   synchronized (entity) {
+
+					if (entity == null)
+						continue;//   synchronized (entity) {
 					if (entity.getDao() == null)
 						Injector.root().getInjector().injectMembers(entity);
 
@@ -272,7 +277,7 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 
 		}
 
-		public persistRunnable(LinkedBlockingQueue peristQueue) {
+		public persistRunnable(BlockingQueue peristQueue) {
 			this.peristQueue = peristQueue;
 
 		}
@@ -281,15 +286,19 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 
 	public class mergeRunnable implements Callable {
 
-		private final LinkedBlockingQueue mergeQueue;
+		private final BlockingQueue mergeQueue;
 
 		@Override
 		public Object call() throws Exception {
+
 			EntityBase entity = null;
-			while (true)
-				// EntityBase entity;
+			while (true) {
+
 				try {
 					entity = (EntityBase) mergeQueue.take();
+
+					if (entity == null)
+						continue;
 					// synchronized (entity) {
 					if (entity.getDao() == null)
 						Injector.root().getInjector().injectMembers(entity);
@@ -333,10 +342,11 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 							+ " full stack trace follows:", e);
 
 				}
+			}
 
 		}
 
-		public mergeRunnable(LinkedBlockingQueue mergeQueue) {
+		public mergeRunnable(BlockingQueue mergeQueue) {
 			this.mergeQueue = mergeQueue;
 
 		}
@@ -351,9 +361,12 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 		public Void call() {
 			EntityBase entity = null;
 			while (true) {
-				try {
 
+				try {
 					entity = (EntityBase) deleteQueue.take();
+
+					if (entity == null)
+						continue;
 					synchronized (entity) {
 						if (entity.getPeristanceAction() != null) {
 							switch (entity.getPeristanceAction()) {
@@ -387,6 +400,7 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 							+ " full stack trace follows:", e);
 
 				}
+
 			}
 
 		}

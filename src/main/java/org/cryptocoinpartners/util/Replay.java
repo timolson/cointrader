@@ -7,11 +7,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 
 import javax.annotation.Nullable;
@@ -285,30 +283,6 @@ public class Replay implements Runnable {
 		} else {
 			new MockTicker(context, ConfigUtil.combined(), start, end, context.getInjector().getInstance(BookFactory.class),
 					context.getInjector().getInstance(BasicQuoteService.class));
-
-		}
-
-	}
-
-	private class PublisherRunnable implements Runnable {
-
-		public PublisherRunnable() {
-
-		}
-
-		@Override
-		// @Inject
-		public void run() {
-			while (true)
-				try {
-
-					RemoteEvent event = queue.take();
-					//runtime.sendEvent(event);
-					context.publish(event);
-
-				} catch (Exception | Error e) {
-					e.printStackTrace();
-				}
 
 		}
 
@@ -614,7 +588,6 @@ public class Replay implements Runnable {
 	}
 
 	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.replay");
-	private final BlockingQueue<RemoteEvent> queue = new LinkedBlockingQueue<RemoteEvent>();
 	private final Interval replayTimeInterval;
 	private final Integer dbReaderThreads = ConfigUtil.combined().getInt("db.replay.reader.threads");
 	private final Semaphore semaphore;

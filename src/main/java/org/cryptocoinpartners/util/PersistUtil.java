@@ -4,11 +4,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -43,13 +43,15 @@ public class PersistUtil {
 
 	private static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.persist");
 	private static Object lock = new Object();
+	private static int queueSize = ConfigUtil.combined().getInt("db.writer.queue.length", 10000);
+
 	@Inject
 	static Provider<EntityManager> entityManagerProvider;
 
 	// private static final BlockingQueue<EntityBase> insertQueue = new DelayQueue();
 	// private static final BlockingQueue<EntityBase> mergeQueue = new DelayQueue();
-	private static final BlockingQueue<EntityBase[]> insertQueue = new LinkedBlockingQueue<EntityBase[]>();
-	private static final BlockingQueue<EntityBase[]> mergeQueue = new LinkedBlockingQueue<EntityBase[]>();
+	private static final BlockingQueue<EntityBase[]> insertQueue = new ArrayBlockingQueue<EntityBase[]>(queueSize);
+	private static final BlockingQueue<EntityBase[]> mergeQueue = new ArrayBlockingQueue<EntityBase[]>(queueSize);
 
 	private static boolean running = false;
 	private static boolean shutdown = false;

@@ -2305,8 +2305,9 @@ public abstract class BaseOrderService implements OrderService {
 			log.info(this.getClass().getSimpleName() + " : triggerOrder  - working volume " + totalWorkingVolume + " unfilledVolumeDiscrete "
 					+ unfilledVolumeDiscrete + " with open order volume "
 					+ (triggeredOrder.getParentFill() == null ? triggeredOrder.getVolume() : triggeredOrder.getParentFill().getOpenVolume())
-					+ " position volume " + triggeredOrder.getParentFill().getPosition().getOpenVolume() + " and unfilled volume "
-					+ triggeredOrder.getUnfilledVolume() + " for " + triggeredOrder.getId() + " with child orders "
+					+ " position volume "
+					+ (triggeredOrder.getParentFill().getPosition() != null ? triggeredOrder.getParentFill().getPosition().getOpenVolume() : "0")
+					+ " and unfilled volume " + triggeredOrder.getUnfilledVolume() + " for " + triggeredOrder.getId() + " with child orders "
 					+ triggeredOrder.getOrderChildren().hashCode());
 			for (Order childOrder : triggeredOrder.getOrderChildren()) {
 				if (orderStateMap.get(childOrder) != null && orderStateMap.get(childOrder).isOpen())
