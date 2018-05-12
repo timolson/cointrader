@@ -1277,282 +1277,257 @@ public class Portfolio extends EntityBase {
 					Amount exitPrice = DecimalAmount.ZERO;
 					Set<Position> positionsToPublish = new HashSet<Position>();
 
-					synchronized (listingPositions) {
-						Iterator<Position> lpitr = listingPositions.iterator();
+					Iterator<Position> lpitr = listingPositions.iterator();
 
-						CLOSEPOSITIONSLOOP: while (lpitr.hasNext()) {
-							Position closePos = lpitr.next();
-							if (closePos.getPositionEffect().equals(PositionEffect.DEFAULT)) {
-								log.debug("closPos " + closePos.getPositionEffect() + " fills" + closePos.getFills());
-							}
-							synchronized (closePos) {
-								if (!closePos.hasFills()) {
-									log.debug(this.getClass().getSimpleName() + ":merge fills 1 - removing position: " + closePos.getId()
-											+ " from listingPositions: " + listingPositions);
-									lpitr.remove();
-									continue;
-								}
+					Collection<Order> ordersToCancel = new HashSet<Order>();
+					CLOSEPOSITIONSLOOP: while (lpitr.hasNext()) {
+						Position closePos = lpitr.next();
+						if (closePos.getPositionEffect().equals(PositionEffect.DEFAULT)) {
+							log.debug("closPos " + closePos.getPositionEffect() + " fills" + closePos.getFills());
+						}
+						if (!closePos.hasFills()) {
+							log.debug(this.getClass().getSimpleName() + ":merge fills 1 - removing position: " + closePos.getId() + " from listingPositions: "
+									+ listingPositions);
+							lpitr.remove();
+							continue;
+						}
 
-								//TODO if we only have opening posiotns on in ClosePos & OpenPos we don't need to loop
-								// should be a more efficent way that looping over every openPos for every ClosePos
-								synchronized (closePos.getFills()) {
-									Iterator<Fill> cpitr = closePos.getFills().iterator();
-									log.debug(this.getClass().getSimpleName() + ":merge fills closePos has " + closePos.getFills().size() + " fills "
-											+ closePos.getFills());
-									int closedFillCount = 0;
-									CLOSEDFILLSLOOP: while (cpitr.hasNext()) {
-										log.debug(
-												this.getClass().getSimpleName() + ":merge fills - Starting close outs with closing position " + closePos.getId()
-														+ " incrementing loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
-										closedFillCount++;
-										Fill closePosition = cpitr.next();
-										synchronized (closePosition) {
-											log.debug(this.getClass().getSimpleName() + ":merge fills  - Closing fill " + closePosition.getId() + " loop "
-													+ closedFillCount + " with itterator " + System.identityHashCode(cpitr));
-											boolean closedFillBreak = false;
-											if (closePosition.getOpenVolumeCount() != 0) {
-												if (closePosition.getPositionEffect() != null)
-													openingPositionEffect = (closePosition.getPositionEffect() == (PositionEffect.CLOSE)) ? PositionEffect.OPEN
-															: ((closePosition.getPositionEffect() == (PositionEffect.OPEN)) ? PositionEffect.CLOSE
-																	: PositionEffect.DEFAULT);
-												synchronized (openingListingPositions) {
-													Iterator<Position> olpitr = openingListingPositions.iterator();
-													OPENPOSITIONSLOOP: while (olpitr.hasNext() && !closedFillBreak) {
-														Position openPos = olpitr.next();
-														if (openPos.getPositionEffect().equals(PositionEffect.DEFAULT))
-															log.debug("openPos fills" + closePos.getFills());
+						//TODO if we only have opening posiotns on in ClosePos & OpenPos we don't need to loop
+						// should be a more efficent way that looping over every openPos for every ClosePos
+						synchronized (closePos.getFills()) {
+							Iterator<Fill> cpitr = closePos.getFills().iterator();
+							log.debug(this.getClass().getSimpleName() + ":merge fills closePos has " + closePos.getFills().size() + " fills "
+									+ closePos.getFills());
+							int closedFillCount = 0;
+							CLOSEDFILLSLOOP: while (cpitr.hasNext()) {
+								log.debug(this.getClass().getSimpleName() + ":merge fills - Starting close outs with closing position " + closePos.getId()
+										+ " incrementing loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
+								closedFillCount++;
+								Fill closePosition = cpitr.next();
+								log.debug(this.getClass().getSimpleName() + ":merge fills  - Closing fill " + closePosition.getId() + " loop " + closedFillCount
+										+ " with itterator " + System.identityHashCode(cpitr));
+								boolean closedFillBreak = false;
+								if (closePosition.getOpenVolumeCount() != 0) {
+									if (closePosition.getPositionEffect() != null)
+										openingPositionEffect = (closePosition.getPositionEffect() == (PositionEffect.CLOSE)) ? PositionEffect.OPEN
+												: ((closePosition.getPositionEffect() == (PositionEffect.OPEN)) ? PositionEffect.CLOSE
+														: PositionEffect.DEFAULT);
+									Iterator<Position> olpitr = openingListingPositions.iterator();
+									OPENPOSITIONSLOOP: while (olpitr.hasNext() && !closedFillBreak) {
+										Position openPos = olpitr.next();
+										if (openPos.getPositionEffect().equals(PositionEffect.DEFAULT))
+											log.debug("openPos fills" + closePos.getFills());
 
-														if ((openPos.getPositionEffect().equals(PositionEffect.OPEN)
-																&& (openPos.getPositionEffect().equals(closePos.getPositionEffect())))
-																|| (openPos.getPositionEffect().equals(PositionEffect.CLOSE)
-																		&& (openPos.getPositionEffect().equals(closePos.getPositionEffect()))))
-															continue;
-														log.debug(this.getClass().getSimpleName() + ":merge fills - Starting close outs with opeingin position "
-																+ openPos.getId() + " loop " + closedFillCount + " with iterator "
-																+ System.identityHashCode(cpitr));
-														if (!openPos.hasFills()) {
-															log.debug(this.getClass().getSimpleName() + ":merge fills removing position -3: " + openPos.getId()
-																	+ " from openingListingPositions: " + openingListingPositions);
-															log.debug(this.getClass().getSimpleName() + ":merge fills - Opening Position " + openPos.getId()
-																	+ " has no fills to close outs with closing fill " + closePosition.getId() + "   loop "
-																	+ closedFillCount + " with iterator " + System.identityHashCode(cpitr));
-															olpitr.remove();
-															continue;
-														}
+										if ((openPos.getPositionEffect().equals(PositionEffect.OPEN)
+												&& (openPos.getPositionEffect().equals(closePos.getPositionEffect())))
+												|| (openPos.getPositionEffect().equals(PositionEffect.CLOSE)
+														&& (openPos.getPositionEffect().equals(closePos.getPositionEffect()))))
+											continue;
+										log.debug(this.getClass().getSimpleName() + ":merge fills - Starting close outs with opeingin position "
+												+ openPos.getId() + " loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
+										if (!openPos.hasFills()) {
+											log.debug(this.getClass().getSimpleName() + ":merge fills removing position -3: " + openPos.getId()
+													+ " from openingListingPositions: " + openingListingPositions);
+											log.debug(this.getClass().getSimpleName() + ":merge fills - Opening Position " + openPos.getId()
+													+ " has no fills to close outs with closing fill " + closePosition.getId() + "   loop " + closedFillCount
+													+ " with iterator " + System.identityHashCode(cpitr));
+											olpitr.remove();
+											continue;
+										}
 
-														synchronized (openPos.getFills()) {
-															Iterator<Fill> opitr = openPos.getFills().iterator();
-															OPENFILLSLOOP: while (opitr.hasNext() && !closedFillBreak) {
-																Fill openPosition = opitr.next();
-																synchronized (openPosition) {
-																	log.debug(this.getClass().getSimpleName()
-																			+ ":merge fills - Starting close outs with opeing fill  " + openPosition.getId()
-																			+ " loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
-																	if (openPosition.getOpenVolumeCount() != 0) {
-																		realisedPnL = DecimalAmount.ZERO;
-																		closingVolumeCount = 0;
-																		if ((closePosition.getPositionEffect().equals(PositionEffect.DEFAULT)
-																				&& openPosition.getPositionEffect().equals(PositionEffect.DEFAULT))
-																				|| (!openPosition.getPositionEffect()
-																						.equals(closePosition.getPositionEffect()))) {
-																			//		if(oenPostion.getOrder)
-																			exitPrice = openPosition.getPrice();
-																			entryPrice = closePosition.getPrice();
-																			closingVolumeCount = (openingTransactionType == (TransactionType.SELL))
-																					? (Math.min(Math.abs(openPosition.getOpenVolumeCount()),
-																							Math.abs(closePosition.getOpenVolumeCount()))) * -1
-																					: (Math.min(Math.abs(openPosition.getOpenVolumeCount()),
-																							Math.abs(closePosition.getOpenVolumeCount())));
-																			if (closingVolumeCount != 0) {
-																				long updatedVolumeCount = 0;
-																				if ((Math.abs(closePosition.getOpenVolumeCount()) >= Math
-																						.abs(openPosition.getOpenVolumeCount()))) {
-																					updatedVolumeCount = closePosition.getOpenVolumeCount()
-																							+ closingVolumeCount;
-																					openPosition.setOpenVolumeCount(0);
-																					log.debug(this.getClass().getSimpleName() + ":merge. set open position "
-																							+ openPosition + " open volume count to 0/"
-																							+ openPosition.getOpenVolumeCount());
+										synchronized (openPos.getFills()) {
+											Iterator<Fill> opitr = openPos.getFills().iterator();
+											OPENFILLSLOOP: while (opitr.hasNext() && !closedFillBreak) {
+												Fill openPosition = opitr.next();
+												log.debug(this.getClass().getSimpleName() + ":merge fills - Starting close outs with opeing fill  "
+														+ openPosition.getId() + " loop " + closedFillCount + " with iterator "
+														+ System.identityHashCode(cpitr));
+												if (openPosition.getOpenVolumeCount() != 0) {
+													realisedPnL = DecimalAmount.ZERO;
+													closingVolumeCount = 0;
+													if ((closePosition.getPositionEffect().equals(PositionEffect.DEFAULT)
+															&& openPosition.getPositionEffect().equals(PositionEffect.DEFAULT))
+															|| (!openPosition.getPositionEffect().equals(closePosition.getPositionEffect()))) {
+														//		if(oenPostion.getOrder)
+														exitPrice = openPosition.getPrice();
+														entryPrice = closePosition.getPrice();
+														closingVolumeCount = (openingTransactionType == (TransactionType.SELL))
+																? (Math.min(Math.abs(openPosition.getOpenVolumeCount()),
+																		Math.abs(closePosition.getOpenVolumeCount()))) * -1
+																: (Math.min(Math.abs(openPosition.getOpenVolumeCount()),
+																		Math.abs(closePosition.getOpenVolumeCount())));
+														if (closingVolumeCount != 0) {
+															long updatedVolumeCount = 0;
+															if ((Math.abs(closePosition.getOpenVolumeCount()) >= Math.abs(openPosition.getOpenVolumeCount()))) {
+																updatedVolumeCount = closePosition.getOpenVolumeCount() + closingVolumeCount;
+																openPosition.setOpenVolumeCount(0);
+																log.debug(this.getClass().getSimpleName() + ":merge. set open position " + openPosition
+																		+ " open volume count to 0/" + openPosition.getOpenVolumeCount());
 
-																					openPosition.setUpdateTime(context.getTime());
-																					openPosition.setPosition(null);
+																openPosition.setUpdateTime(context.getTime());
+																openPosition.setPosition(null);
 
-																					openPos.reset();
-																					openPosition.setHoldingTime(
-																							closePosition.getTimestamp() - openPosition.getTimestamp());
+																openPos.reset();
+																openPosition.setHoldingTime(closePosition.getTimestamp() - openPosition.getTimestamp());
 
-																					openPosition.merge();
-																					closePosition.setOpenVolumeCount(updatedVolumeCount);
-																					log.debug(this.getClass().getSimpleName() + ":merge. set close position "
-																							+ closePosition + " open volume count to 0/"
-																							+ closePosition.getOpenVolumeCount());
+																openPosition.merge();
+																closePosition.setOpenVolumeCount(updatedVolumeCount);
+																log.debug(this.getClass().getSimpleName() + ":merge. set close position " + closePosition
+																		+ " open volume count to 0/" + closePosition.getOpenVolumeCount());
 
-																					closePosition.setUpdateTime(context.getTime());
+																closePosition.setUpdateTime(context.getTime());
 
-																					closePos.reset();
-																					if (closePosition.getOpenVolumeCount() == 0) {
-																						log.debug(this.getClass().getSimpleName()
-																								+ ":merge. setting close position " + closePosition
-																								+ " position to null");
-																						closePosition.setPosition(null);
-																						closePos.reset();
-																						closePosition.setHoldingTime(
-																								closePosition.getTimestamp() - openPosition.getTimestamp());
-																					}
-																					closePosition.merge();
-																					logCloseOut(closingVolumeCount, openPosition, closePosition, true);
-																				} else if (closePosition.getOpenVolumeCount() != 0) {
-																					updatedVolumeCount = openPosition.getOpenVolumeCount() - closingVolumeCount;
-																					closePosition.setOpenVolumeCount(0);
-																					log.debug(this.getClass().getSimpleName() + ":merge. set close position "
-																							+ closePosition + " open volume count to 0/"
-																							+ closePosition.getOpenVolumeCount());
-																					closePosition.setUpdateTime(context.getTime());
-
-																					closePosition.setPosition(null);
-
-																					closePos.reset();
-																					openPosition.setOpenVolumeCount(updatedVolumeCount);
-																					log.debug(this.getClass().getSimpleName() + ":merge. set open position "
-																							+ openPosition + " open volume count to " + updatedVolumeCount + "/"
-																							+ openPosition.getOpenVolumeCount());
-
-																					openPosition.setUpdateTime(context.getTime());
-
-																					openPos.reset();
-																					openPosition.setHoldingTime(
-																							closePosition.getTimestamp() - openPosition.getTimestamp());
-																					if (openPosition.getOpenVolumeCount() == 0) {
-																						log.debug(this.getClass().getSimpleName()
-																								+ ":merge. setting open position " + openPosition
-																								+ " position to null");
-																						openPosition.setPosition(null);
-																						openPos.reset();
-																						openPosition.setHoldingTime(
-																								closePosition.getTimestamp() - openPosition.getTimestamp());
-																					}
-																					openPosition.merge();
-																					logCloseOut(closingVolumeCount, openPosition, closePosition, true);
-																				} else if (closePosition.getOpenVolumeCount() == 0) {
-																					log.debug(this.getClass().getSimpleName()
-																							+ ":merge. setting close position to null " + closePosition
-																							+ " as open volume is :" + closePosition.getOpenVolumeCount());
-																					closePosition.setPosition(null);
-																					closePos.reset();
-
-																				}
-																				closePosition.merge();
-																				DiscreteAmount volDiscrete = new DiscreteAmount(closingVolumeCount,
-																						closePosition.getMarket().getListing().getVolumeBasis());
-																				realisedPnL = realisedPnL.plus(
-																						((entryPrice.minus(exitPrice)).times(volDiscrete, Remainder.ROUND_EVEN))
-																								.times(closePosition.getMarket().getMultiplier(
-																										closePosition.getMarket(), entryPrice, exitPrice),
-																										Remainder.ROUND_EVEN)
-																								.times(closePosition.getMarket().getContractSize(
-																										closePosition.getMarket()), Remainder.ROUND_EVEN));
-																				Amount RealisedPnL = realisedPnL.toBasis(currency.getBasis(),
-																						Remainder.ROUND_EVEN);
-																				if (RealisedPnL.isNegative()
-																						&& closePosition.getPositionEffect() == PositionEffect.OPEN)
-																					log.info("realsiedPnL is a loss. netted open position: " + openPosition
-																							+ " with closing postion: " + closePosition);
-																				if (!RealisedPnL.isZero()) {
-																					this.getBaseAsset();
-																					Transaction trans = transactionFactory.create(closePosition, this,
-																							closePosition.getMarket().getExchange(), currency,
-																							TransactionType.REALISED_PROFIT_LOSS, RealisedPnL,
-																							new DiscreteAmount(0, currency.getBasis()));
-																					log.info("Realised PnL:" + trans);
-																					context.setPublishTime(trans);
-																					trans.persit();
-																					context.route(trans);
-																				}
-																				if (closePosition.getOpenVolumeCount() == 0) {
-																					log.debug(this.getClass().getSimpleName()
-																							+ ":Merge - closePosition Position fill " + closePosition.getId()
-																							+ " has zero quanityt with opening  fill " + openPosition.getId()
-																							+ "  loop " + closedFillCount + " with iterator "
-																							+ System.identityHashCode(cpitr));
-
-																					log.info(closePosition + " closed fully out with " + openPosition);
-																					for (Order childOrder : closePosition.getFillChildOrders())
-																						if (childOrder.getUsePosition() && childOrder.getFillType().isTrigger()
-																								&& childOrder.getStopPrice() != null)
-																							orderService.handleCancelOrder(childOrder);
-																					positionsToPublish.add(openPos);
-																					if (openPos.getOpenVolume().isZero())
-																						log.debug("test");
-																					closedFillBreak = true;
-																				} else
-																					log.info(closePosition + " not closed fully out with " + openPosition);
-
-																			}
-																		}
-																	}
-																	if (openPosition.getOpenVolumeCount() == 0) {
-																		log.debug(this.getClass().getSimpleName() + ":Merge - Opening Position fill "
-																				+ openPosition.getId() + " has zero quanityt with close outs with closing fill "
-																				+ closePosition.getId() + "   loop " + closedFillCount + " with iterator "
-																				+ System.identityHashCode(cpitr));
-																		openPosition.setPosition(null);
-																		openPos.reset();
-																		for (Order childOrder : openPosition.getFillChildOrders())
-																			if (childOrder.getUsePosition() && childOrder.getFillType().isTrigger()
-																					&& childOrder.getStopPrice() != null)
-																				orderService.handleCancelOrder(childOrder);
-																		opitr.remove();
-																	}
+																closePos.reset();
+																if (closePosition.getOpenVolumeCount() == 0) {
+																	log.debug(this.getClass().getSimpleName() + ":merge. setting close position "
+																			+ closePosition + " position to null");
+																	closePosition.setPosition(null);
+																	closePos.reset();
+																	closePosition.setHoldingTime(closePosition.getTimestamp() - openPosition.getTimestamp());
 																}
-															}
-														}
-														if (!openPos.hasFills()) {
-															log.debug(this.getClass().getSimpleName() + ":Merge - Opening Position  " + openPos.getId()
-																	+ " has not fills so removing  from openingListingPositions "
-																	+ System.identityHashCode(openingListingPositions) + "   loop " + closedFillCount
-																	+ " with iterator " + System.identityHashCode(cpitr));
+																closePosition.merge();
+																logCloseOut(closingVolumeCount, openPosition, closePosition, true);
+															} else if (closePosition.getOpenVolumeCount() != 0) {
+																updatedVolumeCount = openPosition.getOpenVolumeCount() - closingVolumeCount;
+																closePosition.setOpenVolumeCount(0);
+																log.debug(this.getClass().getSimpleName() + ":merge. set close position " + closePosition
+																		+ " open volume count to 0/" + closePosition.getOpenVolumeCount());
+																closePosition.setUpdateTime(context.getTime());
 
-															olpitr.remove();
-															openPos.delete();
+																closePosition.setPosition(null);
+
+																closePos.reset();
+																openPosition.setOpenVolumeCount(updatedVolumeCount);
+																log.debug(this.getClass().getSimpleName() + ":merge. set open position " + openPosition
+																		+ " open volume count to " + updatedVolumeCount + "/"
+																		+ openPosition.getOpenVolumeCount());
+
+																openPosition.setUpdateTime(context.getTime());
+
+																openPos.reset();
+																openPosition.setHoldingTime(closePosition.getTimestamp() - openPosition.getTimestamp());
+																if (openPosition.getOpenVolumeCount() == 0) {
+																	log.debug(this.getClass().getSimpleName() + ":merge. setting open position " + openPosition
+																			+ " position to null");
+																	openPosition.setPosition(null);
+																	openPos.reset();
+																	openPosition.setHoldingTime(closePosition.getTimestamp() - openPosition.getTimestamp());
+																}
+																openPosition.merge();
+																logCloseOut(closingVolumeCount, openPosition, closePosition, true);
+															} else if (closePosition.getOpenVolumeCount() == 0) {
+																log.debug(this.getClass().getSimpleName() + ":merge. setting close position to null "
+																		+ closePosition + " as open volume is :" + closePosition.getOpenVolumeCount());
+																closePosition.setPosition(null);
+																closePos.reset();
+
+															}
+															closePosition.merge();
+															DiscreteAmount volDiscrete = new DiscreteAmount(closingVolumeCount,
+																	closePosition.getMarket().getListing().getVolumeBasis());
+															realisedPnL = realisedPnL
+																	.plus(((entryPrice.minus(exitPrice)).times(volDiscrete, Remainder.ROUND_EVEN))
+																			.times(closePosition.getMarket().getMultiplier(closePosition.getMarket(),
+																					entryPrice, exitPrice), Remainder.ROUND_EVEN)
+																			.times(closePosition.getMarket().getContractSize(closePosition.getMarket()),
+																					Remainder.ROUND_EVEN));
+															Amount RealisedPnL = realisedPnL.toBasis(currency.getBasis(), Remainder.ROUND_EVEN);
+															if (RealisedPnL.isNegative() && closePosition.getPositionEffect() == PositionEffect.OPEN)
+																log.info("realsiedPnL is a loss. netted open position: " + openPosition
+																		+ " with closing postion: " + closePosition);
+															if (!RealisedPnL.isZero()) {
+																this.getBaseAsset();
+																Transaction trans = transactionFactory.create(closePosition, this,
+																		closePosition.getMarket().getExchange(), currency, TransactionType.REALISED_PROFIT_LOSS,
+																		RealisedPnL, new DiscreteAmount(0, currency.getBasis()));
+																log.info("Realised PnL:" + trans);
+																context.setPublishTime(trans);
+																trans.persit();
+																context.route(trans);
+															}
+															if (closePosition.getOpenVolumeCount() == 0) {
+																log.debug(this.getClass().getSimpleName() + ":Merge - closePosition Position fill "
+																		+ closePosition.getId() + " has zero quanityt with opening  fill "
+																		+ openPosition.getId() + "  loop " + closedFillCount + " with iterator "
+																		+ System.identityHashCode(cpitr));
+
+																log.info(closePosition + " closed fully out with " + openPosition);
+																for (Order childOrder : closePosition.getFillChildOrders())
+																	if (childOrder.getUsePosition() && childOrder.getFillType().isTrigger()
+																			&& childOrder.getStopPrice() != null)
+																		ordersToCancel.add(childOrder);
+
+																positionsToPublish.add(openPos);
+																if (openPos.getOpenVolume().isZero())
+																	log.debug("test");
+																closedFillBreak = true;
+															} else
+																log.info(closePosition + " not closed fully out with " + openPosition);
+
 														}
-														positionsToPublish.add(openPos);
-														//	publishPositionUpdate(openPos, (openPos.isLong()) ? PositionType.LONG : PositionType.SHORT,
-														//		openPos.getMarket(), 0);
 													}
 												}
-											}
-											log.debug(this.getClass().getSimpleName() + ":merge fills - Completed close outs with closing fill "
-													+ closePosition.getId() + " loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
+												if (openPosition.getOpenVolumeCount() == 0) {
+													log.debug(this.getClass().getSimpleName() + ":Merge - Opening Position fill " + openPosition.getId()
+															+ " has zero quanityt with close outs with closing fill " + closePosition.getId() + "   loop "
+															+ closedFillCount + " with iterator " + System.identityHashCode(cpitr));
+													openPosition.setPosition(null);
+													openPos.reset();
+													for (Order childOrder : openPosition.getFillChildOrders())
+														if (childOrder.getUsePosition() && childOrder.getFillType().isTrigger()
+																&& childOrder.getStopPrice() != null)
+															ordersToCancel.add(childOrder);
+													opitr.remove();
+												}
 
-											if (closePosition.getOpenVolumeCount() == 0) {
-												log.debug(this.getClass().getSimpleName() + ":merge fills - Removing closed outs fills with "
-														+ closePosition.getId() + " loop " + closedFillCount + " with iterator "
-														+ System.identityHashCode(cpitr));
-												closePosition.setPosition(null);
-												closePos.reset();
-												cpitr.remove();
 											}
-											log.debug(this.getClass().getSimpleName() + ":merge fills - Completed close outs with closing fill "
-													+ closePosition.getId() + "   loop " + closedFillCount + " with iterator "
-													+ System.identityHashCode(cpitr));
 										}
+										if (!openPos.hasFills()) {
+											log.debug(this.getClass().getSimpleName() + ":Merge - Opening Position  " + openPos.getId()
+													+ " has not fills so removing  from openingListingPositions "
+													+ System.identityHashCode(openingListingPositions) + "   loop " + closedFillCount + " with iterator "
+													+ System.identityHashCode(cpitr));
+
+											olpitr.remove();
+											openPos.delete();
+										}
+										positionsToPublish.add(openPos);
+										//	publishPositionUpdate(openPos, (openPos.isLong()) ? PositionType.LONG : PositionType.SHORT,
+										//		openPos.getMarket(), 0);
 									}
+
 								}
-							}
-							if (!closePos.hasFills()) {
-								log.debug(this.getClass().getSimpleName() + ":merge fills: Removing position " + closePos.getId() + " from listingPositions "
-										+ listingPositions);
+								log.debug(this.getClass().getSimpleName() + ":merge fills - Completed close outs with closing fill " + closePosition.getId()
+										+ " loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
 
-								lpitr.remove();
-								closePos.delete();
-							}
-							positionsToPublish.add(closePos);
-							//	publishPositionUpdate(closePos, (closePos.isLong()) ? PositionType.LONG : PositionType.SHORT, closePos.getMarket(), 0);
+								if (closePosition.getOpenVolumeCount() == 0) {
+									log.debug(this.getClass().getSimpleName() + ":merge fills - Removing closed outs fills with " + closePosition.getId()
+											+ " loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
+									closePosition.setPosition(null);
+									closePos.reset();
+									cpitr.remove();
+								}
+								log.debug(this.getClass().getSimpleName() + ":merge fills - Completed close outs with closing fill " + closePosition.getId()
+										+ "   loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
 
+							}
 						}
-					}
-					//looop over latest postions and publish out.
 
+						if (!closePos.hasFills()) {
+							log.debug(this.getClass().getSimpleName() + ":merge fills: Removing position " + closePos.getId() + " from listingPositions "
+									+ listingPositions);
+
+							lpitr.remove();
+							closePos.delete();
+						}
+						positionsToPublish.add(closePos);
+						//	publishPositionUpdate(closePos, (closePos.isLong()) ? PositionType.LONG : PositionType.SHORT, closePos.getMarket(), 0);
+
+					}
+
+					//looop over latest postions and publish out.
+					for (Order orderToCancel : ordersToCancel)
+						orderService.handleCancelOrder(orderToCancel);
 					for (Position position : positionsToPublish)
 						publishPositionUpdate(position, (position.isLong()) ? PositionType.LONG : PositionType.SHORT, position.getMarket(), 0);
 					return true;

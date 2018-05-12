@@ -318,7 +318,7 @@ public abstract class Order extends Event {
 	}
 
 	public ContingencyType getContingencyType() {
-		return contingencyType;
+		return (contingencyType == null ? ContingencyType.DEFAULT : contingencyType);
 	}
 
 	public PositionEffect getPositionEffect() {
@@ -587,7 +587,7 @@ public abstract class Order extends Event {
 					fill.getOrder().setPortfolio(parentOrder.getPortfolio());
 				if (fill.getOrder().getParentOrder() != null && fill.getOrder().getParentOrder().getPortfolio().equals(parentOrder.getPortfolio()))
 					fill.getOrder().getParentOrder().setPortfolio(parentOrder.getPortfolio());
-				if (parentOrder.getPortfolio().getPositions().contains(fill.getPosition())) {
+				if (fill.getPosition() != null && parentOrder.getPortfolio().getPositions().contains(fill.getPosition())) {
 					synchronized (parentOrder.getPortfolio()) {
 						for (Position fillPosition : parentOrder.getPortfolio().getPositions()) {
 							if (fillPosition.equals(fill.getPosition())) {

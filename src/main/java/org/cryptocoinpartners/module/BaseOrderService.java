@@ -417,6 +417,11 @@ public abstract class BaseOrderService implements OrderService {
 				if (missingPortfolioOrder.getParentFill() != null && missingPortfolioOrder.getParentFill().getPortfolio().equals(portfolio)
 						&& missingPortfolioOrder.getParentFill().getPortfolio() != (portfolio))
 					missingPortfolioOrder.getParentFill().setPortfolio(portfolio);
+				if (missingPortfolioOrder.getParentFill() != null && missingPortfolioOrder.getParentFill().getOrder() != null
+						&& missingPortfolioOrder.getParentFill().getOrder().getPortfolio().equals(portfolio)
+						&& missingPortfolioOrder.getParentFill().getOrder().getPortfolio() != (portfolio))
+					missingPortfolioOrder.getParentFill().getOrder().setPortfolio(portfolio);
+
 				if (missingPortfolioOrder.getParentFill() != null
 						&& missingPortfolioOrder.getPortfolio().getPositions().contains(missingPortfolioOrder.getParentFill().getPosition())) {
 					synchronized (missingPortfolioOrder.getPortfolio()) {

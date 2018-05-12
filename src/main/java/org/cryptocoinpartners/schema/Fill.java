@@ -748,7 +748,7 @@ public class Fill extends RemoteEvent {
 
 		//   .loadAllChildOrdersByParentOrder()
 
-		if (parentFill.getPortfolio().getPositions().contains(parentFill.getPosition())) {
+		if (parentFill.getPosition() != null && parentFill.getPortfolio().getPositions().contains(parentFill.getPosition())) {
 			synchronized (parentFill.getPortfolio()) {
 
 				for (Position fillPosition : parentFill.getPortfolio().getPositions()) {
