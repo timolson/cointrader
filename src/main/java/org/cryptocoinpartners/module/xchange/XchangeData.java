@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -18,7 +21,9 @@ import javax.inject.Singleton;
 import javax.persistence.NoResultException;
 
 import org.apache.commons.configuration.Configuration;
+import org.cryptocoinpartners.module.ApplicationInitializer;
 import org.cryptocoinpartners.module.Context;
+import org.cryptocoinpartners.schema.Bar;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.BookFactory;
 import org.cryptocoinpartners.schema.Exchange;
@@ -27,6 +32,7 @@ import org.cryptocoinpartners.schema.Market;
 import org.cryptocoinpartners.schema.Prompt;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.schema.TradeFactory;
+import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.RateLimiter;
 import org.cryptocoinpartners.util.XchangeUtil;
@@ -167,6 +173,19 @@ public class XchangeData {
 			failedBookCounts.put(cointraderMarket, 0);
 			retryCounts.put(cointraderMarket, retryCount);
 			logLags.put(cointraderMarket, lagPeriod);
+			//Create queues to perist trades and books.
+			if (!ApplicationInitializer.getMarketTradeQueueMap().containsKey(cointraderMarket)) {
+				ApplicationInitializer.getMarketTradeQueueMap().put(cointraderMarket, new ArrayBlockingQueue<Bar>(queueSize));
+				mergeMarketDataService.submit(context.getInjector().getInstance(ApplicationInitializer.class).new mergeRunnable(
+						ApplicationInitializer.getMarketTradeQueueMap().get(cointraderMarket)));
+			}
+			if (!ApplicationInitializer.getMarketBookQueueMap().containsKey(cointraderMarket)) {
+
+				ApplicationInitializer.getMarketBookQueueMap().put(cointraderMarket, new ArrayBlockingQueue<Bar>(queueSize));
+				mergeMarketDataService.submit(context.getInjector().getInstance(ApplicationInitializer.class).new mergeRunnable(
+						ApplicationInitializer.getMarketBookQueueMap().get(cointraderMarket)));
+				//mergeRunnable runable = new ApplicationInitializer().new mergeRunnable( new ArrayBlockingQueue<Bar>(queueSize));
+			}
 
 			rateLimiter.execute(new FetchTradesRunnable(context, coinTraderExchange, cointraderMarket, rateLimiter));
 		}
@@ -498,6 +517,10 @@ public class XchangeData {
 	private final BookFactory bookFactory;
 	private final boolean orderByTime = true;
 	private final TradeFactory tradeFactory;
+
+	private static int queueSize = ConfigUtil.combined().getInt("db.writer.queue.length", 10000);
+	private static ExecutorService mergeMarketDataService = Executors.newCachedThreadPool();
+
 	//  @Inject
 	//protected EntityManager entityManager;
 	private final HashMap<Market, Long> lastTradeIds = new HashMap<Market, Long>();

@@ -349,6 +349,7 @@ public class Book extends MarketData implements Spread {
 
 		// look for a Chain of Books of the same Market
 		String marketSymbol = this.getMarket().getSymbol();
+		//the chinas use quit a lot of memorry.
 		Chain chain = chains.get(marketSymbol);
 		if (chain == null) {
 			// no chain exists for the Market, so create one

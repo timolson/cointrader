@@ -378,11 +378,13 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					if (dbEntity != null)
 						entity.setVersion(dbEntity.getVersion());
 					entity.setPeristanceAction(PersistanceAction.MERGE);
-					if (entity instanceof Book)
-						application.getMergeBookQueue().put((Book) entity);
-					else if (entity instanceof Trade)
-						application.getMergeTradeQueue().put((Trade) entity);
-					else if (entity instanceof Bar)
+					if (entity instanceof Book) {
+						Book book = (Book) entity;
+						application.getMergeBookQueue(book.getMarket()).put(book);
+					} else if (entity instanceof Trade) {
+						Trade trade = (Trade) entity;
+						application.getMergeTradeQueue(trade.getMarket()).put(trade);
+					} else if (entity instanceof Bar)
 						application.getMergeBarQueue().put((Bar) entity);
 					else
 						application.getMergeQueue().put(entity);
@@ -425,11 +427,13 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 							+ entity.getAttempt() + " of " + retry);
 					//               entity.setRevision(0);
 					entity.setPeristanceAction(PersistanceAction.NEW);
-					if (entity instanceof Book)
-						application.getInsertBookQueue().put((Book) entity);
-					else if (entity instanceof Trade)
-						application.getInsertTradeQueue().put((Trade) entity);
-					else if (entity instanceof Bar)
+					if (entity instanceof Book) {
+						Book book = (Book) entity;
+						application.getInsertBookQueue(book.getMarket()).put(book);
+					} else if (entity instanceof Trade) {
+						Trade trade = (Trade) entity;
+						application.getInsertTradeQueue(trade.getMarket()).put(trade);
+					} else if (entity instanceof Bar)
 						application.getInsertBarQueue().put((Bar) entity);
 					else
 						application.getInsertQueue().put(entity);
@@ -462,11 +466,13 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 						entity.persitParents();
 						entity.prePersist();
 						entity.setPeristanceAction(PersistanceAction.NEW);
-						if (entity instanceof Book)
-							application.getInsertBookQueue().put((Book) entity);
-						else if (entity instanceof Trade)
-							application.getInsertTradeQueue().put((Trade) entity);
-						else if (entity instanceof Bar)
+						if (entity instanceof Book) {
+							Book book = (Book) entity;
+							application.getInsertBookQueue(book.getMarket()).put(book);
+						} else if (entity instanceof Trade) {
+							Trade trade = (Trade) entity;
+							application.getInsertTradeQueue(trade.getMarket()).put(trade);
+						} else if (entity instanceof Bar)
 							application.getInsertBarQueue().put((Bar) entity);
 						else
 							application.getInsertQueue().put(entity);
@@ -501,11 +507,13 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 						entity.setPersisted(true);
 						if (entity.getOriginalEntity() != null)
 							entity.getOriginalEntity().setPersisted(true);
-						if (entity instanceof Book)
-							application.getMergeBookQueue().put((Book) entity);
-						else if (entity instanceof Trade)
-							application.getMergeTradeQueue().put((Trade) entity);
-						else if (entity instanceof Bar)
+						if (entity instanceof Book) {
+							Book book = (Book) entity;
+							application.getMergeBookQueue(book.getMarket()).put(book);
+						} else if (entity instanceof Trade) {
+							Trade trade = (Trade) entity;
+							application.getMergeTradeQueue(trade.getMarket()).put(trade);
+						} else if (entity instanceof Bar)
 							application.getMergeBarQueue().put((Bar) entity);
 						else
 							application.getMergeQueue().put(entity);
@@ -535,10 +543,14 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 						//                     entity.setRevision(0);
 						entity.setPeristanceAction(PersistanceAction.MERGE);
 
-						if (entity instanceof Book)
-							application.getMergeBookQueue().put((Book) entity);
-						else if (entity instanceof Trade)
-							application.getMergeTradeQueue().put((Trade) entity);
+						if (entity instanceof Book) {
+							Book book = (Book) entity;
+							application.getMergeBookQueue(book.getMarket()).put(book);
+						} else if (entity instanceof Trade) {
+							Trade trade = (Trade) entity;
+							application.getMergeTradeQueue(trade.getMarket()).put(trade);
+						}
+
 						else if (entity instanceof Bar)
 							application.getMergeBarQueue().put((Bar) entity);
 						else
@@ -566,10 +578,14 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 								+ " :persist, primary key for version " + entity.getVersion() + "  already present in db with version " + dbEntity.getVersion()
 								+ ". Persist attempt " + entity.getAttempt() + " of " + retry);
 						entity.setPeristanceAction(PersistanceAction.MERGE);
-						if (entity instanceof Book)
-							application.getMergeBookQueue().put((Book) entity);
-						else if (entity instanceof Trade)
-							application.getMergeTradeQueue().put((Trade) entity);
+						if (entity instanceof Book) {
+							Book book = (Book) entity;
+							application.getMergeBookQueue(book.getMarket()).put(book);
+						} else if (entity instanceof Trade) {
+							Trade trade = (Trade) entity;
+							application.getMergeTradeQueue(trade.getMarket()).put(trade);
+						}
+
 						else if (entity instanceof Bar)
 							application.getMergeBarQueue().put((Bar) entity);
 						else
@@ -642,7 +658,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 			for (Book book : books) {
 				if (book != null & !book.isPersisted()) {
 					book.setPeristanceAction(PersistanceAction.NEW);
-					application.getInsertBookQueue().put(book);
+					application.getInsertBookQueue(book.getMarket()).put(book);
 					log.trace("persisting " + book.getClass().getSimpleName() + " id:" + book.getId());
 				}
 			}
@@ -674,7 +690,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 			for (Trade trade : trades) {
 				if (trade != null && !trade.isPersisted()) {
 					trade.setPeristanceAction(PersistanceAction.NEW);
-					application.getInsertTradeQueue().put(trade);
+					application.getInsertTradeQueue(trade.getMarket()).put(trade);
 					log.trace("persisting " + trade.getClass().getSimpleName() + " id:" + trade.getId());
 				}
 			}
@@ -805,12 +821,12 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 			for (Book book : books) {
 				if (book != null && book.isPersisted()) {
 					book.setPeristanceAction(PersistanceAction.MERGE);
-					application.getMergeBookQueue().put(book);
+					application.getMergeBookQueue(book.getMarket()).put(book);
 
 					log.trace("merging " + book.getClass().getSimpleName() + " id:" + book.getId());
 				} else {
 					book.setPeristanceAction(PersistanceAction.NEW);
-					application.getInsertBookQueue().put(book);
+					application.getInsertBookQueue(book.getMarket()).put(book);
 
 					log.trace("persisting " + book.getClass().getSimpleName() + " id:" + book.getId());
 				}
@@ -827,7 +843,7 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 			for (Trade trade : trades) {
 				if (trade != null) {
 					trade.setPeristanceAction(PersistanceAction.MERGE);
-					application.getMergeTradeQueue().put(trade);
+					application.getMergeTradeQueue(trade.getMarket()).put(trade);
 
 					log.trace("merging " + trade.getClass().getSimpleName() + " id:" + trade.getId());
 				}
@@ -1327,10 +1343,14 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					// }
 					entity.prePersist();
 					entity.setPeristanceAction(PersistanceAction.MERGE);
-					if (entity instanceof Book)
-						application.getMergeBookQueue().put((Book) entity);
-					else if (entity instanceof Trade)
-						application.getMergeTradeQueue().put((Trade) entity);
+					if (entity instanceof Book) {
+						Book book = (Book) entity;
+						application.getMergeBookQueue(book.getMarket()).put(book);
+					} else if (entity instanceof Trade) {
+						Trade trade = (Trade) entity;
+						application.getMergeTradeQueue(trade.getMarket()).put(trade);
+					}
+
 					else if (entity instanceof Bar)
 						application.getMergeBarQueue().put((Bar) entity);
 					else
@@ -1387,10 +1407,14 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 							entity.setVersion(dbEntity.getVersion());
 						entity.setPeristanceAction(PersistanceAction.MERGE);
 
-						if (entity instanceof Book)
-							application.getMergeBookQueue().put((Book) entity);
-						else if (entity instanceof Trade)
-							application.getMergeTradeQueue().put((Trade) entity);
+						if (entity instanceof Book) {
+							Book book = (Book) entity;
+							application.getMergeBookQueue(book.getMarket()).put(book);
+						} else if (entity instanceof Trade) {
+							Trade trade = (Trade) entity;
+							application.getMergeTradeQueue(trade.getMarket()).put(trade);
+						}
+
 						else if (entity instanceof Bar)
 							application.getMergeBarQueue().put((Bar) entity);
 						else
@@ -1402,10 +1426,14 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 
 						//
 						entity.setPeristanceAction(PersistanceAction.MERGE);
-						if (entity instanceof Book)
-							application.getMergeBookQueue().put((Book) entity);
-						else if (entity instanceof Trade)
-							application.getMergeTradeQueue().put((Trade) entity);
+						if (entity instanceof Book) {
+							Book book = (Book) entity;
+							application.getMergeBookQueue(book.getMarket()).put(book);
+						} else if (entity instanceof Trade) {
+							Trade trade = (Trade) entity;
+							application.getMergeTradeQueue(trade.getMarket()).put(trade);
+						}
+
 						else if (entity instanceof Bar)
 							application.getMergeBarQueue().put((Bar) entity);
 						else
@@ -1494,10 +1522,14 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 						//                   entity.setRevision(0);
 						entity.prePersist();
 						entity.setPeristanceAction(PersistanceAction.MERGE);
-						if (entity instanceof Book)
-							application.getMergeBookQueue().put((Book) entity);
-						else if (entity instanceof Trade)
-							application.getMergeTradeQueue().put((Trade) entity);
+						if (entity instanceof Book) {
+							Book book = (Book) entity;
+							application.getMergeBookQueue(book.getMarket()).put(book);
+						} else if (entity instanceof Trade) {
+							Trade trade = (Trade) entity;
+							application.getMergeTradeQueue(trade.getMarket()).put(trade);
+						}
+
 						else if (entity instanceof Bar)
 							application.getMergeBarQueue().put((Bar) entity);
 						else
@@ -1529,10 +1561,14 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 						entity.setPersisted(true);
 						if (entity.getOriginalEntity() != null)
 							entity.getOriginalEntity().setPersisted(true);
-						if (entity instanceof Book)
-							application.getMergeBookQueue().put((Book) entity);
-						else if (entity instanceof Trade)
-							application.getMergeTradeQueue().put((Trade) entity);
+						if (entity instanceof Book) {
+							Book book = (Book) entity;
+							application.getMergeBookQueue(book.getMarket()).put(book);
+						} else if (entity instanceof Trade) {
+							Trade trade = (Trade) entity;
+							application.getMergeTradeQueue(trade.getMarket()).put(trade);
+						}
+
 						else if (entity instanceof Bar)
 							application.getMergeBarQueue().put((Bar) entity);
 						else
@@ -1560,10 +1596,14 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 					} else {
 						//     entity.setRevision(0);
 						entity.setPeristanceAction(PersistanceAction.MERGE);
-						if (entity instanceof Book)
-							application.getMergeBookQueue().put((Book) entity);
-						else if (entity instanceof Trade)
-							application.getMergeTradeQueue().put((Trade) entity);
+						if (entity instanceof Book) {
+							Book book = (Book) entity;
+							application.getMergeBookQueue(book.getMarket()).put(book);
+						} else if (entity instanceof Trade) {
+							Trade trade = (Trade) entity;
+							application.getMergeTradeQueue(trade.getMarket()).put(trade);
+						}
+
 						else if (entity instanceof Bar)
 							application.getMergeBarQueue().put((Bar) entity);
 						else
@@ -1590,10 +1630,14 @@ public abstract class DaoJpa implements Dao, java.io.Serializable {
 								entity.setVersion(dbEntity.getVersion());
 						} catch (Exception | Error ex1) {
 							entity.setPeristanceAction(PersistanceAction.MERGE);
-							if (entity instanceof Book)
-								application.getMergeBookQueue().put((Book) entity);
-							else if (entity instanceof Trade)
-								application.getMergeTradeQueue().put((Trade) entity);
+							if (entity instanceof Book) {
+								Book book = (Book) entity;
+								application.getMergeBookQueue(book.getMarket()).put(book);
+							} else if (entity instanceof Trade) {
+								Trade trade = (Trade) entity;
+								application.getMergeTradeQueue(trade.getMarket()).put(trade);
+							}
+
 							else if (entity instanceof Bar)
 								application.getMergeBarQueue().put((Bar) entity);
 							else

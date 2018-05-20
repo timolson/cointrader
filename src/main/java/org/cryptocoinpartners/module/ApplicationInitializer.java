@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.module;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -16,6 +17,7 @@ import org.cryptocoinpartners.schema.Bar;
 import org.cryptocoinpartners.schema.Book;
 import org.cryptocoinpartners.schema.EntityBase;
 import org.cryptocoinpartners.schema.Trade;
+import org.cryptocoinpartners.schema.Tradeable;
 import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.Injector;
 import org.slf4j.Logger;
@@ -39,6 +41,8 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 	private static ListeningExecutorService insertPool = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1));
 	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.applicationInitalizer");
 
+	//private static ExecutorService mergeMarketDataService = Executors.newCachedThreadPool();
+
 	private static ExecutorService mergeService = Executors
 			.newFixedThreadPool(persistanceThreadCount + persistanceBookThreadCount + persistanceTradeThreadCount + persistanceBarThreadCount);
 	private static ExecutorService deleteService = mergeService;
@@ -56,6 +60,9 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 	private static BlockingQueue<Trade> insertTradeQueue = mergeTradeQueue;
 	private static BlockingQueue<Bar> insertBarQueue = mergeBarQueue;
 	private static BlockingQueue<EntityBase> deleteQueue = mergeQueue;
+
+	private static Map<Tradeable, BlockingQueue> marketTradeQueueMap = new HashMap<Tradeable, BlockingQueue>();
+	private static Map<Tradeable, BlockingQueue> marketBookQueueMap = new HashMap<Tradeable, BlockingQueue>();
 
 	//new LinkedBlockingDeque<EntityBase>();;
 	//new LinkedBlockingDeque<EntityBase>();;
@@ -124,6 +131,14 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 		this.insertBarQueue = insertBarQueue;
 	}
 
+	public static Map<Tradeable, BlockingQueue> getMarketBookQueueMap() {
+		return marketBookQueueMap;
+	}
+
+	public static Map<Tradeable, BlockingQueue> getMarketTradeQueueMap() {
+		return marketTradeQueueMap;
+	}
+
 	protected void setMergeBookQueue(BlockingQueue<Book> mergeBookQueue) {
 		this.mergeBookQueue = mergeBookQueue;
 	}
@@ -148,28 +163,28 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 		return mergeQueue;
 	}
 
-	public BlockingQueue<Book> getMergeBookQueue() {
-		return mergeBookQueue;
+	public BlockingQueue<Book> getMergeBookQueue(Tradeable market) {
+		return marketBookQueueMap.get(market);
 	}
 
 	public BlockingQueue<Bar> getMergeBarQueue() {
 		return mergeBarQueue;
 	}
 
-	public BlockingQueue<Trade> getMergeTradeQueue() {
-		return mergeTradeQueue;
+	public BlockingQueue<Trade> getMergeTradeQueue(Tradeable market) {
+		return marketTradeQueueMap.get(market);
 	}
 
 	public BlockingQueue<EntityBase> getInsertQueue() {
 		return insertQueue;
 	}
 
-	public BlockingQueue<Book> getInsertBookQueue() {
-		return insertBookQueue;
+	public BlockingQueue<Book> getInsertBookQueue(Tradeable market) {
+		return marketBookQueueMap.get(market);
 	}
 
-	public BlockingQueue<Trade> getInsertTradeQueue() {
-		return insertTradeQueue;
+	public BlockingQueue<Trade> getInsertTradeQueue(Tradeable market) {
+		return marketTradeQueueMap.get(market);
 	}
 
 	public BlockingQueue<Bar> getInsertBarQueue() {
