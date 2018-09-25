@@ -1,12 +1,13 @@
 
-*** PREANNOUNCING COINTRADER 2 ***
+### PREANNOUNCING COINTRADER 2
 
 I'm currently developing an all-new v2 of Cointrader in Python.  It's not quite ready for initial release, but hopefully in the next month or two an initial version will get posted.
 
 Use this original Cointrader project if you want Java, or if you need something stable _now_.
 
+---
 
-### Coin Trader
+## Coin Trader
 
 [Coin Trader](http://cryptocoinpartners.org) is a Java-based backend for trading cryptocurrencies, released under the Apache License.  It features:
 
