@@ -84,7 +84,7 @@ public class ConsoleNotifications {
 
   @When("select * from Fill")
   private void announceFill(Fill f) {
-    out.println("Filled order " + f.getOrder().getId() + ": " + f);
+    out.println("Filled order " + f.getOrder().getUuid() + ": " + f);
     out.flush();
   }
 

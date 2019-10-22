@@ -20,9 +20,9 @@ import com.google.inject.assistedinject.AssistedInject;
 
 @SuppressWarnings("UnusedDeclaration")
 @Entity
-@Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived"), @Index(columnList = "market"), @Index(columnList = "`interval`") })
+@Table(indexes = { @Index(columnList = "market,time,interval") })
 public class Bar extends MarketData {
-	private long timestamp;
+
 	private Double open;
 	private Double interval;
 	private Double close;
@@ -176,9 +176,10 @@ public class Bar extends MarketData {
 	public String toString() {
 
 		return "Bar(" + System.identityHashCode(this) + ") Start=" + (getTimestamp() != 0 ? (FORMAT.print(getTimestamp())) : "") + SEPARATOR + "Market="
-				+ getMarket() + SEPARATOR + "Interval=" + getInterval() + SEPARATOR + "Open=" + getOpen() + SEPARATOR + "High=" + getHigh() + SEPARATOR + "Low="
-				+ getLow() + SEPARATOR + "Close=" + getClose() + SEPARATOR + "Volume=" + getVolume() + SEPARATOR + "Buy Volume=" + getBuyVolume() + SEPARATOR
-				+ "Sell Volume=" + getSellVolume();
+				+ getMarket() + SEPARATOR + "Interval=" + getInterval() + SEPARATOR + "Open=" + getOpen() * getMarket().getPriceBasis() + SEPARATOR + "High="
+				+ getHigh() * getMarket().getPriceBasis() + SEPARATOR + "Low=" + getLow() * getMarket().getPriceBasis() + SEPARATOR + "Close="
+				+ getClose() * getMarket().getPriceBasis() + SEPARATOR + "Volume=" + getVolume() * getMarket().getVolumeBasis() + SEPARATOR + "Buy Volume="
+				+ getBuyVolume() * getMarket().getVolumeBasis() + SEPARATOR + "Sell Volume=" + getSellVolume() * getMarket().getVolumeBasis();
 	}
 
 	@Override

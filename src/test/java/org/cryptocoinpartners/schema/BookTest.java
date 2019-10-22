@@ -26,7 +26,7 @@ public class BookTest {
         String id = "2af579e1-7b2d-40f5-b341-49ef632e5b7e";
         try {
             Book book = PersistUtil.findById(Book.class, UUID.fromString(id));
-            System.out.println("found " + id + (book.getParent() == null ? " with no parent" : " with parent " + book.getParent().getId()) + ":\n" + book);
+            System.out.println("found " + id + (book.getParent() == null ? " with no parent" : " with parent " + book.getParent().getUuid()) + ":\n" + book);
         } catch (NoResultException e) {
             System.out.println(id + " not found");
         }
@@ -45,7 +45,7 @@ public class BookTest {
         Book parent = b.build();
 
         PersistUtil.insert(parent);
-        System.out.println("saved parent " + parent.getId());
+        System.out.println("saved parent " + parent.getUuid());
 
         b.start(Instant.now(), null, markets.findOrCreate(Exchanges.BITSTAMP, Listing.forSymbol("BTC.USD")));
         b.addBid(new BigDecimal("2.1"), new BigDecimal("1.04"));
@@ -60,7 +60,7 @@ public class BookTest {
         b.addAsk(new BigDecimal("2.82"), new BigDecimal("1.05"));
         Book child = b.build();
         PersistUtil.insert(child);
-        System.out.println("saved child " + child.getId());
+        System.out.println("saved child " + child.getUuid());
 
         b.start(Instant.now(), null, markets.findOrCreate(Exchanges.BITSTAMP, Listing.forSymbol("BTC.USD")));
         b.addBid(new BigDecimal("2.1"), new BigDecimal("1.04"));
@@ -78,7 +78,7 @@ public class BookTest {
         child = b.build();
 
         PersistUtil.insert(child);
-        System.out.println("saved grandchild " + child.getId());
+        System.out.println("saved grandchild " + child.getUuid());
         PersistUtil.shutdown();
     }
 

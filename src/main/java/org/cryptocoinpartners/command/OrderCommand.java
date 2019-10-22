@@ -59,6 +59,8 @@ public abstract class OrderCommand extends AntlrCommandBase {
 		//FillType.STOP_LOSS
 		volume = (isSell && volume.compareTo(BigDecimal.ZERO) > 0) ? volume.negate() : volume;
 		GeneralOrder order = generalOrderFactory.create(context.getTime(), portfolio, market, volume, FillType.MARKET);
+		order.withExecutionInstruction(ExecutionInstruction.TAKER);
+
 		if (limit != null) {
 			long limitCount = DiscreteAmount.roundedCountForBasis(limit, market.getPriceBasis());
 			order.withLimitPrice(limit);
@@ -85,11 +87,12 @@ public abstract class OrderCommand extends AntlrCommandBase {
 		// GeneralOrder longOrder = generalOrderFactory.create(context.getTime(), portfolio, market, orderDiscrete.asBigDecimal(), FillType.STOP_LOSS);
 
 		GeneralOrder order = generalOrderFactory.create(context.getTime(), portfolio, listing, volume, FillType.MARKET);
-
+		order.withExecutionInstruction(ExecutionInstruction.TAKER);
 		if (limit != null) {
 			order.withFillType(FillType.LIMIT);
 
 			order.withLimitPrice(limit);
+
 		}
 
 		if (stop != null) {

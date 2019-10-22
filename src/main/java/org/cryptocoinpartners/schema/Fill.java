@@ -87,7 +87,7 @@ public class Fill extends RemoteEvent {
 	public Fill(@Assisted SpecificOrder order, @Assisted("fillTime") Instant time, @Assisted("fillTimeReceived") Instant timeReceived, @Assisted Market market,
 			@Assisted("fillPriceCount") long priceCount, @Assisted("fillVolumeCount") long volumeCount, @Assisted String remoteKey) {
 		super(time, timeReceived, remoteKey);
-		this.getId();
+		this.getUuid();
 		this.fillChildOrders = new CopyOnWriteArrayList<Order>();
 		this.transactions = new CopyOnWriteArrayList<Transaction>();
 		this.priceCount = priceCount;
@@ -99,6 +99,7 @@ public class Fill extends RemoteEvent {
 		synchronized (order) {
 			this.order.addFill(this);
 		}
+		this.orderGroup = order.getOrderGroup();
 		this.remoteKey = remoteKey;
 		this.market = market;
 		this.portfolio = order.getPortfolio();
@@ -123,7 +124,7 @@ public class Fill extends RemoteEvent {
 	public Fill(@Assisted SpecificOrder order, @Assisted Instant time, @Assisted Instant timeReceived, @Assisted Market market, @Assisted long priceCount,
 			@Assisted long volumeCount, @Assisted Amount commission, @Assisted String remoteKey) {
 		super(time, timeReceived, remoteKey);
-		this.getId();
+		this.getUuid();
 		this.fillChildOrders = new CopyOnWriteArrayList<Order>();
 		this.transactions = new CopyOnWriteArrayList<Transaction>();
 		this.remoteKey = remoteKey;
@@ -131,6 +132,7 @@ public class Fill extends RemoteEvent {
 		synchronized (order) {
 			this.order.addFill(this);
 		}
+		this.orderGroup = order.getOrderGroup();
 		this.market = market;
 
 		this.priceCount = priceCount;
@@ -178,7 +180,7 @@ public class Fill extends RemoteEvent {
 			this.setPeristanceAction(PersistanceAction.MERGE);
 
 			this.setRevision(this.getRevision() + 1);
-			log.debug("Fill - Merge : Merge of Fill " + this.getId() + " OpenVolumeCount:" + this.getOpenVolumeCount() + " called from class "
+			log.debug("Fill - Merge : Merge of Fill " + this.getUuid() + " OpenVolumeCount:" + this.getOpenVolumeCount() + " called from class "
 					+ Thread.currentThread().getStackTrace()[2]);
 
 			fillDao.merge(this);
@@ -196,7 +198,7 @@ public class Fill extends RemoteEvent {
 
 	@Override
 	public synchronized EntityBase refresh() {
-		log.debug("Fill - Refresh : Refresh of Fill " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+		log.debug("Fill - Refresh : Refresh of Fill " + this.getUuid() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 
 		return fillDao.refresh(this);
 	}
@@ -227,7 +229,7 @@ public class Fill extends RemoteEvent {
 		//    childOrder.p
 		//  childOrder.persit();
 		// try {
-		log.debug("Fill - Persist : Persit of Fill " + this.getId() + " OpenVolumeCount:" + this.getOpenVolumeCount() + " called from class "
+		log.debug("Fill - Persist : Persit of Fill " + this.getUuid() + " OpenVolumeCount:" + this.getOpenVolumeCount() + " called from class "
 				+ Thread.currentThread().getStackTrace()[2]);
 		fillDao.persist(this);
 		//  } catch (Exception | Error ex) {
@@ -631,16 +633,19 @@ public class Fill extends RemoteEvent {
 		// + (order.getId() != null ? order.getId() : "")
 		//   + (getFillType() != null ? getFillType() : "")
 		// getVolume()
-		return "Id=" + (getId() != null ? getId() : "") + SEPARATOR + "version=" + getVersion() + SEPARATOR + "revision=" + getRevision() + SEPARATOR + "time="
-				+ (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "PositionType=" + (getPositionType() != null ? getPositionType() : "")
-				+ SEPARATOR + "Market=" + (market != null ? market : "") + SEPARATOR + "Price=" + (getPrice() != null ? getPrice() : "") + SEPARATOR + "Volume="
-				+ (getVolume() != null ? getVolume() : "") + SEPARATOR + "Unfilled Volume=" + (hasChildren() ? getUnfilledVolume() : "") + SEPARATOR
-				+ "Open Volume=" + (getOpenVolume() != null ? getOpenVolume() : "") + SEPARATOR + "Open Volume Count=" + getOpenVolumeCount() + SEPARATOR
-				+ "Position Effect=" + (getPositionEffect() != null ? getPositionEffect() : "") + SEPARATOR + "Position="
-				+ (getPosition() != null ? getPosition().getId() : "") + SEPARATOR + "Comment="
+		return "Id=" + (getId() != null ? getId() : "") + SEPARATOR + "UUId=" + (getUuid() != null ? getUuid() : "") + SEPARATOR + "version=" + getVersion()
+				+ SEPARATOR + "revision=" + getRevision() + SEPARATOR + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR
+				+ "PositionType=" + (getPositionType() != null ? getPositionType() : "") + SEPARATOR + "Market=" + (market != null ? market : "") + SEPARATOR
+				+ "Price=" + (getPrice() != null ? getPrice() : "") + SEPARATOR + "Volume=" + (getVolume() != null ? getVolume() : "") + SEPARATOR
+				+ "Unfilled Volume=" + (hasChildren() ? getUnfilledVolume() : "") + SEPARATOR + "Open Volume="
+				+ (getOpenVolume() != null ? getOpenVolume() : "") + SEPARATOR + "Open Volume Count=" + getOpenVolumeCount() + SEPARATOR + "Commission="
+				+ (getCommission() != null ? getCommission() : "") + SEPARATOR + "Position Effect=" + (getPositionEffect() != null ? getPositionEffect() : "")
+				+ SEPARATOR + "Position=" + (getPosition() != null ? getPosition().getId() + "/" + getPosition().getId() : "") + SEPARATOR + "Comment="
 				+ (getOrder() != null && getOrder().getComment() != null ? getOrder().getComment() : "") + SEPARATOR + "Order="
-				+ (getOrder() != null ? getOrder().getId() : "") + SEPARATOR + "Order group=" + (getOrder() != null ? getOrder().getOrderGroup() : "")
-				+ SEPARATOR + "Parent Fill=" + ((getOrder() != null && getOrder().getParentFill() != null) ? getOrder().getParentFill().getId() : "");
+				+ (getOrder() != null ? getOrder().getId() + "/" + getOrder().getUuid() : "") + SEPARATOR + "Order group=" + getOrderGroup() + SEPARATOR
+				+ "Parent Fill="
+				+ ((getOrder() != null && getOrder().getParentFill() != null) ? getOrder().getParentFill().getId() + "/" + getOrder().getParentFill().getUuid()
+						: "");
 	}
 
 	// JPA
@@ -725,22 +730,22 @@ public class Fill extends RemoteEvent {
 		Fill fillWithTransactions;
 
 		// Set test = new HashSet();
-		log.trace("Fill:loadAllChildOrdersByFill loading child order for fill " + parentFill.getId() + ". Calling class "
+		log.trace("Fill:loadAllChildOrdersByFill loading child order for fill " + parentFill.getUuid() + ". Calling class "
 				+ Thread.currentThread().getStackTrace()[2]);
 		try {
-			log.trace("Fill:loadAllChildOrdersByFill loading child order for parent order: " + parentFill.getOrder().getId() + "/"
-					+ System.identityHashCode(parentFill.getOrder()) + " of fill " + parentFill.getId() + ". Calling class ");
+			log.trace("Fill:loadAllChildOrdersByFill loading child order for parent order: " + parentFill.getOrder().getUuid() + "/"
+					+ System.identityHashCode(parentFill.getOrder()) + " of fill " + parentFill.getUuid() + ". Calling class ");
 
 			parentFill.getOrder().loadAllChildOrdersByParentOrder(parentFill.getOrder(), orders, fills);
 
-			log.trace("Fill:loadAllChildOrdersByFill order children for parent fill: " + parentFill.getId() + ". Calling class ");
+			log.trace("Fill:loadAllChildOrdersByFill order children for parent fill: " + parentFill.getUuid() + ". Calling class ");
 
 			fillWithChildren = EM.namedQueryZeroOne(Fill.class, "Fill.findFill", withChildOrderHints, parentFill.getId());
 			fillWithTransactions = EM.namedQueryZeroOne(Fill.class, "Fill.findFill", withTransactionsHints, parentFill.getId());
 			//   orderWithChildren = EM.namedQueryZeroOne(Order.class, "Fill.findFill", withChildOrderHints, parentFill.getOrder());
 
 		} catch (Error | Exception ex) {
-			log.error("Fill:loadAllChildOrdersByFill unable to get fill for fillID: " + parentFill.getId(), ex);
+			log.error("Fill:loadAllChildOrdersByFill unable to get fill for fillID: " + parentFill.getUuid(), ex);
 			return;
 		}
 
@@ -760,12 +765,12 @@ public class Fill extends RemoteEvent {
 			}
 		}
 
-		if (fillWithChildren != null && fillWithChildren.getFillChildOrders() != null && fillWithChildren.getId().equals(parentFill.getId())
+		if (fillWithChildren != null && fillWithChildren.getFillChildOrders() != null && fillWithChildren.getUuid().equals(parentFill.getUuid())
 				&& Hibernate.isInitialized(fillWithChildren.getFillChildOrders())) {
 			int index = 0;
 			for (Order order : fillWithChildren.getFillChildOrders()) {
-				log.debug("Fill:loadAllChildOrdersByFill loading child order " + order.getId() + "/" + System.identityHashCode(order) + " for fill "
-						+ parentFill.getId());
+				log.debug("Fill:loadAllChildOrdersByFill loading child order " + order.getUuid() + "/" + System.identityHashCode(order) + " for fill "
+						+ parentFill.getUuid());
 
 				if (order.getPortfolio().equals(parentFill.getPortfolio()))
 					order.setPortfolio(parentFill.getPortfolio());
@@ -791,23 +796,23 @@ public class Fill extends RemoteEvent {
 				int myHash = System.identityHashCode(orders.get(order));
 				if (!orders.containsKey(order)) {
 					orders.put(order, order);
-					log.info("Fill:loadAllChildOrdersByFill Order not in order map, loading child order from database " + order.getId() + "/"
-							+ System.identityHashCode(order) + " for fill " + parentFill.getId());
+					log.info("Fill:loadAllChildOrdersByFill Order not in order map, loading child order from database " + order.getUuid() + "/"
+							+ System.identityHashCode(order) + " for fill " + parentFill.getUuid());
 					order.loadAllChildOrdersByParentOrder(order, orders, fills);
 
 				}
-				log.debug("Fill:loadAllChildOrdersByFill setting child order index " + index + " to order  " + order.getId() + " / " +
+				log.debug("Fill:loadAllChildOrdersByFill setting child order index " + index + " to order  " + order.getUuid() + " / " +
 
-						System.identityHashCode(order) + " for fill" + parentFill.getId() + " /" + System.identityHashCode(parentFill));
+						System.identityHashCode(order) + " for fill" + parentFill.getUuid() + " /" + System.identityHashCode(parentFill));
 				fillWithChildren.getFillChildOrders().set(index, orders.get(order));
-				log.debug("Fill:loadAllChildOrdersByFill setting parent fill to " + parentFill.getId() + " / " + System.identityHashCode(parentFill)
-						+ " for order " + order.getId() + " / " + System.identityHashCode(order));
+				log.debug("Fill:loadAllChildOrdersByFill setting parent fill to " + parentFill.getUuid() + " / " + System.identityHashCode(parentFill)
+						+ " for order " + order.getUuid() + " / " + System.identityHashCode(order));
 				orders.get(order).setParentFill(parentFill);
 
 				index++;
 			}
-			log.debug(
-					"Fill:loadAllChildOrdersByFill setting children to " + fillWithChildren.getFillChildOrders().hashCode() + " for fill" + parentFill.getId());
+			log.debug("Fill:loadAllChildOrdersByFill setting children to " + fillWithChildren.getFillChildOrders().hashCode() + " for fill"
+					+ parentFill.getUuid());
 
 			parentFill.setFillChildOrders(fillWithChildren.getFillChildOrders());
 		} else
@@ -820,19 +825,19 @@ public class Fill extends RemoteEvent {
 			getOrder().setPortfolio(parentFill.getPortfolio());
 
 			orders.put(order, order);
-			log.debug("Fill:loadAllChildOrdersByFill order:" + getOrder().getId() + "/" + System.identityHashCode(getOrder())
-					+ " not in order map, loading child orders  for fill" + parentFill.getId());
+			log.debug("Fill:loadAllChildOrdersByFill order:" + getOrder().getUuid() + "/" + System.identityHashCode(getOrder())
+					+ " not in order map, loading child orders  for fill" + parentFill.getUuid());
 
 			//System.out.println(" loading child order for " + order.getId());
 			getOrder().loadAllChildOrdersByParentOrder(getOrder(), orders, fills);
 		}
 
 		if (fillWithTransactions != null && fillWithTransactions.getTransactions() != null && Hibernate.isInitialized(fillWithTransactions.getTransactions())
-				&& fillWithTransactions.getId().equals(parentFill.getId())) {
+				&& fillWithTransactions.getUuid().equals(parentFill.getUuid())) {
 
 			for (Transaction transaction : fillWithTransactions.getTransactions()) {
-				log.debug("Fill:loadAllChildOrdersByFill loading transactions " + transaction.getId() + "/" + System.identityHashCode(order) + " for fill "
-						+ parentFill.getId());
+				log.debug("Fill:loadAllChildOrdersByFill loading transactions " + transaction.getUuid() + "/" + System.identityHashCode(order) + " for fill "
+						+ parentFill.getUuid());
 
 				if (transaction.getPortfolio().equals(parentFill.getPortfolio()))
 					transaction.setPortfolio(parentFill.getPortfolio());
@@ -1001,13 +1006,14 @@ public class Fill extends RemoteEvent {
 		//   + Thread.currentThread().getStackTrace()[2]);
 		// for (StackTraceElement element : Thread.currentThread().getStackTrace())
 		//   log.debug(element.toString());
-		this.openVolume = null;
+
 		/*		if (this.position != null)
 					this.position.reset();
 		*/ if (this.openVolumeCount == null)
 			this.openVolumeCount = new AtomicLong(openVolumeCount);
 		else
 			this.openVolumeCount.set(openVolumeCount);
+		this.openVolume = null;
 
 	}
 
@@ -1043,6 +1049,14 @@ public class Fill extends RemoteEvent {
 
 	}
 
+	public double getOrderGroup() {
+		return orderGroup;
+	}
+
+	public synchronized void setOrderGroup(double orderGroup) {
+		this.orderGroup = orderGroup;
+	}
+
 	private List<Order> fillChildOrders;
 	private SpecificOrder order;
 	private Market market;
@@ -1066,10 +1080,11 @@ public class Fill extends RemoteEvent {
 	private List<Transaction> transactions;
 	private Portfolio portfolio;
 	private Position position;
+	private double orderGroup;
 
 	@Override
 	public synchronized void delete() {
-		log.debug("Fill - Delete : Delete of Fill " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+		log.debug("Fill - Delete : Delete of Fill " + this.getUuid() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 		// TODO Auto-generated method stub
 
 	}

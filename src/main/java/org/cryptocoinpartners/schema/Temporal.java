@@ -20,7 +20,7 @@ public abstract class Temporal extends EntityBase {
 
 	public Temporal(Instant time) {
 		super();
-		this.id = getId();
+		this.uuid = getUuid();
 		this.time = time;
 		this.dateTime = time.toDate();
 		this.timestamp = time.getMillis();
@@ -30,6 +30,7 @@ public abstract class Temporal extends EntityBase {
 
 	/** For Events, this is the time the Event itself occured, not the time we received the Event.  It should be remote
 	 * server time if available, and local time if the object was created locally */
+
 	@Type(type = "org.jadira.usertype.dateandtime.joda.PersistentInstantAsMillisLong")
 	@Basic(optional = false)
 	public Instant getTime() {

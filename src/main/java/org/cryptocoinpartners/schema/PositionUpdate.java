@@ -125,7 +125,7 @@ public class PositionUpdate extends Event {
 	@Override
 	public String toString() {
 
-		return "PositionUpdate{ id=" + getId() + SEPARATOR + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Type=" + getType()
+		return "PositionUpdate{ id=" + getUuid() + SEPARATOR + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Type=" + getType()
 				+ SEPARATOR + "Last Type=" + (getLastType() == null ? "null" : getLastType()) + SEPARATOR + "market={"
 				+ (getMarket() == null ? "null}" : getMarket() + "}") + SEPARATOR + "Interval=" + (getInterval() == 0 ? "null" : getInterval()) + SEPARATOR
 				+ "position=" + getPosition() + "}";

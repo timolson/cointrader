@@ -196,6 +196,10 @@ public interface OrderService {
 
 	Order triggerOrder(Market market, Order triggeredOrder, String comment);
 
+	Collection<SpecificOrder> getPendingLongOrders(Tradeable tradeable);
+
+	Collection<SpecificOrder> getPendingShortOrders(Tradeable tradeable);
+
 	// CountDownLatch getFillProcessingLatch();
 
 }

@@ -1,18 +1,19 @@
 package org.cryptocoinpartners.schema;
 
 import javax.annotation.Nullable;
-import javax.persistence.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.MappedSuperclass;
 
 import org.joda.time.Instant;
 
 /**
  * @author Tim Olson
  */
-@Entity
+
+@MappedSuperclass
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 //ce(strategy = InheritanceType.TABLE_PER_CLASS)
 //@Cacheable(false)

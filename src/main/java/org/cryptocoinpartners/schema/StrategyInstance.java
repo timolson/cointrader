@@ -62,6 +62,11 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
 		return (Strategy) strategy;
 	}
 
+	@Transient
+	public void setStrategy(Object strategy) {
+		this.strategy = strategy;
+	}
+
 	@ElementCollection
 	public Map<String, String> getConfig() {
 		return config;
@@ -72,106 +77,56 @@ public class StrategyInstance extends PortfolioManager implements Context.Attach
 		// attach the actual Strategy instead of this StrategyInstance
 		// Set ourselves as the StrategyInstance
 		//      context.loadStatements("BasicPortfolioService");
-		// portfolio = null;
-		strategy = context.attach(moduleName, new MapConfiguration(config), new Module()
 
-		{
+		portfolio = Portfolio.findOrCreate(getModuleName(), context);
+		if (portfolio == null) {
+			portfolio = context.getInjector().getInstance(Portfolio.class);
+			portfolio.setName(getModuleName());
+			portfolio.persit();
+		} else {
+			portfolio.setPersisted(true);
+			log.info(this.getClass().getSimpleName() + ":afterAttach - " + context.getInjector().getInstance(Portfolio.class)
+					+ " attched to injector. Binding portfolio:" + portfolio);
+			context.getInjector().injectMembers(portfolio);
+			log.info(this.getClass().getSimpleName() + ":afterAttach - " + context.getInjector().getInstance(Portfolio.class)
+					+ " attched to injector. Bound portfolio:" + portfolio);
+		}
+		// set base currency
+		if (portfolio.getBaseAsset() == null) {
+			Asset baseAsset = Asset.forSymbol(portfolio.getContext().getConfig().getString("base.symbol", "USD"));
+			portfolio.setBaseAsset(baseAsset);
+		}
+		if (portfolio.getBaseNotionalBalanceCount() == 0) {
+			DiscreteAmount baseNotionalBalance = new DiscreteAmount(
+					(long) (ConfigUtil.combined().getLong("base.notional.balance", 100000) / (portfolio.getBaseAsset().getBasis())),
+					portfolio.getBaseAsset().getBasis());
+			portfolio.setBaseNotionalBalanceCount(baseNotionalBalance.getCount());
+			portfolio.getBaseNotionalBalance();
+		}
+		if (portfolio.getStartingBaseNotionalBalanceCount() == 0) {
+			DiscreteAmount baseNotionalBalance = new DiscreteAmount(
+					(long) (ConfigUtil.combined().getLong("base.notional.balance", 100000) / (portfolio.getBaseAsset().getBasis())),
+					portfolio.getBaseAsset().getBasis());
+			portfolio.setStartingBaseNotionalBalanceCount(baseNotionalBalance.getCount());
+			portfolio.getStartingBaseNotionalBalance();
+		}
+		portfolio.merge();
+		StrategyInstance.this.setPortfolio(portfolio);
+		if (getStrategy() != null)
+			getStrategy().setPortfolio(portfolio);
+		context.getInjector().injectMembers(StrategyInstance.this);
+		portfolio.setManager(StrategyInstance.this);
+		portfolioService = context.getInjector().getInstance(PortfolioService.class);
+		portfolioService.addPortfolio(portfolio);
+		strategy = context.attach(moduleName, new MapConfiguration(config), new Module() {
 			@Override
 			public void configure(Binder binder) {
-				//  binder.install(new FactoryModuleBuilder().build(GeneralOrderFactory.class));
-				//   binder.install(new FactoryModuleBuilder().build(SpecificOrderFactory.class));
-				//  binder.bind(Dao.class).to(DaoJpa.class);
-
+				binder.bind(Portfolio.class).toInstance(portfolio);
 				binder.bind(StrategyInstance.class).toInstance(StrategyInstance.this);
-				//  binder.bind(Dao.class).to(DaoJpa.class);
-
-				// portfolio = context.getInjector().getInstance(Portfolio.class);b                
-				portfolio = Portfolio.findOrCreate(getModuleName(), context);
-				//  boolean cahced = PersistUtil.cached(portfolio);
-				if (portfolio == null) {
-					// portfolio = portfolioFactory.create(getModuleName(), StrategyInstance.this);
-					portfolio = context.getInjector().getInstance(Portfolio.class);
-
-					portfolio.setName(getModuleName());
-					//  EM.persist(portfolio);
-					portfolio.persit();
-					//EM.persist(portfolio);
-
-					// StrategyInstance.this.setPortfolio(portfolio);
-
-					// EM.persist(portfolio);
-
-					//EM.persist(portfolio);
-
-					// PersistUtil.insert(portfolio);
-				}
-
-				else {
-					portfolio.setPersisted(true);
-					context.getInjector().injectMembers(portfolio);
-
-					binder.bind(Portfolio.class).toInstance(portfolio);
-				}
-				// set base currency
-				if (portfolio.getBaseAsset() == null) {
-					Asset baseAsset = Asset.forSymbol(portfolio.getContext().getConfig().getString("base.symbol", "USD"));
-
-					portfolio.setBaseAsset(baseAsset);
-
-				}
-				if (portfolio.getBaseNotionalBalanceCount() == 0) {
-
-					DiscreteAmount baseNotionalBalance = new DiscreteAmount(
-							(long) (ConfigUtil.combined().getLong("base.notional.balance", 100000) / (portfolio.getBaseAsset().getBasis())),
-							portfolio.getBaseAsset().getBasis());
-
-					portfolio.setBaseNotionalBalanceCount(baseNotionalBalance.getCount());
-					portfolio.getBaseNotionalBalance();
-
-				}
-				if (portfolio.getStartingBaseNotionalBalanceCount() == 0) {
-
-					DiscreteAmount baseNotionalBalance = new DiscreteAmount(
-							(long) (ConfigUtil.combined().getLong("base.notional.balance", 100000) / (portfolio.getBaseAsset().getBasis())),
-							portfolio.getBaseAsset().getBasis());
-
-					portfolio.setStartingBaseNotionalBalanceCount(baseNotionalBalance.getCount());
-					portfolio.getStartingBaseNotionalBalance();
-
-				}
-
-				/* if (portfolio.getBaseTradingBalanceCount() == 0) {
-				
-				     DiscreteAmount baseTradingBalance = new DiscreteAmount((long) (ConfigUtil.combined().getLong("base.trading.balance", 10000) / (portfolio
-				             .getBaseAsset().getBasis())), portfolio.getBaseAsset().getBasis());
-				
-				     portfolio.setBaseTradingBalanceCount(baseTradingBalance.getCount());
-				     portfolio.getBaseTradingBalance();
-				     portfolio.merge();
-				 }
-				*/
-				portfolio.merge();
-				StrategyInstance.this.setPortfolio(portfolio);
-
-				//  portfolio = context.getInjector().getInstance(Portfolio.class);
-				//portfolio.setName(getModuleName());
-				// portfolio.setManager(StrategyInstance.this);
-				// binder.bind(Portfolio.class).toInstance(portfolio);
-
-				portfolioService = context.getInjector().getInstance(PortfolioService.class);
-				portfolioService.addPortfolio(portfolio);
-				//  portfolio.setName(getModuleName());
-				//  portfolio.setManager(this);
-				// binder.bind(Portfolio.class).toInstance(context.getInjector().getInstance(Portfolio.class));
-				// binder.bind(PortfolioService.class).toInstance(context.getInjector().getInstance(PortfolioService.class));
-
-				//              context.loadStatements("Portfolio");
-
-				// Need to rebuild state.
-
 			}
 		});
-		((Strategy) strategy).setPortfolio(portfolio);
+
+		//((Strategy) strategy).setPortfolio(portfolio);
 
 	}
 

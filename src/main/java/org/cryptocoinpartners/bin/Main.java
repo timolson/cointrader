@@ -42,13 +42,13 @@ public class Main {
 		boolean help;
 
 		@Parameter(names = { "-f", "-properties-file" }, description = "location of the cointrader.properties config file")
-		String propertiesFilename = DEFAULT_PROPERTIES_FILENAME;
+		public String propertiesFilename = DEFAULT_PROPERTIES_FILENAME;
 
 		@DynamicParameter(names = { "-D" }, description = "use the -D flag to set configuration properties \"-Ddb.username=dbuser\"")
-		Map<String, String> definitions = new HashMap<>();
+		public Map<String, String> definitions = new HashMap<>();
 	}
 
-	static class MainParamsOnly extends MainParams {
+	public static class MainParamsOnly extends MainParams {
 		@Parameter
 		List<String> everythingElseIgnored;
 	}

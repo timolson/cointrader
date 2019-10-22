@@ -12,6 +12,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.cryptocoinpartners.enumeration.FillType;
@@ -28,6 +29,7 @@ import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.OrderUpdate;
 import org.cryptocoinpartners.schema.SpecificOrder;
 import org.cryptocoinpartners.schema.Trade;
+import org.cryptocoinpartners.schema.TradeFactory;
 import org.cryptocoinpartners.schema.Tradeable;
 import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.EM;
@@ -44,7 +46,8 @@ public class MockOrderService extends BaseOrderService {
 	// static Double doubleSlippage = ConfigUtil.combined().getDouble("mock.exchange.slippage", 0.02);
 	private static double slippage = ConfigUtil.combined().getDouble("mock.exchange.slippage", 0.002);
 	protected final Lock updateOrderBookLock = new ReentrantLock();
-
+	@Inject
+	protected transient TradeFactory tradeFactory;
 	// Object orderProcessingLock;
 
 	// protected final Lock orederMatchingLock = new ReentrantLock();
@@ -61,9 +64,13 @@ public class MockOrderService extends BaseOrderService {
 		addOrder(specificOrder);
 
 		updateOrderState(specificOrder, OrderState.PLACED, true);
-		//	updateBook((quotes.getLastBook(specificOrder.getMarket()) == null ? quotes.getLastTrade(specificOrder.getMarket())
+
+		//	updateBook((quotes.getLastBook(specifcOrder.getMarket()) == null ? quotes.getLastTrade(specificOrder.getMarket())
 		//			: quotes.getLastBook(specificOrder.getMarket())));
 		specificOrder.merge();
+
+		//			: quotes.getLastBook(specificOrder.getMarket())));
+		//now we need to check if it can be filled
 
 		//TODO when placing the order it is on the same listener so it needs to be routed.
 
@@ -89,9 +96,8 @@ public class MockOrderService extends BaseOrderService {
 	@SuppressWarnings("ConstantConditions")
 	// @When("@Priority(9) select * from Book(Book.market in (TrendStrategy.getMarkets()), TrendStrategy.getMarketAllocation(Book.market)>0, Book.bidVolumeAsDouble>0, Book.askVolumeAsDouble<0 )")
 	// @When("@Priority(9) select * from Book")
-	@When("@Priority(8) @Audit select * from LastBookWindow(market.synthetic=false)")
-	private void handleBook(Book b) {
-		log.trace("handleBook: Book Recieved: " + b);
+	@When("@Priority(9) @Audit select * from LastBookWindow(market.synthetic=false,market in (BaseStrategy.getMarkets()))")
+	public void handleBook(Book b) {
 		//mockOrderService.submit(new updateBookRunnable(b));
 		updateBook(b);
 		//mockOrderService.submit(new updateBookRunnable(b));
@@ -99,11 +105,10 @@ public class MockOrderService extends BaseOrderService {
 	}
 
 	@SuppressWarnings("ConstantConditions")
-	@When("@Priority(8)  @Audit select * from LastTradeWindow")
-	private void handleTrade(Trade t) {
+	@When("@Priority(9)  @Audit select * from LastTradeWindow(market in (BaseStrategy.getMarkets()))")
+	public void handleTrade(Trade t) {
 		if (t.getMarket() == null || (t.getMarket() != null && t.getMarket().isSynthetic()))
 			return;
-		log.trace("handleTrade: Book Recieved: " + t);
 		updateBook(t);
 		//mockOrderService.submit(new updateBookRunnable(t));
 	}
@@ -150,12 +155,14 @@ public class MockOrderService extends BaseOrderService {
 				t = (Trade) event;
 
 				//if Trade is a sell then it must have big the ask
+				//Someone has sold, so this would has bit the bid
 				if (t.getVolume().isNegative()) {
 					Offer bestBid = new Offer(market, t.getTime(), t.getTimeReceived(), t.getPrice().getCount(), t.getVolume().negate().getCount());
-					asks.add(bestBid);
+					bids.add(bestBid);
+
 				} else {
 					Offer bestAsk = new Offer(market, t.getTime(), t.getTimeReceived(), t.getPrice().getCount(), t.getVolume().negate().getCount());
-					bids.add(bestAsk);
+					asks.add(bestAsk);
 
 				}
 			}
@@ -164,7 +171,7 @@ public class MockOrderService extends BaseOrderService {
 
 			// todo multiple Orders may be filled with the same Offer.  We should deplete the Offers as we fill
 			// we will loop over the orders that are looking to buy against the sell orders from the book i.e. the asks.
-			if (asks != null && pendingOrders.get(market).get(TransactionType.BUY) != null) {
+			if (asks != null && (pendingOrders.get(market).get(TransactionType.BUY) != null && !pendingOrders.get(market).get(TransactionType.BUY).isEmpty())) {
 				try {
 
 					synchronized (pendingOrders.get(market).get(TransactionType.BUY)) {
@@ -180,7 +187,7 @@ public class MockOrderService extends BaseOrderService {
 									continue;
 								}
 								if (order.getMarket().equals(market) && (order.getTimestamp() <= event.getTimestamp())) {
-									log.trace(this.getClass().getSimpleName() + ":UpdateBook - determining fills for buy order " + order.getId() + "/"
+									log.trace(this.getClass().getSimpleName() + ":UpdateBook - determining fills for buy order " + order.getUuid() + "/"
 											+ System.identityHashCode(this) + " with working volume " + order.getUnfilledVolumeCount());
 									synchronized (event) {
 										Set<Offer> asksToRemove = new HashSet<Offer>();
@@ -194,21 +201,34 @@ public class MockOrderService extends BaseOrderService {
 														&& (order.getLimitPrice() != null && ask != null
 																&& order.getLimitPrice().getCount() < ask.getPriceCount()))) {
 													log.trace(this.getClass().getSimpleName() + ":UpdateBook - ask price " + ask + " greater than limit price "
-															+ order.getLimitPrice() + " for order " + order.getId());
+															+ order.getLimitPrice() + " for order " + order.getUuid());
 													break BIDORDERSLOOP;
 												}
+												//
+												//long buyOrderVolumeCount = order.getUnfilledVolumeCount();
+
 												if (t != null) {
 													log.debug("filled by a trade");
 												}
 
 												long buyFillVolume = Math.min(Math.abs(ask.getVolumeCount()), Math.abs(order.getUnfilledVolumeCount()));
-
 												long slippageDiff = Math.round(ask.getPriceCount() * slippage);
-												long fillPriceCount = Math.min(order.getLimitPrice().getCount(), (ask.getPriceCount() + slippageDiff));
-												log.debug(this.getClass().getSimpleName() + ":updateBook - Creating fill with ask " + ask + " for order "
-														+ order + " with fills " + order.getFills());
+												if (order.getLimitPrice() == null)
+													log.debug("tests");
+												//we are buying
+												long fillPriceCount = (ask.getPriceCount() + slippageDiff);
+
+												log.debug(this.getClass().getSimpleName() + ":updateBook - Calculated fillPriceCount=" + fillPriceCount
+														+ ", limitPrice=" + order.getLimitPrice() + ", limitPriceCount=" + order.getLimitPrice().getCount()
+														+ " , ask=" + ask + " , askCount=" + ask.getPriceCount() + ", slippageDiff=" + slippageDiff);
+
+												log.debug(this.getClass().getSimpleName() + ":updateBook - Creating fill with ask=" + ask + ", book="
+														+ quotes.getLastBook(market) + ", order=" + order.getUuid() + ",working volume="
+														+ order.getUnfilledVolumeCount() + ",fills= " + order.getFills());
 												Fill fill = fillFactory.create(order, ask.getTime(), ask.getTime(), order.getMarket(), fillPriceCount,
 														buyFillVolume, Long.toString(ask.getTime().getMillis()));
+												buyFillsToProcess.add(fill);
+												handleFillProcessing(fill);
 												logFill(order, ask, fill);
 
 												log.debug(this.getClass().getSimpleName() + ":UpdateBook - set askVolume " + ask.getVolumeCount() + " to "
@@ -219,10 +239,9 @@ public class MockOrderService extends BaseOrderService {
 														: (Math.abs(ask.getVolumeCount() - buyFillVolume))));
 
 												if (fill.getVolume() == null || (fill.getVolume() != null && fill.getVolume().isZero()))
-													log.debug("fill " + fill.getId() + " zero lots " + (order.getUnfilledVolumeCount()));
+													log.debug("fill " + fill.getUuid() + " zero lots " + (order.getUnfilledVolumeCount()));
 												if (fill.getVolume().abs().compareTo(order.getVolume().abs()) > 0)
-													log.debug("overfilled " + fill.getId() + " " + (order.getUnfilledVolumeCount()));
-												buyFillsToProcess.add(fill);
+													log.debug("overfilled " + fill.getUuid() + " " + (order.getUnfilledVolumeCount()));
 												if (ask.getVolumeCount() == 0) {
 													asksToRemove.add(ask);
 													continue ASKSLOOP;
@@ -238,10 +257,9 @@ public class MockOrderService extends BaseOrderService {
 								}
 							}
 						}
-						pendingOrders.get(market).get(TransactionType.BUY).removeAll(buyOrdersToRemove);
+						log.debug(this.getClass().getSimpleName() + ": updateBook - Processing buy fills " + buyFillsToProcess);
 
-						for (Fill fill : buyFillsToProcess)
-							handleFillProcessing(fill);
+						pendingOrders.get(market).get(TransactionType.BUY).removeAll(buyOrdersToRemove);
 
 					}
 				} catch (Exception e) {
@@ -249,7 +267,7 @@ public class MockOrderService extends BaseOrderService {
 				}
 			}
 
-			if (bids != null && pendingOrders.get(market).get(TransactionType.SELL) != null) {
+			if (bids != null && pendingOrders.get(market).get(TransactionType.SELL) != null && !pendingOrders.get(market).get(TransactionType.SELL).isEmpty()) {
 				try {
 					synchronized (pendingOrders.get(market).get(TransactionType.SELL)) {
 						Set<SpecificOrder> sellOrdersToRemove = new HashSet<SpecificOrder>();
@@ -259,12 +277,13 @@ public class MockOrderService extends BaseOrderService {
 								+ pendingOrders.get(market).get(TransactionType.SELL));
 						ASKORDERSLOOP: for (SpecificOrder order : pendingOrders.get(market).get(TransactionType.SELL)) {
 							synchronized (order) {
+
 								if (order.getUnfilledVolumeCount() == 0) {
 									sellOrdersToRemove.add(order);
 									continue ASKORDERSLOOP;
 								}
 								if (order.getMarket().equals(market) && (order.getTimestamp() <= event.getTimestamp())) {
-									log.trace(this.getClass().getSimpleName() + ":UpdateBook - determining fills for sell order " + order.getId()
+									log.trace(this.getClass().getSimpleName() + ":UpdateBook - determining fills for sell order " + order.getUuid()
 											+ " with working volume " + order.getUnfilledVolumeCount());
 									synchronized (event) {
 										synchronized (bids) {
@@ -278,19 +297,35 @@ public class MockOrderService extends BaseOrderService {
 														&& (order.getLimitPrice() != null && bid != null
 																&& order.getLimitPrice().getCount() > bid.getPriceCount()))) {
 													log.trace(this.getClass().getSimpleName() + ":UpdateBook - bid price " + bid + " greater than limit price "
-															+ order.getLimitPrice() + " for order " + order.getId());
+															+ order.getLimitPrice() + " for order " + order.getUuid());
 													break ASKORDERSLOOP;
 												}
+												//long sellOrderVolumeCount = order.getUnfilledVolumeCount();
 
 												//	-30000000,-11
 												long askFillVolume = -Math.min(Math.abs(bid.getVolumeCount()), Math.abs(order.getUnfilledVolumeCount()));
 
 												long slippageDiff = Math.round(bid.getPriceCount() * slippage);
-												long fillPriceCount = Math.max(order.getLimitPrice().getCount(), (bid.getPriceCount() - slippageDiff));
-												log.debug(this.getClass().getSimpleName() + ":updateBook - Creating fill with bid " + bid + " for order "
-														+ order + " with fills " + order.getFills());
+												log.debug(this.getClass().getSimpleName() + ":updateBook - Calculated slippage=" + slippageDiff + ", slippage="
+														+ slippage + " , bid=" + bid);
+
+												if (order.getLimitPrice() == null)
+													log.debug("tests");
+												//I want to sell at 22.5 and buy order of only 10, will not get filled, but if it is market, I will get filled at fill count.
+												// I am selling so want to see at 24 or higher.
+												//if  order.getLimitPrice().getCount() > bid.getPriceCount()) if 24>22.
+												long fillPriceCount = (bid.getPriceCount() - slippageDiff);
+												log.debug(this.getClass().getSimpleName() + ":updateBook - Calculated fillPriceCount=" + fillPriceCount
+														+ ", limitPrice=" + order.getLimitPrice() + ", limitPriceCount=" + order.getLimitPrice().getCount()
+														+ " , bid=" + bid + " , bidCount=" + bid.getPriceCount() + ", slippageDiff=" + slippageDiff);
+												log.debug(this.getClass().getSimpleName() + ":updateBook - Creating fill with bid=" + bid + ", book="
+														+ quotes.getLastBook(market) + ", order=" + order.getUuid() + ",working volume="
+														+ order.getUnfilledVolumeCount() + ",fills= " + order.getFills());
 												Fill fill = fillFactory.create(order, context.getTime(), context.getTime(), order.getMarket(), fillPriceCount,
 														askFillVolume, Long.toString(bid.getTime().getMillis()));
+												sellFillsToProcess.add(fill);
+												handleFillProcessing(fill);
+												//	sellOrderVolumeCount = sellOrderVolumeCount - askFillVolume;
 												logFill(order, bid, fill);
 												log.debug(
 														this.getClass().getSimpleName() + ":UpdateBook - set bidVolume " + bid.getVolumeCount() + " to "
@@ -303,10 +338,10 @@ public class MockOrderService extends BaseOrderService {
 												//bid.setVolumeCount(bid.getVolumeCount()>0 ? Math.abs(bid.getVolumeCount()) + askFillVolume : );
 
 												if (fill.getVolume() == null || (fill.getVolume() != null && fill.getVolume().isZero()))
-													log.debug("fill zero lots " + fill.getId() + " " + (order.getUnfilledVolumeCount()));
+													log.debug("fill zero lots " + fill.getUuid() + " " + (order.getUnfilledVolumeCount()));
 												if (fill.getVolume().abs().compareTo(order.getVolume().abs()) > 0)
-													log.debug("overfilled " + fill.getId());
-												sellFillsToProcess.add(fill);
+													log.debug("overfilled " + fill.getUuid());
+
 												//if the bid is empty, move to next bid
 												if (bid.getVolumeCount() == 0) {
 													bidsToRemove.add(bid);
@@ -324,12 +359,13 @@ public class MockOrderService extends BaseOrderService {
 								}
 							}
 						}
+						log.debug(this.getClass().getSimpleName() + ": updateBook - Processing sell fills " + sellFillsToProcess);
+
 						pendingOrders.get(market).get(TransactionType.SELL).removeAll(sellOrdersToRemove);
-						for (Fill fill : sellFillsToProcess)
-							handleFillProcessing(fill);
+
 					}
 				} catch (Exception e) {
-					log.error(this.getClass().getSimpleName() + ": addOrder - Unable to itterate over sell mock order book " + " stack trace: ", e);
+					log.error(this.getClass().getSimpleName() + ": updateBook - Unable to itterate over sell mock order book " + " stack trace: ", e);
 				}
 			}
 		}
@@ -349,7 +385,7 @@ public class MockOrderService extends BaseOrderService {
 		}
 
 		else if (!orderStateMap.get(order).isOpen()) {
-			log.error("Unable to cancel order as is " + orderStateMap.get(order) + " :" + order.getId());
+			log.error("Unable to cancel order as is " + orderStateMap.get(order) + " :" + order.getUuid());
 			deleted = true;
 			return deleted;
 
@@ -383,7 +419,7 @@ public class MockOrderService extends BaseOrderService {
 				//       if (!pendingOrders.get(order.getMarket()).get(order.getTransactionType()).contains(order)) {
 				log.error("Unable to cancel order as not present in mock order book. Order:" + order + " order book ");
 				updateOrderState(order, OrderState.REJECTED, true);
-				deleted = true;
+				deleted = false;
 			}
 			//}
 
@@ -424,8 +460,10 @@ public class MockOrderService extends BaseOrderService {
 				Collections.sort(orders, order.getTransactionType().equals(TransactionType.BUY) ? descendingPriceComparator : ascendingPriceComparator);
 				Map<TransactionType, ArrayList<SpecificOrder>> orderBook = new ConcurrentHashMap<TransactionType, ArrayList<SpecificOrder>>();
 				orderBook.put(order.getTransactionType(), orders);
+
 				pendingOrders.put(order.getMarket(), orderBook);
-				log.trace(this.getClass().getSimpleName() + ":addOrder(" + order.hashCode() + "): " + order.getId() + " added to mock order book ");
+				//getlatest boook and call matcher
+				log.trace(this.getClass().getSimpleName() + ":addOrder(" + order.hashCode() + "): " + order.getUuid() + " added to mock order book ");
 				return;
 
 			} else if (pendingOrders.get(order.getMarket()).get(order.getTransactionType()) == null
@@ -437,7 +475,7 @@ public class MockOrderService extends BaseOrderService {
 				orders.add(order);
 				Collections.sort(orders, order.getTransactionType().equals(TransactionType.BUY) ? descendingPriceComparator : ascendingPriceComparator);
 				pendingOrders.get(order.getMarket()).put(order.getTransactionType(), orders);
-				log.trace(this.getClass().getSimpleName() + ":addOrder(" + order.hashCode() + "): " + order.getId() + " added to mock order book ");
+				log.trace(this.getClass().getSimpleName() + ":addOrder(" + order.hashCode() + "): " + order.getUuid() + " added to mock order book ");
 				return;
 
 			} else {
@@ -449,13 +487,14 @@ public class MockOrderService extends BaseOrderService {
 					// Comparator<SpecificOrder> bookComparator = order.isBid() ? bidComparator : askComparator;
 
 					//   Collections.sort(pendingOrders.get(order.getMarket()).get(order.getTransactionType()), order.isBid() ? bidComparator : askComparator);
-					log.trace(this.getClass().getSimpleName() + ":addOrder(" + order.hashCode() + "):  -" + order.getId() + " added to mock order book.");
+					log.trace(this.getClass().getSimpleName() + ":addOrder(" + order.hashCode() + "):  -" + order.getUuid() + " added to mock order book.");
 
 					return;
 				} else {
-					log.error(this.getClass().getSimpleName() + ":addOrder(" + order.hashCode() + ") -" + order.getId()
+					log.error(this.getClass().getSimpleName() + ":addOrder(" + order.hashCode() + ") -" + order.getUuid()
 							+ " unable to add order to mock order book ");
 					pendingOrders.get(order.getMarket()).get(order.getTransactionType()).add(order);
+
 					Collections.sort(pendingOrders.get(order.getMarket()).get(order.getTransactionType()),
 							order.getTransactionType().equals(TransactionType.BUY) ? descendingPriceComparator : ascendingPriceComparator);
 
@@ -468,6 +507,7 @@ public class MockOrderService extends BaseOrderService {
 		} catch (Exception e) {
 			log.error(this.getClass().getSimpleName() + ": addOrder - Unable to add order " + order + "stack trace: ", e);
 		} finally {
+			updateBook(quotes.getLastBook(order.getMarket()));
 			//       log.debug(this.getClass().getSimpleName() + ":addOrder Unlocking updateOrderBookLock");
 			//     updateOrderBookLock.unlock();
 

@@ -50,6 +50,7 @@ public abstract class Tradeable extends EntityBase {
 		this.setPeristanceAction(PersistanceAction.NEW);
 
 		this.setRevision(this.getRevision() + 1);
+
 		tradeableDao.persist(this);
 	}
 
@@ -188,6 +189,7 @@ public abstract class Tradeable extends EntityBase {
 
 	// JPA
 	protected Tradeable() {
+
 	}
 
 	protected synchronized void setActive(boolean active) {

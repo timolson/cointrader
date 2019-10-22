@@ -3,6 +3,8 @@ package org.cryptocoinpartners.schema;
 import java.math.BigDecimal;
 
 import javax.persistence.Entity;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.schema.dao.Dao;
@@ -14,118 +16,129 @@ import org.joda.time.Instant;
  * @author Tim Olson
  */
 @Entity
+@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public class Offer extends PriceData {
 
-  /** same as new Offer() */
-  public static Offer bid(Tradeable market, Instant time, Instant timeReceived, Long priceCount, Long volumeCount) {
-    return new Offer(market, time, timeReceived, priceCount, volumeCount);
-  }
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 2656787943167749830L;
 
-  /** same as new Offer() except the volumeCount is negated */
-  public static Offer ask(Tradeable market, Instant time, Instant timeReceived, Long priceCount, Long volumeCount) {
-    return new Offer(market, time, timeReceived, priceCount, -volumeCount);
-  }
+	/** same as new Offer() */
+	public static Offer bid(Tradeable market, Instant time, Instant timeReceived, Long priceCount, Long volumeCount) {
+		return new Offer(market, time, timeReceived, priceCount, volumeCount);
+	}
 
-  @Override
-  @Transient
-  public EntityBase getParent() {
+	/** same as new Offer() except the volumeCount is negated */
+	public static Offer ask(Tradeable market, Instant time, Instant timeReceived, Long priceCount, Long volumeCount) {
+		return new Offer(market, time, timeReceived, priceCount, -volumeCount);
+	}
 
-    return null;
-  }
+	@Override
+	@Transient
+	public EntityBase getParent() {
 
-  public static Offer bid(Tradeable market, Instant time, Instant timeReceived, BigDecimal price, BigDecimal volume) {
-    return new Offer(market, time, timeReceived, price, volume);
-  }
+		return null;
+	}
 
-  public static Offer ask(Tradeable market, Instant time, Instant timeReceived, BigDecimal price, BigDecimal volume) {
-    return new Offer(market, time, timeReceived, price, volume.negate());
-  }
+	public static Offer bid(Tradeable market, Instant time, Instant timeReceived, BigDecimal price, BigDecimal volume) {
+		return new Offer(market, time, timeReceived, price, volume);
+	}
 
-  public Offer(Tradeable market, Instant time, Instant timeReceived, Long priceCount, Long volumeCount) {
+	public static Offer ask(Tradeable market, Instant time, Instant timeReceived, BigDecimal price, BigDecimal volume) {
+		return new Offer(market, time, timeReceived, price, volume.negate());
+	}
 
-    super(time, timeReceived, null, market, priceCount, volumeCount);
-  }
+	public Offer(Tradeable market, Instant time, Instant timeReceived, Long priceCount, Long volumeCount) {
 
-  public Offer(Tradeable market, Instant time, Instant timeReceived, BigDecimal price, BigDecimal volume) {
+		super(time, timeReceived, null, market, priceCount, volumeCount);
+	}
 
-    super(time, timeReceived, null, market, price, volume);
-  }
+	public Offer(Tradeable market, Instant time, Instant timeReceived, BigDecimal price, BigDecimal volume) {
 
-  @Override
-  public String toString() {
-    return "Offer{" + ", market=" + getMarket() + ", priceCount=" + getPriceCount() + ", volumeCount=" + getVolumeCount() + '}';
-  }
+		super(time, timeReceived, null, market, price, volume);
+	}
 
-  @SuppressWarnings("ConstantConditions")
-  @Transient
-  public Side getSide() {
-    return getVolumeCount() >= 0 ? Side.BUY : Side.SELL;
-  }
+	@Override
+	public String toString() {
+		return "Offer{" + ", market=" + getMarket() + ", priceCount=" + getPriceCount() + ", volumeCount=" + getVolumeCount() + '}';
+	}
 
-  // JPA
-  protected Offer() {
-  }
+	@SuppressWarnings("ConstantConditions")
+	@Transient
+	public Side getSide() {
+		return getVolumeCount() >= 0 ? Side.BUY : Side.SELL;
+	}
 
-  @Override
-  public void persit() {
-    // TODO Auto-generated method stub
+	@Override
+	public void setId(Long id) {
+		this.id = id;
+	}
 
-  }
+	// JPA
+	protected Offer() {
+	}
 
-  @Override
-  public void detach() {
-    // TODO Auto-generated method stub
+	@Override
+	public void persit() {
+		// TODO Auto-generated method stub
 
-  }
+	}
 
-  @Override
-  public void merge() {
-    // TODO Auto-generated method stub
+	@Override
+	public void detach() {
+		// TODO Auto-generated method stub
 
-  }
+	}
 
-  @Override
-  @Transient
-  public Dao getDao() {
-    // TODO Auto-generated method stub
-    return null;
-  }
+	@Override
+	public void merge() {
+		// TODO Auto-generated method stub
 
-  @Override
-  @Transient
-  public void setDao(Dao dao) {
-    // TODO Auto-generated method stub
-    //  return null;
-  }
+	}
 
-  @Override
-  public void delete() {
-    // TODO Auto-generated method stub
+	@Override
+	@Transient
+	public Dao getDao() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
-  }
+	@Override
+	@Transient
+	public void setDao(Dao dao) {
+		// TODO Auto-generated method stub
+		//  return null;
+	}
 
-  @Override
-  public EntityBase refresh() {
-    // TODO Auto-generated method stub
-    return null;
-  }
+	@Override
+	public void delete() {
+		// TODO Auto-generated method stub
 
-  @Override
-  public void prePersist() {
-    // TODO Auto-generated method stub
+	}
 
-  }
+	@Override
+	public EntityBase refresh() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
-  @Override
-  public void postPersist() {
-    // TODO Auto-generated method stub
+	@Override
+	public void prePersist() {
+		// TODO Auto-generated method stub
 
-  }
+	}
 
-  @Override
-  public void persitParents() {
-    // TODO Auto-generated method stub
+	@Override
+	public void postPersist() {
+		// TODO Auto-generated method stub
 
-  }
+	}
+
+	@Override
+	public void persitParents() {
+		// TODO Auto-generated method stub
+
+	}
 
 }

@@ -110,7 +110,9 @@ public class XchangeData {
 
 		OrderType getOrderType(SpecificOrder specificOrder);
 
-		Collection<org.knowm.xchange.dto.Order> getOrder(TradeService tradeService, long period, String... orderIds) throws Exception;
+		Collection<org.knowm.xchange.dto.Order> getOrder(TradeService tradeService, Listing listing, long period, String... orderIds) throws Exception;
+
+		boolean cancelOrder(TradeService tradeService, Listing listing, String orderId) throws Exception;
 
 		void handleTrades(Trades tradeSpec);
 
@@ -151,6 +153,12 @@ public class XchangeData {
 			Object listingSymbol = il.next();
 			Listing listing = Listing.forSymbol(listingSymbol.toString().toUpperCase());
 			market = context.getInjector().getInstance(Market.class).findOrCreate(coinTraderExchange, listing);
+			if (market.getId() == null) {
+				log.debug("error");
+
+				market = context.getInjector().getInstance(Market.class).findOrCreate(coinTraderExchange, listing);
+			}
+
 			markets.add(market);
 		}
 
@@ -176,13 +184,13 @@ public class XchangeData {
 			//Create queues to perist trades and books.
 			if (!ApplicationInitializer.getMarketTradeQueueMap().containsKey(cointraderMarket)) {
 				ApplicationInitializer.getMarketTradeQueueMap().put(cointraderMarket, new ArrayBlockingQueue<Bar>(queueSize));
-				mergeMarketDataService.submit(context.getInjector().getInstance(ApplicationInitializer.class).new mergeRunnable(
+				mergeMarketDataService.submit(context.getInjector().getInstance(ApplicationInitializer.class).new bulkMergeRunnable(
 						ApplicationInitializer.getMarketTradeQueueMap().get(cointraderMarket)));
 			}
 			if (!ApplicationInitializer.getMarketBookQueueMap().containsKey(cointraderMarket)) {
 
 				ApplicationInitializer.getMarketBookQueueMap().put(cointraderMarket, new ArrayBlockingQueue<Bar>(queueSize));
-				mergeMarketDataService.submit(context.getInjector().getInstance(ApplicationInitializer.class).new mergeRunnable(
+				mergeMarketDataService.submit(context.getInjector().getInstance(ApplicationInitializer.class).new bulkMergeRunnable(
 						ApplicationInitializer.getMarketBookQueueMap().get(cointraderMarket)));
 				//mergeRunnable runable = new ApplicationInitializer().new mergeRunnable( new ArrayBlockingQueue<Bar>(queueSize));
 			}

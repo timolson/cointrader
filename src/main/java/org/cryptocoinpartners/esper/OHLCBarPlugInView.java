@@ -253,7 +253,8 @@ public class OHLCBarPlugInView extends ViewSupport implements CloneableView {
 			} else if (max.get(interval).get(market).compareTo(value) < 0) {
 				max.get(interval).put(market, value);
 			}
-
+			if (interval == 300 && market.getSymbol().equals("BITFINEX:NEO.BTC"))
+				log.debug("test");
 			if (vol.get(interval) == null) {
 				Map<Tradeable, Double> intervalVol = new ConcurrentHashMap<Tradeable, Double>();
 				intervalVol.put(market, volume);

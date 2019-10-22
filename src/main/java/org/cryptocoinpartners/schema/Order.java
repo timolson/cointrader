@@ -63,11 +63,11 @@ import com.google.inject.Inject;
 @Entity
 //@MappedSuperclass
 @Cacheable
-@Table(name = "\"Order\"", indexes = { @Index(columnList = "Order_Type"), @Index(columnList = "fillType"), @Index(columnList = "portfolio"),
-		@Index(columnList = "parentFill"), @Index(columnList = "parentOrder"), @Index(columnList = "version"), @Index(columnList = "revision") })
+@Table(name = "\"Order\"", indexes = { @Index(columnList = "fillType"), @Index(columnList = "portfolio"), @Index(columnList = "parentFill"),
+		@Index(columnList = "parentOrder"), @Index(columnList = "version"), @Index(columnList = "revision") })
 //, @Index(columnList = "portfolio") })
 // This is required because ORDER is a SQL keyword and must be escaped
-@DiscriminatorColumn(name = "Order_Type")
+@DiscriminatorColumn(name = "order_type")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @SuppressWarnings({ "JpaDataSourceORMInspection", "UnusedDeclaration" })
 @NamedQueries({ @NamedQuery(name = "Order.findOrder", query = "select o from Order o where id =?1") })
@@ -292,8 +292,8 @@ public abstract class Order extends Event {
 
 	public synchronized void setParentOrder(Order order) {
 		if (order != null)
-			log.trace("Order:setParentOrder - setting parent order to " + order.getId() + " / " + System.identityHashCode(order) + " for order " + this.getId()
-					+ " / " + System.identityHashCode(this) + ". Calling class " + Thread.currentThread().getStackTrace()[2]);
+			log.trace("Order:setParentOrder - setting parent order to " + order.getUuid() + " / " + System.identityHashCode(order) + " for order "
+					+ this.getUuid() + " / " + System.identityHashCode(this) + ". Calling class " + Thread.currentThread().getStackTrace()[2]);
 
 		if (order == null || (order != null && !order.equals(this))) {
 
@@ -303,7 +303,7 @@ public abstract class Order extends Event {
 
 	public synchronized void setParentFill(Fill fill) {
 		if (fill != null) {
-			log.trace("Order:setParentFill setting parent fill to " + fill.getId() + " / " + System.identityHashCode(fill) + " for order " + this.getId()
+			log.trace("Order:setParentFill setting parent fill to " + fill.getUuid() + " / " + System.identityHashCode(fill) + " for order " + this.getUuid()
 					+ " / " + System.identityHashCode(this) + ". Calling class " + Thread.currentThread().getStackTrace()[2]);
 			//   for (StackTraceElement ste : Thread.currentThread().getStackTrace()) {
 			//     log.error(ste.toString());
@@ -527,8 +527,8 @@ public abstract class Order extends Event {
 	}
 
 	public void loadAllChildOrdersByParentOrder(Order parentOrder, Map<Order, Order> orders, Map<Fill, Fill> fills) {
-		log.debug(this.getClass().getSimpleName() + " - loadAllChildOrdersByParentOrder for " + parentOrder.getId() + "/" + System.identityHashCode(parentOrder)
-				+ " called from class " + Thread.currentThread().getStackTrace()[2]);
+		log.debug(this.getClass().getSimpleName() + " - loadAllChildOrdersByParentOrder for " + parentOrder.getUuid() + "/"
+				+ System.identityHashCode(parentOrder) + " called from class " + Thread.currentThread().getStackTrace()[2]);
 
 		Map withFillsHints = new HashMap();
 		Map withTransHints = new HashMap();
@@ -572,12 +572,12 @@ public abstract class Order extends Event {
 			orderWithTransactions = EM.namedQueryZeroOne(Order.class, "Order.findOrder", withTransHints, parentOrder.getId());
 			orderWithUpdates = EM.namedQueryZeroOne(Order.class, "Order.findOrder", withUpdatesHints, parentOrder.getId());
 		} catch (Error | Exception ex) {
-			log.error("Order:loadAllChildOrdersByParentOrdere unable to get order for orderID: " + parentOrder.getId() + ". Full stack trace ", ex);
+			log.error("Order:loadAllChildOrdersByParentOrdere unable to get order for orderID: " + parentOrder.getUuid() + ". Full stack trace ", ex);
 			return;
 		}
 
 		if (orderWithFills != null && orderWithFills.getFills() != null && Hibernate.isInitialized(orderWithFills.getFills())
-				&& orderWithFills.getId().equals(parentOrder.getId())) {
+				&& orderWithFills.getUuid().equals(parentOrder.getUuid())) {
 			int index = 0;
 			for (Fill fill : orderWithFills.getFills()) {
 
@@ -599,8 +599,8 @@ public abstract class Order extends Event {
 				}
 				if (!fills.containsKey(fill)) {
 					fills.put(fill, fill);
-					log.debug("Order loadAllChildOrdersByParentOrder loading all child order for fill" + fill.getId() + " for order " + orderWithFills.getId()
-							+ ". Calling class " + Thread.currentThread().getStackTrace()[2]);
+					log.debug("Order loadAllChildOrdersByParentOrder loading all child order for fill" + fill.getUuid() + " for order "
+							+ orderWithFills.getUuid() + ". Calling class " + Thread.currentThread().getStackTrace()[2]);
 					fill.loadAllChildOrdersByFill(fill, orders, fills);
 
 				} else {
@@ -609,14 +609,14 @@ public abstract class Order extends Event {
 				}
 				index++;
 			}
-			log.debug("Order:loadAllChildOrdersByParentOrder - Setting fills for order" + parentOrder.getId() + "/" + System.identityHashCode(parentOrder)
-					+ " to fills from " + orderWithFills.getId() + "/" + System.identityHashCode(orderWithFills));
+			log.debug("Order:loadAllChildOrdersByParentOrder - Setting fills for order" + parentOrder.getUuid() + "/" + System.identityHashCode(parentOrder)
+					+ " to fills from " + orderWithFills.getUuid() + "/" + System.identityHashCode(orderWithFills));
 			parentOrder.setFills(orderWithFills.getFills());
 		} else
 			parentOrder.setFills(new CopyOnWriteArrayList<Fill>());
 
 		if (orderWithUpdates != null && orderWithUpdates.getOrderUpdates() != null && Hibernate.isInitialized(orderWithUpdates.getOrderUpdates())
-				&& orderWithUpdates.getId().equals(parentOrder.getId())) {
+				&& orderWithUpdates.getUuid().equals(parentOrder.getUuid())) {
 
 			for (OrderUpdate orderUpdate : orderWithUpdates.getOrderUpdates()) {
 
@@ -641,7 +641,7 @@ public abstract class Order extends Event {
 			parentOrder.setOrderUpdates(new CopyOnWriteArrayList<OrderUpdate>());
 
 		if (orderWithTransactions != null && orderWithTransactions.getTransactions() != null && Hibernate.isInitialized(orderWithTransactions.getTransactions())
-				&& orderWithTransactions.getId().equals(parentOrder.getId())) {
+				&& orderWithTransactions.getUuid().equals(parentOrder.getUuid())) {
 
 			for (Transaction transaction : orderWithTransactions.getTransactions()) {
 				if (transaction.getPortfolio().equals(parentOrder.getPortfolio()))
@@ -671,26 +671,26 @@ public abstract class Order extends Event {
 			parentOrder.setTransactions(new CopyOnWriteArrayList<Transaction>());
 
 		if (orderWithChildren != null && orderWithChildren.getOrderChildren() != null && Hibernate.isInitialized(orderWithChildren.getOrderChildren())
-				&& orderWithChildren.getId().equals(parentOrder.getId())) {
+				&& orderWithChildren.getUuid().equals(parentOrder.getUuid())) {
 			int index = 0;
 			for (Order order : orderWithChildren.getOrderChildren()) {
 				//if (order.getId().toString().equals("5678a30e-ff17-43b7-be84-f92734f18d86"))
 				//	log.debug("test");
 				if (order.getPortfolio().equals(parentOrder.getPortfolio())) {
-					log.debug("Order:loadAllChildOrdersByParentOrder - Setting order " + order.getId() + "/" + System.identityHashCode(order)
+					log.debug("Order:loadAllChildOrdersByParentOrder - Setting order " + order.getUuid() + "/" + System.identityHashCode(order)
 							+ " portfolio to: " + parentOrder.getPortfolio() + "/" + System.identityHashCode(parentOrder.getPortfolio()));
 
 					order.setPortfolio(parentOrder.getPortfolio());
 				}
 				if (order.getParentOrder() != null && order.getParentOrder().getPortfolio().equals(parentOrder.getPortfolio())) {
-					log.debug("Order:loadAllChildOrdersByParentOrder - Setting parent order " + order.getParentOrder().getId() + "/"
+					log.debug("Order:loadAllChildOrdersByParentOrder - Setting parent order " + order.getParentOrder().getUuid() + "/"
 							+ System.identityHashCode(order.getParentOrder()) + " portfolio to: " + parentOrder.getPortfolio() + "/"
 							+ System.identityHashCode(parentOrder.getPortfolio()));
 
 					order.getParentOrder().setPortfolio(parentOrder.getPortfolio());
 				}
 				if (order.getParentFill() != null && order.getParentFill().getPortfolio().equals(parentOrder.getPortfolio())) {
-					log.debug("Order:loadAllChildOrdersByParentOrder - Setting parent fill " + order.getParentFill().getId() + "/"
+					log.debug("Order:loadAllChildOrdersByParentOrder - Setting parent fill " + order.getParentFill().getUuid() + "/"
 							+ System.identityHashCode(order.getParentFill()) + " portfolio to: " + parentOrder.getPortfolio() + "/"
 							+ System.identityHashCode(parentOrder.getPortfolio()));
 
@@ -701,32 +701,33 @@ public abstract class Order extends Event {
 					continue;
 				if (!orders.containsKey(order)) {
 					orders.put(order, order);
-					log.debug("Order:loadAllChildOrdersByParentOrder - Loading child orders for: " + order.getId());
+					log.debug("Order:loadAllChildOrdersByParentOrder - Loading child orders for: " + order.getUuid());
 					order.loadAllChildOrdersByParentOrder(order, orders, fills);
 				} else
 					orderWithChildren.getOrderChildren().set(index, orders.get(order));
 				index++;
 			}
 			log.debug("Order:loadAllChildOrdersByParentOrder - setting orderChildren to " + System.identityHashCode(orderWithChildren.getOrderChildren())
-					+ "for order " + parentOrder.getId() + " /" + System.identityHashCode(parentOrder));
+					+ "for order " + parentOrder.getUuid() + " /" + System.identityHashCode(parentOrder));
 
 			parentOrder.setOrderChildren(orderWithChildren.getOrderChildren());
 		} else {
-			log.debug("Order:loadAllChildOrdersByParentOrder - setting orderChildren to new array list for order " + parentOrder.getId() + " /"
+			log.debug("Order:loadAllChildOrdersByParentOrder - setting orderChildren to new array list for order " + parentOrder.getUuid() + " /"
 					+ System.identityHashCode(parentOrder));
 
 			parentOrder.setOrderChildren(new CopyOnWriteArrayList<Order>());
 		}
 		if (orders.containsKey(parentOrder.getParentOrder())) {
-			log.debug("Order:loadAllChildOrdersByParentOrder -setting parent order for" + parentOrder.getId() + " / " + System.identityHashCode(parentOrder)
-					+ " to parent order " + orders.get(parentOrder.getParentOrder()).getId() + " / "
+			log.debug("Order:loadAllChildOrdersByParentOrder -setting parent order for" + parentOrder.getUuid() + " / " + System.identityHashCode(parentOrder)
+					+ " to parent order " + orders.get(parentOrder.getParentOrder()).getUuid() + " / "
 					+ System.identityHashCode(orders.get(parentOrder.getParentOrder())));
 
 			setParentOrder(orders.get(parentOrder.getParentOrder()));
 		}
 		if (fills.containsKey(parentOrder.getParentFill())) {
-			log.debug("Order:loadAllChildOrdersByParentOrder - setting parent fill for " + parentOrder.getId() + " / " + System.identityHashCode(parentOrder)
-					+ " to fill  " + fills.get(parentOrder.getParentFill()).getId() + " / " + System.identityHashCode(fills.get(parentOrder.getParentFill())));
+			log.debug("Order:loadAllChildOrdersByParentOrder - setting parent fill for " + parentOrder.getUuid() + " / " + System.identityHashCode(parentOrder)
+					+ " to fill  " + fills.get(parentOrder.getParentFill()).getUuid() + " / "
+					+ System.identityHashCode(fills.get(parentOrder.getParentFill())));
 
 			setParentFill(fills.get(parentOrder.getParentFill()));
 		}
@@ -1008,7 +1009,7 @@ public abstract class Order extends Event {
 			this.setPeristanceAction(PersistanceAction.MERGE);
 
 			this.setRevision(this.getRevision() + 1);
-			log.trace("Order - Merge : Merge of Order " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+			log.trace("Order - Merge : Merge of Order " + this.getUuid() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 
 			orderDao.merge(this);
 			//if (duplicate == null || duplicate.isEmpty())
@@ -1140,7 +1141,7 @@ public abstract class Order extends Event {
 		//List<Order> duplicate = null;
 		//  EntityBase entity = PersistUtil.find(this);
 		try {
-			log.debug("Order - Persist : Persit of Order " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+			log.debug("Order - Persist : Persit of Order " + this.getUuid() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 
 			this.setPeristanceAction(PersistanceAction.NEW);
 			this.setRevision(this.getRevision() + 1);
@@ -1280,8 +1281,8 @@ public abstract class Order extends Event {
 	}
 
 	public synchronized void addChildOrder(Order order) {
-		log.debug(this.getClass().getSimpleName() + "addChildOrder - adding child order " + order.getId() + "/" + System.identityHashCode(order) + " to order "
-				+ this.getId() + "/" + System.identityHashCode(order));
+		log.debug(this.getClass().getSimpleName() + "addChildOrder - adding child order " + order.getUuid() + "/" + System.identityHashCode(order)
+				+ " to order " + this.getUuid() + "/" + System.identityHashCode(order));
 		if (!getOrderChildren().contains(order) && order != null && !order.equals(this))
 			synchronized (getOrderChildren()) {
 				getOrderChildren().add(order);

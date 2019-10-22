@@ -99,7 +99,7 @@ public class Currency extends Asset {
 			currency.setRevision(currency.getRevision() + 1);
 			currencyMap.put(symbol, currency);
 			try {
-				currencyDao.persistEntities(currency);
+				currencyDao.persistEntities(false, currency);
 			} catch (Throwable e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -117,7 +117,7 @@ public class Currency extends Asset {
 			currency.setRevision(currency.getRevision() + 1);
 			currencyMap.put(symbol, currency);
 			try {
-				currencyDao.persistEntities(currency);
+				currencyDao.persistEntities(false, currency);
 			} catch (Throwable e1) {
 				// TODO Auto-generated catch block
 
@@ -153,7 +153,7 @@ public class Currency extends Asset {
 
 		this.setRevision(this.getRevision() + 1);
 		try {
-			currencyDao.persistEntities(this);
+			currencyDao.persistEntities(false, this);
 		} catch (Throwable e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

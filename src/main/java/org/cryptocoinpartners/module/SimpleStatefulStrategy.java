@@ -106,14 +106,6 @@ public abstract class SimpleStatefulStrategy extends BaseStrategy {
 		state = State.STOP;
 	}
 
-	protected void setInterval(double interval) {
-		this.interval = interval;
-	}
-
-	protected void setTrendInterval(double trendInterval) {
-		this.trendInterval = trendInterval;
-	}
-
 	protected void setRunsInterval(double runsInterval) {
 		this.runsInterval = runsInterval;
 	}
@@ -128,9 +120,8 @@ public abstract class SimpleStatefulStrategy extends BaseStrategy {
 	private Order stopOrder;
 	protected State state = State.WARMUP;
 	//defualt 24Hr bars
-	protected static double interval = 86400;
+	//protected static double interval = 86400;
 	protected static double runsInterval = 86400;
-	protected static double trendInterval = 86400;
 	protected static double heartbeatInterval = 900;
 
 }

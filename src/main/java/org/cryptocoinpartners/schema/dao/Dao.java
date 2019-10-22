@@ -1,7 +1,6 @@
 package org.cryptocoinpartners.schema.dao;
 
 import java.util.List;
-import java.util.UUID;
 
 import javax.persistence.NoResultException;
 
@@ -32,15 +31,15 @@ public interface Dao {
 
 	void merge(Bar... bar);
 
-	void persistEntities(EntityBase... entities) throws Throwable;
+	void persistEntities(boolean bulkInsert, EntityBase... entities) throws Throwable;
 
-	void mergeEntities(EntityBase... entities) throws Throwable;
+	<T> EntityBase mergeEntities(boolean bulkInsert, EntityBase... entities) throws Throwable;
 
 	void deleteEntities(EntityBase... entities);
 
 	void delete(EntityBase... entities);
 
-	<T> T find(Class<T> resultType, UUID id);
+	<T> T find(Class<T> resultType, Long id);
 
 	boolean contains(EntityBase entity);
 
@@ -50,7 +49,7 @@ public interface Dao {
 
 	<T> T namedQueryOne(Class<T> resultType, String namedQuery, Object... params) throws NoResultException;
 
-	<T extends EntityBase> T findById(Class<T> resultType, UUID id) throws NoResultException;
+	<T extends EntityBase> T findById(Class<T> resultType, Long id) throws NoResultException;
 
 	void queryEach(Visitor<Object[]> handler, String queryStr, Object... params);
 
@@ -60,9 +59,9 @@ public interface Dao {
 
 	void queryEach(Visitor<Object[]> handler, int batchSize, String queryStr, Object... params);
 
-	<T> Long findRevisionById(Class<T> resultType, UUID id) throws NoResultException;
+	<T> Long findRevisionById(Class<T> resultType, Long id) throws NoResultException;
 
-	<T> Long findVersionById(Class<T> resultType, UUID id) throws NoResultException;
+	<T> Long findVersionById(Class<T> resultType, Long id) throws NoResultException;
 
 	// T queryZeroOne(Class<T> resultType, String queryStr, Object[] params);
 

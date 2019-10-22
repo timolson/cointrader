@@ -22,10 +22,12 @@ import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.FeeMethod;
 import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.schema.dao.Dao;
-import org.cryptocoinpartners.schema.dao.ListingDao;
+import org.cryptocoinpartners.schema.dao.ListingJpaDao;
 import org.cryptocoinpartners.util.EM;
 
 import com.google.inject.Inject;
+import com.google.inject.assistedinject.Assisted;
+import com.google.inject.assistedinject.AssistedInject;
 
 /**
  * Represents the possibility to trade one Asset for another
@@ -43,8 +45,11 @@ import com.google.inject.Inject;
 //@UniqueConstraint(columnNames = { "base", "quote" }) })
 public class Listing extends EntityBase {
 	@Inject
-	protected transient static ListingDao listingDao;
+	protected transient static ListingJpaDao listingDao;
 	protected static Set<Listing> listings = new HashSet<Listing>();
+
+	@Inject
+	protected transient static ListingFactory listingFactory;
 
 	@ManyToOne(optional = false)
 	@JoinColumn(name = "base")
@@ -79,45 +84,88 @@ public class Listing extends EntityBase {
 
 	/** will create the listing if it doesn't exist */
 	public static Listing forPair(Asset base, Asset quote) {
-
-		for (Listing listing : listings) {
-			if (listing.getBase().equals(base) && listing.getQuote().equals(quote))
-				return listing;
+		Listing listing = null;
+		for (Listing mappedListing : listings) {
+			if (mappedListing.getBase().equals(base) && mappedListing.getQuote().equals(quote) && mappedListing.getPrompt() == null)
+				return mappedListing;
 		}
 		//this is very slow, we should cache it in a map!
 		try {
-			Listing listing = EM.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBase", base, quote);
-			if (listing == null) {
-				listing = new Listing(base, quote);
-				EM.find(base);
-				EM.find(quote);
-				EM.persist(listing);
-			} else
-				listing.setPersisted(true);
 
-			listings.add(listing);
+			listing = EM.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBase", base, quote);
+			if (listing == null) {
+				listing = listingFactory.create(base, quote);
+
+				try {
+					listingDao.persistEntities(false, listing);
+					if (listing != null)
+						listings.add(listing);
+				} catch (Throwable e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+			} else {
+				listing.setPersisted(true);
+				if (listing != null)
+					listings.add(listing);
+			}
+
 			return listing;
 		} catch (NoResultException e) {
-			final Listing listing = new Listing(base, quote);
-			EM.persist(listing);
-			listings.add(listing);
+			listing = listingFactory.create(base, quote);
+
+			try {
+				listingDao.persistEntities(false, listing);
+				if (listing != null)
+					listings.add(listing);
+			} catch (Throwable ex) {
+				// TODO Auto-generated catch block
+				ex.printStackTrace();
+			}
+
 			return listing;
 		}
 	}
 
 	public static Listing forPair(Asset base, Asset quote, Prompt prompt) {
+		Listing listing = null;
+		for (Listing mappedListing : listings) {
+			if (mappedListing.getBase().equals(base) && mappedListing.getQuote().equals(quote)
+					&& (mappedListing.getPrompt() != null && mappedListing.getPrompt().equals(prompt)))
+				return mappedListing;
+		}
 		try {
 
-			Listing listing = EM.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBasePrompt", base, quote, prompt);
+			listing = EM.namedQueryZeroOne(Listing.class, "Listing.findByQuoteBasePrompt", base, quote, prompt);
 			if (listing == null) {
-				listing = new Listing(base, quote, prompt);
-				EM.persist(listing);
-			} else
+				listing = listingFactory.create(base, quote, prompt);
+
+				try {
+					listingDao.persistEntities(false, listing);
+					if (listing != null)
+						listings.add(listing);
+				} catch (Throwable e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else {
 				listing.setPersisted(true);
+				if (listing != null)
+					listings.add(listing);
+			}
 			return listing;
 		} catch (NoResultException e) {
-			final Listing listing = new Listing(base, quote, prompt);
-			EM.persist(listing);
+			try {
+				listing = listingFactory.create(base, quote, prompt);
+				listingDao.persistEntities(false, listing);
+				if (listing != null)
+					listings.add(listing);
+			} catch (Throwable ex) {
+				// TODO Auto-generated catch block
+				ex.printStackTrace();
+			}
+
 			return listing;
 		}
 	}
@@ -235,6 +283,13 @@ public class Listing extends EntityBase {
 		return 0;
 	}
 
+	@Transient
+	protected double getLiquidation() {
+		if (prompt != null && prompt.getLiquidation() != 0)
+			return prompt.getLiquidation();
+		return 0;
+	}
+
 	public static List<String> allSymbols() {
 		List<String> result = new ArrayList<>();
 		List<Listing> listings = EM.queryList(Listing.class, "select x from Listing x");
@@ -265,12 +320,14 @@ public class Listing extends EntityBase {
 	protected Asset quote;
 	private Prompt prompt;
 
-	public Listing(Asset base, Asset quote) {
+	@AssistedInject
+	public Listing(@Assisted("base") Asset base, @Assisted("quote") Asset quote) {
 		this.base = base;
 		this.quote = quote;
 	}
 
-	public Listing(Asset base, Asset quote, Prompt prompt) {
+	@AssistedInject
+	public Listing(@Assisted("base") Asset base, @Assisted("quote") Asset quote, @Assisted Prompt prompt) {
 		this.base = base;
 		this.quote = quote;
 		this.prompt = prompt;
@@ -386,7 +443,7 @@ public class Listing extends EntityBase {
 	@Override
 	@Transient
 	public synchronized void setDao(Dao dao) {
-		listingDao = (ListingDao) dao;
+		listingDao = (ListingJpaDao) dao;
 		// TODO Auto-generated method stub
 		//  return null;
 	}

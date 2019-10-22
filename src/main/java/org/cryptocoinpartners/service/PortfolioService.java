@@ -67,6 +67,8 @@ public interface PortfolioService {
 
 	Map<Asset, Amount> getRealisedPnLs();
 
+	Map<Asset, Amount> getComissionsAndFees();
+
 	Amount getRealisedPnL(Asset quoteAsset);
 
 	Collection<Portfolio> getPortfolios();
@@ -99,6 +101,10 @@ public interface PortfolioService {
 
 	Amount getBaseUnrealisedPnL(Asset quoteAsset);
 
+	Amount getBaseComissionAndFee(Asset quoteAsset);
+
+	Amount getBaseComissionAndFee(Asset quoteAsset, Market market);
+
 	Amount getBaseRealisedPnL(Asset quoteAsset);
 
 	Amount getBaseRealisedPnL(Asset quoteAsset, Market market);
@@ -124,6 +130,8 @@ public interface PortfolioService {
 	Amount getBaseUnrealisedPnL(Asset quoteAsset, Market market);
 
 	Map<Asset, Amount> getRealisedPnLs(Market market);
+
+	Map<Asset, Amount> getComissionsAndFees(Market market);
 
 	Map<Asset, Amount> getUnrealisedPnLs(Exchange exchange);
 

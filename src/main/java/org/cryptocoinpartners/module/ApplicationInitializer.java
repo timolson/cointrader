@@ -1,14 +1,17 @@
 package org.cryptocoinpartners.module;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import javax.inject.Singleton;
 import javax.persistence.ElementCollection;
@@ -51,11 +54,13 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 	//     ;;Executors.newFixedThreadPool(persistanceThreadCount);
 	//private static BlockingQueue insertQueue = new DelayQueue();
 	//private static BlockingQueue mergeQueue = new DelayQueue();
-	private static BlockingQueue<EntityBase> mergeQueue = new ArrayBlockingQueue<EntityBase>(queueSize);
-	private static BlockingQueue<Book> mergeBookQueue = new ArrayBlockingQueue<Book>(queueSize);
-	private static BlockingQueue<Trade> mergeTradeQueue = new ArrayBlockingQueue<Trade>(queueSize);
-	private static BlockingQueue<Bar> mergeBarQueue = new ArrayBlockingQueue<Bar>(queueSize);
+	private static BlockingQueue<EntityBase> mergeQueue = new LinkedBlockingQueue<EntityBase>();
+	private static BlockingQueue<EntityBase> bulkMergeQueue = new LinkedBlockingQueue<EntityBase>();
+	private static BlockingQueue<Book> mergeBookQueue = new LinkedBlockingQueue<Book>();
+	private static BlockingQueue<Trade> mergeTradeQueue = new LinkedBlockingQueue<Trade>();
+	private static BlockingQueue<Bar> mergeBarQueue = new LinkedBlockingQueue<Bar>();
 	private static BlockingQueue<EntityBase> insertQueue = mergeQueue;
+	private static BlockingQueue<EntityBase> bulkInsertQueue = bulkMergeQueue;
 	private static BlockingQueue<Book> insertBookQueue = mergeBookQueue;
 	private static BlockingQueue<Trade> insertTradeQueue = mergeTradeQueue;
 	private static BlockingQueue<Bar> insertBarQueue = mergeBarQueue;
@@ -119,8 +124,16 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 		this.insertQueue = insertQueue;
 	}
 
+	protected void setBulkInsertQueue(BlockingQueue<EntityBase> bulkInsertQueue) {
+		this.bulkInsertQueue = bulkInsertQueue;
+	}
+
 	protected void setMergeQueue(BlockingQueue<EntityBase> mergeQueue) {
 		this.mergeQueue = mergeQueue;
+	}
+
+	protected void setBulkMergeQueue(BlockingQueue<EntityBase> bulkMergeQueue) {
+		this.bulkMergeQueue = bulkMergeQueue;
 	}
 
 	protected void setInsertBookQueue(BlockingQueue<Book> insertBookQueue) {
@@ -163,6 +176,10 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 		return mergeQueue;
 	}
 
+	public BlockingQueue<EntityBase> getBulkMergeQueue() {
+		return bulkMergeQueue;
+	}
+
 	public BlockingQueue<Book> getMergeBookQueue(Tradeable market) {
 		return marketBookQueueMap.get(market);
 	}
@@ -177,6 +194,10 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 
 	public BlockingQueue<EntityBase> getInsertQueue() {
 		return insertQueue;
+	}
+
+	public BlockingQueue<EntityBase> getBulkInsertQueue() {
+		return bulkInsertQueue;
 	}
 
 	public BlockingQueue<Book> getInsertBookQueue(Tradeable market) {
@@ -240,7 +261,7 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 						Injector.root().getInjector().injectMembers(entity);
 
 						log.error(this.getClass().getSimpleName() + ":persistRunnable - No DAO defined for " + entity.getClass().getSimpleName() + " "
-								+ entity.getId());
+								+ entity.getUuid());
 						// we should inject a DAO.
 						//      Injector.root().getInjector().
 						//                peristQueue.add(entity);
@@ -252,23 +273,23 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 							//  entity.getDao().persistEntities(entity);
 							case NEW:
 
-								entity.getDao().persistEntities(entity);
+								entity.getDao().persistEntities(false, entity);
 
 								// TODO Auto-generated catch block
 								break;
 							case MERGE:
-								entity.getDao().mergeEntities(entity);
+								entity.getDao().mergeEntities(false, entity);
 								break;
 							case DELETE:
 								entity.getDao().deleteEntities(entity);
 								break;
 							default:
-								entity.getDao().persistEntities(entity);
+								entity.getDao().persistEntities(false, entity);
 								break;
 						}
 					} else
 
-						entity.getDao().persistEntities(entity);
+						entity.getDao().persistEntities(false, entity);
 					//  EntityBase[] entities = peristQueue.take();
 					// for (EntityBase entity : entities)
 
@@ -276,13 +297,13 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 
 				} catch (RuntimeException e) {
 					log.error(" " + this.getClass().getSimpleName() + ":persistRunnable, resubmitting thread due to "
-							+ (entity == null ? "null entity" : entity.getId()) + " full stack trace follows:", e);
+							+ (entity == null ? "null entity" : entity.getUuid()) + " full stack trace follows:", e);
 
 					insertService.submit(this);
 					throw e;
 				} catch (Throwable e) {
 
-					log.error(" " + this.getClass().getSimpleName() + ":persistRunnable, " + (entity == null ? "null entity" : entity.getId())
+					log.error(" " + this.getClass().getSimpleName() + ":persistRunnable, " + (entity == null ? "null entity" : entity.getUuid())
 							+ " full stack trace follows:", e);
 					//   Thread.currentThread().interrupt();
 					// return null; // supposing there is no cleanup or other stuff to be done
@@ -294,6 +315,173 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 
 		public persistRunnable(BlockingQueue peristQueue) {
 			this.peristQueue = peristQueue;
+
+		}
+
+	}
+
+	public class batchMergeRunnable implements Callable {
+
+		private final BlockingQueue mergeQueue;
+
+		@Override
+		public Object call() throws Exception {
+
+			EntityBase entity = null;
+			int maxBatchSize = 50;
+			long maxLatencyNanos = 100000;
+			long maxTimeoutNanos = 100000;
+			Collection<EntityBase> batch = new ArrayList<EntityBase>();
+			int curBatchSize = 0;
+			long stopBatchTimeNanos = -1;
+
+			while (true) {
+				boolean timeout = false;
+				if (stopBatchTimeNanos == -1) {
+					// Start of new batch. Block for the first item of this batch.
+					batch.add((EntityBase) mergeQueue.take());
+					curBatchSize++;
+					stopBatchTimeNanos = maxTimeoutNanos + maxLatencyNanos;
+				} else {
+					// Continue existing batch. Block until an item is in the queue or the
+					// batch timeout expires.
+					EntityBase element = (EntityBase) mergeQueue.poll(stopBatchTimeNanos, TimeUnit.NANOSECONDS);
+					if (element == null) {
+						// Timeout occurred.
+						break;
+					}
+					batch.add(element);
+					curBatchSize++;
+				}
+				curBatchSize += mergeQueue.drainTo(batch, maxBatchSize - curBatchSize);
+
+				if (curBatchSize >= maxBatchSize) {
+
+					try {
+						if (entity == null)
+							continue;
+						// synchronized (entity) {
+						if (entity.getDao() == null)
+							Injector.root().getInjector().injectMembers(entity);
+						if (entity.getDao() == null) {
+							log.error(this.getClass().getSimpleName() + ":mergeRunnable - No DAO defined for " + entity.getClass().getSimpleName() + " "
+									+ entity.getUuid());
+
+							//    mergeQueue.add(entity);
+							continue;
+
+						}
+						//  continue;
+
+						if (entity.getPeristanceAction() != null) {
+							switch (entity.getPeristanceAction()) {
+								case NEW:
+									entity.getDao().persistEntities(false, entity);
+									break;
+								case MERGE:
+									entity.getDao().mergeEntities(false, entity);
+									break;
+								case DELETE:
+									entity.getDao().deleteEntities(entity);
+									break;
+								default:
+									entity.getDao().mergeEntities(false, entity);
+									break;
+							}
+						} else
+							entity.getDao().mergeEntities(false, entity);
+						//  }
+
+					} catch (RuntimeException e) {
+						log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, resubmitting thread due to "
+								+ (entity == null ? "null entity" : entity.getUuid()) + " full stack trace follows:", e);
+
+						mergeService.submit(this);
+						throw e;
+					} catch (Throwable e) {
+						log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, " + (entity == null ? "null entity" : entity.getUuid())
+								+ " full stack trace follows:", e);
+
+					}
+					break;
+				}
+			}
+
+			return curBatchSize;
+
+		}
+
+		public batchMergeRunnable(BlockingQueue mergeQueue) {
+			this.mergeQueue = mergeQueue;
+
+		}
+
+	}
+
+	public class bulkMergeRunnable implements Callable {
+
+		private final BlockingQueue bulkMergeQueue;
+
+		@Override
+		public Object call() throws Exception {
+
+			EntityBase entity = null;
+			while (true) {
+
+				try {
+					entity = (EntityBase) bulkMergeQueue.take();
+
+					if (entity == null)
+						continue;
+					// synchronized (entity) {
+					if (entity.getDao() == null)
+						Injector.root().getInjector().injectMembers(entity);
+					if (entity.getDao() == null) {
+						log.error(this.getClass().getSimpleName() + ":mergeRunnable - No DAO defined for " + entity.getClass().getSimpleName() + " "
+								+ entity.getUuid());
+
+						//    mergeQueue.add(entity);
+						continue;
+
+					}
+					//  continue;
+
+					if (entity.getPeristanceAction() != null) {
+						switch (entity.getPeristanceAction()) {
+							case NEW:
+								entity.getDao().persistEntities(true, entity);
+								break;
+							case MERGE:
+								entity.getDao().mergeEntities(true, entity);
+								break;
+							case DELETE:
+								entity.getDao().deleteEntities(entity);
+								break;
+							default:
+								entity.getDao().mergeEntities(true, entity);
+								break;
+						}
+					} else
+						entity.getDao().mergeEntities(false, entity);
+					//  }
+
+				} catch (RuntimeException e) {
+					log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, resubmitting thread due to "
+							+ (entity == null ? "null entity" : entity.getUuid()) + " full stack trace follows:", e);
+
+					mergeService.submit(this);
+					throw e;
+				} catch (Throwable e) {
+					log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, " + (entity == null ? "null entity" : entity.getUuid())
+							+ " full stack trace follows:", e);
+
+				}
+			}
+
+		}
+
+		public bulkMergeRunnable(BlockingQueue bulkMergeQueue) {
+			this.bulkMergeQueue = bulkMergeQueue;
 
 		}
 
@@ -319,7 +507,7 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 						Injector.root().getInjector().injectMembers(entity);
 					if (entity.getDao() == null) {
 						log.error(this.getClass().getSimpleName() + ":mergeRunnable - No DAO defined for " + entity.getClass().getSimpleName() + " "
-								+ entity.getId());
+								+ entity.getUuid());
 
 						//    mergeQueue.add(entity);
 						continue;
@@ -330,30 +518,30 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 					if (entity.getPeristanceAction() != null) {
 						switch (entity.getPeristanceAction()) {
 							case NEW:
-								entity.getDao().persistEntities(entity);
+								entity.getDao().persistEntities(false, entity);
 								break;
 							case MERGE:
-								entity.getDao().mergeEntities(entity);
+								entity.getDao().mergeEntities(false, entity);
 								break;
 							case DELETE:
 								entity.getDao().deleteEntities(entity);
 								break;
 							default:
-								entity.getDao().mergeEntities(entity);
+								entity.getDao().mergeEntities(false, entity);
 								break;
 						}
 					} else
-						entity.getDao().mergeEntities(entity);
+						entity.getDao().mergeEntities(false, entity);
 					//  }
 
 				} catch (RuntimeException e) {
 					log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, resubmitting thread due to "
-							+ (entity == null ? "null entity" : entity.getId()) + " full stack trace follows:", e);
+							+ (entity == null ? "null entity" : entity.getUuid()) + " full stack trace follows:", e);
 
 					mergeService.submit(this);
 					throw e;
 				} catch (Throwable e) {
-					log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, " + (entity == null ? "null entity" : entity.getId())
+					log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, " + (entity == null ? "null entity" : entity.getUuid())
 							+ " full stack trace follows:", e);
 
 				}
@@ -386,10 +574,10 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 						if (entity.getPeristanceAction() != null) {
 							switch (entity.getPeristanceAction()) {
 								case NEW:
-									entity.getDao().persistEntities(entity);
+									entity.getDao().persistEntities(false, entity);
 									break;
 								case MERGE:
-									entity.getDao().mergeEntities(entity);
+									entity.getDao().mergeEntities(false, entity);
 									break;
 								case DELETE:
 									entity.getDao().deleteEntities(entity);
@@ -407,11 +595,11 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 					}
 				} catch (RuntimeException e) {
 					log.error(" " + this.getClass().getSimpleName() + ":deleteRunnable, resubmitting thread due to "
-							+ (entity == null ? "null entity" : entity.getId()) + " full stack trace follows:", e);
+							+ (entity == null ? "null entity" : entity.getUuid()) + " full stack trace follows:", e);
 					deleteService.submit(this);
 					throw e;
 				} catch (Throwable e) {
-					log.error(" " + this.getClass().getSimpleName() + ":deleteRunnable, " + (entity == null ? "null entity" : entity.getId())
+					log.error(" " + this.getClass().getSimpleName() + ":deleteRunnable, " + (entity == null ? "null entity" : entity.getUuid())
 							+ " full stack trace follows:", e);
 
 				}

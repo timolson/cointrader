@@ -173,7 +173,7 @@ public class OrderUpdate extends Event {
 	public synchronized void persit() {
 
 		try {
-			log.debug(this.getClass().getSimpleName() + " - Persist : Persit of Order Update " + this.getId() + " called from class "
+			log.debug(this.getClass().getSimpleName() + " - Persist : Persit of Order Update " + this.getUuid() + " called from class "
 					+ Thread.currentThread().getStackTrace()[2]);
 
 			this.setPeristanceAction(PersistanceAction.NEW);
@@ -206,8 +206,8 @@ public class OrderUpdate extends Event {
 	}
 
 	@Override
-	protected synchronized void setId(UUID id) {
-		this.id = id;
+	protected synchronized void setUuid(UUID uuid) {
+		this.uuid = uuid;
 	}
 
 	protected synchronized void setLastState(OrderState lastState) {
@@ -237,7 +237,7 @@ public class OrderUpdate extends Event {
 	public synchronized void merge() {
 
 		try {
-			log.debug(this.getClass().getSimpleName() + " - Merge : Merge of Order Update " + this.getId() + " called from class "
+			log.debug(this.getClass().getSimpleName() + " - Merge : Merge of Order Update " + this.getUuid() + " called from class "
 					+ Thread.currentThread().getStackTrace()[2]);
 
 			this.setPeristanceAction(PersistanceAction.NEW);

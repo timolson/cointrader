@@ -25,9 +25,14 @@ public class XchangeHelperBase implements XchangeData.Helper {
 	}
 
 	@Override
-	public Collection<Order> getOrder(TradeService tradeService, long period, String... orderIds) throws Exception {
+	public Collection<Order> getOrder(TradeService tradeService, Listing listing, long period, String... orderIds) throws Exception {
 		return tradeService.getOrder(orderIds);
 
+	}
+
+	@Override
+	public boolean cancelOrder(TradeService tradeService, Listing listing, String orderId) throws Exception {
+		return tradeService.cancelOrder(orderId);
 	}
 
 	@Override

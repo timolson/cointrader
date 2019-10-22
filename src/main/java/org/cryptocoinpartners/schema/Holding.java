@@ -3,11 +3,11 @@ package org.cryptocoinpartners.schema;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import javax.persistence.ManyToOne;
+import javax.persistence.MappedSuperclass;
 import javax.persistence.Transient;
 
 import org.cryptocoinpartners.schema.dao.Dao;
@@ -22,7 +22,8 @@ import com.google.inject.Inject;
  * 
  * @author Tim Olson
  */
-@Entity
+
+@MappedSuperclass
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 //@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 //@Cacheable

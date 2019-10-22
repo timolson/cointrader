@@ -43,7 +43,9 @@ import org.cryptocoinpartners.schema.dao.PortfolioDao;
 import org.cryptocoinpartners.service.OrderService;
 import org.cryptocoinpartners.service.PortfolioService;
 import org.cryptocoinpartners.service.QuoteService;
+import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.EM;
+import org.cryptocoinpartners.util.FeesUtil;
 import org.cryptocoinpartners.util.Remainder;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
@@ -51,7 +53,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Sets;
-import com.google.inject.Singleton;
 
 /**
  * Many Owners may have Stakes in the Portfolio, but there is only one PortfolioManager, who is not necessarily an Owner. The Portfolio has muFltiple Positions.
@@ -59,7 +60,6 @@ import com.google.inject.Singleton;
  * @author Tim Olson
  */
 @Entity
-@Singleton
 //@NamedQueries({ @NamedQuery(name = "Portfolio.findOpenPositions", query = "select po from Portfolio po where po.positions.fills.fill.openVolumeCount<>0", hints = { @QueryHint(name = "javax.persistence.fetchgraph", value = "graph.Portfolio.positions") }) })
 //@NamedEntityGraph(name = "graph.Position.fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "fills"), subgraphs = @NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode("order")))
 //@NamedEntityGraph(name = "graph.Portfolio.positions", attributeNodes = @NamedAttributeNode(value = "positions", subgraph = "positions"), subgraphs = @NamedSubgraph(name = "positions", attributeNodes = @NamedAttributeNode("portfolio")))
@@ -102,6 +102,7 @@ public class Portfolio extends EntityBase {
 	private transient static Set<Tradeable> markets;
 
 	private transient static Set<Exchange> exchanges;
+	protected static boolean baseRealisedPnL = (ConfigUtil.combined() != null) ? ConfigUtil.combined().getBoolean("base.realised.pnl", false) : false;
 
 	/** returns all Positions, whether they are tied to an open Order or not. Use getTradeablePositions() */
 	public @Transient List<Fill> getDetailedPositions() {
@@ -326,7 +327,7 @@ public class Portfolio extends EntityBase {
 
 	public synchronized void positionReset() {
 		log.debug(this.getClass().getSimpleName() + ":positionReset called from class " + Thread.currentThread().getStackTrace()[2]
-				+ " reseiting positions for " + this.getId());
+				+ " reseiting positions for " + this.getUuid());
 
 		positions.clear();
 
@@ -533,8 +534,7 @@ public class Portfolio extends EntityBase {
 			for (Position detailedPosition : positionsMap.get(asset).get(market.getExchange()).get(market.getListing()).get(TransactionType.BUY)) {
 				synchronized (detailedPosition.getFills()) {
 					for (Fill pos : detailedPosition.getFills()) {
-						if (pos.getPositionEffect() == null || (pos.getPositionEffect() != null && pos.getMarket().getContractSize(pos.getMarket()) == 1D)
-								|| pos.getPositionEffect() == PositionEffect.OPEN)
+						if (pos.getPositionEffect() == null || (pos.getPositionEffect() != null && pos.getPositionEffect() == PositionEffect.OPEN))
 							fills.add(pos);
 
 					}
@@ -554,9 +554,7 @@ public class Portfolio extends EntityBase {
 				log.debug("Postion: " + detailedPosition.getFills());
 				synchronized (detailedPosition.getFills()) {
 					for (Fill pos : detailedPosition.getFills()) {
-						if (pos.getOrder().getOrderGroup() == orderGroup && (pos.getPositionEffect() == null
-								|| (pos.getPositionEffect() != null && pos.getMarket().getContractSize(pos.getMarket()) == 1D)
-								|| pos.getPositionEffect() == PositionEffect.OPEN))
+						if (pos.getOrder().getOrderGroup() == orderGroup && (pos.getPositionEffect() == null || pos.getPositionEffect() == PositionEffect.OPEN))
 							fills.add(pos);
 
 					}
@@ -575,8 +573,7 @@ public class Portfolio extends EntityBase {
 			for (Position detailedPosition : positionsMap.get(asset).get(market.getExchange()).get(market.getListing()).get(TransactionType.SELL)) {
 				synchronized (detailedPosition.getFills()) {
 					for (Fill pos : detailedPosition.getFills()) {
-						if (pos.getPositionEffect() == null || (pos.getPositionEffect() != null && pos.getMarket().getContractSize(pos.getMarket()) == 1D)
-								|| pos.getPositionEffect() == PositionEffect.OPEN)
+						if (pos.getPositionEffect() == null || pos.getPositionEffect() == PositionEffect.OPEN)
 
 							fills.add(pos);
 
@@ -585,6 +582,30 @@ public class Portfolio extends EntityBase {
 			}
 
 		return positionFactory.create(fills, market);
+	}
+
+	public @Transient Position getOpentPosition(Position position1, Position position2) {
+		List<Fill> fills = new CopyOnWriteArrayList<Fill>();
+		if (position1.getMarket().equals(position2.getMarket())) {
+			synchronized (position1.getFills()) {
+				for (Fill pos : position1.getFills()) {
+					if (pos.getPositionEffect() == null || pos.getPositionEffect() == PositionEffect.OPEN)
+
+						fills.add(pos);
+
+				}
+			}
+			synchronized (position2.getFills()) {
+				for (Fill pos : position2.getFills()) {
+					if (pos.getPositionEffect() == null || pos.getPositionEffect() == PositionEffect.OPEN)
+
+						fills.add(pos);
+
+				}
+			}
+		}
+
+		return positionFactory.create(fills, position1.getMarket());
 	}
 
 	public @Transient Position getShortPosition(Asset asset, Market market, double orderGroup) {
@@ -597,7 +618,7 @@ public class Portfolio extends EntityBase {
 				synchronized (detailedPosition.getFills()) {
 					for (Fill pos : detailedPosition.getFills()) {
 						if (pos.getOrder().getOrderGroup() == orderGroup && (pos.getPositionEffect() == null
-								|| (pos.getPositionEffect() != null && pos.getMarket().getContractSize(pos.getMarket()) == 1D)
+
 								|| pos.getPositionEffect() == PositionEffect.OPEN))
 
 							fills.add(pos);
@@ -660,6 +681,35 @@ public class Portfolio extends EntityBase {
 		return allPnLs;
 	}
 
+	public @Transient Map<Asset, Amount> getComissionsAndFees() {
+
+		Map<Asset, Amount> allComissionAndFees = new ConcurrentHashMap<Asset, Amount>();
+		synchronized (getComissionAndFee()) {
+			for (Iterator<Asset> it = getComissionAndFee().keySet().iterator(); it.hasNext();) {
+
+				Asset asset = it.next();
+				for (Iterator<Exchange> ite = getComissionAndFee().get(asset).keySet().iterator(); ite.hasNext();) {
+					Exchange exchange = ite.next();
+					for (Iterator<Listing> itl = getComissionAndFee().get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+						Listing listing = itl.next();
+						Amount comissionsAndFees = getComissionAndFee().get(asset).get(exchange).get(listing);
+
+						if (allComissionAndFees.get(asset) == null) {
+							allComissionAndFees.put(asset, comissionsAndFees);
+						} else {
+							allComissionAndFees.put(asset, allComissionAndFees.get(asset).plus(comissionsAndFees));
+						}
+					}
+
+				}
+
+			}
+		}
+		// }
+
+		return allComissionAndFees;
+	}
+
 	public @Transient Map<Asset, Amount> getRealisedPnLs(Market market) {
 
 		Map<Asset, Amount> allPnLs = new ConcurrentHashMap<Asset, Amount>();
@@ -693,6 +743,39 @@ public class Portfolio extends EntityBase {
 		return allPnLs;
 	}
 
+	public @Transient Map<Asset, Amount> getComissionsAndFees(Market market) {
+
+		Map<Asset, Amount> allComissionsAndFees = new ConcurrentHashMap<Asset, Amount>();
+		synchronized (getComissionAndFee()) {
+			for (Iterator<Asset> it = getComissionAndFee().keySet().iterator(); it.hasNext();) {
+
+				Asset asset = it.next();
+				for (Iterator<Exchange> ite = getComissionAndFee().get(asset).keySet().iterator(); ite.hasNext();) {
+					Exchange exchange = ite.next();
+					if (exchange.equals(market.getExchange())) {
+						for (Iterator<Listing> itl = getComissionAndFee().get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+							Listing listing = itl.next();
+							if (listing.equals(market.getListing())) {
+								Amount comissionsAndFees = getComissionAndFee().get(asset).get(exchange).get(listing);
+
+								if (allComissionsAndFees.get(asset) == null) {
+									allComissionsAndFees.put(asset, comissionsAndFees);
+								} else {
+									allComissionsAndFees.put(asset, allComissionsAndFees.get(asset).plus(comissionsAndFees));
+								}
+							}
+						}
+
+					}
+				}
+
+			}
+		}
+		// }
+
+		return allComissionsAndFees;
+	}
+
 	public @Transient Amount getRealisedPnL(Asset asset) {
 
 		Amount realisedPnL = DecimalAmount.ZERO;
@@ -710,9 +793,31 @@ public class Portfolio extends EntityBase {
 		return realisedPnL;
 	}
 
+	public @Transient Amount getComissionAndFee(Asset asset) {
+
+		Amount comissionsAndFees = DecimalAmount.ZERO;
+		synchronized (getComissionAndFee().get(asset)) {
+			for (Iterator<Exchange> ite = getComissionAndFee().get(asset).keySet().iterator(); ite.hasNext();) {
+				Exchange exchange = ite.next();
+				for (Iterator<Listing> itl = getComissionAndFee().get(asset).get(exchange).keySet().iterator(); itl.hasNext();) {
+					Listing listing = itl.next();
+					comissionsAndFees = comissionsAndFees.plus(getComissionAndFee().get(asset).get(exchange).get(listing));
+
+				}
+			}
+		}
+
+		return comissionsAndFees;
+	}
+
 	public @Transient Map<Asset, Map<Exchange, Map<Listing, Amount>>> getRealisedPnL() {
 
 		return realisedProfits;
+	}
+
+	public @Transient Map<Asset, Map<Exchange, Map<Listing, Amount>>> getComissionAndFee() {
+
+		return commissionsAndFees;
 	}
 
 	public @Transient DiscreteAmount getNetPosition(Asset asset, Exchange exchange) {
@@ -880,7 +985,8 @@ public class Portfolio extends EntityBase {
 			}
 
 			log.debug("Portfolio - addRealisedPnL: adding transaction " + transaction + " to "
-					+ getRealisedPnL().get(transaction.getCurrency()).get(transaction.getExchange()).get(transaction.getFill().getMarket().getListing()));
+					+ getRealisedPnL().get(transaction.getCurrency()).get(transaction.getExchange()).get(transaction.getFill().getMarket().getListing())
+					+ " in realsiedPNL " + getRealisedPnL());
 			Amount TotalRealisedPnL = transaction.getAmount()
 					.plus(getRealisedPnL().get(transaction.getCurrency()).get(transaction.getExchange()).get(transaction.getFill().getMarket().getListing()));
 
@@ -888,6 +994,49 @@ public class Portfolio extends EntityBase {
 					TotalRealisedPnL);
 		} catch (Exception | Error ex) {
 			log.debug("Portfolio - addRealisedPnL: Unable to set relasied PnL", ex);
+
+		}
+	}
+
+	@Transient
+	public synchronized void addComissionAndFee(Transaction transaction) {
+		//if the realised map does not exist then we need to create it.
+		try {
+			Amount comissionAndFees = DecimalAmount.ZERO;
+
+			Map<Listing, Amount> marketComissionAndFees;
+			if (getComissionAndFee().get(transaction.getCommissionCurrency()) == null) {
+				Map<Exchange, Map<Listing, Amount>> assetComissionsAndFees = new ConcurrentHashMap<Exchange, Map<Listing, Amount>>();
+				marketComissionAndFees = new ConcurrentHashMap<Listing, Amount>();
+				marketComissionAndFees.put(transaction.getFill().getMarket().getListing(), comissionAndFees);
+				assetComissionsAndFees.put(transaction.getExchange(), marketComissionAndFees);
+				getComissionAndFee().put(transaction.getCommissionCurrency(), assetComissionsAndFees);
+			}
+
+			if (getComissionAndFee().get(transaction.getCommissionCurrency()).get(transaction.getExchange()) == null) {
+				marketComissionAndFees = new ConcurrentHashMap<Listing, Amount>();
+				marketComissionAndFees.put(transaction.getFill().getMarket().getListing(), comissionAndFees);
+				getComissionAndFee().get(transaction.getCommissionCurrency()).put(transaction.getExchange(), marketComissionAndFees);
+
+			}
+
+			if (getComissionAndFee().get(transaction.getCommissionCurrency()).get(transaction.getExchange())
+					.get(transaction.getFill().getMarket().getListing()) == null) {
+				getComissionAndFee().get(transaction.getCommissionCurrency()).get(transaction.getExchange()).put(transaction.getFill().getMarket().getListing(),
+						comissionAndFees);
+
+			}
+
+			log.debug("Portfolio - getComissionAndFee: adding transaction " + transaction + " to " + getComissionAndFee()
+					.get(transaction.getCommissionCurrency()).get(transaction.getExchange()).get(transaction.getFill().getMarket().getListing())
+					+ " in getComissionAndFee " + getComissionAndFee());
+			Amount TotalComissionAndFee = transaction.getCommission().plus(getComissionAndFee().get(transaction.getCommissionCurrency())
+					.get(transaction.getExchange()).get(transaction.getFill().getMarket().getListing()));
+
+			getComissionAndFee().get(transaction.getCommissionCurrency()).get(transaction.getExchange()).put(transaction.getFill().getMarket().getListing(),
+					TotalComissionAndFee);
+		} catch (Exception | Error ex) {
+			log.debug("Portfolio - getComissionAndFee: Unable to set commsions and fees", ex);
 
 		}
 	}
@@ -907,6 +1056,8 @@ public class Portfolio extends EntityBase {
 			transactions.put(transaction.getCurrency(), assetTransactions);
 			if (transaction.getType() == TransactionType.REALISED_PROFIT_LOSS)
 				addRealisedPnL(transaction);
+			else if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL)
+				addComissionAndFee(transaction);
 			//      portfolioService.resetBalances();
 			return true;
 		} else {
@@ -921,6 +1072,8 @@ public class Portfolio extends EntityBase {
 				assetTransactions.put(transaction.getExchange(), transactionGroup);
 				if (transaction.getType() == TransactionType.REALISED_PROFIT_LOSS)
 					addRealisedPnL(transaction);
+				else if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL)
+					addComissionAndFee(transaction);
 				//    portfolioService.resetBalances();
 				return true;
 			} else {
@@ -932,6 +1085,8 @@ public class Portfolio extends EntityBase {
 					Amount TotalRealisedPnL = null;
 					if (transaction.getType() == TransactionType.REALISED_PROFIT_LOSS)
 						addRealisedPnL(transaction);
+					else if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL)
+						addComissionAndFee(transaction);
 					exchangeTransactions.put(transaction.getType(), transactionList);
 					//         portfolioService.resetBalances();
 					return true;
@@ -946,6 +1101,8 @@ public class Portfolio extends EntityBase {
 					exchangeTransactions.put(transaction.getType(), transactionList);
 					if (transaction.getType() == TransactionType.REALISED_PROFIT_LOSS)
 						addRealisedPnL(transaction);
+					else if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL)
+						addComissionAndFee(transaction);
 					//  portfolioService.resetBalances();
 					return true;
 				}
@@ -1106,9 +1263,9 @@ public class Portfolio extends EntityBase {
 	//TODO hold the positions per order group in seperate map so that the orderupdate published with the positions just for that order group, currently the order groups are colmingled so each order group gets a postions update with the same position in.
 
 	@Transient
-	public synchronized boolean merge(Fill fill) {
+	public boolean merge(Fill fill) {
 		boolean persit = true;
-		if (!fill.getMarket().getSymbol().equals("OKCOIN_QUARTER:BTC.USD.QUARTER"))
+		if (fill.getMarket().getSymbol().equals("BITFINEX:ZEC.BTC"))
 			log.debug("test");
 		if (fill.getPositionEffect().equals(PositionEffect.CLOSE) && fill.isLong())
 			log.debug("closing short");
@@ -1195,346 +1352,516 @@ public class Portfolio extends EntityBase {
 				publishPositionUpdate(fill.getPosition(), (fill.isLong()) ? PositionType.LONG : PositionType.SHORT, fill.getMarket(),
 						fill.getOrder().getOrderGroup());
 				Amount profits = DecimalAmount.ZERO;
-				if (getRealisedPnL() == null || getRealisedPnL().get(this.getBaseAsset()) == null
-						|| getRealisedPnL().get(this.getBaseAsset()).get(fill.getMarket().getExchange()) == null
-						|| getRealisedPnL().get(this.getBaseAsset()).get(fill.getMarket().getExchange()).get(fill.getMarket().getListing()) == null) {
+				//NPE here
+				if (getRealisedPnL() == null || getRealisedPnL().get(this.getBaseAsset()) == null) {
+					assetRealisedProfits = new ConcurrentHashMap<Exchange, Map<Listing, Amount>>();
+					marketRealisedProfits = new ConcurrentHashMap<Listing, Amount>();
+					marketRealisedProfits.put(fill.getMarket().getListing(), profits);
+					assetRealisedProfits.put(fill.getMarket().getExchange(), marketRealisedProfits);
+					getRealisedPnL().put(this.getBaseAsset(), assetRealisedProfits);
+				} else if (getRealisedPnL().get(this.getBaseAsset()).get(fill.getMarket().getExchange()) == null) {
 					marketRealisedProfits = new ConcurrentHashMap<Listing, Amount>();
 					marketRealisedProfits.put(fill.getMarket().getListing(), profits);
 					getRealisedPnL().get(this.getBaseAsset()).put(fill.getMarket().getExchange(), marketRealisedProfits);
+				} else if (getRealisedPnL().get(this.getBaseAsset()).get(fill.getMarket().getExchange()).get(fill.getMarket().getListing()) == null) {
+					getRealisedPnL().get(this.getBaseAsset()).get(fill.getMarket().getExchange()).put(fill.getMarket().getListing(), profits);
 				}
 
 				return true;
 			} else {
-				ConcurrentLinkedQueue<Position> listingPositions = exchangePositions.get(fill.getMarket().getListing()).get(transactionType);
-				ConcurrentLinkedQueue<Position> openingListingPositions = exchangePositions.get(fill.getMarket().getListing()).get(openingTransactionType);
+
+				Map<TransactionType, ConcurrentLinkedQueue<Position>> listingPositions = assetPositions.get(fill.getMarket().getExchange())
+						.get(fill.getMarket().getListing());
 				if (listingPositions == null) {
-					log.debug(this.getClass().getSimpleName() + ":merge. creating new lisiting for fill" + fill);
-					ConcurrentLinkedQueue<Position> listingsDetailPosition = new ConcurrentLinkedQueue<Position>();
+					log.debug(this.getClass().getSimpleName() + ":merge. creating new listing for fill" + fill);
+					ConcurrentLinkedQueue<Position> detailPosition = new ConcurrentLinkedQueue<Position>();
+					Map<TransactionType, ConcurrentLinkedQueue<Position>> positionType = new ConcurrentHashMap<TransactionType, ConcurrentLinkedQueue<Position>>();
 					Position detPosition;
 					if (fill.getPosition() == null) {
 						detPosition = positionFactory.create(fill, fill.getMarket());
 						log.debug(this.getClass().getSimpleName() + ":merge. created new position " + detPosition);
-						// detPosition.getPortfolio().merge();
 						detPosition.persit();
 						fill.persit();
 
 					} else {
 						detPosition = fill.getPosition();
 					}
-					log.info(fill + "added to new " + transactionType + " position");
-					listingsDetailPosition.add(detPosition);
-					exchangePositions.get(fill.getMarket().getListing()).put(transactionType, listingsDetailPosition);
-					listingPositions = exchangePositions.get(fill.getMarket().getListing()).get(transactionType);
-					Amount listingProfits = DecimalAmount.ZERO;
-					if (getRealisedPnL() == null || getRealisedPnL().get(this.getBaseAsset()) == null
-							|| getRealisedPnL().get(this.getBaseAsset()).get(fill.getMarket().getExchange()) == null
-							|| getRealisedPnL().get(this.getBaseAsset()).get(fill.getMarket().getExchange()).get(fill.getMarket().getListing()) == null) {
-						marketRealisedProfits = new ConcurrentHashMap<Listing, Amount>();
-						marketRealisedProfits.put(fill.getMarket().getListing(), listingProfits);
-						getRealisedPnL().get(this.getBaseAsset()).put(fill.getMarket().getExchange(), marketRealisedProfits);
-					}
-				} else {
-					if (!listingPositions.isEmpty() || listingPositions.peek() != null) {
-						Position position = listingPositions.peek();
-						log.info(fill + " prepareing to add to  existing " + transactionType + " position:" + position);
-						fill.setPosition(position);
+					log.info(fill + "added to new " + fill.getMarket().getExchange() + " position");
 
-						if (position.addFill(fill)) {
-							log.info(fill + " added to existing " + transactionType + " position:" + position);
-							synchronized (position.getFills()) {
-								Collections.sort(position.getFills(), timeComparator);
-							}
-							log.info("sorted exisitng position by time then largest volume:" + position);
-							fill.persit();
-						} else {
-							log.info(fill + " not added to existing " + transactionType + " position:" + position);
-							fill.persit();
-						}
-					} else {
+					detailPosition.add(detPosition);
+					positionType.put(transactionType, detailPosition);
+					assetPositions.get(fill.getMarket().getExchange()).put(fill.getMarket().getListing(), positionType);
+
+					publishPositionUpdate(fill.getPosition(), (fill.isLong()) ? PositionType.LONG : PositionType.SHORT, fill.getMarket(),
+							fill.getOrder().getOrderGroup());
+					Amount profits = DecimalAmount.ZERO;
+					if (getRealisedPnL() == null || getRealisedPnL().get(this.getBaseAsset()) == null) {
+						assetRealisedProfits = new ConcurrentHashMap<Exchange, Map<Listing, Amount>>();
+						marketRealisedProfits = new ConcurrentHashMap<Listing, Amount>();
+						marketRealisedProfits.put(fill.getMarket().getListing(), profits);
+						assetRealisedProfits.put(fill.getMarket().getExchange(), marketRealisedProfits);
+						getRealisedPnL().put(this.getBaseAsset(), assetRealisedProfits);
+					} else if (getRealisedPnL().get(this.getBaseAsset()).get(fill.getMarket().getExchange()) == null) {
+						marketRealisedProfits = new ConcurrentHashMap<Listing, Amount>();
+						marketRealisedProfits.put(fill.getMarket().getListing(), profits);
+						getRealisedPnL().get(this.getBaseAsset()).put(fill.getMarket().getExchange(), marketRealisedProfits);
+					} else if (getRealisedPnL().get(this.getBaseAsset()).get(fill.getMarket().getExchange()).get(fill.getMarket().getListing()) == null) {
+						getRealisedPnL().get(this.getBaseAsset()).get(fill.getMarket().getExchange()).put(fill.getMarket().getListing(), profits);
+					}
+
+					return true;
+
+				} else {
+					log.debug(this.getClass().getSimpleName() + ":merge. getting listings for transaction type " + transactionType + "  market  "
+							+ fill.getMarket() + " listing " + fill.getMarket().getListing());
+					ConcurrentLinkedQueue<Position> transactionPositions = exchangePositions.get(fill.getMarket().getListing()).get(transactionType);
+
+					Map<TransactionType, ConcurrentLinkedQueue<Position>> openingListingPositions = exchangePositions.get(fill.getMarket().getListing());
+					ConcurrentLinkedQueue<Position> openingTransactionPositions = null;
+					if (openingListingPositions != null) {
+						openingTransactionPositions = exchangePositions.get(fill.getMarket().getListing()).get(openingTransactionType);
+					}
+
+					if (transactionPositions == null) {
+						log.debug(this.getClass().getSimpleName() + ":merge. creating new lisiting for fill" + fill);
+						ConcurrentLinkedQueue<Position> listingsDetailPosition = new ConcurrentLinkedQueue<Position>();
 						Position detPosition;
 						if (fill.getPosition() == null) {
-							//fill.getPortfolio().merge();
 							detPosition = positionFactory.create(fill, fill.getMarket());
 							log.debug(this.getClass().getSimpleName() + ":merge. created new position " + detPosition);
-							//       detPosition.getPortfolio().merge();
+							// detPosition.getPortfolio().merge();
 							detPosition.persit();
 							fill.persit();
 
 						} else {
-							log.debug(this.getClass().getSimpleName() + ":merge. adding to exising fill position  for fill" + fill);
 							detPosition = fill.getPosition();
 						}
-						listingPositions.add(detPosition);
+						log.info(fill + "added to new " + transactionType + " position");
+						listingsDetailPosition.add(detPosition);
+						exchangePositions.get(fill.getMarket().getListing()).put(transactionType, listingsDetailPosition);
+						transactionPositions = exchangePositions.get(fill.getMarket().getListing()).get(transactionType);
+						Amount listingProfits = DecimalAmount.ZERO;
+						if (getRealisedPnL() == null || getRealisedPnL().get(this.getBaseAsset()) == null) {
+							assetRealisedProfits = new ConcurrentHashMap<Exchange, Map<Listing, Amount>>();
+							marketRealisedProfits = new ConcurrentHashMap<Listing, Amount>();
+							marketRealisedProfits.put(fill.getMarket().getListing(), listingProfits);
+							assetRealisedProfits.put(fill.getMarket().getExchange(), marketRealisedProfits);
+							getRealisedPnL().put(this.getBaseAsset(), assetRealisedProfits);
+						} else if (getRealisedPnL().get(this.getBaseAsset()).get(fill.getMarket().getExchange()) == null) {
+							marketRealisedProfits = new ConcurrentHashMap<Listing, Amount>();
+							marketRealisedProfits.put(fill.getMarket().getListing(), listingProfits);
+							getRealisedPnL().get(this.getBaseAsset()).put(fill.getMarket().getExchange(), marketRealisedProfits);
+						} else if (getRealisedPnL().get(this.getBaseAsset()).get(fill.getMarket().getExchange()).get(fill.getMarket().getListing()) == null) {
+							getRealisedPnL().get(this.getBaseAsset()).get(fill.getMarket().getExchange()).put(fill.getMarket().getListing(), listingProfits);
+						}
+					} else {
+						//Map<TransactionType, ConcurrentLinkedQueue<Position>> listingPositions = assetPositions.get(fill.getMarket().getExchange())
+						///		.get(fill.getMarket().getListing());
+
+						Position position = listingPositions.isEmpty() ? null : listingPositions.get(transactionType).peek();
+						if (fill.getMarket().getSymbol().equals("BITFINEX:ZEC.BTC"))
+							log.debug("test");
+						if (position != null) {
+							log.info(fill + " prepareing to add to  existing " + transactionType + " position:" + position);
+							fill.setPosition(position);
+							if (position.addFill(fill)) {
+								log.info(fill + " added to existing " + transactionType + " position:" + position);
+								synchronized (position.getFills()) {
+									Collections.sort(position.getFills(), timeComparator);
+								}
+								log.info("sorted exisitng position by time then largest volume:" + position);
+								fill.persit();
+							} else {
+								log.info(fill + " not added to existing " + transactionType + " position:" + position);
+								fill.persit();
+							}
+
+						} else {
+							Position detPosition;
+							if (fill.getPosition() == null) {
+								//fill.getPortfolio().merge();
+								detPosition = positionFactory.create(fill, fill.getMarket());
+								log.debug(this.getClass().getSimpleName() + ":merge. created new position " + detPosition);
+								//       detPosition.getPortfolio().merge();
+								detPosition.persit();
+								fill.persit();
+
+							} else {
+								log.debug(this.getClass().getSimpleName() + ":merge. adding to exising fill position  for fill" + fill);
+								detPosition = fill.getPosition();
+							}
+							listingPositions.get(transactionType).add(detPosition);
+						}
 					}
-				}
-				log.debug(this.getClass().getSimpleName() + ":merge fills -  Determing closeouts fill " + fill + " with open positions "
-						+ openingListingPositions);
 
-				if (openingListingPositions != null && !(openingListingPositions.isEmpty())) {
-					Amount realisedPnL = DecimalAmount.ZERO;
-					long closingVolumeCount = 0;
-					Amount entryPrice = DecimalAmount.ZERO;
-					Amount exitPrice = DecimalAmount.ZERO;
-					Set<Position> positionsToPublish = new HashSet<Position>();
+					log.debug(this.getClass().getSimpleName() + ":merge fills -  Determing closeouts fill " + fill + " with open positions "
+							+ openingTransactionPositions);
 
-					Iterator<Position> lpitr = listingPositions.iterator();
+					if (openingTransactionPositions != null && !(openingTransactionPositions.isEmpty())) {
+						Amount realisedPnL = DecimalAmount.ZERO;
+						long closingVolumeCount = 0;
+						Amount entryPrice = DecimalAmount.ZERO;
+						Amount exitPrice = DecimalAmount.ZERO;
+						Set<Position> positionsToPublish = new HashSet<Position>();
+						synchronized (transactionPositions) {
+							Iterator<Position> lpitr = transactionPositions.iterator();
 
-					Collection<Order> ordersToCancel = new HashSet<Order>();
-					CLOSEPOSITIONSLOOP: while (lpitr.hasNext()) {
-						Position closePos = lpitr.next();
-						if (closePos.getPositionEffect().equals(PositionEffect.DEFAULT)) {
-							log.debug("closPos " + closePos.getPositionEffect() + " fills" + closePos.getFills());
-						}
-						if (!closePos.hasFills()) {
-							log.debug(this.getClass().getSimpleName() + ":merge fills 1 - removing position: " + closePos.getId() + " from listingPositions: "
-									+ listingPositions);
-							lpitr.remove();
-							continue;
-						}
+							Collection<Order> ordersToCancel = new HashSet<Order>();
+							CLOSEPOSITIONSLOOP: while (lpitr.hasNext()) {
+								Position closePos = lpitr.next();
+								if (closePos.getPositionEffect().equals(PositionEffect.DEFAULT)) {
+									log.debug("closPos " + closePos.getPositionEffect() + " fills" + closePos.getFills());
+								}
+								synchronized (closePos) {
+									if (!closePos.hasFills()) {
+										log.debug(this.getClass().getSimpleName() + ":merge fills 1 - removing position: " + closePos.getUuid()
+												+ " from listingPositions: " + transactionPositions);
+										lpitr.remove();
+										continue;
+									}
 
-						//TODO if we only have opening posiotns on in ClosePos & OpenPos we don't need to loop
-						// should be a more efficent way that looping over every openPos for every ClosePos
-						synchronized (closePos.getFills()) {
-							Iterator<Fill> cpitr = closePos.getFills().iterator();
-							log.debug(this.getClass().getSimpleName() + ":merge fills closePos has " + closePos.getFills().size() + " fills "
-									+ closePos.getFills());
-							int closedFillCount = 0;
-							CLOSEDFILLSLOOP: while (cpitr.hasNext()) {
-								log.debug(this.getClass().getSimpleName() + ":merge fills - Starting close outs with closing position " + closePos.getId()
-										+ " incrementing loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
-								closedFillCount++;
-								Fill closePosition = cpitr.next();
-								log.debug(this.getClass().getSimpleName() + ":merge fills  - Closing fill " + closePosition.getId() + " loop " + closedFillCount
-										+ " with itterator " + System.identityHashCode(cpitr));
-								boolean closedFillBreak = false;
-								if (closePosition.getOpenVolumeCount() != 0) {
-									if (closePosition.getPositionEffect() != null)
-										openingPositionEffect = (closePosition.getPositionEffect() == (PositionEffect.CLOSE)) ? PositionEffect.OPEN
-												: ((closePosition.getPositionEffect() == (PositionEffect.OPEN)) ? PositionEffect.CLOSE
-														: PositionEffect.DEFAULT);
-									Iterator<Position> olpitr = openingListingPositions.iterator();
-									OPENPOSITIONSLOOP: while (olpitr.hasNext() && !closedFillBreak) {
-										Position openPos = olpitr.next();
-										if (openPos.getPositionEffect().equals(PositionEffect.DEFAULT))
-											log.debug("openPos fills" + closePos.getFills());
+									//TODO if we only have opening posiotns on in ClosePos & OpenPos we don't need to loop
+									// should be a more efficent way that looping over every openPos for every ClosePos
+									synchronized (closePos.getFills()) {
+										Iterator<Fill> cpitr = closePos.getFills().iterator();
+										log.debug(this.getClass().getSimpleName() + ":merge fills closePos has " + closePos.getFills().size() + " fills "
+												+ closePos.getFills());
+										int closedFillCount = 0;
+										CLOSEDFILLSLOOP: while (cpitr.hasNext()) {
+											log.debug(this.getClass().getSimpleName() + ":merge fills - Starting close outs with closing position "
+													+ closePos.getUuid() + " incrementing loop " + closedFillCount + " with iterator "
+													+ System.identityHashCode(cpitr));
+											closedFillCount++;
+											Fill closePosition = cpitr.next();
+											synchronized (closePosition) {
+												log.debug(this.getClass().getSimpleName() + ":merge fills  - Closing fill " + closePosition.getUuid() + " loop "
+														+ closedFillCount + " with itterator " + System.identityHashCode(cpitr));
+												boolean closedFillBreak = false;
+												if (closePosition.getOpenVolumeCount() != 0) {
+													if (closePosition.getPositionEffect() != null)
+														openingPositionEffect = (closePosition.getPositionEffect() == (PositionEffect.CLOSE))
+																? PositionEffect.OPEN
+																: ((closePosition.getPositionEffect() == (PositionEffect.OPEN)) ? PositionEffect.CLOSE
+																		: PositionEffect.DEFAULT);
+													synchronized (openingTransactionPositions) {
+														Iterator<Position> olpitr = openingTransactionPositions.iterator();
+														OPENPOSITIONSLOOP: while (olpitr.hasNext() && !closedFillBreak) {
+															Position openPos = olpitr.next();
+															if (openPos.getPositionEffect().equals(PositionEffect.DEFAULT))
+																log.debug("openPos fills" + closePos.getFills());
 
-										if ((openPos.getPositionEffect().equals(PositionEffect.OPEN)
-												&& (openPos.getPositionEffect().equals(closePos.getPositionEffect())))
-												|| (openPos.getPositionEffect().equals(PositionEffect.CLOSE)
-														&& (openPos.getPositionEffect().equals(closePos.getPositionEffect()))))
-											continue;
-										log.debug(this.getClass().getSimpleName() + ":merge fills - Starting close outs with opeingin position "
-												+ openPos.getId() + " loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
-										if (!openPos.hasFills()) {
-											log.debug(this.getClass().getSimpleName() + ":merge fills removing position -3: " + openPos.getId()
-													+ " from openingListingPositions: " + openingListingPositions);
-											log.debug(this.getClass().getSimpleName() + ":merge fills - Opening Position " + openPos.getId()
-													+ " has no fills to close outs with closing fill " + closePosition.getId() + "   loop " + closedFillCount
-													+ " with iterator " + System.identityHashCode(cpitr));
-											olpitr.remove();
-											continue;
-										}
-
-										synchronized (openPos.getFills()) {
-											Iterator<Fill> opitr = openPos.getFills().iterator();
-											OPENFILLSLOOP: while (opitr.hasNext() && !closedFillBreak) {
-												Fill openPosition = opitr.next();
-												log.debug(this.getClass().getSimpleName() + ":merge fills - Starting close outs with opeing fill  "
-														+ openPosition.getId() + " loop " + closedFillCount + " with iterator "
-														+ System.identityHashCode(cpitr));
-												if (openPosition.getOpenVolumeCount() != 0) {
-													realisedPnL = DecimalAmount.ZERO;
-													closingVolumeCount = 0;
-													if ((closePosition.getPositionEffect().equals(PositionEffect.DEFAULT)
-															&& openPosition.getPositionEffect().equals(PositionEffect.DEFAULT))
-															|| (!openPosition.getPositionEffect().equals(closePosition.getPositionEffect()))) {
-														//		if(oenPostion.getOrder)
-														exitPrice = openPosition.getPrice();
-														entryPrice = closePosition.getPrice();
-														closingVolumeCount = (openingTransactionType == (TransactionType.SELL))
-																? (Math.min(Math.abs(openPosition.getOpenVolumeCount()),
-																		Math.abs(closePosition.getOpenVolumeCount()))) * -1
-																: (Math.min(Math.abs(openPosition.getOpenVolumeCount()),
-																		Math.abs(closePosition.getOpenVolumeCount())));
-														if (closingVolumeCount != 0) {
-															long updatedVolumeCount = 0;
-															if ((Math.abs(closePosition.getOpenVolumeCount()) >= Math.abs(openPosition.getOpenVolumeCount()))) {
-																updatedVolumeCount = closePosition.getOpenVolumeCount() + closingVolumeCount;
-																openPosition.setOpenVolumeCount(0);
-																log.debug(this.getClass().getSimpleName() + ":merge. set open position " + openPosition
-																		+ " open volume count to 0/" + openPosition.getOpenVolumeCount());
-
-																openPosition.setUpdateTime(context.getTime());
-																openPosition.setPosition(null);
-
-																openPos.reset();
-																openPosition.setHoldingTime(closePosition.getTimestamp() - openPosition.getTimestamp());
-
-																openPosition.merge();
-																closePosition.setOpenVolumeCount(updatedVolumeCount);
-																log.debug(this.getClass().getSimpleName() + ":merge. set close position " + closePosition
-																		+ " open volume count to 0/" + closePosition.getOpenVolumeCount());
-
-																closePosition.setUpdateTime(context.getTime());
-
-																closePos.reset();
-																if (closePosition.getOpenVolumeCount() == 0) {
-																	log.debug(this.getClass().getSimpleName() + ":merge. setting close position "
-																			+ closePosition + " position to null");
-																	closePosition.setPosition(null);
-																	closePos.reset();
-																	closePosition.setHoldingTime(closePosition.getTimestamp() - openPosition.getTimestamp());
-																}
-																closePosition.merge();
-																logCloseOut(closingVolumeCount, openPosition, closePosition, true);
-															} else if (closePosition.getOpenVolumeCount() != 0) {
-																updatedVolumeCount = openPosition.getOpenVolumeCount() - closingVolumeCount;
-																closePosition.setOpenVolumeCount(0);
-																log.debug(this.getClass().getSimpleName() + ":merge. set close position " + closePosition
-																		+ " open volume count to 0/" + closePosition.getOpenVolumeCount());
-																closePosition.setUpdateTime(context.getTime());
-
-																closePosition.setPosition(null);
-
-																closePos.reset();
-																openPosition.setOpenVolumeCount(updatedVolumeCount);
-																log.debug(this.getClass().getSimpleName() + ":merge. set open position " + openPosition
-																		+ " open volume count to " + updatedVolumeCount + "/"
-																		+ openPosition.getOpenVolumeCount());
-
-																openPosition.setUpdateTime(context.getTime());
-
-																openPos.reset();
-																openPosition.setHoldingTime(closePosition.getTimestamp() - openPosition.getTimestamp());
-																if (openPosition.getOpenVolumeCount() == 0) {
-																	log.debug(this.getClass().getSimpleName() + ":merge. setting open position " + openPosition
-																			+ " position to null");
-																	openPosition.setPosition(null);
-																	openPos.reset();
-																	openPosition.setHoldingTime(closePosition.getTimestamp() - openPosition.getTimestamp());
-																}
-																openPosition.merge();
-																logCloseOut(closingVolumeCount, openPosition, closePosition, true);
-															} else if (closePosition.getOpenVolumeCount() == 0) {
-																log.debug(this.getClass().getSimpleName() + ":merge. setting close position to null "
-																		+ closePosition + " as open volume is :" + closePosition.getOpenVolumeCount());
-																closePosition.setPosition(null);
-																closePos.reset();
-
-															}
-															closePosition.merge();
-															DiscreteAmount volDiscrete = new DiscreteAmount(closingVolumeCount,
-																	closePosition.getMarket().getListing().getVolumeBasis());
-															realisedPnL = realisedPnL
-																	.plus(((entryPrice.minus(exitPrice)).times(volDiscrete, Remainder.ROUND_EVEN))
-																			.times(closePosition.getMarket().getMultiplier(closePosition.getMarket(),
-																					entryPrice, exitPrice), Remainder.ROUND_EVEN)
-																			.times(closePosition.getMarket().getContractSize(closePosition.getMarket()),
-																					Remainder.ROUND_EVEN));
-															Amount RealisedPnL = realisedPnL.toBasis(currency.getBasis(), Remainder.ROUND_EVEN);
-															if (RealisedPnL.isNegative() && closePosition.getPositionEffect() == PositionEffect.OPEN)
-																log.info("realsiedPnL is a loss. netted open position: " + openPosition
-																		+ " with closing postion: " + closePosition);
-															if (!RealisedPnL.isZero()) {
-																this.getBaseAsset();
-																Transaction trans = transactionFactory.create(closePosition, this,
-																		closePosition.getMarket().getExchange(), currency, TransactionType.REALISED_PROFIT_LOSS,
-																		RealisedPnL, new DiscreteAmount(0, currency.getBasis()));
-																log.info("Realised PnL:" + trans);
-																context.setPublishTime(trans);
-																trans.persit();
-																context.route(trans);
-															}
-															if (closePosition.getOpenVolumeCount() == 0) {
-																log.debug(this.getClass().getSimpleName() + ":Merge - closePosition Position fill "
-																		+ closePosition.getId() + " has zero quanityt with opening  fill "
-																		+ openPosition.getId() + "  loop " + closedFillCount + " with iterator "
+															if ((openPos.getPositionEffect().equals(PositionEffect.OPEN)
+																	&& (openPos.getPositionEffect().equals(closePos.getPositionEffect())))
+																	|| (openPos.getPositionEffect().equals(PositionEffect.CLOSE)
+																			&& (openPos.getPositionEffect().equals(closePos.getPositionEffect()))))
+																continue;
+															log.debug(this.getClass().getSimpleName()
+																	+ ":merge fills - Starting close outs with opeingin position " + openPos.getUuid()
+																	+ " loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
+															if (!openPos.hasFills()) {
+																log.debug(this.getClass().getSimpleName() + ":merge fills removing position -3: "
+																		+ openPos.getUuid() + " from openingListingPositions: " + openingTransactionPositions);
+																log.debug(this.getClass().getSimpleName() + ":merge fills - Opening Position "
+																		+ openPos.getUuid() + " has no fills to close outs with closing fill "
+																		+ closePosition.getUuid() + "   loop " + closedFillCount + " with iterator "
 																		+ System.identityHashCode(cpitr));
+																olpitr.remove();
+																continue;
+															}
 
-																log.info(closePosition + " closed fully out with " + openPosition);
-																for (Order childOrder : closePosition.getFillChildOrders())
-																	if (childOrder.getUsePosition() && childOrder.getFillType().isTrigger()
-																			&& childOrder.getStopPrice() != null)
-																		ordersToCancel.add(childOrder);
+															synchronized (openPos.getFills()) {
+																Iterator<Fill> opitr = openPos.getFills().iterator();
+																OPENFILLSLOOP: while (opitr.hasNext() && !closedFillBreak) {
+																	Fill openPosition = opitr.next();
+																	synchronized (openPosition) {
+																		log.debug(this.getClass().getSimpleName()
+																				+ ":merge fills - Starting close outs with opeing fill  "
+																				+ openPosition.getUuid() + " loop " + closedFillCount + " with iterator "
+																				+ System.identityHashCode(cpitr));
+																		if (openPosition.getOpenVolumeCount() != 0) {
+																			realisedPnL = DecimalAmount.ZERO;
+																			closingVolumeCount = 0;
+																			if (((closePosition.getPositionEffect().equals(PositionEffect.DEFAULT)
+																					&& openPosition.getPositionEffect().equals(PositionEffect.DEFAULT))
+																					|| (!openPosition.getPositionEffect()
+																							.equals(closePosition.getPositionEffect())))
+																					&& (openPosition.getOrderGroup() == 0 || closePosition.getOrderGroup() == 0
+																							|| (openPosition.getOrderGroup() == closePosition
+																									.getOrderGroup()))) {
+																				//		if(oenPostion.getOrder)
+																				exitPrice = openPosition.getPrice();
+																				entryPrice = closePosition.getPrice();
+																				closingVolumeCount = (openingTransactionType == (TransactionType.SELL))
+																						? (Math.min(Math.abs(openPosition.getOpenVolumeCount()),
+																								Math.abs(closePosition.getOpenVolumeCount()))) * -1
+																						: (Math.min(Math.abs(openPosition.getOpenVolumeCount()),
+																								Math.abs(closePosition.getOpenVolumeCount())));
+																				if (closingVolumeCount != 0) {
+																					long updatedVolumeCount = 0;
+																					if ((Math.abs(closePosition.getOpenVolumeCount()) >= Math
+																							.abs(openPosition.getOpenVolumeCount()))) {
+																						updatedVolumeCount = closePosition.getOpenVolumeCount()
+																								+ closingVolumeCount;
+																						openPosition.setOpenVolumeCount(0);
+																						log.debug(this.getClass().getSimpleName() + ":merge. set open position "
+																								+ openPosition + " open volume count to 0/"
+																								+ openPosition.getOpenVolumeCount());
 
-																positionsToPublish.add(openPos);
-																if (openPos.getOpenVolume().isZero())
-																	log.debug("test");
-																closedFillBreak = true;
-															} else
-																log.info(closePosition + " not closed fully out with " + openPosition);
+																						openPosition.setUpdateTime(context.getTime());
+																						openPosition.setPosition(null);
 
+																						openPos.reset();
+																						openPosition.setHoldingTime(
+																								closePosition.getTimestamp() - openPosition.getTimestamp());
+
+																						openPosition.merge();
+																						closePosition.setOpenVolumeCount(updatedVolumeCount);
+																						log.debug(
+																								this.getClass().getSimpleName() + ":merge. set close position "
+																										+ closePosition + " open volume count to 0/"
+																										+ closePosition.getOpenVolumeCount());
+
+																						closePosition.setUpdateTime(context.getTime());
+
+																						closePos.reset();
+																						if (closePosition.getOpenVolumeCount() == 0) {
+																							log.debug(this.getClass().getSimpleName()
+																									+ ":merge. setting close position " + closePosition
+																									+ " position to null");
+																							closePosition.setPosition(null);
+																							closePos.reset();
+																							closePosition.setHoldingTime(
+																									closePosition.getTimestamp() - openPosition.getTimestamp());
+																						}
+																						closePosition.merge();
+																						logCloseOut(closingVolumeCount, openPosition, closePosition, true);
+																					} else if (closePosition.getOpenVolumeCount() != 0) {
+																						updatedVolumeCount = openPosition.getOpenVolumeCount()
+																								- closingVolumeCount;
+																						closePosition.setOpenVolumeCount(0);
+																						log.debug(
+																								this.getClass().getSimpleName() + ":merge. set close position "
+																										+ closePosition + " open volume count to 0/"
+																										+ closePosition.getOpenVolumeCount());
+																						closePosition.setUpdateTime(context.getTime());
+
+																						closePosition.setPosition(null);
+
+																						closePos.reset();
+																						openPosition.setOpenVolumeCount(updatedVolumeCount);
+																						log.debug(this.getClass().getSimpleName() + ":merge. set open position "
+																								+ openPosition + " open volume count to " + updatedVolumeCount
+																								+ "/" + openPosition.getOpenVolumeCount());
+
+																						openPosition.setUpdateTime(context.getTime());
+
+																						openPos.reset();
+																						openPosition.setHoldingTime(
+																								closePosition.getTimestamp() - openPosition.getTimestamp());
+																						if (openPosition.getOpenVolumeCount() == 0) {
+																							log.debug(this.getClass().getSimpleName()
+																									+ ":merge. setting open position " + openPosition
+																									+ " position to null");
+																							openPosition.setPosition(null);
+																							openPos.reset();
+																							openPosition.setHoldingTime(
+																									closePosition.getTimestamp() - openPosition.getTimestamp());
+																						}
+																						openPosition.merge();
+																						logCloseOut(closingVolumeCount, openPosition, closePosition, true);
+																					} else if (closePosition.getOpenVolumeCount() == 0) {
+																						log.debug(this.getClass().getSimpleName()
+																								+ ":merge. setting close position to null " + closePosition
+																								+ " as open volume is :" + closePosition.getOpenVolumeCount());
+																						closePosition.setPosition(null);
+																						closePos.reset();
+
+																					}
+																					closePosition.merge();
+																					DiscreteAmount volDiscrete = new DiscreteAmount(closingVolumeCount,
+																							closePosition.getMarket().getListing().getVolumeBasis());
+																					Listing listing = Listing.forPair(currency, this.getBaseAsset());
+																					// Trade lastTrade = quotes.getLastTrade(listing);
+																					Offer rate = quoteService.getImpliedBestAskForListing(listing);
+
+																					log.info("calucalting realisedPNL with " + realisedPnL
+																							+ " existing realised pnl");
+																					if (!closePosition.getMarket().getBase().getSymbol().equals("BTC")) {
+																						log.debug("no btc");
+																						rate = quoteService.getImpliedBestAskForListing(listing);
+
+																					}
+																					realisedPnL = realisedPnL.plus((((entryPrice.minus(exitPrice))
+																							.times(volDiscrete, Remainder.ROUND_EVEN))
+																									.times(closePosition.getMarket().getMultiplier(
+																											closePosition.getMarket(), entryPrice, exitPrice),
+																											Remainder.ROUND_EVEN)
+																									.times(closePosition.getMarket().getContractSize(
+																											closePosition.getMarket()), Remainder.ROUND_EVEN)));
+																					DiscreteAmount closingVolumeCountDiscrete = new DiscreteAmount(
+																							closingVolumeCount, closePosition.getMarket().getVolumeBasis());
+																					Amount openPositonFee = FeesUtil.getCommission(openPosition.getPrice(),
+																							closingVolumeCountDiscrete.negate(), openPosition.getMarket(),
+																							openPosition.getPositionEffect(),
+																							openPosition.getOrder().getExecutionInstruction());
+																					Amount closePositonFee = FeesUtil.getCommission(closePosition.getPrice(),
+																							closingVolumeCountDiscrete, closePosition.getMarket(),
+																							closePosition.getPositionEffect(),
+																							closePosition.getOrder().getExecutionInstruction());
+
+																					log.info("calucalted realisedPNL=" + realisedPnL);
+																					Amount RealisedPnL = realisedPnL.toBasis(currency.getBasis(),
+																							Remainder.ROUND_FLOOR);
+																					log.info("rounded RealisedPnL to " + RealisedPnL + " with currency "
+																							+ currency + " and basis " + currency.getBasis());
+																					Transaction trans = null;
+																					if (baseRealisedPnL) {
+																						Amount BaseRealisedPnL = (RealisedPnL.times(rate.getPrice(),
+																								Remainder.ROUND_EVEN)).toBasis(this.getBaseAsset().getBasis(),
+																										Remainder.ROUND_FLOOR);
+																						log.info("calucalted BaseRealisedPnL of " + BaseRealisedPnL
+																								+ " with rate " + rate.getPrice());
+
+																						openPositonFee = (openPositonFee.times(rate.getPrice(),
+																								Remainder.ROUND_EVEN)).toBasis(this.getBaseAsset().getBasis(),
+																										Remainder.ROUND_FLOOR);
+																						closePositonFee = (closePositonFee.times(rate.getPrice(),
+																								Remainder.ROUND_EVEN)).toBasis(this.getBaseAsset().getBasis(),
+																										Remainder.ROUND_FLOOR);
+																						trans = transactionFactory.create(closePosition, this,
+																								closePosition.getMarket().getExchange(), this.getBaseAsset(),
+																								TransactionType.REALISED_PROFIT_LOSS, BaseRealisedPnL,
+																								new DiscreteAmount(0, currency.getBasis()));
+
+																					} else {
+																						if (!RealisedPnL.isZero()) {
+																							trans = transactionFactory.create(closePosition, this,
+																									closePosition.getMarket().getExchange(), currency,
+																									TransactionType.REALISED_PROFIT_LOSS, RealisedPnL,
+																									new DiscreteAmount(0, currency.getBasis()));
+																						}
+																					}
+
+																					if (RealisedPnL.isNegative()
+																							&& closePosition.getPositionEffect() == PositionEffect.OPEN)
+																						log.info("realsiedPnL is a loss. netted open position: " + openPosition
+																								+ " with closing postion: " + closePosition);
+																					if (trans != null) {
+																						log.info(this.getClass().getSimpleName() + " At " + context.getTime()
+																								+ " merge - Realised PnL=" + trans.getAmount()
+																								+ ",realisedPNLCCY=" + trans.getCurrency() + ",openPositonFee="
+																								+ openPositonFee + ",closePositonFee=" + closePositonFee
+																								+ ",closePosition=" + closePosition + ",openPosition="
+																								+ openPosition + ",transaction=" + trans);
+
+																						context.setPublishTime(trans);
+																						trans.persit();
+																						getManager().updatePortfolio(trans);
+
+																					}
+
+																					if (closePosition.getOpenVolumeCount() == 0) {
+																						log.debug(this.getClass().getSimpleName()
+																								+ ":Merge - closePosition Position fill "
+																								+ closePosition.getUuid()
+																								+ " has zero quanityt with opening  fill "
+																								+ openPosition.getUuid() + "  loop " + closedFillCount
+																								+ " with iterator " + System.identityHashCode(cpitr));
+
+																						log.info(closePosition + " closed fully out with " + openPosition);
+																						for (Order childOrder : closePosition.getFillChildOrders())
+																							if (childOrder.getUsePosition()
+																									&& childOrder.getFillType().isTrigger()
+																									&& childOrder.getStopPrice() != null)
+																								ordersToCancel.add(childOrder);
+
+																						positionsToPublish.add(openPos);
+																						if (openPos.getOpenVolume().isZero())
+																							log.debug("test");
+																						closedFillBreak = true;
+																					} else
+																						log.info(closePosition + " not closed fully out with " + openPosition);
+
+																				}
+																			}
+																		}
+																		if (openPosition.getOpenVolumeCount() == 0) {
+																			log.debug(this.getClass().getSimpleName() + ":Merge - Opening Position fill "
+																					+ openPosition.getUuid()
+																					+ " has zero quanityt with close outs with closing fill "
+																					+ closePosition.getUuid() + "   loop " + closedFillCount + " with iterator "
+																					+ System.identityHashCode(cpitr));
+																			openPosition.setPosition(null);
+																			openPos.reset();
+																			for (Order childOrder : openPosition.getFillChildOrders())
+																				if (childOrder.getUsePosition() && childOrder.getFillType().isTrigger()
+																						&& childOrder.getStopPrice() != null)
+																					ordersToCancel.add(childOrder);
+																			opitr.remove();
+																		}
+																	}
+																}
+															}
+															if (!openPos.hasFills()) {
+																log.debug(this.getClass().getSimpleName() + ":Merge - Opening Position  " + openPos.getUuid()
+																		+ " has not fills so removing  from openingListingPositions "
+																		+ System.identityHashCode(openingTransactionPositions) + "   loop " + closedFillCount
+																		+ " with iterator " + System.identityHashCode(cpitr));
+
+																olpitr.remove();
+																openPos.delete();
+															}
+															positionsToPublish.add(openPos);
+															//	publishPositionUpdate(openPos, (openPos.isLong()) ? PositionType.LONG : PositionType.SHORT,
+															//		openPos.getMarket(), 0);
 														}
 													}
 												}
-												if (openPosition.getOpenVolumeCount() == 0) {
-													log.debug(this.getClass().getSimpleName() + ":Merge - Opening Position fill " + openPosition.getId()
-															+ " has zero quanityt with close outs with closing fill " + closePosition.getId() + "   loop "
-															+ closedFillCount + " with iterator " + System.identityHashCode(cpitr));
-													openPosition.setPosition(null);
-													openPos.reset();
-													for (Order childOrder : openPosition.getFillChildOrders())
-														if (childOrder.getUsePosition() && childOrder.getFillType().isTrigger()
-																&& childOrder.getStopPrice() != null)
-															ordersToCancel.add(childOrder);
-													opitr.remove();
-												}
+												log.debug(this.getClass().getSimpleName() + ":merge fills - Completed close outs with closing fill "
+														+ closePosition.getUuid() + " loop " + closedFillCount + " with iterator "
+														+ System.identityHashCode(cpitr));
 
+												if (closePosition.getOpenVolumeCount() == 0) {
+													log.debug(this.getClass().getSimpleName() + ":merge fills - Removing closed outs fills with "
+															+ closePosition.getUuid() + " loop " + closedFillCount + " with iterator "
+															+ System.identityHashCode(cpitr));
+													closePosition.setPosition(null);
+													closePos.reset();
+													cpitr.remove();
+												}
+												log.debug(this.getClass().getSimpleName() + ":merge fills - Completed close outs with closing fill "
+														+ closePosition.getUuid() + "   loop " + closedFillCount + " with iterator "
+														+ System.identityHashCode(cpitr));
 											}
 										}
-										if (!openPos.hasFills()) {
-											log.debug(this.getClass().getSimpleName() + ":Merge - Opening Position  " + openPos.getId()
-													+ " has not fills so removing  from openingListingPositions "
-													+ System.identityHashCode(openingListingPositions) + "   loop " + closedFillCount + " with iterator "
-													+ System.identityHashCode(cpitr));
-
-											olpitr.remove();
-											openPos.delete();
-										}
-										positionsToPublish.add(openPos);
-										//	publishPositionUpdate(openPos, (openPos.isLong()) ? PositionType.LONG : PositionType.SHORT,
-										//		openPos.getMarket(), 0);
 									}
-
 								}
-								log.debug(this.getClass().getSimpleName() + ":merge fills - Completed close outs with closing fill " + closePosition.getId()
-										+ " loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
+								if (!closePos.hasFills()) {
+									log.debug(this.getClass().getSimpleName() + ":merge fills: Removing position " + closePos.getUuid()
+											+ " from listingPositions " + transactionPositions);
 
-								if (closePosition.getOpenVolumeCount() == 0) {
-									log.debug(this.getClass().getSimpleName() + ":merge fills - Removing closed outs fills with " + closePosition.getId()
-											+ " loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
-									closePosition.setPosition(null);
-									closePos.reset();
-									cpitr.remove();
+									lpitr.remove();
+									closePos.delete();
 								}
-								log.debug(this.getClass().getSimpleName() + ":merge fills - Completed close outs with closing fill " + closePosition.getId()
-										+ "   loop " + closedFillCount + " with iterator " + System.identityHashCode(cpitr));
+								positionsToPublish.add(closePos);
+								//	publishPositionUpdate(closePos, (closePos.isLong()) ? PositionType.LONG : PositionType.SHORT, closePos.getMarket(), 0);
 
 							}
+
+							//looop over latest postions and publish out.
+							for (Order orderToCancel : ordersToCancel) {
+								log.debug(this.getClass().getSimpleName() + ":merge fills: cancelling orders " + orderToCancel);
+								orderService.handleCancelOrder(orderToCancel);
+							}
+							for (Position position : positionsToPublish)
+								publishPositionUpdate(position, (position.isLong()) ? PositionType.LONG : PositionType.SHORT, position.getMarket(), 0);
+							return true;
 						}
-
-						if (!closePos.hasFills()) {
-							log.debug(this.getClass().getSimpleName() + ":merge fills: Removing position " + closePos.getId() + " from listingPositions "
-									+ listingPositions);
-
-							lpitr.remove();
-							closePos.delete();
-						}
-						positionsToPublish.add(closePos);
-						//	publishPositionUpdate(closePos, (closePos.isLong()) ? PositionType.LONG : PositionType.SHORT, closePos.getMarket(), 0);
-
 					}
-
-					//looop over latest postions and publish out.
-					for (Order orderToCancel : ordersToCancel)
-						orderService.handleCancelOrder(orderToCancel);
-					for (Position position : positionsToPublish)
-						publishPositionUpdate(position, (position.isLong()) ? PositionType.LONG : PositionType.SHORT, position.getMarket(), 0);
+					publishPositionUpdate(fill.getPosition(), (fill.isLong()) ? PositionType.LONG : PositionType.SHORT, fill.getMarket(),
+							fill.getOrder().getOrderGroup());
 					return true;
 				}
-				publishPositionUpdate(fill.getPosition(), (fill.isLong()) ? PositionType.LONG : PositionType.SHORT, fill.getMarket(),
-						fill.getOrder().getOrderGroup());
-				return true;
 			}
 		}
 	}
@@ -1802,6 +2129,8 @@ public class Portfolio extends EntityBase {
 	public Portfolio() {
 		this.positionsMap = new ConcurrentHashMap<Asset, Map<Exchange, Map<Listing, Map<TransactionType, ConcurrentLinkedQueue<Position>>>>>();
 		this.realisedProfits = new ConcurrentHashMap<Asset, Map<Exchange, Map<Listing, Amount>>>();
+		this.commissionsAndFees = new ConcurrentHashMap<Asset, Map<Exchange, Map<Listing, Amount>>>();
+
 		//this.balances = new CopyOnWriteArrayList<>();
 		this.transactions = new ConcurrentHashMap<Asset, Map<Exchange, Map<TransactionType, ConcurrentLinkedQueue<Transaction>>>>();
 
@@ -1914,13 +2243,13 @@ public class Portfolio extends EntityBase {
 							// Fill filltest;
 							//  if (!portfolioFills.containsKey(fill)) {
 							context.getInjector().injectMembers(fill);
-							log.debug("Portfolio: findOrCreate Loading all child order for fill " + fill.getId());
+							log.debug("Portfolio: findOrCreate Loading all child order for fill " + fill.getUuid());
 							fill.loadAllChildOrdersByFill(fill, portfolioOrders, portfolioFills);
-							log.debug("Portfolio: findOrCreate Loading all child order for fill order " + fill.getOrder().getId());
+							log.debug("Portfolio: findOrCreate Loading all child order for fill order " + fill.getOrder().getUuid());
 							if (fill.getOrder().getPortfolio().equals(myPort))
 								fill.getOrder().setPortfolio(myPort);
 							fill.getOrder().loadAllChildOrdersByParentOrder(fill.getOrder(), portfolioOrders, portfolioFills);
-							log.debug("Portfolio: findOrCreate loaded all child order for fill order " + fill.getOrder().getId());
+							log.debug("Portfolio: findOrCreate loaded all child order for fill order " + fill.getOrder().getUuid());
 							//  } else {
 							//    filltest = portfolioFills.get(fill);
 							//fill = portfolioFills.get(fill);
@@ -1963,7 +2292,7 @@ public class Portfolio extends EntityBase {
 			}
 			System.gc();
 			for (Order order : myPort.getAllOrders()) {
-				log.trace("loding members for order:" + order.getId());
+				log.trace("loding members for order:" + order.getUuid());
 				context.getInjector().injectMembers(order);
 				for (Transaction transaction : order.getTransactions()) {
 					context.getInjector().injectMembers(transaction);
@@ -1990,7 +2319,7 @@ public class Portfolio extends EntityBase {
 	public synchronized void persit() {
 
 		try {
-			log.debug("Portfolio - Persist : Persit of Portfolio " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+			log.debug("Portfolio - Persist : Persit of Portfolio " + this.getUuid() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 
 			this.setPeristanceAction(PersistanceAction.NEW);
 			this.setRevision(this.getRevision() + 1);
@@ -2019,7 +2348,7 @@ public class Portfolio extends EntityBase {
 		this.setPeristanceAction(PersistanceAction.MERGE);
 
 		this.setRevision(this.getRevision() + 1);
-		log.debug("Portfolio - Portfolio : Merge of Portfolio " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+		log.debug("Portfolio - Portfolio : Merge of Portfolio " + this.getUuid() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 
 		try {
 
@@ -2034,7 +2363,7 @@ public class Portfolio extends EntityBase {
 		}
 	}
 
-	private transient PortfolioManager manager;
+	public transient PortfolioManager manager;
 
 	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.portfolio");
 	@Inject
@@ -2066,6 +2395,8 @@ public class Portfolio extends EntityBase {
 	private long baseCashBalanceCount;
 	private transient Map<Asset, Map<Exchange, Map<Listing, Map<TransactionType, ConcurrentLinkedQueue<Position>>>>> positionsMap;
 	private transient Map<Asset, Map<Exchange, Map<Listing, Amount>>> realisedProfits;
+
+	private transient Map<Asset, Map<Exchange, Map<Listing, Amount>>> commissionsAndFees;
 	private transient Map<Asset, Map<Exchange, Map<TransactionType, ConcurrentLinkedQueue<Transaction>>>> transactions;
 	private transient List<Stake> stakes;
 

@@ -46,6 +46,8 @@ public class SaveMarketData {
 
 	@Inject
 	protected BarJpaDao barDao;
+	@Inject
+	protected transient Context context;
 
 	/*static {
 		tradeService = Executors.newFixedThreadPool(ConfigUtil.combined().getInt("db.trade.writer.threads", 1));
@@ -61,7 +63,7 @@ public class SaveMarketData {
 
 		//  if (future == null || future.isDone()) {
 		//Future future = 
-		log.trace("book recieved: " + m.getId() + " thread: " + Thread.currentThread().getName());
+		log.trace("book recieved: " + m.getUuid() + " thread: " + Thread.currentThread().getName());
 		try {
 			m.persit();
 		} catch (Error | Exception ex) {
@@ -74,7 +76,7 @@ public class SaveMarketData {
 	@When("@Priority(1) @Audit select * from Trade")
 	public void handleTrade(Trade m) {
 
-		log.trace("trade recieved: " + m.getId() + " thread: " + Thread.currentThread().getName());
+		log.trace("trade recieved: " + m.getUuid() + " thread: " + Thread.currentThread().getName());
 		try {
 			m.persit();
 		} catch (Error | Exception ex) {
@@ -87,8 +89,10 @@ public class SaveMarketData {
 	@When("@Priority(1) @Audit select * from LastBarWindow")
 	public void handleBar(Bar m) {
 
-		log.trace("bar recieved: " + m.getId() + " thread: " + Thread.currentThread().getName());
+		log.trace("bar recieved: " + m.getUuid() + " thread: " + Thread.currentThread().getName());
 		try {
+			if (m.getDao() == null)
+				context.getInjector().injectMembers(m);
 			m.persit();
 		} catch (Error | Exception ex) {
 			log.debug("SaveTradeRunnable:saveData - Bar " + m + " not persisted");

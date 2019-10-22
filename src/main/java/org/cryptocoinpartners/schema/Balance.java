@@ -46,7 +46,7 @@ public class Balance extends Holding {
 	public Balance(@Assisted Exchange exchange, @Assisted Asset asset) {
 
 		super(exchange, asset);
-		this.getId();
+		this.getUuid();
 
 		this.description = "";
 
@@ -55,10 +55,11 @@ public class Balance extends Holding {
 	@AssistedInject
 	public Balance(@Assisted Exchange exchange, @Assisted Asset asset, @Assisted Amount amount) {
 		super(exchange, asset);
-		this.getId();
+		this.getUuid();
 
 		//  this.amount = amount;
-		setAmountDecimal(amount.asBigDecimal());
+		this.amount = amount;
+
 		this.description = "";
 
 	}
@@ -78,9 +79,8 @@ public class Balance extends Holding {
 	@AssistedInject
 	public Balance(@Assisted Exchange exchange, @Assisted Asset asset, @Assisted Amount amount, @Assisted String description) {
 		super(exchange, asset);
-		this.getId();
-
-		setAmountDecimal(amount.asBigDecimal());
+		this.getUuid();
+		this.amount = amount;
 		this.description = description;
 
 	}
@@ -133,12 +133,14 @@ public class Balance extends Holding {
 	@Nullable
 	@Column(precision = 18, scale = 8)
 	public BigDecimal getAmountDecimal() {
-		return amount.asBigDecimal();
+		if (amount != null)
+			return amount.asBigDecimal();
+		return null;
 	}
 
-	protected synchronized void setAmountDecimal(BigDecimal amount) {
+	protected synchronized void setAmount(Amount amount) {
 		//  if (amount != null) {
-		this.amount = DecimalAmount.of(amount);
+		this.amount = amount;
 		// }
 
 	}
@@ -159,21 +161,24 @@ public class Balance extends Holding {
 		return "Balance [asset=" + getAsset() + ", amount=" + getAmount() + ", description=" + getDescription() + "]";
 	}
 
-	@Override
 	public synchronized void merge() {
-		this.setPeristanceAction(PersistanceAction.MERGE);
-		this.setRevision(this.getRevision() + 1);
-		log.debug("Balance - Merge : Merge of Balance " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
-
 		try {
+			//   find();
+			this.setPeristanceAction(PersistanceAction.MERGE);
+
+			this.setRevision(this.getRevision() + 1);
+			log.debug("Balance - Merge : Merge of Balance " + this.getUuid() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+
 			balanceDao.merge(this);
 			//if (duplicate == null || duplicate.isEmpty())
 		} catch (Exception | Error ex) {
 
 			System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":merge, full stack trace follows:" + ex);
+
 			// ex.printStackTrace();
 
 		}
+
 	}
 
 	//@ManyToOne
@@ -199,6 +204,12 @@ public class Balance extends Holding {
 		this.exchange = exchange;
 	}
 
+	public synchronized void setAmountDecimal(BigDecimal amountdecimal) {
+		if (amountdecimal != null) {
+			this.amount = DecimalAmount.of(amountdecimal);
+		}
+	}
+
 	@Override
 	@Transient
 	public Dao getDao() {
@@ -218,7 +229,7 @@ public class Balance extends Holding {
 		this.setPeristanceAction(PersistanceAction.NEW);
 
 		this.setRevision(this.getRevision() + 1);
-		log.debug("Balance - Persist : Persist of Balance " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+		log.debug("Balance - Persist : Persist of Balance " + this.getUuid() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 
 		try {
 			balanceDao.persist(this);
@@ -306,6 +317,44 @@ public class Balance extends Holding {
 
 	@Override
 	public synchronized void prePersist() {
+
+		/*		if (getDao() != null) {
+		
+					EntityBase dbExchange = null;
+		
+					if (getExchange() != null) {
+						try {
+							dbExchange = getDao().find(getExchange().getClass(), getExchange().getId());
+							if (dbExchange != null) {
+								dbExchange = getDao().mergeEntities(getExchange());
+								this.setExchange((Exchange) dbExchange);
+							} else {
+								//getOrder().setPeristanceAction(PersistanceAction.NEW);
+								getDao().persistEntities(getExchange());
+							}
+						} catch (Throwable ex) {
+							if (dbExchange != null)
+								if (getExchange().getRevision() > dbExchange.getRevision()) {
+									//  getOrder().setPeristanceAction(PersistanceAction.MERGE);
+									try {
+										getDao().mergeEntities(getExchange());
+									} catch (Throwable e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								} else {
+									//   getOrder().setPeristanceAction(PersistanceAction.NEW);
+									try {
+										getDao().persistEntities(getExchange());
+									} catch (Throwable e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								}
+						}
+					}
+				}*/
+
 		// TODO Auto-generated method stub
 
 	}

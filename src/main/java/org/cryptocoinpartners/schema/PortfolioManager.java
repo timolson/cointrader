@@ -6,7 +6,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import javax.inject.Inject;
-import javax.inject.Singleton;
 import javax.persistence.Entity;
 import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
@@ -33,7 +32,6 @@ import org.slf4j.LoggerFactory;
  */
 @Entity
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-@Singleton
 //@Cacheable
 public class PortfolioManager extends EntityBase implements Context.AttachListener {
 
@@ -70,18 +68,20 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 	private void updateReservation(OrderUpdate update) {
 
 		//removes the reservation from the transactions
-		Transaction reservation = update.getOrder().getReservation();
-		if (reservation != null && update.getState() != OrderState.NEW) {
-			if (reservation.getType() == (TransactionType.BUY_RESERVATION) || reservation.getType() == (TransactionType.SELL_RESERVATION)) {
-				Amount price = (update.getOrder().getLimitPrice() == null)
-						? ((update.getOrder().getVolume().isNegative()) ? quotes.getLastBidForMarket(update.getOrder().getMarket()).getPrice()
-								: quotes.getLastAskForMarket(update.getOrder().getMarket()).getPrice())
-						: update.getOrder().getLimitPrice();
-				Amount updateAmount = reservation.getType() == (TransactionType.BUY_RESERVATION)
-						? (update.getOrder().getUnfilledVolume().times(price, Remainder.ROUND_EVEN)).negate()
-						: update.getOrder().getVolume();
-				reservation.setAmountDecimal(updateAmount.asBigDecimal());
-				//  reservation.setAsset(reservation.getAsset());
+		if (update.getOrder().getPortfolio().equals(portfolio)) {
+			Transaction reservation = update.getOrder().getReservation();
+			if (reservation != null && update.getState() != OrderState.NEW) {
+				if (reservation.getType() == (TransactionType.BUY_RESERVATION) || reservation.getType() == (TransactionType.SELL_RESERVATION)) {
+					Amount price = (update.getOrder().getLimitPrice() == null)
+							? ((update.getOrder().getVolume().isNegative()) ? quotes.getLastBidForMarket(update.getOrder().getMarket()).getPrice()
+									: quotes.getLastAskForMarket(update.getOrder().getMarket()).getPrice())
+							: update.getOrder().getLimitPrice();
+					Amount updateAmount = reservation.getType() == (TransactionType.BUY_RESERVATION)
+							? (update.getOrder().getUnfilledVolume().times(price, Remainder.ROUND_EVEN)).negate()
+							: update.getOrder().getVolume();
+					reservation.setAmountDecimal(updateAmount.asBigDecimal());
+					//  reservation.setAsset(reservation.getAsset());
+				}
 			}
 		}
 	}
@@ -90,45 +90,47 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 	private void removeReservation(OrderUpdate update) {
 		//removes the reservation from the transactions
 		Order order = update.getOrder();
-		Transaction reservation = order.getReservation();
-		switch (update.getState()) {
-			case NEW:
-				break;
-			case TRIGGER:
-				break;
-			case ROUTED:
-				break;
-			case PLACED:
-				break;
-			case PARTFILLED:
-				break;
-			case FILLED:
-				if (order instanceof SpecificOrder)
-					portfolio.removeTransaction(reservation);
-				break;
-			case CANCELLING:
-				break;
-			case CANCELLED:
-				if (order instanceof SpecificOrder)
-					portfolio.removeTransaction(reservation);
-				break;
-			case REJECTED:
-				if (order instanceof SpecificOrder)
-					portfolio.removeTransaction(reservation);
-				break;
-			case EXPIRED:
-				if (order instanceof SpecificOrder)
-					portfolio.removeTransaction(reservation);
-				break;
-			case ERROR:
-				break;
-			default:
+		if (order.getPortfolio().equals(portfolio)) {
+			Transaction reservation = order.getReservation();
+			switch (update.getState()) {
+				case NEW:
+					break;
+				case TRIGGER:
+					break;
+				case ROUTED:
+					break;
+				case PLACED:
+					break;
+				case PARTFILLED:
+					break;
+				case FILLED:
+					if (order instanceof SpecificOrder)
+						portfolio.removeTransaction(reservation);
+					break;
+				case CANCELLING:
+					break;
+				case CANCELLED:
+					if (order instanceof SpecificOrder)
+						portfolio.removeTransaction(reservation);
+					break;
+				case REJECTED:
+					if (order instanceof SpecificOrder)
+						portfolio.removeTransaction(reservation);
+					break;
+				case EXPIRED:
+					if (order instanceof SpecificOrder)
+						portfolio.removeTransaction(reservation);
+					break;
+				case ERROR:
+					break;
+				default:
 
-				log.error(this.getClass().getSimpleName() + ":removeReservation - Called from class " + Thread.currentThread().getStackTrace()[2]
-						+ " Unknown order state: " + update.getState());
-				break;
+					log.error(this.getClass().getSimpleName() + ":removeReservation - Called from class " + Thread.currentThread().getStackTrace()[2]
+							+ " Unknown order state: " + update.getState());
+					break;
+			}
+
 		}
-
 	}
 
 	private class handleTransactionRunnable implements Runnable {
@@ -193,49 +195,83 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 			Portfolio portfolio = transaction.getPortfolio();
 			// Add transaction to approraite portfolio
 			portfolio.addTransaction(transaction);
-			if (transaction.getExchange() != null &&
+			if (transaction.getExchange() != null && (transaction.getType().isBookable())) {
 
-					(transaction.getType().isBookable())) {
+				log.debug(this.getClass().getSimpleName() + "- updatePortfolio determing updates to exchange " + transaction.getExchange() + " balances "
+						+ transaction.getExchange().getBalances());
+
 				//  Amount currentBalance =DecimalAmount.ZERO;
 				Amount currentBalance = (transaction.getExchange().getBalances().isEmpty()
 						|| transaction.getExchange().getBalances().get(transaction.getCurrency()) == null) ? DecimalAmount.ZERO
 								: transaction.getExchange().getBalances().get(transaction.getCurrency()).getAmount();
-				if ((transaction.getExchange().getBalances().isEmpty() || transaction.getExchange().getBalances().get(transaction.getCurrency()) == null)) {
-					Balance updateBalance;
-					if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL) {
-						log.debug(this.getClass().getSimpleName() + "- updatePortfolio creating buy/sell balance for exchange " + transaction.getExchange()
-								+ " asset: " + transaction.getCommissionCurrency() + " amount: " + currentBalance.plus(transaction.getCommission()));
 
-						updateBalance = balanceFactory.create(transaction.getExchange(), transaction.getCommissionCurrency(),
+				Balance newBalance;
+				if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL) {
+					if ((transaction.getExchange().getBalances().isEmpty()
+							|| transaction.getExchange().getBalances().get(transaction.getCommissionCurrency()) == null)) {
+						log.debug(this.getClass().getSimpleName() + "- updatePortfolio creating buy/sell for " + transaction.getType()
+								+ " balance for exchange " + transaction.getExchange() + " asset: " + transaction.getCommissionCurrency() + " amount: "
+								+ currentBalance.plus(transaction.getCommission()));
+
+						newBalance = balanceFactory.create(transaction.getExchange(), transaction.getCommissionCurrency(),
 								currentBalance.plus(transaction.getCommission()));
-
+						transaction.getExchange().getBalances().put(transaction.getCommissionCurrency(), newBalance);
+						newBalance.persit();
+						log.debug(this.getClass().getSimpleName() + "- updatePortfolio new balance " + newBalance + " added to balances "
+								+ transaction.getExchange().getBalances() + " for " + transaction.getType() + " on exahgne " + transaction.getExchange()
+								+ " asset: " + transaction.getCurrency());
 					} else {
-						log.debug(this.getClass().getSimpleName() + "- updatePortfolio creating balance for exchange " + transaction.getExchange() + " asset: "
-								+ transaction.getCurrency() + " current balance " + currentBalance + " amount: " + transaction.getAmount());
+						Amount updatedBalanceAmount;
+						updatedBalanceAmount = transaction.getCommission()
+								.plus(transaction.getExchange().getBalances().get(transaction.getCommissionCurrency()).getAmount());
+						transaction.getExchange().getBalances().get(transaction.getCommissionCurrency()).setAmount(updatedBalanceAmount);
+						if (transaction.getExchange().getBalances().get(transaction.getCommissionCurrency()).getId() == null) {
+							log.debug("test");
 
-						updateBalance = (transaction.getType().isDebit()
+						}
+						transaction.getExchange().getBalances().get(transaction.getCommissionCurrency()).merge();
+						log.debug(this.getClass().getSimpleName() + "- updatePortfolio updated balance "
+								+ transaction.getExchange().getBalances().get(transaction.getCommissionCurrency()) + " in balances "
+								+ transaction.getExchange().getBalances() + " for " + transaction.getType() + " on exchange " + transaction.getExchange()
+								+ " with buy.sell: " + updatedBalanceAmount + "/" + updatedBalanceAmount.asBigDecimal() + " and transactino amount "
+								+ transaction.getCommission() + "/" + transaction.getCommission().asBigDecimal());
+					}
+
+				} else {
+					if ((transaction.getExchange().getBalances().isEmpty() || transaction.getExchange().getBalances().get(transaction.getCurrency()) == null)) {
+
+						log.debug(this.getClass().getSimpleName() + "- updatePortfolio creating balance for" + transaction.getType() + " on exchange "
+								+ transaction.getExchange() + " asset: " + transaction.getCurrency() + " current balance " + currentBalance + " amount: "
+								+ transaction.getAmount() + ", transaction:" + transaction + ",balanceFactory:" + balanceFactory);
+
+						newBalance = (transaction.getType().isDebit()
 								? balanceFactory.create(transaction.getExchange(), transaction.getCurrency(), (currentBalance.minus(transaction.getAmount())))
 								: balanceFactory.create(transaction.getExchange(), transaction.getCurrency(), (currentBalance.plus(transaction.getAmount()))));
-					}
-					updateBalance.persit();
+						transaction.getExchange().getBalances().put(transaction.getCurrency(), newBalance);
+						newBalance.persit();
+						log.debug(this.getClass().getSimpleName() + "- updatePortfolio new balance " + newBalance + " added to balances "
+								+ transaction.getExchange().getBalances() + " for " + transaction.getType() + " on exahgne " + transaction.getExchange()
+								+ " asset: " + transaction.getCurrency());
 
-					transaction.getExchange().getBalances().put(transaction.getCurrency(), updateBalance);
-					transaction.getExchange().merge();
-				} else {
-					Balance updateBalance;
-					Amount updateBalanceAmount;
-					if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SELL) {
-						updateBalance = transaction.getExchange().getBalances().get(transaction.getCommissionCurrency());
-						updateBalanceAmount = updateBalance.getAmount().plus(transaction.getCommission());
 					} else {
-						updateBalance = transaction.getExchange().getBalances().get(transaction.getCurrency());
-						updateBalanceAmount = updateBalance.getAmount().plus(transaction.getAmount());
+						Amount updatedBalanceAmount;
+						updatedBalanceAmount = transaction.getAmount().plus(transaction.getExchange().getBalances().get(transaction.getCurrency()).getAmount());
+						transaction.getExchange().getBalances().get(transaction.getCurrency()).setAmount(updatedBalanceAmount);
+						transaction.getExchange().getBalances().get(transaction.getCurrency()).merge();
+						log.debug(this.getClass().getSimpleName() + "- updatePortfolio updated balance "
+								+ transaction.getExchange().getBalances().get(transaction.getCurrency()) + " in balances "
+								+ transaction.getExchange().getBalances() + " for " + transaction.getType() + " on exchange " + transaction.getExchange()
+								+ " with : " + updatedBalanceAmount + "/" + updatedBalanceAmount.asBigDecimal() + " and transactino amount "
+								+ transaction.getAmount() + "/" + transaction.getAmount().asBigDecimal());
+
 					}
-					updateBalance.setAmountDecimal(updateBalanceAmount.asBigDecimal());
-					updateBalance.merge();
 				}
 
+				transaction.getExchange().merge();
 			}
+			for (Asset asset : transaction.getExchange().getBalances().keySet())
+				if (!asset.getSymbol().equals(transaction.getExchange().getBalances().get(asset).getAsset().getSymbol()))
+					log.debug("balance inccorectly placed");
 
 			log.info("transaction: " + transaction + " Proccessed.");
 
@@ -285,7 +321,8 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 					+ portfolio.getStartingBaseNotionalBalance().plus(portfolioService.getBaseCashBalance(portfolio.getBaseAsset()))
 							.plus(portfolioService.getBaseUnrealisedPnL(portfolio.getBaseAsset())).minus(portfolio.getStartingBaseCashBalance())
 					+ " (Cash Balance:" + portfolioService.getBaseCashBalance(portfolio.getBaseAsset()) + " Realised PnL (M2M):"
-					+ portfolioService.getBaseRealisedPnL(portfolio.getBaseAsset()) + " Open Trade Equity:"
+					+ portfolioService.getBaseRealisedPnL(portfolio.getBaseAsset()) + " Commissions And Fees:"
+					+ portfolioService.getBaseComissionAndFee(portfolio.getBaseAsset()) + " Open Trade Equity:"
 					+ portfolioService.getBaseUnrealisedPnL(portfolio.getBaseAsset()) + " MarketValue:"
 					+ portfolioService.getBaseMarketValue(portfolio.getBaseAsset()) + ")");
 			for (Position position : portfolio.getNetPositions()) {
@@ -325,6 +362,7 @@ public class PortfolioManager extends EntityBase implements Context.AttachListen
 	// @Inject
 	protected void setPortfolio(Portfolio portfolio) {
 		this.portfolio = portfolio;
+
 	}
 
 	@Transient

@@ -32,6 +32,7 @@ import com.google.inject.assistedinject.AssistedInject;
 @SuppressWarnings("UnusedDeclaration")
 @Entity
 @DiscriminatorValue(value = "GeneralOrder")
+//@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 // @Cacheable
 @Table(name = "GeneralOrder", indexes = { @Index(columnList = "fillType"), @Index(columnList = "portfolio"), @Index(columnList = "parentFill"),
 		@Index(columnList = "parentOrder"), @Index(columnList = "listing"), @Index(columnList = "version"), @Index(columnList = "revision") })
@@ -39,7 +40,7 @@ public class GeneralOrder extends Order {
 	@AssistedInject
 	public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Listing listing, @Assisted BigDecimal volume) {
 		super(time);
-		this.getId();
+		this.getUuid();
 		this.children = new CopyOnWriteArrayList<Order>();
 
 		this.fills = new CopyOnWriteArrayList<Fill>();
@@ -58,7 +59,7 @@ public class GeneralOrder extends Order {
 	public GeneralOrder(@Assisted GeneralOrder generalOrder) {
 		super(generalOrder.getTime());
 
-		this.getId();
+		this.getUuid();
 		this.children = new CopyOnWriteArrayList<Order>();
 		this.orderGroup = generalOrder.getOrderGroup();
 
@@ -111,7 +112,7 @@ public class GeneralOrder extends Order {
 	public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Order parentOrder, @Assisted Listing listing,
 			@Assisted BigDecimal volume) {
 		super(time);
-		this.getId();
+		this.getUuid();
 
 		this.children = new CopyOnWriteArrayList<Order>();
 		this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
@@ -133,7 +134,7 @@ public class GeneralOrder extends Order {
 	@AssistedInject
 	public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Market market, @Assisted BigDecimal volume, @Assisted FillType type) {
 		super(time);
-		this.getId();
+		this.getUuid();
 		this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
 		this.children = new CopyOnWriteArrayList<Order>();
@@ -158,7 +159,7 @@ public class GeneralOrder extends Order {
 	public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Listing listing, @Assisted BigDecimal volume,
 			@Assisted FillType type) {
 		super(time);
-		this.getId();
+		this.getUuid();
 		this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
 		this.children = new CopyOnWriteArrayList<Order>();
@@ -177,7 +178,7 @@ public class GeneralOrder extends Order {
 	public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Order parentOrder, @Assisted Market market,
 			@Assisted BigDecimal volume, @Assisted FillType type) {
 		super(time);
-		this.getId();
+		this.getUuid();
 		this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
 		super.setPortfolio(portfolio);
@@ -203,7 +204,7 @@ public class GeneralOrder extends Order {
 	@AssistedInject
 	public GeneralOrder(@Assisted Instant time, @Assisted Fill parentFill, @Assisted Market market, @Assisted BigDecimal volume, @Assisted FillType type) {
 		super(time);
-		this.getId();
+		this.getUuid();
 		this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
 		super.setPortfolio(parentFill.getPortfolio());
@@ -230,7 +231,7 @@ public class GeneralOrder extends Order {
 	@AssistedInject
 	public GeneralOrder(@Assisted Instant time, @Assisted Portfolio portfolio, @Assisted Listing listing, @Assisted String volume) {
 		super(time);
-		this.getId();
+		this.getUuid();
 		this.orderUpdates = new CopyOnWriteArrayList<OrderUpdate>();
 
 		super.setPortfolio(portfolio);
@@ -511,9 +512,14 @@ public class GeneralOrder extends Order {
 
 	@Override
 	public String toString() {
-		String s = "GeneralOrder{" + "id=" + getId() + "/" + System.identityHashCode(this) + ",time=" + (getTime() != null ? (FORMAT.print(getTime())) : "")
-				+ ", parentOrder=" + (getParentOrder() == null ? "null" : getParentOrder().getId() + "/" + System.identityHashCode(getParentOrder()))
-				+ ", parentFill=" + (getParentFill() == null ? "null" : getParentFill().getId()) + ", listing=" + listing + ", volume=" + volume;
+		String s = "GeneralOrder{" + "uuid=" + getUuid() + "/" + System.identityHashCode(this) + "/" + (getId() == null ? "id=null" : ",id=" + getId())
+				+ ",time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + ", parentOrder="
+				+ (getParentOrder() == null ? "null"
+						: "(" + getParentOrder().getUuid() + "/" + System.identityHashCode(getParentOrder()) + ")"
+								+ (getParentOrder().getId() == null ? "#null" : "#" + (getParentOrder().getId())))
+				+ ", parentFill="
+				+ (getParentFill() == null ? "null" : getParentFill().getUuid() + "#" + (getParentFill().getId() == null ? "#null" : getParentFill().getId()))
+				+ " listing=" + listing + ", volume=" + volume;
 		//+ ", unfilled volume="+ (getUnfilledVolume() == null ? "null" : getUnfilledVolume());
 		if (market != null)
 			s += ", market=" + market;

@@ -75,12 +75,13 @@ public class MockTicker {
 		double high = config.getDouble("randomticker.high", 928.00);
 		double low = config.getDouble("randomticker.low", 230.00);
 		double noise = config.getDouble("randomticker.noise", 0.05);
+		//	noise = (noise == 0 ? Math.random() : noise);
 		long secondsDuration = ((end.minus(start.getMillis())).getMillis() / 1000);
 		int length = Math.round(secondsDuration / interval);
 		double range = high - low;
 		int trendLength = Math.round(trend / interval);
-
 		double offset = low * (1 - noise) + (((high * (1 + noise)) - (low * (1 - noise))) / 2);
+
 		if (config.getBoolean("randomticker", false))
 
 			new Thread(new PoissonTickerThread(markets, start, length, trendLength, range, noise, offset, interval, bookFactory)).start();
@@ -141,6 +142,7 @@ public class MockTicker {
 			String path = jepPath.getPath();
 			String baseUrl = "/" + FilenameUtils.getPath(path);
 			//    .getFile();
+			double marketOffset = offset;
 
 			try (Jep jep = new Jep(false, baseUrl)) {
 				jep.eval("from commonrandom import  generate_trendy_price");
@@ -151,11 +153,16 @@ public class MockTicker {
 
 				// using eval(String) to invoke methods
 				jep.set("Nlength", length);
-				jep.set("Tlength", trendLength);
-				jep.set("Xamplitude", range);
-				jep.set("Volscale", volatility);
 				for (Market market : markets) {
+					//we need to round the range for the market
+					double marketRange = Math.round(range);
+					marketOffset = Math.round(offset);
 
+					jep.set("Xamplitude", (marketRange));
+					jep.set("Volscale", (volatility == 0 ? Math.random() : volatility));
+					jep.set("Tlength", trendLength);
+					//jep.set("Tlength", (volatility == 0 ? Math.random() * trendLength : trendLength));
+					//	(trendLength));
 					// jep.set("annualSR", annualSharpeRatio);
 					//jep.set("want_skew", skew);
 					//jep.set("size", length);
@@ -181,9 +188,12 @@ public class MockTicker {
 				tradeTime = (tradeTime == 0 ? start.getMillis() : tradeTime + (interval * 1000));
 
 				for (Market market : markets) {
+					//(volatility == 0) ? marketPrices.get(market).get(ThreadLocalRandom.current().nextInt(0, priceCount))
 					double rawPrice = marketPrices.get(market).get(index);
-
+					double adjustPrice = marketOffset + rawPrice;
 					// we need to get same index value from all other markets
+					//	if (adjustPrice > 0)
+					//		log.debug("test");
 
 					//   if (tradeTime=)
 					Book book = bookFactory.create(new Instant(tradeTime), market);
@@ -191,15 +201,15 @@ public class MockTicker {
 					int loopVal;
 					int end_value = 20;
 					for (loopVal = 1; loopVal < end_value; loopVal++) {
-						book.addBid(BigDecimal.valueOf((rawPrice + offset) - (market.getPriceBasis() * loopVal)), BigDecimal.valueOf(nextVolume(market)));
-						book.addAsk(BigDecimal.valueOf((rawPrice + offset) + (market.getPriceBasis() * loopVal)), BigDecimal.valueOf(nextVolume(market)));
+						book.addBid(BigDecimal.valueOf((adjustPrice) - (market.getPriceBasis() * loopVal)), BigDecimal.valueOf(nextVolume(market)));
+						book.addAsk(BigDecimal.valueOf((adjustPrice) + (market.getPriceBasis() * loopVal)), BigDecimal.valueOf(nextVolume(market)));
 
 					}
 					book.build();
 					//   context.publish(book);
 
 					// log.info("publishing book " + book);
-					Trade trade = Trade.fromDoubles(market, new Instant(tradeTime), null, (rawPrice + offset), nextVolume(market));
+					Trade trade = Trade.fromDoubles(market, new Instant(tradeTime), null, (adjustPrice), nextVolume(market));
 					// log.info("publishing trade " + trade);
 					context.publish(book);
 					context.publish(trade);

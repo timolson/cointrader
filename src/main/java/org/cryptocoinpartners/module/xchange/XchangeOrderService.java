@@ -9,12 +9,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -191,8 +192,6 @@ public class XchangeOrderService extends BaseOrderService {
 
 		BigDecimal tradeableVolume = specificOrder.getVolume().abs().asBigDecimal();
 		CurrencyPair currencyPair = XchangeUtil.getCurrencyPairForListing(specificOrder.getMarket().getListing());
-		String id = specificOrder.getId().toString();
-		Date timestamp = specificOrder.getTime().toDate();
 		if ((specificOrder.getFillType() == null || (specificOrder.getFillType() != null && !specificOrder.getFillType().equals(FillType.MARKET)))
 				&& specificOrder.getLimitPrice() != null) {
 			if (XchangeUtil.getHelperForExchange(specificOrder.getMarket().getExchange()) != null) {
@@ -244,9 +243,9 @@ public class XchangeOrderService extends BaseOrderService {
 							this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place limit order " + specificOrder + " with last known state "
 									+ orderStateMap.get(specificOrder) + " as xchange order " + limitOrder + ". Threw a Execption, full stack trace follows:",
 							e);
-					error(specificOrder, "handleSpecificOrder: unable to place limit order: " + specificOrder.getId() + " error " + e);
+					error(specificOrder, "handleSpecificOrder: unable to place limit order: " + specificOrder.getUuid() + " error " + e);
 					// Throw the execption as we don't know if the order actually got to the exchange, but we market it as error.
-					throw new UnknownOrderStateException("Unknown state of limit order " + specificOrder.getId(), e);
+					throw new UnknownOrderStateException("Unknown state of limit order " + specificOrder.getUuid(), e);
 				} else
 					updateOrderState(specificOrder, OrderState.PLACED, true);
 			}
@@ -295,14 +294,14 @@ public class XchangeOrderService extends BaseOrderService {
 					throw ex;
 
 			} catch (Exception | Error e) {
-				if (specificOrder.getId().toString().equals(specificOrder.getRemoteKey())) {
+				if (specificOrder.getUuid().toString().equals(specificOrder.getRemoteKey())) {
 					log.error(
 							this.getClass().getSimpleName() + ":handleSpecificOrder Unable to place market order " + specificOrder + " with last known state "
 									+ orderStateMap.get(specificOrder) + " as xchange order " + marketOrder + ". Threw a Execption, full stack trace follows:",
 							e);
 
-					error(specificOrder, "handleSpecificOrder: unable to place market order: " + specificOrder.getId() + " error " + e);
-					throw new UnknownOrderStateException("Unknown state of market order " + specificOrder.getId(), e);
+					error(specificOrder, "handleSpecificOrder: unable to place market order: " + specificOrder.getUuid() + " error " + e);
+					throw new UnknownOrderStateException("Unknown state of market order " + specificOrder.getUuid(), e);
 				} else
 					updateOrderState(specificOrder, OrderState.PLACED, true);
 			}
@@ -395,7 +394,9 @@ public class XchangeOrderService extends BaseOrderService {
 					params = new Object[] { contract };
 
 			}
-			List<String> openOrdersXchangeIds = new ArrayList<String>();
+			Map<Listing, List<String>> openOrdersXchangeIds = new HashMap<Listing, List<String>>();
+			//		new ArrayList<String>();
+
 			for (org.cryptocoinpartners.schema.Order cointraderOrder : getPendingOrders()) {
 				if (XchangeUtil.getCurrencyPairForListing(cointraderOrder.getMarket().getListing()).equals(pair)
 						&& cointraderOrder.getMarket().getExchange().equals(coinTraderExchange)) {
@@ -404,8 +405,11 @@ public class XchangeOrderService extends BaseOrderService {
 					SpecificOrder openSpecificOrder;
 					if (cointraderOrder instanceof SpecificOrder) {
 						openSpecificOrder = (SpecificOrder) cointraderOrder;
-						if (openSpecificOrder.isExternal())
-							openOrdersXchangeIds.add(openSpecificOrder.getRemoteKey());
+						if (openSpecificOrder.isExternal()) {
+							if (openOrdersXchangeIds.get(openSpecificOrder.getMarket().getListing()) == null)
+								openOrdersXchangeIds.put(openSpecificOrder.getMarket().getListing(), new ArrayList<String>());
+							openOrdersXchangeIds.get(openSpecificOrder.getMarket().getListing()).add(openSpecificOrder.getRemoteKey());
+						}
 					}
 
 				}
@@ -430,7 +434,27 @@ public class XchangeOrderService extends BaseOrderService {
 			//for all the order we know about, we need to see if we had any fills for these orders
 
 			//so we just need to blend 1 and generate unknow orders!
+			if (exchangeCancellationQueues != null && exchangeCancellationQueues.get(coinTraderExchange) != null) {
+				SpecificOrder orderToCancel = null;
+				try {
+					while ((orderToCancel = exchangeCancellationQueues.get(coinTraderExchange).poll()) != null) {
+						log.debug(this.getClass().getSimpleName() + ":getOrders. Attempting to cancel order " + orderToCancel);
 
+						if (orderStateMap.get(orderToCancel) != null && orderStateMap.get(orderToCancel).isOpen() && cancelSpecificOrder(orderToCancel))
+							log.debug(this.getClass().getSimpleName() + ":getOrders. Canclled l order " + orderToCancel);
+						else
+							log.debug(this.getClass().getSimpleName() + ":getOrders. Unable to cancle order " + orderToCancel + " with state "
+									+ orderStateMap.get(orderToCancel));
+					}
+				} catch (NullPointerException npe) {
+					return;
+					//nothing to do as the queue is empty
+				} catch (Throwable e) {
+					log.error(this.getClass().getSimpleName() + ":getOrders. Unable to cancel order " + (orderToCancel != null ? orderToCancel : "null")
+							+ " with state " + (orderToCancel != null ? orderStateMap.get(orderToCancel) : "null"), e);
+
+				}
+			}
 			Collection<Order> exchangeOrders = new ArrayList<Order>();
 			if (!openOrdersXchangeIds.isEmpty()) {
 				// so for the open orders we have get the state, then create fill for differnence.
@@ -444,11 +468,21 @@ public class XchangeOrderService extends BaseOrderService {
 					 */synchronized (tradePollingService) {
 						log.trace(this.getClass().getSimpleName() + ": getOrders - Poolling market " + market + " with " + openOrdersXchangeIds);
 						//we need to batch the fills with an interval if the exchange does not support mass reuqests
+
 						if (helper != null) {
-							exchangeOrders = helper.getOrder(tradePollingService, period,
-									openOrdersXchangeIds.toArray(new String[openOrdersXchangeIds.size()]));
-						} else
-							exchangeOrders = tradePollingService.getOrder(openOrdersXchangeIds.toArray(new String[openOrdersXchangeIds.size()]));
+							for (Listing listing : openOrdersXchangeIds.keySet()) {
+
+								exchangeOrders = helper.getOrder(tradePollingService, listing, period,
+										openOrdersXchangeIds.get(listing).toArray(new String[openOrdersXchangeIds.get(listing).size()]));
+							}
+						} else {
+							ArrayList<String> combinedOpenOrdersXchangeIds = new ArrayList<String>();
+							for (Listing listing : openOrdersXchangeIds.keySet()) {
+								combinedOpenOrdersXchangeIds.addAll(openOrdersXchangeIds.get(listing));
+							}
+							exchangeOrders = tradePollingService
+									.getOrder(combinedOpenOrdersXchangeIds.toArray(new String[combinedOpenOrdersXchangeIds.size()]));
+						}
 					}
 
 					//  exchangeOrders = tradePollingService.getOrder(openOrdersXchangeIds.toArray(new String[openOrdersXchangeIds.size()]));
@@ -573,6 +607,7 @@ public class XchangeOrderService extends BaseOrderService {
 									if (specificOpenOrder.getVolume().asBigDecimal().compareTo(xchangeOrder.getOriginalAmount()) != 0) {
 										long updateVolumeCount = DiscreteAmount.roundedCountForBasis(xchangeOrder.getOriginalAmount(), market.getVolumeBasis());
 										specificOpenOrder.setVolumeCount(updateVolumeCount);
+										specificOpenOrder.setUnfilledVolumeCount(updateVolumeCount);
 									}
 									cointraderXchangeOrders.add(xchangeOrder);
 									isOpen = true;
@@ -667,6 +702,9 @@ public class XchangeOrderService extends BaseOrderService {
 
 			}
 			return;
+		} finally {
+			//let's read off any queued cancellatons orders.
+
 		}
 
 	}
@@ -736,7 +774,7 @@ public class XchangeOrderService extends BaseOrderService {
 				if (lastFillTimes.get(market) == null || lastFillTimes.get(market) == 0 || lastFillTimes.get(market) == null
 						|| lastFillTimes.get(market) == 0) {
 					try {
-
+						log.trace(this.getClass().getSimpleName() + ":getOrders getting last fill market=" + market);
 						List<org.cryptocoinpartners.schema.Fill> results = EM.queryList(org.cryptocoinpartners.schema.Fill.class,
 								"select f from Fill f where market=?1 and time=(select max(time) from Fill where market=?1)", market);
 
@@ -978,7 +1016,6 @@ public class XchangeOrderService extends BaseOrderService {
 		org.knowm.xchange.Exchange exchange;
 		exchange = XchangeUtil.getExchangeForMarket(order.getMarket().getExchange());
 		TradeService tradeService = exchange.getTradeService();
-
 		boolean deleted = false;
 		if (orderStateMap.get(order).isNew()) {
 			log.error("Cancelling new order " + orderStateMap.get(order) + " :" + order);
@@ -995,7 +1032,12 @@ public class XchangeOrderService extends BaseOrderService {
 		try {
 
 			synchronized (tradeService) {
-				tradeService.cancelOrder(order.getRemoteKey());
+
+				if (XchangeUtil.getHelperForExchange(order.getMarket().getExchange()) != null)
+					XchangeUtil.getHelperForExchange(order.getMarket().getExchange()).cancelOrder(tradeService, order.getMarket().getListing(),
+							order.getRemoteKey());
+				else
+					tradeService.cancelOrder(order.getRemoteKey());
 			}
 
 			/*
@@ -1027,23 +1069,48 @@ public class XchangeOrderService extends BaseOrderService {
 			// }
 
 			// }
+			if (!deleted && !exchangeCancellationQueues.get(order.getMarket().getExchange()).contains(order))
+				exchangeCancellationQueues.get(order.getMarket().getExchange()).put(order);
+
 			return deleted;
 		} catch (HttpStatusIOException hse) {
 			log.error(this.getClass().getSimpleName() + "specificOrderToCancel: Unable to cancel order :" + order + "with trade service"
 					+ tradeService.hashCode() + " due to " + hse + ". Resetting Trade Service Connection.");
 			XchangeUtil.resetExchange(order.getMarket().getExchange());
+			if (exchangeCancellationQueues.get(order.getMarket().getExchange()) == null)
+				exchangeCancellationQueues.put(order.getMarket().getExchange(), new LinkedBlockingQueue<SpecificOrder>());
+			log.error(this.getClass().getSimpleName() + "- cancelSpecificOrder: Unable to cancel" + order
+					+ " on first attempt. Adding order to exchange specifc cancellation queue to be handled by poolling order service.");
+			updateOrderState(order, OrderState.CANCELLING, true);
+			if (!exchangeCancellationQueues.get(order.getMarket().getExchange()).contains(order))
+				exchangeCancellationQueues.get(order.getMarket().getExchange()).put(order);
 			return deleted;
 
 		} catch (SocketTimeoutException ste) {
 			log.error(this.getClass().getSimpleName() + "specificOrderToCancel: Unable to cancel order :" + order + "with trade service"
 					+ tradeService.hashCode() + " due to " + ste + ". Resetting Trade Service Connection.");
 			XchangeUtil.resetExchange(order.getMarket().getExchange());
+			if (exchangeCancellationQueues.get(order.getMarket().getExchange()) == null)
+				exchangeCancellationQueues.put(order.getMarket().getExchange(), new LinkedBlockingQueue<SpecificOrder>());
+			log.error(this.getClass().getSimpleName() + "- cancelSpecificOrder: Unable to cancel" + order
+					+ " on first attempt. Adding order to exchange specifc cancellation queue to be handled by poolling order service.");
+			updateOrderState(order, OrderState.CANCELLING, true);
+			if (!exchangeCancellationQueues.get(order.getMarket().getExchange()).contains(order))
+				exchangeCancellationQueues.get(order.getMarket().getExchange()).put(order);
+
 			return deleted;
 		} catch (Error | Exception e) {
 			log.error("Unable to cancel order :" + order + "with trade service" + tradeService.hashCode() + " due to " + e);
+			LinkedBlockingQueue<org.cryptocoinpartners.schema.Order> myobj;
+			if (exchangeCancellationQueues.get(order.getMarket().getExchange()) == null)
+				exchangeCancellationQueues.put(order.getMarket().getExchange(), new LinkedBlockingQueue<SpecificOrder>());
+			log.error(this.getClass().getSimpleName() + "- cancelSpecificOrder: Unable to cancel" + order
+					+ " on first attempt. Adding order to exchange specifc cancellation queue to be handled by poolling order service.");
+			updateOrderState(order, OrderState.CANCELLING, true);
+			if (!exchangeCancellationQueues.get(order.getMarket().getExchange()).contains(order))
+				exchangeCancellationQueues.get(order.getMarket().getExchange()).put(order);
 			throw e;
 		}
-
 	}
 
 	@Override

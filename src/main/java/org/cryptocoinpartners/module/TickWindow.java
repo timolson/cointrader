@@ -51,10 +51,10 @@ public class TickWindow {
     }
 
     private AccumulatingTick getAccumulatingTick(Tradeable ml) {
-        AccumulatingTick at = accumulatingTickMap.get(ml.getId());
+        AccumulatingTick at = accumulatingTickMap.get(ml.getUuid());
         if (at == null) {
             at = new AccumulatingTick(ml);
-            accumulatingTickMap.put(ml.getId(), at);
+            accumulatingTickMap.put(ml.getUuid(), at);
         }
         return at;
     }

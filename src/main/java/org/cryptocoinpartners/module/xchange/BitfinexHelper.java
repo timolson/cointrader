@@ -43,7 +43,7 @@ public class BitfinexHelper extends XchangeHelperBase {
 	}
 
 	@Override
-	public synchronized Collection<Order> getOrder(TradeService tradeService, long period, String... orderIds) throws Exception {
+	public synchronized Collection<Order> getOrder(TradeService tradeService, Listing listing, long period, String... orderIds) throws Exception {
 		//we need to batch into periods and query 1 group per second.
 		//5 means every 5 seconds 
 		List<Order> openOrders = new ArrayList<Order>();

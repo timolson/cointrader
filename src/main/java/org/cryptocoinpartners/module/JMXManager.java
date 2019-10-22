@@ -204,8 +204,7 @@ public class JMXManager implements JMXManagerMBean {
 
 	}
 
-	// run createStopLimitPercentageManualFill OKCOIN_THISWEEK:BTC.USD.THISWEEK "1" 47000.16 0.15 TRAILING_STOP_LOSS ShortError Close True
-
+	//run createStopLimitPercentageManualFill  OKCOIN_QUARTER:ETH.USD.QUARTER -2680 400 0.1128 TRAILING_STOP_LOSS "Missing Short Stop Order" Open True
 	@Override
 	public String createStopLimitPercentageManualFill(String marketSymbol, String volume, String price, String stopPercentage, String type, String comment,
 			String openClose, String position) throws Throwable {

@@ -1,290 +1,312 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
 
-    <groupId>org.cryptocoinpartners</groupId>
-    <artifactId>cointrader</artifactId>
-    <version>0.3.0-SNAPSHOT</version>
+	<groupId>org.cryptocoinpartners</groupId>
+	<artifactId>cointrader</artifactId>
+	<version>0.3.0-SNAPSHOT</version>
 
-    <developers>
-        <developer>
-            <name>Tim Olson</name>
-            <email>tim@cryptocoinpartners.org</email>
-        </developer>
-    </developers>
+	<developers>
+		<developer>
+			<name>Tim Olson</name>
+			<email>tim@cryptocoinpartners.org</email>
+		</developer>
+	</developers>
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <xchange.version>4.3.3-SNAPSHOT</xchange.version>
-        <slf4j-api.version>1.7.5</slf4j-api.version>
-        <hibernate.version>5.2.12.Final</hibernate.version>
-        <antlr.version>4.2.2</antlr.version>
-    </properties>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<xchange.version>4.3.10-SNAPSHOT</xchange.version>
+		<slf4j-api.version>1.7.5</slf4j-api.version>
+		<hibernate.version>5.2.12.Final</hibernate.version>
+		<antlr.version>4.2.2</antlr.version>
+	</properties>
 
-    <dependencies>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.11</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>${slf4j-api.version}</version>
-        </dependency>
-         <dependency>
-    <groupId>com.google.inject.extensions</groupId>
-    <artifactId>guice-jmx</artifactId>
-    <version>4.1.0</version>
-</dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>log4j-over-slf4j</artifactId>
-            <version>${slf4j-api.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.0.13</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-configuration</groupId>
-            <artifactId>commons-configuration</artifactId>
-            <version>1.6</version>
-        </dependency>
-        <dependency>
-            <groupId>net.sourceforge.collections</groupId>
-            <artifactId>collections-generic</artifactId>
-            <version>4.01</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>2.6</version>
-        </dependency>
-        <dependency>
-            <groupId>com.tictactec</groupId>
-            <artifactId>ta-lib</artifactId>
-            <version>0.4.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.espertech</groupId>
-            <artifactId>esper</artifactId>
-            <version>4.9.0</version>
-        </dependency>
-<dependency>
-    <groupId>org.apache.commons</groupId>
-    <artifactId>commons-math3</artifactId>
-    <version>3.2</version>
-</dependency>
-        <dependency>
-            <groupId>com.beust</groupId>
-            <artifactId>jcommander</artifactId>
-            <version>1.30</version>
-        </dependency>
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.11</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>eu.aylett</groupId>
+			<artifactId>atunit</artifactId>
+			<version>2.0.0</version>
+			<scope>test</scope>
+		</dependency>
 
-        <dependency>
-            <groupId>com.google.inject</groupId>
-            <artifactId>guice</artifactId>
-            <version>4.1.0</version>
-        </dependency>
-        
-<dependency>
-	<groupId>com.google.inject.extensions</groupId>
-	<artifactId>guice-persist</artifactId>
-	<version>4.1.0</version>
-</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>${slf4j-api.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.google.inject.extensions</groupId>
+			<artifactId>guice-jmx</artifactId>
+			<version>4.1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>log4j-over-slf4j</artifactId>
+			<version>${slf4j-api.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.0.13</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-configuration</groupId>
+			<artifactId>commons-configuration</artifactId>
+			<version>1.6</version>
+		</dependency>
+		<dependency>
+			<groupId>net.sourceforge.collections</groupId>
+			<artifactId>collections-generic</artifactId>
+			<version>4.01</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-lang</groupId>
+			<artifactId>commons-lang</artifactId>
+			<version>2.6</version>
+		</dependency>
+		<dependency>
+			<groupId>com.tictactec</groupId>
+			<artifactId>ta-lib</artifactId>
+			<version>0.4.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.espertech</groupId>
+			<artifactId>esper</artifactId>
+			<version>4.9.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-math3</artifactId>
+			<version>3.2</version>
+		</dependency>
+		<dependency>
+			<groupId>com.beust</groupId>
+			<artifactId>jcommander</artifactId>
+			<version>1.30</version>
+		</dependency>
 
-<dependency>
-	<groupId>com.google.inject.extensions</groupId>
-	<artifactId>guice-assistedinject</artifactId>
-	<version>4.1.0</version>
-</dependency>
+		<dependency>
+			<groupId>com.google.inject</groupId>
+			<artifactId>guice</artifactId>
+			<version>4.1.0</version>
+		</dependency>
 
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>18.0</version>
-        </dependency>
+		<dependency>
+			<groupId>com.google.inject.extensions</groupId>
+			<artifactId>guice-persist</artifactId>
+			<version>4.1.0</version>
+		</dependency>
 
-        <dependency>
-            <groupId>joda-time</groupId>
-            <artifactId>joda-time</artifactId>
-            <version>2.9.9</version>
-        </dependency>
-        <dependency> <!-- Support for Joda Time in Hibernate -->
-            <groupId>org.jadira.usertype</groupId>
-            <artifactId>usertype.core</artifactId>
-            <version>7.0.0.CR1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-core</artifactId>
-            <version>${hibernate.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-entitymanager</artifactId>
-            <version>${hibernate.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-c3p0</artifactId>
-            <version>${hibernate.version}</version>
-        </dependency>
-        <dependency>
-        	<groupId>org.hibernate</groupId>
-        	<artifactId>hibernate-ehcache</artifactId>
-        	<version>${hibernate.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>6.0.6</version>
-        </dependency>
-        <dependency>
-            <groupId>org.reflections</groupId>
-            <artifactId>reflections</artifactId>
-            <version>0.9.9-RC1</version>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.4</version>
-        </dependency>
-        <dependency> <!-- this is found in the project's /repo directory -->
-            <groupId>com.bethecoder</groupId>
-            <artifactId>ascii-table</artifactId>
-            <version>1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>net.sf.opencsv</groupId>
-            <artifactId>opencsv</artifactId>
-            <version>2.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.clutch.dates</groupId>
-            <artifactId>stringtotime</artifactId>
-            <version>1.0.6</version>
-        </dependency>
-        <dependency>
-            <groupId>org.antlr</groupId>
-            <artifactId>antlr4-runtime</artifactId>
-            <version>${antlr.version}</version>
-        </dependency>
-        <dependency>
-	<groupId>com.github.nkzawa</groupId>
-	<artifactId>engine.io-client</artifactId>
-	<version>0.3.0</version>
-</dependency>
-<dependency>
-	<groupId>commons-beanutils</groupId>
-	<artifactId>commons-beanutils</artifactId>
-	<version>1.7.0</version>
-</dependency>
+		<dependency>
+			<groupId>com.google.inject.extensions</groupId>
+			<artifactId>guice-assistedinject</artifactId>
+			<version>4.1.0</version>
+		</dependency>
 
-<dependency>
-    <groupId>org.apache.commons</groupId>
-    <artifactId>commons-math3</artifactId>
-    <version>3.6.1</version>
-</dependency>
- 
-        
-        <dependency>
-            <groupId>jline</groupId>
-            <artifactId>jline</artifactId>
-            <version>2.12</version>
-        </dependency>
-                <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-core</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-                <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-binance</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-                        <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-bitmex</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-bitfinex</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-bitstamp</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-                <dependency>
-        	<groupId>org.knowm.xchange</groupId>
-        	<artifactId>xchange-bittrex</artifactId>
-        	<version>${xchange.version}</version>
-        </dependency>
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>18.0</version>
+		</dependency>
 
+		<dependency>
+			<groupId>joda-time</groupId>
+			<artifactId>joda-time</artifactId>
+			<version>2.9.9</version>
+		</dependency>
+		<dependency> <!-- Support for Joda Time in Hibernate -->
+			<groupId>org.jadira.usertype</groupId>
+			<artifactId>usertype.core</artifactId>
+			<version>7.0.0.CR1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-core</artifactId>
+			<version>${hibernate.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-entitymanager</artifactId>
+			<version>${hibernate.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-c3p0</artifactId>
+			<version>${hibernate.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-ehcache</artifactId>
+			<version>${hibernate.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<version>8.0.11</version>
+		</dependency>
+		<dependency>
+			<groupId>org.reflections</groupId>
+			<artifactId>reflections</artifactId>
+			<version>0.9.9-RC1</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.4</version>
+		</dependency>
+		<dependency> <!-- this is found in the project's /repo directory -->
+			<groupId>com.bethecoder</groupId>
+			<artifactId>ascii-table</artifactId>
+			<version>1.0</version>
+		</dependency>
+		<dependency>
+			<groupId>net.sf.opencsv</groupId>
+			<artifactId>opencsv</artifactId>
+			<version>2.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.clutch.dates</groupId>
+			<artifactId>stringtotime</artifactId>
+			<version>1.0.6</version>
+		</dependency>
+		<dependency>
+			<groupId>org.antlr</groupId>
+			<artifactId>antlr4-runtime</artifactId>
+			<version>${antlr.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>com.github.nkzawa</groupId>
+			<artifactId>engine.io-client</artifactId>
+			<version>0.3.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jblas</groupId>
+			<artifactId>jblas</artifactId>
+			<version>1.2.4</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-beanutils</groupId>
+			<artifactId>commons-beanutils</artifactId>
+			<version>1.7.0</version>
+		</dependency>
 
-                <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-btctrade</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
+		<dependency>
+			<groupId>gov.nist.math</groupId>
+			<artifactId>jama</artifactId>
+			<version>1.0.3</version>
+		</dependency>
 
-  
-              <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-gdax</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-                      <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-gemini</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-                              <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-hitbtc</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-math3</artifactId>
+			<version>3.6.1</version>
+		</dependency>
 
-        
-                     <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-kraken</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
+		<dependency>
+			<groupId>org.la4j</groupId>
+			<artifactId>la4j</artifactId>
+			<version>0.6.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>jline</groupId>
+			<artifactId>jline</artifactId>
+			<version>2.12</version>
+		</dependency>
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-core</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-binance</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-bitmex</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-bitfinex</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-bitstamp</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-bittrex</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
 
 
-        <dependency>
-        	<groupId>org.knowm.xchange</groupId>
-        	<artifactId>xchange-okcoin</artifactId>
-        	<version>${xchange.version}</version>
-        </dependency>
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-btctrade</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
 
-        
-                        <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-poloniex</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-                                <dependency>
-            <groupId>org.knowm.xchange</groupId>
-            <artifactId>xchange-quoine</artifactId>
-            <version>${xchange.version}</version>
-        </dependency>
-        
-        
-        <dependency>
-        	<groupId>com.mchange</groupId>
-        	<artifactId>c3p0</artifactId>
-        	<version>0.9.5</version>
-        </dependency>
+
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-gdax</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-gemini</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-hitbtc</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-kraken</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-okcoin</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-poloniex</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.knowm.xchange</groupId>
+			<artifactId>xchange-quoine</artifactId>
+			<version>${xchange.version}</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>com.mchange</groupId>
+			<artifactId>c3p0</artifactId>
+			<version>0.9.5</version>
+		</dependency>
 		<dependency>
 			<groupId>nz.ac.waikato.cms.weka</groupId>
 			<artifactId>weka-dev</artifactId>
@@ -296,136 +318,140 @@
 			<version>1.0</version>
 		</dependency>
 
-		
+
 		<dependency>
 			<groupId>commons-codec</groupId>
 			<artifactId>commons-codec</artifactId>
 			<version>1.9</version>
 		</dependency>
-	<dependency>
+		<dependency>
 			<groupId>black.ninia</groupId>
 			<artifactId>jep</artifactId>
 			<version>3.7.0</version>
 		</dependency>
-    </dependencies>
+<dependency>
+    <groupId>com.therealvan</groupId>
+    <artifactId>appender-core</artifactId>
+    <version>2.3.1</version>
+</dependency>
+<dependency>
+    <groupId>com.therealvan</groupId>
+    <artifactId>appender-log4j</artifactId>
+    <version>2.3.1</version>
+</dependency>
+	</dependencies>
 
 
-    <build>
-        <defaultGoal>package</defaultGoal>
-        <resources>
-            <!-- buildtime.properties is filtered to provide build version etc. for the cointrader runtime -->
-            <resource>
-                <directory>src/main/resources</directory>
-                <filtering>true</filtering>
-                <includes>
-                    <include>org/cryptocoinpartners/buildtime.properties</include>
-                </includes>
-            </resource>
-            <resource>
-                <directory>src/main/resources</directory>
-            </resource>
-            <resource>
-                <directory>src/main/java</directory>
-                <excludes>
-                    <exclude>**/*.java</exclude>
-                </excludes>
-            </resource>
-            <resource>
-                <directory>.</directory>
-                <includes>
-                    <include>cointrader-default.properties</include>
-                </includes>
-            </resource>
-        </resources>
-        <plugins>           
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>org.cryptocoinpartners.bin.Main</mainClass>
-                        </manifest>
-                    </archive>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <phase>package</phase>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.3</version>
-                <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
-                </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>2.6</version>
-                <configuration>
-                    <encoding>UTF-8</encoding>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>sonar-maven-plugin</artifactId>
-                <version>2.3</version>
-            </plugin>
-            <!--
-            <plugin>
-                <groupId>org.eclipse.jetty</groupId>
-                <artifactId>jetty-maven-plugin</artifactId>
-                <version>9.2.1.v20140609</version>
-                <configuration>
-                    <scanIntervalSeconds>10</scanIntervalSeconds>
-                    <webApp>
-                        <contextPath>/test</contextPath>
-                    </webApp>
-                </configuration>
-            </plugin>
-            -->
-            <plugin>
-                <groupId>org.antlr</groupId>
-                <artifactId>antlr4-maven-plugin</artifactId>
-                <version>${antlr.version}</version>
-                <executions>
-                    <execution>
-                        <id>antlr</id>
-                        <goals>
-                            <goal>antlr4</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+	<build>
+		<defaultGoal>package</defaultGoal>
+		<resources>
+			<!-- buildtime.properties is filtered to provide build version etc. for 
+				the cointrader runtime -->
+			<resource>
+				<directory>src/main/resources</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>org/cryptocoinpartners/buildtime.properties</include>
+				</includes>
+			</resource>
+			<resource>
+				<directory>src/main/resources</directory>
+			</resource>
+			<resource>
+				<directory>src/main/java</directory>
+				<excludes>
+					<exclude>**/*.java</exclude>
+				</excludes>
+			</resource>
+			<resource>
+				<directory>.</directory>
+				<includes>
+					<include>cointrader-default.properties</include>
+				</includes>
+			</resource>
+		</resources>
+		<plugins>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>org.cryptocoinpartners.bin.Main</mainClass>
+						</manifest>
+					</archive>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>single</goal>
+						</goals>
+						<phase>package</phase>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.3</version>
+				<configuration>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>2.6</version>
+				<configuration>
+					<encoding>UTF-8</encoding>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+				<version>2.3</version>
+			</plugin>
+			<!-- <plugin> <groupId>org.eclipse.jetty</groupId> <artifactId>jetty-maven-plugin</artifactId> 
+				<version>9.2.1.v20140609</version> <configuration> <scanIntervalSeconds>10</scanIntervalSeconds> 
+				<webApp> <contextPath>/test</contextPath> </webApp> </configuration> </plugin> -->
+			<plugin>
+				<groupId>org.antlr</groupId>
+				<artifactId>antlr4-maven-plugin</artifactId>
+				<version>${antlr.version}</version>
+				<executions>
+					<execution>
+						<id>antlr</id>
+						<goals>
+							<goal>antlr4</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 
 
 
 
-    <repositories>
-        <!-- this is for the XChange SNAPSHOT code -->
-        <repository>
-            <id>sonatype-oss-snapshot</id>
-            <snapshots/>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </repository>
+	<repositories>
+		<!-- this is for the XChange SNAPSHOT code -->
+		<repository>
+			<id>sonatype-oss-snapshot</id>
+			<snapshots />
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+		</repository>
 
-        <!-- this is for any jars registered in the project's /repo directory -->
-        <repository>
-            <id>project-local</id>
-            <name>project-local</name>
-            <url>file:${project.basedir}/repo</url>
-        </repository>
-    </repositories>
+		<!-- this is for any jars registered in the project's /repo directory -->
+		<repository>
+			<id>project-local</id>
+			<name>project-local</name>
+			<url>file:${project.basedir}/repo</url>
+		</repository>
+
+
+
+	</repositories>
 
 
 </project>

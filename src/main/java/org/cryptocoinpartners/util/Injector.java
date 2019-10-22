@@ -114,14 +114,15 @@ public class Injector {
 		properties.put("hibernate.connection.url", ConfigUtil.combined().getString("db.url"));
 		properties.put("hibernate.connection.username", ConfigUtil.combined().getString("db.username"));
 		properties.put("hibernate.connection.password", ConfigUtil.combined().getString("db.password"));
+		properties.put("hibernate.connection.zeroDateTimeBehavior", "CONVERT_TO_NULL");
 		properties.put("hibernate.physical_naming_strategy", "org.cryptocoinpartners.util.PhysicalNamingStrategyImpl");
-
 		properties.put("hibernate.connection.autocommit", "false");
 		properties.put("hibernate.flushMode", "COMMIT");
+		properties.put("hibernate.jdbc.fetch_size", ConfigUtil.combined().getString("db.fetch_size", "10000"));
 		properties.put("hibernate.connection.release_mode", "auto");
-		// properties.put("hibernate.jdbc.batch_size", "30");
-		// properties.put("hibernate.order_inserts", "true");
-		// properties.put("hibernate.order_updates", "true");
+		//properties.put("hibernate.jdbc.batch_size", ConfigUtil.combined().getString("db.batch_size", "1000000000"));
+		//properties.put("hibernate.order_inserts", "true");
+		//properties.put("hibernate.order_updates", "true");
 
 		properties.put("hibernate.connection.provider_class", "org.hibernate.connection.C3P0ConnectionProvider");
 		properties.put("hibernate.cache.region.factory_class", "org.hibernate.cache.ehcache.EhCacheRegionFactory");
@@ -147,7 +148,7 @@ public class Injector {
 		//  properties.put("hibernate.c3p0.max_statements", "0");
 		// properties.put("hibernate.c3p0.maxIdleTimeExcessConnections", "2");
 		// properties.put("hibernate.c3p0.timeout", "300");
-		// properties.put("hibernate.c3p0.maxIdleTime", "21600");
+		properties.put("hibernate.c3p0.maxIdleTime", ConfigUtil.combined().getString("db.max_idle_time", "0"));
 		properties.put("hibernate.c3p0.idle_test_period", ConfigUtil.combined().getString("db.idle.test.period", "0"));
 
 		//properties.put("hibernate.c3p0.checkoutTimeout", "500");

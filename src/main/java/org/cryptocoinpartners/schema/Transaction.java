@@ -51,7 +51,7 @@ public class Transaction extends Event {
 	public Transaction(@Assisted Portfolio portfolio, @Assisted Exchange exchange, @Assisted Asset currency, @Assisted TransactionType type,
 			@Assisted("transactionAmount") Amount amount, @Assisted("transactionPrice") Amount price) {
 		// this.id = getId();
-		this.getId();
+		this.getUuid();
 		this.version = getVersion();
 
 		this.setCurrency(currency);
@@ -63,28 +63,26 @@ public class Transaction extends Event {
 		this.setExchange(exchange);
 		this.setPortfolioName(portfolio);
 
-		if (getCurrency() != null && !getCurrency().equals(portfolio.getBaseAsset())) {
+		if (getCurrency() != null) {
 			if (getPortfolio() != null && getPortfolio().getQuoteService() != null) {
 				Listing listing = Listing.forPair(getCurrency(), portfolio.getBaseAsset());
 				Offer rate = portfolio.getQuoteService().getImpliedBestAskForListing(listing);
 				//  DiscreteAmount fxRate = rate.getPrice();
 				if (rate != null)
-					this.baseRateCount = rate.getPriceCount();
+					this.baseRate = rate.getPrice();
 			}
 
-		} else if (getCurrency() != null && getCurrency().equals(portfolio.getBaseAsset()))
-			this.baseRateCount = 1;
+		}
 
-		if (getCommissionCurrency() != null && !getCommissionCurrency().equals(portfolio.getBaseAsset())) {
+		if (getCommissionCurrency() != null) {
 			if (!getCurrency().equals(getCommissionCurrency()) && getPortfolio() != null && getPortfolio().getQuoteService() != null) {
 				Listing commListing = Listing.forPair(getCommissionCurrency(), portfolio.getBaseAsset());
 				Offer commRate = portfolio.getQuoteService().getImpliedBestAskForListing(commListing);
 				if (commRate != null)
-					this.baseCommissionRateCount = commRate.getPriceCount();
-			} else if (getCurrency().equals(getCommissionCurrency()))
-				this.baseCommissionRateCount = getBaseRateCount();
-		} else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
-			this.baseCommissionRateCount = 1;
+					this.baseCommissionRate = commRate.getPrice();
+			} else if (getCurrency().equals(getCommissionCurrency()) && getBaseRate() != null)
+				this.baseCommissionRate = getBaseRate();
+		}
 
 		double basis;
 		if (getExchange() != null && getExchange().getFeeBasis(getExchange()) != 0)
@@ -101,9 +99,11 @@ public class Transaction extends Event {
 	public Transaction(@Assisted Fill fill, @Assisted Portfolio portfolio, @Assisted Exchange exchange, @Assisted Asset currency,
 			@Assisted TransactionType type, @Assisted("transactionAmount") Amount amount, @Assisted("transactionPrice") Amount price) {
 		// this.id = getId();
-		this.getId();
+		this.getUuid();
 		this.version = getVersion();
 		this.fill = fill;
+		if (fill.getMarket().getExchange().getSymbol().equals("BITFINEX"))
+			log.debug("test");
 		synchronized (this.fill) {
 			this.fill.addTransaction(this);
 		}
@@ -117,28 +117,26 @@ public class Transaction extends Event {
 		this.setExchange(exchange);
 		this.setPortfolioName(portfolio);
 
-		if (getCurrency() != null && !getCurrency().equals(portfolio.getBaseAsset())) {
+		if (getCurrency() != null) {
 			if (getPortfolio() != null && getPortfolio().getQuoteService() != null) {
 				Listing listing = Listing.forPair(getCurrency(), portfolio.getBaseAsset());
 				Offer rate = portfolio.getQuoteService().getImpliedBestAskForListing(listing);
 				//  DiscreteAmount fxRate = rate.getPrice();
 				if (rate != null)
-					this.baseRateCount = rate.getPriceCount();
+					this.baseRate = rate.getPrice();
 			}
 
-		} else if (getCurrency() != null && getCurrency().equals(portfolio.getBaseAsset()))
-			this.baseRateCount = 1;
+		}
 
-		if (getCommissionCurrency() != null && !getCommissionCurrency().equals(portfolio.getBaseAsset())) {
+		if (getCommissionCurrency() != null) {
 			if (!getCurrency().equals(getCommissionCurrency()) && getPortfolio() != null && getPortfolio().getQuoteService() != null) {
 				Listing commListing = Listing.forPair(getCommissionCurrency(), portfolio.getBaseAsset());
 				Offer commRate = portfolio.getQuoteService().getImpliedBestAskForListing(commListing);
 				if (commRate != null)
-					this.baseCommissionRateCount = commRate.getPriceCount();
-			} else if (getCurrency().equals(getCommissionCurrency()))
-				this.baseCommissionRateCount = getBaseRateCount();
-		} else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
-			this.baseCommissionRateCount = 1;
+					this.baseCommissionRate = commRate.getPrice();
+			} else if (getCurrency().equals(getCommissionCurrency()) && getBaseRate() != null)
+				this.baseCommissionRate = getBaseRate();
+		}
 		double basis;
 		if (getExchange() != null && getExchange().getFeeBasis(getExchange()) != 0)
 			basis = getExchange().getFeeBasis(getExchange());
@@ -148,12 +146,13 @@ public class Transaction extends Event {
 
 		this.setAmountDecimal(
 				basis == 0 ? DecimalAmount.of(amount).asBigDecimal() : DecimalAmount.of(amount).toBasis(basis, Remainder.ROUND_UP).asBigDecimal());
-
+		this.setCommissionDecimal(fill.getCommission().asBigDecimal());
+		this.setMarginDecimal(fill.getMargin().asBigDecimal());
 	}
 
 	public Transaction(Portfolio portfolio, Exchange exchange, Asset currency, TransactionType type, Amount amount) {
 		//   this.id = getId();
-		this.getId();
+		this.getUuid();
 		this.version = getVersion();
 		this.setCurrency(currency);
 		this.setAsset(currency);
@@ -161,28 +160,25 @@ public class Transaction extends Event {
 		this.setPortfolio(portfolio);
 		this.setExchange(exchange);
 		this.setPortfolioName(portfolio);
-		if (getCurrency() != null && !getCurrency().equals(portfolio.getBaseAsset())) {
+		if (getCurrency() != null) {
 			if (getPortfolio() != null && getPortfolio().getQuoteService() != null) {
 				Listing listing = Listing.forPair(getCurrency(), portfolio.getBaseAsset());
 				Offer rate = portfolio.getQuoteService().getImpliedBestAskForListing(listing);
 				//  DiscreteAmount fxRate = rate.getPrice();
 				if (rate != null)
-					this.baseRateCount = rate.getPriceCount();
+					this.baseRate = rate.getPrice();
 			}
 
-		} else if (getCurrency() != null && getCurrency().equals(portfolio.getBaseAsset()))
-			this.baseRateCount = 1;
-
-		if (getCommissionCurrency() != null && !getCommissionCurrency().equals(portfolio.getBaseAsset())) {
+		}
+		if (getCommissionCurrency() != null) {
 			if (!getCurrency().equals(getCommissionCurrency()) && getPortfolio() != null && getPortfolio().getQuoteService() != null) {
 				Listing commListing = Listing.forPair(getCommissionCurrency(), portfolio.getBaseAsset());
 				Offer commRate = portfolio.getQuoteService().getImpliedBestAskForListing(commListing);
 				if (commRate != null)
-					this.baseCommissionRateCount = commRate.getPriceCount();
-			} else if (getCurrency().equals(getCommissionCurrency()))
-				this.baseCommissionRateCount = getBaseRateCount();
-		} else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
-			this.baseCommissionRateCount = 1;
+					this.baseCommissionRate = commRate.getPrice();
+			} else if (getCurrency().equals(getCommissionCurrency()) && getBaseRate() != null)
+				this.baseCommissionRate = getBaseRate();
+		}
 
 		double basis;
 		if (getExchange() != null && getExchange().getFeeBasis(getExchange()) != 0)
@@ -199,21 +195,15 @@ public class Transaction extends Event {
 	@AssistedInject
 	public Transaction(@Assisted Fill fill, @Assisted Instant creationTime) {
 		//  this.id = getId();
-		this.getId();
+		this.getUuid();
 		this.version = getVersion();
 		Portfolio portfolio = fill.getOrder().getPortfolio();
 		TransactionType transactionType = null;
 
-		if (fill.getOrder().getPositionEffect() == PositionEffect.OPEN || fill.getOrder().getPositionEffect() == PositionEffect.CLOSE) {
-			//is entering or exiting trade
-			transactionType = (fill.getVolume().isPositive()) ? TransactionType.BUY : TransactionType.SELL;
-		} else {
-			// is either  buying base currency and selling quote or selling base currency and buying quote
-			transactionType = TransactionType.REBALANCE;
-		}
+		transactionType = (fill.getVolume().isPositive()) ? TransactionType.BUY : TransactionType.SELL;
+
 		this.time = creationTime;
-		this.asset = (fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? fill.getMarket().getQuote()
-				: fill.getMarket().getTradedCurrency(fill.getMarket());
+		this.asset = fill.getMarket().getBase();
 		this.currency = this.asset;
 		this.fill = fill;
 		synchronized (this.fill) {
@@ -228,33 +218,32 @@ public class Transaction extends Event {
 		this.setPortfolioName(portfolio);
 		//BTC/USD, ETH(base)/BTC(quote)
 
-		this.setCommissionCurrency(getAsset());
+		this.setCommissionCurrency((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? fill.getMarket().getQuote()
+				: fill.getMarket().getTradedCurrency(fill.getMarket()));
 
 		this.setMarket(fill.getMarket());
 		this.setExchange(fill.getMarket().getExchange());
 
-		if (getCurrency() != null && !getCurrency().equals(portfolio.getBaseAsset())) {
+		if (getCurrency() != null) {
 			if (getPortfolio() != null && getPortfolio().getQuoteService() != null) {
 				Listing listing = Listing.forPair(getCurrency(), portfolio.getBaseAsset());
 				Offer rate = portfolio.getQuoteService().getImpliedBestAskForListing(listing);
 				//  DiscreteAmount fxRate = rate.getPrice();
 				if (rate != null)
-					this.baseRateCount = rate.getPriceCount();
+					this.baseRate = rate.getPrice();
 			}
 
-		} else if (getCurrency() != null && getCurrency().equals(portfolio.getBaseAsset()))
-			this.baseRateCount = 1;
+		}
 
-		if (getCommissionCurrency() != null && !getCommissionCurrency().equals(portfolio.getBaseAsset())) {
+		if (getCommissionCurrency() != null) {
 			if (!getCurrency().equals(getCommissionCurrency()) && getPortfolio() != null && getPortfolio().getQuoteService() != null) {
 				Listing commListing = Listing.forPair(getCommissionCurrency(), portfolio.getBaseAsset());
 				Offer commRate = portfolio.getQuoteService().getImpliedBestAskForListing(commListing);
 				if (commRate != null)
-					this.baseCommissionRateCount = commRate.getPriceCount();
+					this.baseCommissionRate = commRate.getPrice();
 			} else if (getCurrency().equals(getCommissionCurrency()))
-				this.baseCommissionRateCount = getBaseRateCount();
-		} else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
-			this.baseCommissionRateCount = 1;
+				this.baseCommissionRate = getBaseRate();
+		}
 		double basis;
 		if (getExchange() != null && getExchange().getFeeBasis(getExchange()) != 0)
 			basis = getExchange().getFeeBasis(getExchange());
@@ -263,19 +252,9 @@ public class Transaction extends Event {
 			basis = getCurrency() == null ? getAsset() == null ? 0 : getAsset().getBasis() : getCurrency().getBasis();
 
 		//  this.setAmountDecimal((basis==0 ? ((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (amount.times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal() : amount.asBigDecimal()) : DecimalAmount.of((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (amount.times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal() : amount.asBigDecimal()).asBigDecimal())) ;
-		this.setCommissionDecimal((basis == 0
-				? ((fill.getMarket().getTradedCurrency(fill.getMarket()) == null)
-						? (fill.getCommission().times(getPrice(), Remainder.ROUND_EVEN).asBigDecimal())
-						: fill.getCommission().asBigDecimal())
-				: DecimalAmount.of((fill.getMarket().getTradedCurrency(fill.getMarket()) == null)
-						? (fill.getCommission().times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal()
-						: fill.getCommission().asBigDecimal()).toBasis(basis, Remainder.ROUND_UP).asBigDecimal()));
-		this.setMarginDecimal((basis == 0
-				? ((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (fill.getMargin().times(getPrice(), Remainder.ROUND_EVEN).asBigDecimal())
-						: fill.getMargin().asBigDecimal())
-				: DecimalAmount.of((fill.getMarket().getTradedCurrency(fill.getMarket()) == null)
-						? (fill.getMargin().times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal()
-						: fill.getMargin().asBigDecimal()).toBasis(basis, Remainder.ROUND_UP).asBigDecimal()));
+		this.setCommissionDecimal(fill.getCommission().asBigDecimal());
+		this.setMarginDecimal(fill.getMargin().asBigDecimal());
+
 		this.assetAmount = this.getCommission().plus(this.getMargin());
 
 		this.amount = assetAmount;
@@ -285,60 +264,57 @@ public class Transaction extends Event {
 	@AssistedInject
 	public Transaction(@Assisted Order order, @Assisted Instant creationTime) {
 		// this.id = getId();
-		this.getId();
+		this.getUuid();
 		this.version = getVersion();
 		this.portfolio = order.getPortfolio();
 
 		TransactionType transactionType = order.getVolume().isPositive() ? TransactionType.BUY_RESERVATION : TransactionType.SELL_RESERVATION;
 		this.order = order;
+		if (order.getMarket().getExchange().getSymbol().equals("BITFINEX"))
+			log.debug("test");
 		synchronized (this.order) {
 			this.order.addTransaction(this);
 		}
 		this.time = creationTime;
-		this.asset = (order.getMarket().getTradedCurrency(order.getMarket()) == null) ? order.getMarket().getBase()
-				: order.getMarket().getTradedCurrency(order.getMarket());
+		this.asset = order.getMarket().getBase();
+		this.currency = this.asset;
 
 		//  this.asset = order.getMarket().getTradedCurrency(order.getMarket());
 
-		this.currency = order.getMarket().getBase();
-		this.setAsset(currency);
+		//this.currency = asset;
+		//this.setAsset(currency);
 		this.setPrice(order.getLimitPrice());
 		this.setType(transactionType);
 		this.setPortfolio(portfolio);
 		this.setPositionEffect(order.getPositionEffect());
-		if (getAsset().equals(order.getMarket().getQuote()))
-			this.setCommissionCurrency(order.getMarket().getBase());
+		this.setCommissionCurrency((order.getMarket().getTradedCurrency(order.getMarket()) == null) ? order.getMarket().getQuote()
+				: order.getMarket().getTradedCurrency(order.getMarket()));
 
-		else
-			this.setCommissionCurrency(getAsset());
 		//if traded=quote, then do this, if traded== base then just volume
 		this.setMarket(order.getMarket());
 		this.setPortfolioName(portfolio);
 		// this.time = order.getTime();
 		this.setExchange(order.getMarket().getExchange());
 
-		if (getCurrency() != null && !getCurrency().equals(portfolio.getBaseAsset())) {
+		if (getCurrency() != null) {
 			if (getPortfolio() != null && getPortfolio().getQuoteService() != null) {
 				Listing listing = Listing.forPair(getCurrency(), portfolio.getBaseAsset());
 				Offer rate = portfolio.getQuoteService().getImpliedBestAskForListing(listing);
 				//  DiscreteAmount fxRate = rate.getPrice();
 				if (rate != null)
-					this.baseRateCount = rate.getPriceCount();
+					this.baseRate = rate.getPrice();
 			}
 
-		} else if (getCurrency() != null && getCurrency().equals(portfolio.getBaseAsset()))
-			this.baseRateCount = 1;
-
-		if (getCommissionCurrency() != null && !getCommissionCurrency().equals(portfolio.getBaseAsset())) {
+		}
+		if (getCommissionCurrency() != null) {
 			if (!getCurrency().equals(getCommissionCurrency()) && getPortfolio() != null && getPortfolio().getQuoteService() != null) {
 				Listing commListing = Listing.forPair(getCommissionCurrency(), portfolio.getBaseAsset());
 				Offer commRate = portfolio.getQuoteService().getImpliedBestAskForListing(commListing);
 				if (commRate != null)
-					this.baseCommissionRateCount = commRate.getPriceCount();
-			} else if (getCurrency().equals(getCommissionCurrency()))
-				this.baseCommissionRateCount = getBaseRateCount();
-		} else if (getCommissionCurrency() != null && getCommissionCurrency().equals(portfolio.getBaseAsset()))
-			this.baseCommissionRateCount = 1;
+					this.baseCommissionRate = commRate.getPrice();
+			} else if (getCurrency().equals(getCommissionCurrency()) && getBaseRate() != null)
+				this.baseCommissionRate = getBaseRate();
+		}
 
 		double basis;
 		if (getExchange() != null && getExchange().getFeeBasis(getExchange()) != 0)
@@ -348,20 +324,8 @@ public class Transaction extends Event {
 			basis = getCurrency() == null ? getAsset() == null ? 0 : getAsset().getBasis() : getCurrency().getBasis();
 
 		//  this.setAmountDecimal((basis==0 ? ((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (amount.times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal() : amount.asBigDecimal()) : DecimalAmount.of((fill.getMarket().getTradedCurrency(fill.getMarket()) == null) ? (amount.times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal() : amount.asBigDecimal()).asBigDecimal())) ;
-		this.setCommissionDecimal((basis == 0
-				? ((order.getMarket().getTradedCurrency(order.getMarket()) == null)
-						? (order.getForcastedCommission().times(getPrice(), Remainder.ROUND_EVEN).asBigDecimal())
-						: order.getForcastedCommission().asBigDecimal())
-				: DecimalAmount.of((order.getMarket().getTradedCurrency(order.getMarket()) == null)
-						? (order.getForcastedCommission().times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal()
-						: order.getForcastedCommission().asBigDecimal()).toBasis(basis, Remainder.ROUND_UP).asBigDecimal()));
-		this.setMarginDecimal((basis == 0
-				? ((order.getMarket().getTradedCurrency(order.getMarket()) == null)
-						? (order.getForcastedMargin().times(getPrice(), Remainder.ROUND_EVEN).asBigDecimal())
-						: order.getForcastedMargin().asBigDecimal())
-				: DecimalAmount.of((order.getMarket().getTradedCurrency(order.getMarket()) == null)
-						? (order.getForcastedMargin().times(getPrice(), Remainder.ROUND_EVEN)).asBigDecimal()
-						: order.getForcastedMargin().asBigDecimal()).toBasis(basis, Remainder.ROUND_UP).asBigDecimal()));
+		this.setCommissionDecimal(order.getForcastedCommission().asBigDecimal());
+		this.setMarginDecimal(order.getForcastedMargin().asBigDecimal());
 
 		this.assetAmount = this.getCommission().plus(this.getMargin());
 
@@ -440,16 +404,10 @@ public class Transaction extends Event {
 		return priceCount;
 	}
 
-	public @Nullable Long getBaseRateCount() {
-		return baseRateCount;
-	}
-
 	@Transient
 	public Amount getBaseRate() {
-		if (portfolio.getBaseAsset().getBasis() == 0)
+		if (portfolio == null || portfolio.getBaseAsset() == null || portfolio.getBaseAsset().getBasis() == 0)
 			return null;
-		if (baseRate == null)
-			this.baseRate = new DiscreteAmount(getBaseRateCount(), portfolio.getBaseAsset().getBasis());
 
 		return baseRate;
 	}
@@ -462,21 +420,32 @@ public class Transaction extends Event {
 	}
 
 	@Nullable
-	public long getBaseCommissionRateCount() {
+	@Column(precision = 18, scale = 8)
+	public BigDecimal getBaseCommissionRateDecimal() {
+		if (baseCommissionRate == null)
+			return BigDecimal.ZERO;
+		return baseCommissionRate.asBigDecimal();
 
-		return baseCommissionRateCount;
 	}
 
-	@Transient
-	public Amount getBaseCommissionRate() {
+	@Column(precision = 18, scale = 8)
+	public BigDecimal getBaseRateDecimal() {
+		if (baseRate == null)
+			return BigDecimal.ZERO;
+		return baseRate.asBigDecimal();
 
-		if (getPortfolio().getBaseAsset().getBasis() == 0)
-			return null;
-		if (baseCommissionRate == null)
-			this.baseCommissionRate = new DiscreteAmount(getBaseCommissionRateCount(), getPortfolio().getBaseAsset().getBasis());
+	}
 
-		return baseCommissionRate;
+	protected synchronized void setBaseCommissionRateDecimal(BigDecimal commissionRate) {
+		if (commissionRate != null) {
+			this.baseCommissionRate = DecimalAmount.of(commissionRate);
+		}
+	}
 
+	protected synchronized void setBaseRateDecimal(BigDecimal rate) {
+		if (rate != null) {
+			this.baseRate = DecimalAmount.of(rate);
+		}
 	}
 
 	@Nullable
@@ -535,6 +504,12 @@ public class Transaction extends Event {
 	@Transient
 	public Amount getCommission() {
 		return commission;
+
+	}
+
+	@Transient
+	public Amount getBaseCommissionRate() {
+		return baseCommissionRate;
 
 	}
 
@@ -770,15 +745,18 @@ public class Transaction extends Event {
 	@Override
 	public String toString() {
 
-		return "id=" + getId() + SEPARATOR + "time=" + (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Portfolio=" + getPortfolio()
-				+ SEPARATOR + "Exchange=" + getExchange() + SEPARATOR + "type=" + getType()
-				+ (getFill() != null ? (SEPARATOR + "fill=" + getFill().getId()) : "") + (getOrder() != null ? (SEPARATOR + "order=" + getOrder()) : "")
-				+ SEPARATOR + "amount=" + getAmount() + (getAsset() != null ? (SEPARATOR + "asset=" + getAsset()) : "") + SEPARATOR + "price="
+		return "UUID=" + getUuid() + SEPARATOR + "ID=" + (getId() != null ? getId() : "") + SEPARATOR + "time="
+				+ (getTime() != null ? (FORMAT.print(getTime())) : "") + SEPARATOR + "Portfolio=" + (getPortfolio() != null ? getPortfolio() : "") + SEPARATOR
+				+ "Exchange=" + (getExchange() != null ? getExchange() : "") + SEPARATOR + "type=" + (getType() != null ? getType() : "")
+				+ (getFill() != null ? (SEPARATOR + "fill=" + getFill().getUuid()) : "")
+				+ (getOrder() != null ? (SEPARATOR + "order=" + getOrder().getUuid()) : "") + SEPARATOR + "amount=" + getAmount()
+				+ (getAsset() != null ? (SEPARATOR + "asset=" + getAsset()) : "") + SEPARATOR + "price="
 				+ (getPrice() == null || getPrice() != DecimalAmount.ZERO ? getPrice() : "")
 				+ (getCurrency() != null ? (SEPARATOR + "currency=" + getCurrency()) : "")
 				+ (getCommission() != null ? (SEPARATOR + "commission=" + getCommission()) : "")
 				+ (getMargin() != null ? (SEPARATOR + "margin=" + getMargin()) : "") + (getBaseRate() != null ? (SEPARATOR + "base rate=" + getBaseRate()) : "")
 				+ (getBaseCommissionRate() != null ? (SEPARATOR + "getBaseCommissionRate=" + getBaseCommissionRate()) : "");
+
 	}
 
 	protected synchronized void setPortfolio(Portfolio portfolio) {
@@ -801,14 +779,6 @@ public class Transaction extends Event {
 
 	protected synchronized void setAsset(Asset asset) {
 		this.asset = asset;
-	}
-
-	protected synchronized void setBaseCommissionRateCount(long baseCommissionRateCount) {
-		this.baseCommissionRateCount = baseCommissionRateCount;
-	}
-
-	protected synchronized void setBaseRateCount(long baseRateCount) {
-		this.baseRateCount = baseRateCount;
 	}
 
 	protected synchronized void setPriceCount(long priceCount) {
@@ -868,8 +838,6 @@ public class Transaction extends Event {
 	private Amount margin;
 	private Exchange exchange;
 	private long priceCount;
-	private long baseRateCount;
-	private long baseCommissionRateCount;
 
 	private Asset commissionCurrency;
 	private Market market;
@@ -898,7 +866,7 @@ public class Transaction extends Event {
 
 	@Override
 	public synchronized void delete() {
-		log.debug("Transaction - Delete : Delete of Transaction " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+		log.debug("Transaction - Delete : Delete of Transaction " + this.getUuid() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 		// TODO Auto-generated method stub
 
 	}

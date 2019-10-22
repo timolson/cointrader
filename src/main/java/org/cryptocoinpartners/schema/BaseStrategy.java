@@ -26,6 +26,7 @@ public class BaseStrategy implements Strategy {
 
 	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.baseStrategy");
 	protected static HashMap<Tradeable, Double[]> marketAllocations = new HashMap<Tradeable, Double[]>();
+	protected static HashMap<Double, Double> intervalAllocations = new HashMap<Double, Double>();
 
 	@Override
 	public synchronized void setPortfolio(Portfolio portfolio) {
@@ -107,13 +108,48 @@ public class BaseStrategy implements Strategy {
 
 	@Transient
 	public static Double getMarketAllocation(Tradeable market) {
+		log.debug("getMarketAllocation market=" + market + "/" + System.identityHashCode(market) + "allocation="
+				+ (marketAllocations.get(market) == null ? 0 : marketAllocations.get(market)[0]) + ",allocations=" + marketAllocations.get(market)
+				+ ",market allocation=" + marketAllocations);
 
-		return marketAllocations.get(market)[0];
+		return marketAllocations.get(market) == null ? 0 : marketAllocations.get(market)[0];
 
 	}
 
 	@Transient
+	public static Double getExchangeAllocation(Tradeable market) {
+		log.debug("getMarketAllocation market=" + market + "/" + System.identityHashCode(market) + ",allocations=" + marketAllocations.get(market)
+				+ ",market allocation=" + marketAllocations);
+		return marketAllocations.get(market) == null ? 0 : marketAllocations.get(market)[0];
+
+	}
+
+	@Transient
+	public static Double getAllocationByExchange(Exchange exchange) {
+		log.debug("getAllocationByExchange allocations=" + marketAllocations);
+		Double totalAllocation = 0d;
+		for (Tradeable tradeable : marketAllocations.keySet())
+			if (tradeable instanceof Market) {
+				Market market = (Market) tradeable;
+				if (market.getExchange().equals(exchange))
+					totalAllocation = totalAllocation + Math.abs(marketAllocations.get(market)[0]);
+			}
+		return totalAllocation / getTotalAllocation();
+	}
+
+	@Transient
+	public static Double getTotalAllocation() {
+		log.debug("getTotalAllocation allocations=" + marketAllocations);
+		Double totalAllocation = 0d;
+		for (Tradeable market : marketAllocations.keySet())
+			totalAllocation = totalAllocation + Math.abs(marketAllocations.get(market)[0]);
+		return totalAllocation;
+	}
+
+	@Transient
 	public static Double getMarginMultiplier(Tradeable market) {
+		log.debug("getMarginMultiplier market=" + market + "/" + System.identityHashCode(market) + ",allocations=" + marketAllocations.get(market)
+				+ ",market allocation=" + marketAllocations);
 
 		return marketAllocations.get(market)[1];
 
@@ -137,8 +173,9 @@ public class BaseStrategy implements Strategy {
 	public synchronized Tradeable addMarket(Tradeable market, Double allocation) {
 		//   synchronized (lock) {
 		if (market != null && !getMarkets().contains(market)) {
-
-			getMarketAllocations().put(market, new Double[] { allocation, 1d });
+			if (getMarketAllocations() != null && !getMarketAllocations().containsKey(market)) {
+				getMarketAllocations().put(market, new Double[] { allocation, 1d });
+			}
 
 		}
 		if (market != null)
@@ -150,8 +187,9 @@ public class BaseStrategy implements Strategy {
 	public synchronized Tradeable addMarket(Tradeable market, Double allocation, Double multiplier) {
 		//   synchronized (lock) {
 		if (market != null && !getMarkets().contains(market)) {
-
-			getMarketAllocations().put(market, new Double[] { allocation, multiplier });
+			if (getMarketAllocations() != null && !getMarketAllocations().containsKey(market)) {
+				getMarketAllocations().put(market, new Double[] { allocation, multiplier });
+			}
 
 		}
 		if (market != null)
@@ -203,7 +241,6 @@ public class BaseStrategy implements Strategy {
 	/** You may use this service to query the most recent Trades and Books for all Listings and Markets. */
 	@Inject
 	protected transient QuoteService quotes;
-	@Inject
 	protected transient Portfolio portfolio;
 	@Inject
 	protected transient Context context;

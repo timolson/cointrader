@@ -151,141 +151,159 @@ public class Replay implements Runnable {
 
 	@Override
 	public void run() {
+		try {
+			final Instant start = replayTimeInterval.getStart().toInstant();
+			final Instant end = replayTimeInterval.getEnd().toInstant();
+			List<Double> intervals = new ArrayList<Double>();
+			Double maxInterval = 0d;
+			Bar lastBar = null;
+			Map<String, Tradeable> markets = new HashMap<String, Tradeable>();
 
-		final Instant start = replayTimeInterval.getStart().toInstant();
-		final Instant end = replayTimeInterval.getEnd().toInstant();
-		List<Double> intervals = new ArrayList<Double>();
-		Double maxInterval = 0d;
-		Bar lastBar = null;
-		Map<String, Tradeable> markets = new HashMap<String, Tradeable>();
+			PortfolioService portfolioService = context.getInjector().getInstance(PortfolioService.class);
+			for (Portfolio portfolio : portfolioService.getPortfolios()) {
+				for (Tradeable tradeable : portfolio.getMarkets())
+					if (tradeable != null)
+						markets.put(tradeable.getSymbol(), tradeable);
 
-		PortfolioService portfolioService = context.getInjector().getInstance(PortfolioService.class);
-		for (Portfolio portfolio : portfolioService.getPortfolios()) {
-			for (Tradeable tradeable : portfolio.getMarkets())
-				if (tradeable != null)
-					markets.put(tradeable.getSymbol(), tradeable);
-
-		}
-		if (replayBars) {
-			for (String interval : barIntervals) {
-				Double intervalAsDouble = Double.parseDouble(interval);
-				if (!intervals.contains(intervalAsDouble))
-					intervals.add(intervalAsDouble);
-				if (intervalAsDouble > maxInterval)
-					maxInterval = intervalAsDouble;
 			}
+			if (replayBars) {
+				for (String interval : barIntervals) {
+					Double intervalAsDouble = Double.parseDouble(interval);
+					if (!intervals.contains(intervalAsDouble))
+						intervals.add(intervalAsDouble);
+					if (intervalAsDouble > maxInterval)
+						maxInterval = intervalAsDouble;
+				}
 
-			final String maxBarTimeQuery = "select r from Bar r where  market in (?1) and interval= ?2  and volume<>0 order by time desc";
-			try {
-				lastBar = EM.queryLimitOne(Bar.class, maxBarTimeQuery, new ArrayList(markets.values()), maxInterval);
-			} catch (Exception | Error ex) {
-				lastBar = null;
+				final String maxBarTimeQuery = "select r from Bar r where  market in (?1) and interval= ?2  and volume<>0 order by time desc";
+				try {
+					lastBar = EM.queryLimitOne(Bar.class, maxBarTimeQuery, new ArrayList(markets.values()), maxInterval);
+				} catch (Exception | Error ex) {
+					lastBar = null;
+				}
 			}
-		}
-		//got the start time of the 115200 which would have been  2018-03-20 08:00:00 and run time was 2018-03-21 07:36:49 
-		final List<RemoteEvent> events = new ArrayList<>();
-		final List<Book> books = new ArrayList<>();
-		final List<Trade> trades = new ArrayList<>();
-		final List<Bar> bars = new ArrayList<>();
-		//   ArrayList marketsArray = new ArrayList(markets.values());
-		//we could kick these off the book and trade on seperate threads then let them come back before continuing.
-		//trades.addAll(EM.queryList(Trade.class, tradeQuery, new ArrayList(markets.values()), start, stop));
+			//got the start time of the 115200 which would have been  2018-03-20 08:00:00 and run time was 2018-03-21 07:36:49 
+			final List<RemoteEvent> events = new ArrayList<>();
+			final List<Book> books = new ArrayList<>();
+			final List<Trade> trades = new ArrayList<>();
+			final List<Bar> bars = new ArrayList<>();
+			//   ArrayList marketsArray = new ArrayList(markets.values());
+			//we could kick these off the book and trade on seperate threads then let them come back before continuing.
+			//trades.addAll(EM.queryList(Trade.class, tradeQuery, new ArrayList(markets.values()), start, stop));
 
-		if (!useRandomData) {
-			int threadCount = 0;
-			CountDownLatch startLatch = null;
-			CountDownLatch stopLatch = null;
-			service = Executors.newFixedThreadPool(dbReaderThreads);
+			if (!useRandomData) {
+				int threadCount = 0;
+				CountDownLatch startLatch = null;
+				CountDownLatch stopLatch = null;
+				service = Executors.newFixedThreadPool(dbReaderThreads);
 
-			//   engines = Executors.newFixedThreadPool(1);
-			//    replayTimeInterval.toDuration().
-			// engines.submit(new PublisherRunnable());
-			/*
-			 * if (replayTimeInterval.toDuration().isLongerThan(timeStep)) { // Start two threads, but ensure the first thread publish first, then reuse it
-			 * for (Instant now = start; !now.isAfter(end);) { final Instant stepEnd = now.plus(timeStep); threadCount++; now = stepEnd; } } endLatch = new
-			 * CountDownLatch(threadCount);
-			 *///  semaphore.release(threadCount);
+				//   engines = Executors.newFixedThreadPool(1);
+				//    replayTimeInterval.toDuration().
+				// engines.submit(new PublisherRunnable());
+				/*
+				 * if (replayTimeInterval.toDuration().isLongerThan(timeStep)) { // Start two threads, but ensure the first thread publish first, then reuse it
+				 * for (Instant now = start; !now.isAfter(end);) { final Instant stepEnd = now.plus(timeStep); threadCount++; now = stepEnd; } } endLatch = new
+				 * CountDownLatch(threadCount);
+				 *///  semaphore.release(threadCount);
 
-			if (replayTimeInterval.toDuration().isLongerThan(timeStep)) {
-				// Start two threads, but ensure the first thread publish first, then reuse it
+				if (replayTimeInterval.toDuration().isLongerThan(timeStep)) {
+					// Start two threads, but ensure the first thread publish first, then reuse it
 
-				for (Instant now = start; !now.isAfter(end);) {
-					final Instant stepEnd = now.plus(timeStep);
-					Instant lastBarEnd = lastBar == null ? null : lastBar.getTime().toDateTime().plusSeconds(lastBar.getInterval().intValue()).toInstant();
-					log.debug("Replay: Run replaying from " + now + " to " + stepEnd + (lastBarEnd == null ? "" : "with last bar start time of " + lastBarEnd));
-					stopLatch = new CountDownLatch(1);
-					log.debug("Replay: ReplayStepRunnable created with: " + now + ", " + context.getRunTime() + ", " + semaphore + ", " + startLatch + ", "
-							+ stopLatch + ", " + threadCount);
+					for (Instant now = start; !now.isAfter(end);) {
+						try {
+							final Instant stepEnd = now.plus(timeStep);
+							Instant lastBarEnd = lastBar == null ? null
+									: lastBar.getTime().toDateTime().plusSeconds(lastBar.getInterval().intValue()).toInstant();
+							log.debug("Replay: Run replaying from " + now + " to " + stepEnd
+									+ (lastBarEnd == null ? "" : "with last bar start time of " + lastBarEnd));
+							stopLatch = new CountDownLatch(1);
+							log.debug("Replay: ReplayStepRunnable created with: " + now + ", " + context.getRunTime() + ", " + semaphore + ", " + startLatch
+									+ ", " + stopLatch + ", " + threadCount);
 
-					ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime(), semaphore, startLatch, stopLatch, threadCount,
-							replayBooks, replayBars, (lastBarEnd == null ? null : lastBarEnd), markets, intervals);
-					startLatch = stopLatch;
-					service.submit(replayStep);
-					// if (threadCount != 0)
-					threadCount++;
-					now = stepEnd;
+							ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime(), semaphore, startLatch, stopLatch,
+									threadCount, replayBooks, replayBars, (lastBarEnd == null ? null : lastBarEnd), markets, intervals);
+							startLatch = stopLatch;
+							//we submit 170 threads but only  9 executed!
+							service.submit(replayStep);
+							log.debug("Replay: ReplayStepRunnable submitted with: " + now + ", " + context.getRunTime() + ", " + semaphore + ", " + startLatch
+									+ ", " + stopLatch + ", " + threadCount);
 
-				}
-				semaphore.release(threadCount);
-				while (semaphore.availablePermits() > 0) {
-					try {
-						Thread.sleep(1000);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						log.debug(this.getClass().getSimpleName() + ": replaying historic prices", e);
-					}
-				}
-				if (replayBars) {
-					threadCount = 0;
-					//context = replay.getContext();
-
-					//	latestBars
-					double lastBarInterval = 0d;
-					for (Double interval : latestBars.keySet())
-						if (interval > lastBarInterval)
-							lastBarInterval = interval;
-					Instant endInstant = new Instant(System.currentTimeMillis());
-					Instant startInstant = (latestBars.get(lastBarInterval) != null)
-							? latestBars.get(lastBarInterval).toDateTime().plusSeconds((int) lastBarInterval).toInstant()
-							: endInstant.toDateTime().minusSeconds(maxInterval.intValue()).toInstant();
-
-					for (Instant now = startInstant; !now.isAfter(endInstant);) {
-						final Instant stepEnd = now.plus(timeStep);
-						log.debug("Replay: Run replaying from " + now + " to " + stepEnd);
-						stopLatch = new CountDownLatch(1);
-						log.debug("Replay: ReplayStepRunnable created with: " + now + ", " + context.getRunTime() + ", " + semaphore + ", " + startLatch + ", "
-								+ stopLatch + ", " + threadCount);
-
-						ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime(), semaphore, startLatch, stopLatch,
-								threadCount, false, false, null, markets, intervals);
-						startLatch = stopLatch;
-						service.submit(replayStep);
-						// if (threadCount != 0)
-						threadCount++;
-						now = stepEnd;
-
+							// if (threadCount != 0)
+							threadCount++;
+							now = stepEnd;
+						} catch (Error | Exception e) {
+							log.error(this.getClass().getSimpleName() + " run - Unable to replay books and trades due  to ", e);
+							continue;
+						}
 					}
 					semaphore.release(threadCount);
-
-				}
-				while (semaphore.availablePermits() > 0) {
-					try {
-						Thread.sleep(1000);
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						log.debug(this.getClass().getSimpleName() + ": replaying historic prices", e);
+					while (semaphore.availablePermits() > 0) {
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							log.debug(this.getClass().getSimpleName() + ": replaying historic prices", e);
+						}
 					}
-				}
-				log.debug("completed");
+					if (replayBars) {
+						threadCount = 0;
+						//context = replay.getContext();
 
-			} else
-				replayStep(start, end, replayBooks, replayBars, null, markets, intervals);
-		} else {
-			new MockTicker(context, ConfigUtil.combined(), start, end, context.getInjector().getInstance(BookFactory.class),
-					context.getInjector().getInstance(BasicQuoteService.class));
+						//	latestBars
+						double lastBarInterval = 0d;
+						for (Double interval : latestBars.keySet())
+							if (interval > lastBarInterval)
+								lastBarInterval = interval;
+						Instant endInstant = new Instant(System.currentTimeMillis());
+						Instant startInstant = (latestBars.get(lastBarInterval) != null)
+								? latestBars.get(lastBarInterval).toDateTime().plusSeconds((int) lastBarInterval).toInstant()
+								: endInstant.toDateTime().minusSeconds(maxInterval.intValue()).toInstant();
+
+						for (Instant now = startInstant; !now.isAfter(endInstant);) {
+							try {
+								final Instant stepEnd = now.plus(timeStep);
+								log.debug("Replay: Run replaying from " + now + " to " + stepEnd);
+								stopLatch = new CountDownLatch(1);
+								log.debug("Replay: ReplayStepRunnable created with: " + now + ", " + context.getRunTime() + ", " + semaphore + ", " + startLatch
+										+ ", " + stopLatch + ", " + threadCount);
+
+								ReplayStepRunnable replayStep = new ReplayStepRunnable(now, stepEnd, context.getRunTime(), semaphore, startLatch, stopLatch,
+										threadCount, false, false, null, markets, intervals);
+								startLatch = stopLatch;
+								service.submit(replayStep);
+								// if (threadCount != 0)
+								threadCount++;
+								now = stepEnd;
+							} catch (Error | Exception e) {
+								log.error(this.getClass().getSimpleName() + " run - Unable to replay barsvdue to ", e);
+								continue;
+							}
+
+						}
+						semaphore.release(threadCount);
+
+					}
+					while (semaphore.availablePermits() > 0) {
+						try {
+							Thread.sleep(1000);
+						} catch (InterruptedException e) {
+							// TODO Auto-generated catch block
+							log.debug(this.getClass().getSimpleName() + ": replaying historic prices", e);
+						}
+					}
+					log.debug("completed");
+
+				} else
+					replayStep(start, end, replayBooks, replayBars, null, markets, intervals);
+			} else {
+				new MockTicker(context, ConfigUtil.combined(), start, end, context.getInjector().getInstance(BookFactory.class),
+						context.getInjector().getInstance(BasicQuoteService.class));
+
+			}
+		} catch (Error | Exception e) {
+			log.error(this.getClass().getSimpleName() + " run - Unable to replay market data due to ", e);
 
 		}
-
 	}
 
 	private class ReplayStepRunnable implements Runnable {
@@ -330,14 +348,8 @@ public class Replay implements Runnable {
 				// perform interesting task
 				log.debug("ReplayStepRunnable: Run querying events from " + start + " to " + stop + " with latch " + startLatch);
 				List<RemoteEvent> events = queryEvents(start, stop, replayBooks, replayBars, barEnd, markets, intervals);
+				log.debug("ReplayStepRunnable: Run queried events from " + start + " to " + stop + " with latch " + startLatch);
 
-				// Log.debug(context.getInjector().toString());
-				//PortfolioService port = context.getInjector().getInstance(PortfolioService.class);
-				//   Iterator<RemoteEvent> ite = queryEvents(start, stop).iterator();
-				// thread 1 starts, thread 2 finishes, want to wait till thread 1 is complete before processing 
-
-				// we need to wait for current thread to finish.
-				//  try {
 				if (startLatch != null) {
 					log.debug("ReplayStepRunnable: Run Waiting for start latch " + startLatch);
 
@@ -351,50 +363,26 @@ public class Replay implements Runnable {
 				}
 				System.gc();
 				log.debug("ReplayStepRunnable: Published events from " + start + " to " + stop);
-
-				//  } catch (Error | Exception e) {
-				// TODO Auto-generated catch block
-				//     log.debug("ReplayStepRunnable: Unable to query events between " + start + " and stop " + stop + ", full stack trace follows:", e);
-
-				// }
-
-				// context.advanceTime(stop);
-
 			} catch (Error | Exception e) {
 				log.debug("ReplayStepRunnable: Unable to query events between " + start + " and stop " + stop + ", full stack trace follows:", e);
-
-				// TODO Auto-generated catch block
-				//  e.printStackTrace();
 			} finally {
-				if (startLatch != null) {
-					log.debug("ReplayStepRunnable: Run Waiting for start latch " + startLatch);
+				try {
 
-					try {
-						startLatch.await();
-					} catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						log.debug("ReplayStepRunnable: Unable to query events between " + start + " and stop " + stop + ", full stack trace follows:", e);
-
-					}
-				}
-
-				log.debug("ReplayStepRunnable: Run Counting down stop latch " + stopLatch);
-
-				stopLatch.countDown();
-				if (semaphore != null) {
-
-					try {
+					if (semaphore != null) {
 						log.debug("ReplayStepRunnable: removing permit from to pool for semaphore avaiable permits " + semaphore.availablePermits());
-
 						semaphore.acquire();
-					} catch (InterruptedException e) {
-						log.debug("ReplayStepRunnable: unable to remove permit from to pool for semaphore avaiable permits " + semaphore.availablePermits(), e);
-
 					}
+
+				} catch (Error | Exception e) {
+					log.debug("ReplayStepRunnable: Unable to query events between " + start + " and stop " + stop + ", full stack trace follows:", e);
+
+				} finally {
+					log.debug("ReplayStepRunnable: Run Counting down stop latch " + stopLatch);
+					stopLatch.countDown();
+
 				}
 
 			}
-
 		}
 
 	}
@@ -431,23 +419,27 @@ public class Replay implements Runnable {
 		//trades.addAll(EM.queryList(Trade.class, tradeQuery, new ArrayList(markets.values()), start, stop));
 
 		if (replayBooks) {
-			books.addAll(EM.queryList(Book.class, bookQuery, new ArrayList(markets.values()), start, stop));
-			Iterator<Book> itb = books.iterator();
+			List<Book> results = EM.queryList(Book.class, bookQuery, new ArrayList(markets.values()), start, stop);
+			if (results != null) {
+				books.addAll(results);
+				Iterator<Book> itb = books.iterator();
 
-			while (itb.hasNext()) {
-				Book book = itb.next();
-				book.sortBook();
+				while (itb.hasNext()) {
+					Book book = itb.next();
 
-				//book.
-				if (!markets.containsKey(book.getMarket().getSymbol())) {
-					itb.remove();
-					continue;
+					book.sortBook();
+
+					//book.
+					if (!markets.containsKey(book.getMarket().getSymbol())) {
+						itb.remove();
+						continue;
+					}
+					book.setMarket(markets.get(book.getMarket().getSymbol()));
+					book.setPersisted(true);
 				}
-				book.setMarket(markets.get(book.getMarket().getSymbol()));
-				book.setPersisted(true);
-			}
 
-			events.addAll(books);
+				events.addAll(books);
+			}
 		}
 		//got the start time of the 115200 which would have been  2018-03-20 08:00:00 and run time was 2018-03-21 07:36:49 
 		//now -32 => 19/03/2018 23:36
@@ -461,42 +453,47 @@ public class Replay implements Runnable {
 		if (replayBars && start.isBefore(barEnd)) {
 			if (stop.isAfter(barEnd))
 				stop = barEnd;
+			List<Bar> results = EM.queryList(Bar.class, barQuery, intervals, new ArrayList(markets.values()), start, stop);
+			if (results != null) {
+				bars.addAll(results);
+				Iterator<Bar> itb = bars.iterator();
 
-			bars.addAll(EM.queryList(Bar.class, barQuery, intervals, new ArrayList(markets.values()), start, stop));
-			Iterator<Bar> itb = bars.iterator();
+				while (itb.hasNext()) {
+					Bar bar = itb.next();
+					if (latestBars == null || latestBars.isEmpty() || !latestBars.containsKey(bar.getInterval()))
+						latestBars.put(bar.getInterval(), bar.getTime());
+					else if (latestBars.containsKey(bar.getInterval()) && latestBars.get(bar.getInterval()).isBefore(bar.getTime()))
+						latestBars.put(bar.getInterval(), bar.getTime());
 
-			while (itb.hasNext()) {
-				Bar bar = itb.next();
-				if (latestBars == null || latestBars.isEmpty() || !latestBars.containsKey(bar.getInterval()))
-					latestBars.put(bar.getInterval(), bar.getTime());
-				else if (latestBars.containsKey(bar.getInterval()) && latestBars.get(bar.getInterval()).isBefore(bar.getTime()))
-					latestBars.put(bar.getInterval(), bar.getTime());
-
-				if (!markets.containsKey(bar.getMarket().getSymbol())) {
-					itb.remove();
-					continue;
+					if (!markets.containsKey(bar.getMarket().getSymbol())) {
+						itb.remove();
+						continue;
+					}
+					bar.setMarket(markets.get(bar.getMarket().getSymbol()));
+					bar.setPersisted(true);
 				}
-				bar.setMarket(markets.get(bar.getMarket().getSymbol()));
-				bar.setPersisted(true);
+				//I need to publish the trade updates then 
+				events.addAll(bars);
 			}
-			//I need to publish the trade updates then 
-			events.addAll(bars);
 		} else if (!replayBars || (replayBars && barEnd == null)) {
 			//TODO we need to replay trades for any bars we don't have.
-			trades.addAll(EM.queryList(Trade.class, tradeQuery, new ArrayList(markets.values()), start, stop));
+			List<Trade> results = EM.queryList(Trade.class, tradeQuery, new ArrayList(markets.values()), start, stop);
+			if (results != null) {
+				trades.addAll(results);
 
-			Iterator<Trade> itt = trades.iterator();
+				Iterator<Trade> itt = trades.iterator();
 
-			while (itt.hasNext()) {
-				Trade trade = itt.next();
-				if (!markets.containsKey(trade.getMarket().getSymbol())) {
-					itt.remove();
-					continue;
+				while (itt.hasNext()) {
+					Trade trade = itt.next();
+					if (!markets.containsKey(trade.getMarket().getSymbol())) {
+						itt.remove();
+						continue;
+					}
+					trade.setMarket(markets.get(trade.getMarket().getSymbol()));
+					trade.setPersisted(true);
 				}
-				trade.setMarket(markets.get(trade.getMarket().getSymbol()));
-				trade.setPersisted(true);
+				events.addAll(trades);
 			}
-			events.addAll(trades);
 
 		}
 
@@ -545,7 +542,7 @@ public class Replay implements Runnable {
 			if (sComp != 0) {
 				return sComp;
 			} else if (event.getRemoteKey() != null && event.getRemoteKey() != null) {
-				return (event.getId().compareTo(event2.getId()));
+				return (event.getUuid().compareTo(event2.getUuid()));
 			} else
 				return event.getTimeReceived().compareTo(event2.getTimeReceived());
 
@@ -590,13 +587,17 @@ public class Replay implements Runnable {
 	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.replay");
 	private final Interval replayTimeInterval;
 	private final Integer dbReaderThreads = ConfigUtil.combined().getInt("db.replay.reader.threads");
+	private final static Integer replayTimeStep = ConfigUtil.combined().getInt("db.replay.batchhours", 24);
+
 	private final Semaphore semaphore;
 	private static ExecutorService service;
 	private static ExecutorService engines;
 	private static CountDownLatch endLatch;
 
 	private final Context context;
-	private static final Duration timeStep = Duration.standardHours(24); // how many rows from the DB to gather in one batch
+	private static final Duration timeStep = Duration.standardHours(replayTimeStep); // how many rows from the DB to gather in one batch
+	//private static final Duration timeStep = Duration.standardHours(24); // how many rows from the DB to gather in one batch
+
 	private final boolean orderByTimeReceived;
 	private final boolean useRandomData;
 	private boolean replayBooks = true;

@@ -7,10 +7,12 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Nullable;
 import javax.persistence.Column;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.MappedSuperclass;
+import javax.persistence.TableGenerator;
 import javax.persistence.Transient;
-import javax.persistence.Version;
 
 import org.cryptocoinpartners.enumeration.PersistanceAction;
 import org.cryptocoinpartners.schema.dao.Dao;
@@ -53,10 +55,10 @@ public abstract class EntityBase implements java.io.Serializable, Cloneable, Com
 
 	@Transient
 	public void getUpdateLock() throws InterruptedException {
-		log.debug(this.getClass().getSimpleName() + " : getUpdateLock - attempting to get update lock for id " + getId() + " called from class "
+		log.debug(this.getClass().getSimpleName() + " : getUpdateLock - attempting to get update lock for id " + getUuid() + " called from class "
 				+ Thread.currentThread().getStackTrace()[2]);
 		updateLock.acquire();
-		log.debug(this.getClass().getSimpleName() + " : getUpdateLock - acquired  update lock for id " + getId() + " called from class "
+		log.debug(this.getClass().getSimpleName() + " : getUpdateLock - acquired  update lock for id " + getUuid() + " called from class "
 				+ Thread.currentThread().getStackTrace()[2]);
 
 	}
@@ -64,11 +66,11 @@ public abstract class EntityBase implements java.io.Serializable, Cloneable, Com
 	@Transient
 	public void releaseUpdateLock() {
 		// Log.debug(messages)
-		log.debug(this.getClass().getSimpleName() + " : releaseUpdateLock - attempting to release update lock for id " + getId() + " called from class "
+		log.debug(this.getClass().getSimpleName() + " : releaseUpdateLock - attempting to release update lock for id " + getUuid() + " called from class "
 				+ Thread.currentThread().getStackTrace()[2]);
 
 		updateLock.release();
-		log.debug(this.getClass().getSimpleName() + " : getUpdateLock - released update lock for id " + getId() + " called from class "
+		log.debug(this.getClass().getSimpleName() + " : getUpdateLock - released update lock for id " + getUuid() + " called from class "
 				+ Thread.currentThread().getStackTrace()[2]);
 
 	}
@@ -99,14 +101,31 @@ public abstract class EntityBase implements java.io.Serializable, Cloneable, Com
 		return persisted;
 	}
 
-	@Id
 	@Column(columnDefinition = "BINARY(16)", length = 16, updatable = true, nullable = false)
-	public UUID getId() {
+	public UUID getUuid() {
 		ensureId();
+		return uuid;
+	}
+
+	//	@Id
+	//	@GeneratedValue(strategy = GenerationType.AUTO, generator = "native")
+	//	@GenericGenerator(name = "native", strategy = "native")
+
+	//@GeneratedValue(strategy = GenerationType.AUTO)
+	//	@Column(name = "id", updatable = false, nullable = false)
+	//@GeneratedValue(strategy = GenerationType.TABLE)
+	//@Id
+	//@GeneratedValue(strategy = GenerationType.AUTO, generator = "native")
+	//@GenericGenerator(name = "native", strategy = "native")
+	//@Column(name = "id", updatable = false, nullable = false) 
+	@Id
+	@GeneratedValue(strategy = GenerationType.TABLE, generator = "ConfirmationCodeGenerator")
+	@TableGenerator(table = "SEQUENCES", name = "ConfirmationCodeGenerator")
+	public Long getId() {
 		return id;
 	}
 
-	@Version
+	//@Version
 	@Column(name = "version", columnDefinition = "integer DEFAULT 0", nullable = false)
 	public long getVersion() {
 		//  if (version == null)
@@ -167,7 +186,10 @@ public abstract class EntityBase implements java.io.Serializable, Cloneable, Com
 	}
 
 	public synchronized void setVersion(long version) {
+
 		this.version = version;
+		if (this.originalEntity != null)
+			this.originalEntity.version = version;
 	}
 
 	public synchronized void setPersisted(Boolean persisted) {
@@ -184,6 +206,8 @@ public abstract class EntityBase implements java.io.Serializable, Cloneable, Com
 
 	public synchronized void setRevision(int revision) {
 		this.revision = revision;
+		if (this.originalEntity != null)
+			this.originalEntity.revision = revision;
 	}
 
 	public synchronized void setOriginalEntity(EntityBase originalEntity) {
@@ -219,9 +243,9 @@ public abstract class EntityBase implements java.io.Serializable, Cloneable, Com
 			return false;
 		EntityBase that = (EntityBase) o;
 		// Need to check these are not null as assinged when persisted so might not yet be present when objects are compared
-		if (id == null || that.id == null)
+		if (uuid == null || that.uuid == null)
 			return false;
-		return id.equals(that.id);
+		return uuid.equals(that.uuid);
 
 	}
 
@@ -230,7 +254,7 @@ public abstract class EntityBase implements java.io.Serializable, Cloneable, Com
 		// ensureId();
 		//return Objects.hashCode(this.getId());
 
-		return getId().toString().hashCode();
+		return getUuid().toString().hashCode();
 	}
 
 	// JPA
@@ -240,9 +264,13 @@ public abstract class EntityBase implements java.io.Serializable, Cloneable, Com
 
 	}
 
-	protected synchronized void setId(UUID id) {
-		if (this.id == null)
-			this.id = id;
+	protected synchronized void setUuid(UUID uuid) {
+
+		this.uuid = uuid;
+	}
+
+	public synchronized void setId(Long id) {
+		this.id = id;
 	}
 
 	public abstract void postPersist();
@@ -299,15 +327,17 @@ public abstract class EntityBase implements java.io.Serializable, Cloneable, Com
 	public abstract void merge();
 
 	private void ensureId() {
-		if (id == null)
-			setId(UUID.randomUUID());
+		if (uuid == null)
+			setUuid(UUID.randomUUID());
 		// id = UUID.randomUUID();
 
 		// if (startTime == 0)
 		//   startTime = System.currentTimeMillis() + delay;
 	}
 
-	protected UUID id;
+	protected UUID uuid;
+
+	protected Long id;
 	protected long version;
 	protected boolean persisted = false;
 	protected EntityBase originalEntity;

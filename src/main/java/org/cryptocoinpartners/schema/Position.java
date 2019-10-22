@@ -98,7 +98,7 @@ public class Position extends Holding {
 	@AssistedInject
 	public Position(@Assisted Fill fill, @Assisted Market market) {
 
-		this.getId();
+		this.getUuid();
 
 		this.fills = new ArrayList<Fill>();
 		fill.setPosition(this);
@@ -128,7 +128,7 @@ public class Position extends Holding {
 
 	@AssistedInject
 	public Position(@Assisted Collection<Fill> fills, @Assisted Market market) {
-		this.getId();
+		this.getUuid();
 
 		this.fills = new ArrayList<Fill>();
 		this.market = market;
@@ -161,7 +161,7 @@ public class Position extends Holding {
 	@Transient
 	public boolean isLong() {
 
-		return (getVolume() != null && getVolume().isPositive());
+		return (getOpenVolume() != null && getOpenVolume().isPositive());
 	}
 
 	@Override
@@ -185,7 +185,7 @@ public class Position extends Holding {
 	@Transient
 	public boolean isFlat() {
 		//if (getVolume()!=null)
-		return ((getLongVolume() == null && getLongVolume() == null) || (getLongVolume().isZero() && getShortVolume().isZero()));
+		return ((getLongVolume() == null && getShortVolume() == null) || (getLongVolume().isZero() && getShortVolume().isZero()));
 	}
 
 	@ManyToOne(optional = false)
@@ -343,18 +343,20 @@ public class Position extends Holding {
 			return longAvgPrice;
 		longCumVolume = DecimalAmount.ZERO;
 		Amount longAvgPriceTmp = null;
-		Iterator<Fill> itf = getFills().iterator();
-		while (itf.hasNext() && longAvgPrice == null) {
-			Fill pos = itf.next();
-			if (pos.isLong() && pos.getPrice() != null && !pos.getPrice().isZero() && !(longCumVolume.plus(pos.getOpenVolume()).isZero())) {
-				longAvgPriceTmp = longAvgPriceTmp == null ? pos.getPrice()
-						: ((longAvgPriceTmp.times(longCumVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getPrice(), Remainder.ROUND_EVEN)))
-								.divide(longCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
-				longCumVolume = longCumVolume.plus(pos.getOpenVolume());
+		synchronized (getFills()) {
+			Iterator<Fill> itf = getFills().iterator();
+			while (itf.hasNext() && longAvgPrice == null) {
+				Fill pos = itf.next();
+				if (pos.isLong() && pos.getPrice() != null) {
+					longAvgPriceTmp = longAvgPriceTmp == null ? pos.getPrice()
+							: ((longAvgPriceTmp.times(longCumVolume, Remainder.ROUND_EVEN))
+									.plus(pos.getOpenVolume().times(pos.getPrice(), Remainder.ROUND_EVEN))).divide(longCumVolume.plus(pos.getOpenVolume()),
+											Remainder.ROUND_EVEN);
+					longCumVolume = longCumVolume.plus(pos.getOpenVolume());
+				}
+
 			}
-
 		}
-
 		if (longAvgPriceTmp == null && longAvgPrice == null)
 			longAvgPrice = DecimalAmount.ZERO;
 		else if (longAvgPriceTmp != null && longAvgPrice == null)
@@ -382,16 +384,19 @@ public class Position extends Holding {
 			return shortAvgPrice;
 		shortCumVolume = DecimalAmount.ZERO;
 		Amount shortAvgPriceTmp = null;
-		Iterator<Fill> itf = getFills().iterator();
+		synchronized (getFills()) {
+			Iterator<Fill> itf = getFills().iterator();
 
-		while (itf.hasNext() && shortAvgPrice == null) {
-			Fill pos = itf.next();
-			if (pos.isShort() && pos.getPrice() != null && !pos.getPrice().isZero() && !(shortCumVolume.plus(pos.getOpenVolume()).isZero())) {
-				shortAvgPriceTmp = shortAvgPriceTmp == null ? pos.getPrice()
-						: ((shortAvgPriceTmp.times(shortCumVolume, Remainder.ROUND_EVEN)).plus(pos.getOpenVolume().times(pos.getPrice(), Remainder.ROUND_EVEN)))
-								.dividedBy(shortCumVolume.plus(pos.getOpenVolume()), Remainder.ROUND_EVEN);
-				shortCumVolume = shortCumVolume.plus(pos.getOpenVolume());
+			while (itf.hasNext() && shortAvgPrice == null) {
+				Fill pos = itf.next();
+				if (pos.isShort() && pos.getPrice() != null) {
+					shortAvgPriceTmp = shortAvgPriceTmp == null ? pos.getPrice()
+							: ((shortAvgPriceTmp.times(shortCumVolume, Remainder.ROUND_EVEN))
+									.plus(pos.getOpenVolume().times(pos.getPrice(), Remainder.ROUND_EVEN))).dividedBy(shortCumVolume.plus(pos.getOpenVolume()),
+											Remainder.ROUND_EVEN);
+					shortCumVolume = shortCumVolume.plus(pos.getOpenVolume());
 
+				}
 			}
 		}
 
@@ -413,29 +418,30 @@ public class Position extends Holding {
 		//  synchronized (this) {
 		longCumVolume = DecimalAmount.ZERO;
 		Amount originalLongAvgStopPriceTmp = null;
-		Iterator<Fill> itf = getFills().iterator();
-		while (itf.hasNext() && longAvgStopPrice == null) {
-			//  for (Fill pos : getFills()) {
-			Fill pos = itf.next();
-			if (pos.isLong()) {
-				if (pos.getFillChildOrders() != null)
-					synchronized (pos.getFillChildOrders()) {
-						for (Order childOrder : pos.getFillChildOrders()) {
-							if (childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()) {
-								if (childOrder.isAsk() && childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()
-										&& !(longCumVolume.plus(childOrder.getUnfilledVolume()).isZero())) {
-									originalLongAvgStopPriceTmp = originalLongAvgStopPriceTmp == null ? childOrder.getStopPrice()
-											: ((originalLongAvgStopPriceTmp.times(longCumVolume, Remainder.ROUND_EVEN))
-													.plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(), Remainder.ROUND_EVEN)))
-															.divide(longCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
-									longCumVolume = longCumVolume.plus(childOrder.getUnfilledVolume());
+		synchronized (getFills()) {
+			Iterator<Fill> itf = getFills().iterator();
+			while (itf.hasNext() && longAvgStopPrice == null) {
+				//  for (Fill pos : getFills()) {
+				Fill pos = itf.next();
+				if (pos.isLong()) {
+					if (pos.getFillChildOrders() != null)
+						synchronized (pos.getFillChildOrders()) {
+							for (Order childOrder : pos.getFillChildOrders()) {
+								if (childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()) {
+									if (childOrder.isAsk() && childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()
+											&& !(longCumVolume.plus(childOrder.getUnfilledVolume()).isZero())) {
+										originalLongAvgStopPriceTmp = originalLongAvgStopPriceTmp == null ? childOrder.getStopPrice()
+												: ((originalLongAvgStopPriceTmp.times(longCumVolume, Remainder.ROUND_EVEN))
+														.plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(), Remainder.ROUND_EVEN)))
+																.divide(longCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
+										longCumVolume = longCumVolume.plus(childOrder.getUnfilledVolume());
+									}
 								}
 							}
 						}
-					}
+				}
 			}
 		}
-
 		if (originalLongAvgStopPriceTmp == null && originalLongAvgStopPrice == null)
 			originalLongAvgStopPrice = DecimalAmount.ZERO;
 		else if (originalLongAvgStopPriceTmp != null && originalLongAvgStopPrice == null)
@@ -454,26 +460,28 @@ public class Position extends Holding {
 			return longAvgStopPrice;
 		longCumVolume = DecimalAmount.ZERO;
 		Amount longAvgStopPriceTmp = null;
-		Iterator<Fill> itf = getFills().iterator();
-		while (itf.hasNext() && longAvgStopPrice == null) {
-			//  for (Fill pos : getFills()) {
-			Fill pos = itf.next();
-			if (pos.isLong()) {
-				if (pos.getFillChildOrders() != null)
-					synchronized (pos.getFillChildOrders()) {
-						for (Order childOrder : pos.getFillChildOrders()) {
-							if (childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()) {
-								if (childOrder.isAsk() && childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()
-										&& !(longCumVolume.plus(childOrder.getUnfilledVolume()).isZero())) {
-									longAvgStopPriceTmp = longAvgStopPriceTmp == null ? childOrder.getStopPrice()
-											: ((longAvgStopPriceTmp.times(longCumVolume, Remainder.ROUND_EVEN))
-													.plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(), Remainder.ROUND_EVEN)))
-															.divide(longCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
-									longCumVolume = longCumVolume.plus(childOrder.getUnfilledVolume());
+		synchronized (getFills()) {
+			Iterator<Fill> itf = getFills().iterator();
+			while (itf.hasNext() && longAvgStopPrice == null) {
+				//  for (Fill pos : getFills()) {
+				Fill pos = itf.next();
+				if (pos.isLong()) {
+					if (pos.getFillChildOrders() != null)
+						synchronized (pos.getFillChildOrders()) {
+							for (Order childOrder : pos.getFillChildOrders()) {
+								if (childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()) {
+									if (childOrder.isAsk() && childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()
+											&& !(longCumVolume.plus(childOrder.getUnfilledVolume()).isZero())) {
+										longAvgStopPriceTmp = longAvgStopPriceTmp == null ? childOrder.getStopPrice()
+												: ((longAvgStopPriceTmp.times(longCumVolume, Remainder.ROUND_EVEN))
+														.plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(), Remainder.ROUND_EVEN)))
+																.divide(longCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
+										longCumVolume = longCumVolume.plus(childOrder.getUnfilledVolume());
+									}
 								}
 							}
 						}
-					}
+				}
 			}
 		}
 
@@ -496,17 +504,18 @@ public class Position extends Holding {
 		if (positionEffect != null)
 			return positionEffect;
 		PositionEffect positionEffectTmp = PositionEffect.DEFAULT;
-		Iterator<Fill> itf = getFills().iterator();
-		while (itf.hasNext()) {
-			Fill pos = itf.next();
-			if (pos.getPositionEffect() != null && positionEffectTmp.equals(PositionEffect.DEFAULT))
-				positionEffectTmp = pos.getPositionEffect();
-			else if (pos.getPositionEffect() != null && !(positionEffectTmp.equals(pos.getPositionEffect()))) {
-				positionEffectTmp = PositionEffect.DEFAULT;
-				break;
+		synchronized (getFills()) {
+			Iterator<Fill> itf = getFills().iterator();
+			while (itf.hasNext()) {
+				Fill pos = itf.next();
+				if (pos.getPositionEffect() != null && positionEffectTmp.equals(PositionEffect.DEFAULT))
+					positionEffectTmp = pos.getPositionEffect();
+				else if (pos.getPositionEffect() != null && !(positionEffectTmp.equals(pos.getPositionEffect()))) {
+					positionEffectTmp = PositionEffect.DEFAULT;
+					break;
+				}
 			}
 		}
-
 		positionEffect = positionEffectTmp;
 		return positionEffect;
 	}
@@ -522,29 +531,30 @@ public class Position extends Holding {
 			return shortAvgStopPrice;
 		shortCumVolume = DecimalAmount.ZERO;
 		Amount shortAvgStopPriceTmp = null;
-		Iterator<Fill> itf = getFills().iterator();
-		while (itf.hasNext() && shortAvgStopPrice == null) {
-			//  for (Fill pos : getFills()) {
-			Fill pos = itf.next();
-			if (pos.isShort()) {
-				if (pos.getFillChildOrders() != null)
-					synchronized (pos.getFillChildOrders()) {
-						for (Order childOrder : pos.getFillChildOrders()) {
-							if (childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()) {
-								if (childOrder.isBid() && childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()
-										&& !(shortCumVolume.plus(childOrder.getUnfilledVolume()).isZero())) {
-									shortAvgStopPriceTmp = shortAvgStopPriceTmp == null ? childOrder.getStopPrice()
-											: ((shortAvgStopPriceTmp.times(shortCumVolume, Remainder.ROUND_EVEN))
-													.plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(), Remainder.ROUND_EVEN)))
-															.divide(shortCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
-									shortCumVolume = shortCumVolume.plus(childOrder.getUnfilledVolume());
+		synchronized (getFills()) {
+			Iterator<Fill> itf = getFills().iterator();
+			while (itf.hasNext() && shortAvgStopPrice == null) {
+				//  for (Fill pos : getFills()) {
+				Fill pos = itf.next();
+				if (pos.isShort()) {
+					if (pos.getFillChildOrders() != null)
+						synchronized (pos.getFillChildOrders()) {
+							for (Order childOrder : pos.getFillChildOrders()) {
+								if (childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()) {
+									if (childOrder.isBid() && childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()
+											&& !(shortCumVolume.plus(childOrder.getUnfilledVolume()).isZero())) {
+										shortAvgStopPriceTmp = shortAvgStopPriceTmp == null ? childOrder.getStopPrice()
+												: ((shortAvgStopPriceTmp.times(shortCumVolume, Remainder.ROUND_EVEN))
+														.plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(), Remainder.ROUND_EVEN)))
+																.divide(shortCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
+										shortCumVolume = shortCumVolume.plus(childOrder.getUnfilledVolume());
+									}
 								}
 							}
 						}
-					}
+				}
 			}
 		}
-
 		if (shortAvgStopPriceTmp == null && shortAvgStopPrice == null)
 			shortAvgStopPrice = DecimalAmount.ZERO;
 		else if (shortAvgStopPriceTmp != null && shortAvgStopPrice == null)
@@ -559,26 +569,28 @@ public class Position extends Holding {
 			return originalShortAvgStopPrice;
 		shortCumVolume = DecimalAmount.ZERO;
 		Amount originalShortAvgStopPriceTmp = null;
-		Iterator<Fill> itf = getFills().iterator();
-		while (itf.hasNext() && shortAvgStopPrice == null) {
-			//  for (Fill pos : getFills()) {
-			Fill pos = itf.next();
-			if (pos.isShort()) {
-				if (pos.getFillChildOrders() != null)
-					synchronized (pos.getFillChildOrders()) {
-						for (Order childOrder : pos.getFillChildOrders()) {
-							if (childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()) {
-								if (childOrder.isBid() && childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()
-										&& !(shortCumVolume.plus(childOrder.getUnfilledVolume()).isZero())) {
-									originalShortAvgStopPriceTmp = originalShortAvgStopPriceTmp == null ? childOrder.getStopPrice()
-											: ((originalShortAvgStopPriceTmp.times(shortCumVolume, Remainder.ROUND_EVEN))
-													.plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(), Remainder.ROUND_EVEN)))
-															.divide(shortCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
-									shortCumVolume = shortCumVolume.plus(childOrder.getUnfilledVolume());
+		synchronized (getFills()) {
+			Iterator<Fill> itf = getFills().iterator();
+			while (itf.hasNext() && shortAvgStopPrice == null) {
+				//  for (Fill pos : getFills()) {
+				Fill pos = itf.next();
+				if (pos.isShort()) {
+					if (pos.getFillChildOrders() != null)
+						synchronized (pos.getFillChildOrders()) {
+							for (Order childOrder : pos.getFillChildOrders()) {
+								if (childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()) {
+									if (childOrder.isBid() && childOrder.getStopPrice() != null && !childOrder.getStopPrice().isZero()
+											&& !(shortCumVolume.plus(childOrder.getUnfilledVolume()).isZero())) {
+										originalShortAvgStopPriceTmp = originalShortAvgStopPriceTmp == null ? childOrder.getStopPrice()
+												: ((originalShortAvgStopPriceTmp.times(shortCumVolume, Remainder.ROUND_EVEN))
+														.plus(childOrder.getUnfilledVolume().times(childOrder.getStopPrice(), Remainder.ROUND_EVEN)))
+																.divide(shortCumVolume.plus(childOrder.getUnfilledVolume()), Remainder.ROUND_EVEN);
+										shortCumVolume = shortCumVolume.plus(childOrder.getUnfilledVolume());
+									}
 								}
 							}
 						}
-					}
+				}
 			}
 		}
 
@@ -602,7 +614,7 @@ public class Position extends Holding {
 
 	@Override
 	public String toString() {
-		return "Id=" + (getId() != null ? getId() : "") + SEPARATOR + "Exchange=" + exchange
+		return "UUID=" + (getUuid() != null ? getUuid() : "") + SEPARATOR + "Id=" + (getId() != null ? getId() : "") + SEPARATOR + "Exchange=" + exchange
 				+ (getShortVolume() != null ? (SEPARATOR + ", Short Qty=" + getShortVolume()) : "")
 				+ (getShortAvgPrice() != null ? (SEPARATOR + ", Short Avg Price=" + getShortAvgPrice()) : "")
 				+ (getPositionEffect() != null ? (SEPARATOR + ",PositionEffect=" + getPositionEffect()) : "")
@@ -700,15 +712,16 @@ public class Position extends Holding {
 		long volumeCountTmp = 0;
 
 		if (volumeCount == null) {
-			Iterator<Fill> itf = getFills().iterator();
-			while (itf.hasNext()) {
-				//  for (Fill pos : getFills()) {
-				Fill fill = itf.next();
+			synchronized (getFills()) {
+				Iterator<Fill> itf = getFills().iterator();
+				while (itf.hasNext()) {
+					//  for (Fill pos : getFills()) {
+					Fill fill = itf.next();
 
-				volumeCountTmp += fill.getOpenVolumeCount();
+					volumeCountTmp += fill.getOpenVolumeCount();
 
+				}
 			}
-
 			volumeCount = new AtomicLong(volumeCountTmp);
 		}
 
@@ -720,20 +733,23 @@ public class Position extends Holding {
 	@Transient
 	protected long getOpenVolumeCount() {
 		//    reset();
-		long openVolumeCountTmp = 0;
 		if (openVolumeCount == null) {
-			Iterator<Fill> itf = getFills().iterator();
-			while (itf.hasNext()) {
+			synchronized (getFills()) {
+				long openVolumeCountTmp = 0;
 
-				//  for (Fill pos : getFills()) {
-				Fill fill = itf.next();
+				Iterator<Fill> itf = getFills().iterator();
+				while (itf.hasNext()) {
 
-				// if (fill.getPositionEffect() == null || fill.getPositionEffect() == PositionEffect.OPEN)
-				openVolumeCountTmp += fill.getOpenVolumeCount();
+					//  for (Fill pos : getFills()) {
+					Fill fill = itf.next();
+
+					// if (fill.getPositionEffect() == null || fill.getPositionEffect() == PositionEffect.OPEN)
+					openVolumeCountTmp += fill.getOpenVolumeCount();
+
+				}
+				openVolumeCount = new AtomicLong(openVolumeCountTmp);
 
 			}
-
-			openVolumeCount = new AtomicLong(openVolumeCountTmp);
 
 		}
 
@@ -749,25 +765,21 @@ public class Position extends Holding {
 		long longVolumeCountTmp = 0;
 
 		if (longVolumeCount == null) {
-			Iterator<Fill> itf = getFills().iterator();
-			while (itf.hasNext()) {
-				//  for (Fill pos : getFills()) {
-				Fill fill = itf.next();
+			synchronized (getFills()) {
+				Iterator<Fill> itf = getFills().iterator();
+				while (itf.hasNext()) {
+					//  for (Fill pos : getFills()) {
+					Fill fill = itf.next();
 
-				if (fill.getMarket().getListing().getPrompt() != null
-						&& (fill.getPositionEffect() != null && ((fill.getPositionEffect() == PositionEffect.OPEN && fill.isLong())
-								|| (fill.getPositionEffect() == PositionEffect.CLOSE && fill.isShort())))) {
-					longVolumeCountTmp += fill.getOpenVolumeCount();
-				} else if ((fill.getPositionEffect() == null || (fill.getPositionEffect() != null && fill.getMarket().getContractSize(fill.getMarket()) == 1D))
-						&& fill.isLong())
-					longVolumeCountTmp += fill.getOpenVolumeCount();
+					if (fill.isLong()) {
+						longVolumeCountTmp += fill.getOpenVolumeCount();
+					}
+					long vol = this.getVolumeCount();
+					// if (vol > 0 && vol != longVolumeCount)
+					//System.out.println("issue with long volume cacl");
 
-				long vol = this.getVolumeCount();
-				// if (vol > 0 && vol != longVolumeCount)
-				//System.out.println("issue with long volume cacl");
-
+				}
 			}
-
 			longVolumeCount = new AtomicLong(longVolumeCountTmp);
 		}
 
@@ -782,22 +794,19 @@ public class Position extends Holding {
 		long shortVolumeCountTmp = 0;
 
 		if (shortVolumeCount == null) {
-			Iterator<Fill> itf = getFills().iterator();
-			while (itf.hasNext()) {
-				//  for (Fill pos : getFills()) {
-				Fill fill = itf.next();
-				// if it is entering & short or exiting and long
-				if (fill.getMarket().getListing().getPrompt() != null
-						&& (fill.getPositionEffect() != null && ((fill.getPositionEffect() == PositionEffect.OPEN && fill.isShort())
-								|| (fill.getPositionEffect() == PositionEffect.CLOSE && fill.isLong())))) {
-					shortVolumeCountTmp += fill.getOpenVolumeCount();
+			synchronized (getFills()) {
+				Iterator<Fill> itf = getFills().iterator();
+				while (itf.hasNext()) {
+					//  for (Fill pos : getFills()) {
+					Fill fill = itf.next();
+					// if it is entering & short or exiting and long
+					if (fill.isShort()) {
+						shortVolumeCountTmp += fill.getOpenVolumeCount();
 
-				} else if ((fill.getPositionEffect() == null || (fill.getPositionEffect() != null && fill.getMarket().getContractSize(fill.getMarket()) == 1D))
-						&& fill.isShort())
-					shortVolumeCountTmp += fill.getOpenVolumeCount();
+					}
 
+				}
 			}
-
 			shortVolumeCount = new AtomicLong(shortVolumeCountTmp);
 
 		}
@@ -837,7 +846,7 @@ public class Position extends Holding {
 	@Override
 	public synchronized void merge() {
 
-		log.debug("Position - Merge : Merge of Position " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+		log.debug("Position - Merge : Merge of Position " + this.getUuid() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 
 		this.setPeristanceAction(PersistanceAction.MERGE);
 
@@ -861,7 +870,7 @@ public class Position extends Holding {
 		//   synchronized (this.getPortfolio().getPositions()) {
 
 		try {
-			log.debug("Position - delete : Delete of Position " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+			log.debug("Position - delete : Delete of Position " + this.getUuid() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 			//  if (this.getPortfolio() != null)
 			//  if (this.getPortfolio().removePosition(this)) {
 
@@ -889,7 +898,7 @@ public class Position extends Holding {
 	@Override
 	public synchronized EntityBase refresh() {
 		try {
-			log.debug("Position - Refresh : Refresh of Position " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+			log.debug("Position - Refresh : Refresh of Position " + this.getUuid() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 
 			return positionDao.refresh(this);
 			//if (duplicate == null || duplicate.isEmpty())
@@ -921,7 +930,7 @@ public class Position extends Holding {
 	public synchronized void persit() {
 
 		try {
-			log.debug("Position - Persist : Persit of Position " + this.getId() + " called from class " + Thread.currentThread().getStackTrace()[2]);
+			log.debug("Position - Persist : Persit of Position " + this.getUuid() + " called from class " + Thread.currentThread().getStackTrace()[2]);
 			this.setPeristanceAction(PersistanceAction.NEW);
 			this.setRevision(this.getRevision() + 1);
 

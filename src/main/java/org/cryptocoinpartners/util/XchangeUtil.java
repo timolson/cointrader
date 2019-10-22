@@ -136,6 +136,10 @@ public class XchangeUtil {
 
 				for (String listingSymbol : listings) {
 					Listing listing = Listing.forSymbol(listingSymbol.toUpperCase());
+					if (listing == null) {
+						log.debug("test");
+						listing = Listing.forSymbol(listingSymbol.toUpperCase());
+					}
 					if (listing.getPrompt() != null) {
 						spec.setExchangeSpecificParametersItem("Futures_Contract_String", listing.getPrompt().getSymbol());
 						spec.setExchangeSpecificParametersItem("Futures_Leverage",

@@ -48,7 +48,7 @@ import jline.internal.Log;
 @Entity
 //@Cacheable(false)
 //@Cache(usage = CacheConcurrencyStrategy.NONSTRICT_READ_WRITE, region = "book")
-@Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived"), @Index(columnList = "market") })
+@Table(indexes = { @Index(columnList = "market,time") })
 public class Book extends MarketData implements Spread {
 
 	/**
@@ -167,7 +167,7 @@ public class Book extends MarketData implements Spread {
 
 	@Nullable
 	public Double getBidPriceAsDouble() {
-		if (getBids().isEmpty())
+		if (getBids() == null || getBids().isEmpty())
 			return 0d;
 		return getBids().get(0).getPriceAsDouble();
 	}
@@ -175,14 +175,14 @@ public class Book extends MarketData implements Spread {
 	@Nullable
 	@Transient
 	public Double getBidPriceCountAsDouble() {
-		if (getBids().isEmpty())
+		if (getBids() == null || getBids().isEmpty())
 			return 0d;
 		return getBids().get(0).getPriceCountAsDouble();
 	}
 
 	@Nullable
 	public Double getBidVolumeAsDouble() {
-		if (getBids().isEmpty())
+		if (getBids() == null || getBids().isEmpty())
 			return 0d;
 		return getBids().get(0).getVolumeAsDouble();
 	}
@@ -190,7 +190,7 @@ public class Book extends MarketData implements Spread {
 	@Nullable
 	@Transient
 	public Double getBidVolumeCountAsDouble() {
-		if (getBids().isEmpty())
+		if (getBids() == null || getBids().isEmpty())
 			return 0d;
 		return getBids().get(0).getVolumeCountAsDouble();
 	}
@@ -198,7 +198,7 @@ public class Book extends MarketData implements Spread {
 	@Nullable
 	@Transient
 	public DiscreteAmount getAskPrice() {
-		if (getAsks().isEmpty())
+		if (getAsks() == null || getAsks().isEmpty())
 			return new DiscreteAmount(0L, getMarket().getPriceBasis());
 		return getAsks().get(0).getPrice();
 	}
@@ -206,7 +206,7 @@ public class Book extends MarketData implements Spread {
 	@Nullable
 	@Transient
 	public DiscreteAmount getAskVolume() {
-		if (getAsks().isEmpty())
+		if (getAsks() == null || getAsks().isEmpty())
 			return new DiscreteAmount(0, getMarket().getVolumeBasis());
 		return getAsks().get(0).getVolume();
 	}
@@ -230,7 +230,7 @@ public class Book extends MarketData implements Spread {
 	/** saved to the db for query convenience */
 	@Nullable
 	public Double getAskPriceAsDouble() {
-		if (getAsks().isEmpty())
+		if (getAsks() == null || getAsks().isEmpty())
 			return 0d;
 		return getAsks().get(0).getPriceAsDouble();
 	}
@@ -238,7 +238,7 @@ public class Book extends MarketData implements Spread {
 	@Nullable
 	@Transient
 	public Double getAskPriceCountAsDouble() {
-		if (getAsks().isEmpty())
+		if (getAsks() == null || getAsks().isEmpty())
 			return 0d;
 		return getAsks().get(0).getPriceCountAsDouble();
 	}
@@ -246,7 +246,7 @@ public class Book extends MarketData implements Spread {
 	/** saved to the db for query convenience */
 	@Nullable
 	public Double getAskVolumeAsDouble() {
-		if (getAsks().isEmpty())
+		if (getAsks() == null || getAsks().isEmpty())
 			return 0d;
 		return getAsks().get(0).getVolumeAsDouble();
 	}
@@ -254,7 +254,7 @@ public class Book extends MarketData implements Spread {
 	@Nullable
 	@Transient
 	public Double getAskVolumeCountAsDouble() {
-		if (getAsks().isEmpty())
+		if (getAsks() == null || getAsks().isEmpty())
 			return 0d;
 		return getAsks().get(0).getVolumeCountAsDouble();
 	}
@@ -277,7 +277,9 @@ public class Book extends MarketData implements Spread {
 	Book(@Assisted Instant time, @Assisted Tradeable market) {
 		//  this.bookDao = bookDao;
 		// Book();
-		this.id = getId();
+		if (time.getMillis() == 1391306423000L)
+			log.debug("test");
+		this.uuid = getUuid();
 
 		this.bids = new ArrayList<>();
 		this.asks = new ArrayList<>();
@@ -291,8 +293,9 @@ public class Book extends MarketData implements Spread {
 	Book(@Assisted Instant time, @Assisted String remoteKey, @Assisted Tradeable market) {
 		// Book();
 		//this.bookDao = bookDao;
-
-		this.id = getId();
+		if (time.getMillis() == 1391306423000L)
+			log.debug("test");
+		this.uuid = getUuid();
 		this.bids = new ArrayList<>();
 		this.asks = new ArrayList<>();
 		this.setTime(time);
@@ -303,7 +306,9 @@ public class Book extends MarketData implements Spread {
 
 	@AssistedInject
 	Book(@Assisted("bookTime") Instant time, @Assisted("bookTimeReceived") Instant timeReceived, @Assisted String remoteKey, @Assisted Tradeable market) {
-		this.id = getId();
+		if (time.getMillis() == 1391306423000L)
+			log.debug("test");
+		this.uuid = getUuid();
 		this.bids = new ArrayList<>();
 		this.asks = new ArrayList<>();
 		this.setTime(time);
@@ -314,6 +319,8 @@ public class Book extends MarketData implements Spread {
 
 	public synchronized Book addBid(BigDecimal price, BigDecimal volume) {
 		//   synchronized (lock) {
+		if (time.getMillis() == 1391306423000L)
+			log.debug("test");
 		Tradeable market = this.getMarket();
 		synchronized (this.bids) {
 			this.bids.add(Offer.bid(market, this.getTime(), this.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
@@ -333,6 +340,8 @@ public class Book extends MarketData implements Spread {
 	}
 
 	public Book addAsk(BigDecimal price, BigDecimal volume) {
+		if (time.getMillis() == 1391306423000L)
+			log.debug("test");
 		Tradeable market = this.getMarket();
 		synchronized (this.asks) {
 			this.asks.add(Offer.ask(market, this.getTime(), this.getTimeReceived(), DiscreteAmount.roundedCountForBasis(price, market.getPriceBasis()),
@@ -675,6 +684,8 @@ public class Book extends MarketData implements Spread {
 
 	@PostLoad
 	private void postLoad() {
+		if (time.getMillis() == 1391306423000L)
+			log.debug("test");
 		bids = convertDatabaseBlobToQuoteList(bidInsertionsBlob);
 		asks = convertDatabaseBlobToQuoteList(askInsertionsBlob);
 		if (parent != null) {
@@ -691,6 +702,8 @@ public class Book extends MarketData implements Spread {
 
 	// if this is implemented as a @PostLoad, the transitive dependencies for the parent's parent are not resolved
 	private void resolveDiff() {
+		if (time.getMillis() == 1391306423000L)
+			log.debug("test");
 		if (!needToResolveDiff)
 			return;
 		// no difference between books
@@ -747,8 +760,11 @@ public class Book extends MarketData implements Spread {
 	}
 
 	private List<Offer> convertDatabaseBlobToQuoteList(byte[] bytes) {
+
 		if (bytes == null)
 			return new ArrayList<>();
+		if (time.getMillis() == 1391306423000L)
+			log.debug("test");
 		List<Offer> result = new ArrayList<>();
 		ByteArrayInputStream bin = new ByteArrayInputStream(bytes);
 		//noinspection EmptyCatchBlock
@@ -932,12 +948,12 @@ public class Book extends MarketData implements Spread {
 			bookDao.persist(this);
 
 		} catch (javax.persistence.PersistenceException pex) {
-			System.out.println("Unable to perist entity " + this.getClass().getSimpleName() + ": " + this.getId() + ". " + pex.getCause());
+			System.out.println("Unable to perist entity " + this.getClass().getSimpleName() + ": " + this.getUuid() + ". " + pex.getCause());
 
 		} catch (Exception | Error ex) {
 
 			//     unitOfWork.end();
-			System.out.println("Unable to perist entity " + this.getClass().getSimpleName() + ": " + this.getId() + ". " + ex);
+			System.out.println("Unable to perist entity " + this.getClass().getSimpleName() + ": " + this.getUuid() + ". " + ex);
 			throw ex;
 
 		}

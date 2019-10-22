@@ -29,6 +29,7 @@ import org.cryptocoinpartners.esper.annotation.Listeners;
 import org.cryptocoinpartners.esper.annotation.Subscriber;
 import org.cryptocoinpartners.esper.annotation.When;
 import org.cryptocoinpartners.schema.Event;
+import org.cryptocoinpartners.schema.StrategyInstance;
 import org.cryptocoinpartners.service.Service;
 import org.cryptocoinpartners.util.ConfigUtil;
 import org.cryptocoinpartners.util.Injector;
@@ -150,11 +151,18 @@ public class Context {
 	}
 
 	public <T> T attach(Class<T> c, final Configuration moduleConfig, Module... specificInjections) {
-		Injector i = ArrayUtils.isEmpty(specificInjections) ? injector : injector.createChildInjector(specificInjections);
-		if (moduleConfig != null)
-			i = i.withConfig(moduleConfig);
-		T instance = i.getInstance(c);
-		attach(c, instance);
+		//njector.createChildInjector(specificInjections);
+		Injector i = injector;
+		T instance;
+		if (ArrayUtils.isEmpty(specificInjections)) {
+			if (moduleConfig != null)
+				i = i.withConfig(moduleConfig);
+			instance = i.getInstance(c);
+
+			attach(c, instance);
+		} else
+			instance = i.getInstance(c);
+
 		return instance;
 	}
 
@@ -191,6 +199,21 @@ public class Context {
 	 * Attaches a specific instance to this Context.
 	 */
 	public void attachInstance(Object instance) {
+		Class<? extends Object> instanceClass = instance.getClass();
+		if (instance instanceof StrategyInstance) {
+			StrategyInstance strategyInstance = (StrategyInstance) instance;
+			try {
+
+				instanceClass = Class.forName("org.cryptocoinpartners.module." + strategyInstance.getModuleName());
+				Object injectedInstance = injector.getInstance(instanceClass);
+				strategyInstance.setStrategy(injectedInstance);
+				attach(instanceClass, injectedInstance);
+			} catch (ClassNotFoundException e) {
+				log.trace(this.getClass() + ":subscribe unable to subscibe to " + strategyInstance.getModuleName() + " as class not found");
+				return;
+			}
+
+		}
 		attach(instance.getClass(), instance);
 	}
 
@@ -234,23 +257,21 @@ public class Context {
 
 	private void handlePublish(Event e) {
 		Instant now;
-		if (timeProvider != null) {
-			now = timeProvider.nextTime(e);
-			if (now != null)
-				try {
+		try {
+			if (timeProvider != null) {
+				now = timeProvider.nextTime(e);
+				if (now != null)
 					advanceTime(now);
-				} catch (Error | Exception ex) {
-					log.warn(this.getClass().getSimpleName() + " - HandlePublish(): Unable to publish " + e.getClass().getSimpleName() + " " + e + " due to"
-							+ ex);
-					return;
-				}
-			else
+				else
+					now = new Instant(epRuntime.getCurrentTime());
+			} else
 				now = new Instant(epRuntime.getCurrentTime());
-		} else
-			now = new Instant(epRuntime.getCurrentTime());
-		e.publishedAt(now);
-
-		epRuntime.sendEvent(e);
+			e.publishedAt(now);
+			epRuntime.sendEvent(e);
+		} catch (Error | Exception ex) {
+			log.warn(this.getClass().getSimpleName() + " - HandlePublish(): Unable to publish " + e.getClass().getSimpleName() + " " + e + " due to" + ex);
+			return;
+		}
 		//   epRuntime.route(e);
 	}
 
@@ -299,7 +320,9 @@ public class Context {
 	public void subscribe(Object listener) {
 		if (listener == this)
 			return;
-		for (Class<?> cls = listener.getClass(); cls != Object.class; cls = cls.getSuperclass())
+		Class<?> listenerClass = listener.getClass();
+
+		for (Class<?> cls = listenerClass; cls != Object.class; cls = cls.getSuperclass())
 			subscribe(listener, cls);
 	}
 
@@ -344,6 +367,10 @@ public class Context {
 		return epRuntime;
 	}
 
+	public EPAdministrator getEsperAdministrator() {
+		return epAdministrator;
+	}
+
 	private void subscribe(Object listener, Class<?> cls) {
 		String classname = null;
 		List<String> filesToLoad = new ArrayList<String>();
@@ -354,6 +381,8 @@ public class Context {
 				// we need to load the supers in order,.
 
 				classname = method.getDeclaringClass().getSimpleName();
+
+				//	classname = method.getDeclaringClass().getSimpleName();
 				//  loadedModules.
 				boolean test = loadedModules.contains(classname);
 				if (!loadedModules.contains(classname)) {
@@ -415,6 +444,7 @@ public class Context {
 	 */
 	public void loadStatements(String source, Object intoFieldBean) {
 		EPDeploymentAdmin deploymentAdmin = epAdministrator.getDeploymentAdmin();
+
 		com.espertech.esper.client.deploy.Module module;
 		String filename = source + ".epl";
 		try {

@@ -139,8 +139,17 @@ public class Prompt extends EntityBase {
 		return this.margin;
 	}
 
+	@Basic(optional = true)
+	public double getLiquidation() {
+		return this.liquidation;
+	}
+
 	protected synchronized void setMargin(int margin) {
 		this.margin = margin;
+	}
+
+	protected synchronized void setLiquidation(double liquidation) {
+		this.liquidation = liquidation;
 	}
 
 	@ManyToOne(optional = true)
@@ -234,7 +243,7 @@ public class Prompt extends EntityBase {
 					takerFeeRate, feeMethod, marginFeeMethod);
 			prompt.setRevision(prompt.getRevision() + 1);
 			try {
-				promptDao.persistEntities(prompt);
+				promptDao.persistEntities(false, prompt);
 			} catch (Throwable e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -252,7 +261,7 @@ public class Prompt extends EntityBase {
 					marginFeeMethod);
 			prompt.setRevision(prompt.getRevision() + 1);
 			try {
-				promptDao.persistEntities(prompt);
+				promptDao.persistEntities(false, prompt);
 			} catch (Throwable e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -274,7 +283,7 @@ public class Prompt extends EntityBase {
 		this.priceBasis = priceBasis;
 	}
 
-	private Prompt(String symbol, double tickValue, double tickSize, Asset tradedCurrency, double volumeBasis, double priceBasis, int margin,
+	public Prompt(String symbol, double tickValue, double tickSize, Asset tradedCurrency, double volumeBasis, double priceBasis, int margin,
 			FeeMethod marginMethod, double makerFeeRate, double takerFeeRate, FeeMethod feeMethod, FeeMethod marginFeeMethod) {
 		this.symbol = symbol;
 		this.tickValue = tickValue;
@@ -317,6 +326,7 @@ public class Prompt extends EntityBase {
 	private double priceBasis;
 	private double volumeBasis;
 	private int margin;
+	private double liquidation;
 	private double makerFeeRate;
 	private double takerFeeRate;
 
@@ -327,7 +337,7 @@ public class Prompt extends EntityBase {
 
 		this.setRevision(this.getRevision() + 1);
 		try {
-			promptDao.persistEntities(this);
+			promptDao.persistEntities(false, this);
 		} catch (Throwable e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

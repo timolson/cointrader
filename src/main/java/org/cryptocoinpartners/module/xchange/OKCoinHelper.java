@@ -1,6 +1,9 @@
 package org.cryptocoinpartners.module.xchange;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.PositionEffect;
@@ -13,6 +16,8 @@ import org.knowm.xchange.dto.Order.OrderType;
 import org.knowm.xchange.okcoin.FuturesContract;
 import org.knowm.xchange.okcoin.dto.trade.OkCoinPriceLimit;
 import org.knowm.xchange.okcoin.service.OkCoinFuturesTradeService;
+import org.knowm.xchange.okcoin.service.OkCoinFuturesTradeService.OkCoinFuturesCancelOrderParams;
+import org.knowm.xchange.okcoin.service.OkCoinFuturesTradeService.OkCoinFuturesOrderQueryParams;
 import org.knowm.xchange.service.trade.TradeService;
 
 @SuppressWarnings("UnusedDeclaration")
@@ -31,6 +36,26 @@ public class OKCoinHelper extends XchangeHelperBase {
 	public FuturesContract getContractForListing(Listing listing) {
 
 		return FuturesContract.valueOfIgnoreCase(FuturesContract.class, listing.getPrompt().getSymbol());
+	}
+
+	@Override
+	public boolean cancelOrder(TradeService tradeService, Listing listing, String orderId) throws Exception {
+		FuturesContract contract = getContractForListing(listing);
+		OkCoinFuturesCancelOrderParams params = new OkCoinFuturesCancelOrderParams(XchangeUtil.getCurrencyPairForListing(listing), contract, orderId);
+		return tradeService.cancelOrder(params);
+	}
+
+	@Override
+	public synchronized Collection<Order> getOrder(TradeService tradeService, Listing listing, long period, String... orderIds) throws Exception {
+		//Pass trade params
+		List<OkCoinFuturesOrderQueryParams> params = new ArrayList<OkCoinFuturesOrderQueryParams>();
+		FuturesContract contract = getContractForListing(listing);
+
+		for (String orderId : orderIds) {
+			params.add(new OkCoinFuturesOrderQueryParams(XchangeUtil.getCurrencyPairForListing(listing), contract, orderId));
+		}
+		return tradeService.getOrder(params.toArray(new OkCoinFuturesOrderQueryParams[params.size()]));
+
 	}
 
 	@Override

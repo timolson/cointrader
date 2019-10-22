@@ -88,9 +88,16 @@ public class BasicQuoteService implements QuoteService {
 		if (listing == null)
 			return null;
 		try {
-			long impliedPriceCount = impliedTradeMatrix.getRate(listing.getBase(), listing.getQuote()).getCount();
+			DiscreteAmount impliedPrice = impliedTradeMatrix.getRate(listing.getBase(), listing.getQuote());
 			Market market = context.getInjector().getInstance(Market.class).findOrCreate(Exchanges.SELF, listing);
-			return new Trade(market, Instant.now(), Instant.now().toString(), impliedPriceCount, 0L);
+			//long impliedPriceCount = impliedTradeMatrix.getRate(listing.getBase(), listing.getQuote()).getCount();
+
+			long impliedPriceCount = DiscreteAmount.roundedCountForBasis(impliedPrice.asBigDecimal(), market.getPriceBasis());
+			//issues is that implied price is in 0.001 baisis, and market is in in 0.01
+
+			Trade trade = new Trade(market, Instant.now(), Instant.now().toString(), impliedPriceCount, 0L);
+			log.debug(this.getClass().getSimpleName() + ":getLastImpliedTrade - Calcaulted implied trade=" + trade.getPrice() + ", listing=" + listing);
+			return trade;
 		} catch (java.lang.IllegalArgumentException e) {
 			return null;
 		}
@@ -153,7 +160,6 @@ public class BasicQuoteService implements QuoteService {
 		if (market == null)
 			return null;
 		Offer bestBid = null;
-		Offer testBestBid = null;
 		/*
 		 * if (XchangeData.exists()) { XchangeData xchangeData = context.getInjector().getInstance(XchangeData.class); try {
 		 * recordBook(xchangeData.getBook(market, market.getExchange())); } catch (Exception e) { // TODO Auto-generated catch block
@@ -164,13 +170,16 @@ public class BasicQuoteService implements QuoteService {
 		// for( Market market : marketsByListing.get(listing.getSymbol()) ) {
 		Book book = lastBookByMarket.get(market.getSymbol());
 		if (book != null)
-			testBestBid = book.getBestBid();
-		//noinspection ConstantConditions
+			bestBid = book.getBestBid();
 
-		if (bestBid == null || bestBid.getVolumeCount() == 0 || bestBid.getPriceCount() == 0
-				|| (testBestBid != null && testBestBid.getPrice().compareTo(bestBid.getPrice()) > 0))
+		if (bestBid == null || bestBid.getVolumeCount() == 0 || bestBid.getPriceCount() == 0) {
+			DiscreteAmount bestImpliedBidAmount = getLastTrade(market).getPrice();
+			long bestImpliedBid = DiscreteAmount.roundedCountForBasis(bestImpliedBidAmount.asBigDecimal(), market.getPriceBasis());
+			DiscreteAmount bestImpliedBidVolumeAmount = getLastTrade(market).getVolume();
+			long bestImplieBidVolume = Math.abs(DiscreteAmount.roundedCountForBasis(bestImpliedBidVolumeAmount.asBigDecimal(), market.getVolumeBasis()));
 
-			bestBid = testBestBid;
+			bestBid = new Offer(market, Instant.now(), Instant.now(), bestImpliedBid, bestImplieBidVolume);
+		}
 
 		return bestBid;
 	}
@@ -205,17 +214,39 @@ public class BasicQuoteService implements QuoteService {
 		if (listing == null)
 			return null;
 		try {
-			long bestImpliedAsk = impliedAskMatrix.getRate(listing.getBase(), listing.getQuote()).getCount();
+			//we are getting the count and converting it
+			// we need to get the descrete amount and rebasis
+			DiscreteAmount bestImpliedAskAmount = impliedAskMatrix.getRate(listing.getBase(), listing.getQuote());
 			Market market = context.getInjector().getInstance(Market.class).findOrCreate(Exchanges.SELF, listing);
-			return new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
+
+			long bestImpliedAsk = DiscreteAmount.roundedCountForBasis(bestImpliedAskAmount.asBigDecimal(), market.getPriceBasis());
+			//long bestImpliedAsk = impliedAskMatrix.getRate(listing.getBase(), listing.getQuote()).getCount();
+
+			Offer offer = new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
+			log.debug(this.getClass().getSimpleName() + ":getImpliedBestAskForListing - Calcaulted implied ask=" + offer.getPrice() + ", listing=" + listing);
+			return offer;
 		} catch (java.lang.IllegalArgumentException e) {
 			Trade lastImpliedTrade = getLastTrade(listing);
 			if (lastImpliedTrade != null) {
-				long bestImpliedAsk = getLastTrade(listing).getPriceCount();
+				DiscreteAmount bestImpliedAskAmount = getLastTrade(listing).getPrice();
 				Market market = context.getInjector().getInstance(Market.class).findOrCreate(Exchanges.SELF, listing);
-				return new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, 0L);
-			} else
+				//	long bestImpliedAsk = getLastTrade(listing).getPriceCount();
+				DiscreteAmount bestImpliedAskVolumeAmount = getLastTrade(listing).getVolume();
+				long bestImpliedAskVolume = Math.abs(DiscreteAmount.roundedCountForBasis(bestImpliedAskVolumeAmount.asBigDecimal(), market.getVolumeBasis()))
+						* -1;
+
+				long bestImpliedAsk = DiscreteAmount.roundedCountForBasis(bestImpliedAskAmount.asBigDecimal(), market.getPriceBasis());
+				Offer offer = new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, bestImpliedAskVolume);
+				log.debug(
+						this.getClass().getSimpleName() + ":getImpliedBestAskForListing - Calcaulted implied ask=" + offer.getPrice() + ", listing=" + listing);
+				return offer;
+			} else {
+				log.debug(this.getClass().getSimpleName() + ":getImpliedBestAskForListing - Unable to detreming implied ask " + listing
+						+ " from impliedAskMatrix: " + impliedAskMatrix + " or last trade " + lastTradeByListing + " or impliedTradeMatrix"
+						+ impliedTradeMatrix);
+
 				return null;
+			}
 		}
 	}
 
@@ -224,17 +255,38 @@ public class BasicQuoteService implements QuoteService {
 		if (listing == null)
 			return null;
 		try {
-			long bestImpliedBid = impliedBidMatrix.getRate(listing.getBase(), listing.getQuote()).getCount();
+			DiscreteAmount bestImpliedBidAmount = impliedBidMatrix.getRate(listing.getBase(), listing.getQuote());
 			Market market = context.getInjector().getInstance(Market.class).findOrCreate(Exchanges.SELF, listing);
-			return new Offer(market, Instant.now(), Instant.now(), bestImpliedBid, 0L);
+
+			long bestImpliedBid = DiscreteAmount.roundedCountForBasis(bestImpliedBidAmount.asBigDecimal(), market.getPriceBasis());
+			//long bestImpliedBid = impliedBidMatrix.getRate(listing.getBase(), listing.getQuote()).getCount();
+
+			Offer offer = new Offer(market, Instant.now(), Instant.now(), bestImpliedBid, 0L);
+			log.debug(this.getClass().getSimpleName() + ":getImpliedBestBidForListing - Calcaulted implied bid=" + offer.getPrice() + ", listing=" + listing);
+			return offer;
+
 		} catch (java.lang.IllegalArgumentException e) {
 			Trade lastImpliedTrade = getLastTrade(listing);
 			if (lastImpliedTrade != null) {
-				long bestImpliedBid = getLastTrade(listing).getPriceCount();
+				DiscreteAmount bestImpliedBidAmount = getLastTrade(listing).getPrice();
 				Market market = context.getInjector().getInstance(Market.class).findOrCreate(Exchanges.SELF, listing);
-				return new Offer(market, Instant.now(), Instant.now(), bestImpliedBid, 0L);
-			} else
+				//	long bestImpliedBid = getLastTrade(listing).getPriceCount();
+				DiscreteAmount bestImpliedBidVolumeAmount = getLastTrade(listing).getVolume();
+				long bestImpliedBidVolume = DiscreteAmount.roundedCountForBasis(bestImpliedBidVolumeAmount.asBigDecimal(), market.getVolumeBasis());
+
+				long bestImpliedBid = Math.abs(DiscreteAmount.roundedCountForBasis(bestImpliedBidAmount.asBigDecimal(), market.getPriceBasis()));
+				Offer offer = new Offer(market, Instant.now(), Instant.now(), bestImpliedBid, bestImpliedBidVolume);
+				log.debug(
+						this.getClass().getSimpleName() + ":getImpliedBestBidForListing - Calcaulted implied bid=" + offer.getPrice() + ", listing=" + listing);
+
+				return offer;
+			} else {
+				log.debug(this.getClass().getSimpleName() + ":getImpliedBestBidForListing - Unable to detreming implied bid for " + listing
+						+ " from impliedBidMatrix: " + impliedBidMatrix + " or last trade " + lastTradeByListing + " or impliedTradeMatrix"
+						+ impliedTradeMatrix);
+
 				return null;
+			}
 
 		}
 
@@ -245,7 +297,6 @@ public class BasicQuoteService implements QuoteService {
 		if (market == null)
 			return null;
 		Offer bestAsk = null;
-		Offer testBestAsk = null;
 		/*
 		 * if (XchangeData.exists()) { XchangeData xchangeData = context.getInjector().getInstance(XchangeData.class); try {
 		 * recordBook(xchangeData.getBook(market, market.getExchange())); } catch (Exception e) { // TODO Auto-generated catch block
@@ -253,17 +304,23 @@ public class BasicQuoteService implements QuoteService {
 		 */
 		Book book = lastBookByMarket.get(market.getSymbol());
 		if (book != null)
-			testBestAsk = book.getBestAsk();
+			bestAsk = book.getBestAsk();
 		//noinspection ConstantConditions
-		if (bestAsk == null || bestAsk.getVolumeCount() == 0 || bestAsk.getPriceCount() == 0
-				|| (testBestAsk != null && testBestAsk.getPrice().compareTo(bestAsk.getPrice()) < 0))
-			bestAsk = testBestAsk;
+
+		if (bestAsk == null || bestAsk.getVolumeCount() == 0 || bestAsk.getPriceCount() == 0) {
+			DiscreteAmount bestImpliedAskAmount = getLastTrade(market).getPrice();
+			DiscreteAmount bestImpliedAskVolumeAmount = getLastTrade(market).getVolume();
+			long bestImpliedAskVolume = Math.abs(DiscreteAmount.roundedCountForBasis(bestImpliedAskVolumeAmount.asBigDecimal(), market.getVolumeBasis())) * -1;
+
+			long bestImpliedAsk = DiscreteAmount.roundedCountForBasis(bestImpliedAskAmount.asBigDecimal(), market.getPriceBasis());
+			bestAsk = new Offer(market, Instant.now(), Instant.now(), bestImpliedAsk, bestImpliedAskVolume);
+		}
 
 		return bestAsk;
 	}
 
 	//@Priority(10)
-	@When("@Priority(9) @Audit select * from LastBookWindow")
+	@When("@Priority(8) @Audit select * from LastBookWindow")
 	private void recordBook(Book b) {
 		Tradeable market = b.getMarket();
 		if (!market.isSynthetic()) {
@@ -317,7 +374,7 @@ public class BasicQuoteService implements QuoteService {
 
 	}
 
-	@When("@Priority(9) @Audit select * from LastTradeWindow")
+	@When("@Priority(8) @Audit select * from LastTradeWindow")
 	private void recordTrade(Trade t) {
 
 		Tradeable market = t.getMarket();
@@ -379,7 +436,7 @@ public class BasicQuoteService implements QuoteService {
 		}
 	}
 
-	@When("@Priority(9) @Audit select * from LastBarWindow")
+	@When("@Priority(8) @Audit select * from LastBarWindow")
 	private void recordBar(Bar b) {
 		Tradeable market = b.getMarket();
 		double interval = b.getInterval();

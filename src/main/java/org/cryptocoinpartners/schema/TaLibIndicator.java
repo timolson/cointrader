@@ -30,7 +30,7 @@ import com.google.inject.assistedinject.AssistedInject;
 //@Cacheable(false)
 //@Table(indexes = { @Index(columnList = "time"), @Index(columnList = "timeReceived"), @Index(columnList = "market") })
 //@Table(indexes = { @Index(columnList = "market,time") })
-public class Trade extends PriceData {
+public class TaLibIndicator extends PriceData {
 
 	@Inject
 	protected transient TradeDao tradeDao;
@@ -53,6 +53,14 @@ public class Trade extends PriceData {
 		return null;
 	}
 
+	@Transient
+	@Nullable
+	public Object getValue() {
+		Object value = new Object();
+		;
+		return value;
+	}
+
 	@Override
 	@Transient
 	public TradeDao getDao() {
@@ -67,22 +75,22 @@ public class Trade extends PriceData {
 		//  return null;
 	}
 
-	public static Trade fromDoubles(Tradeable market, Instant time, @Nullable String remoteKey, double price, double volume) {
+	public static TaLibIndicator fromDoubles(Tradeable market, Instant time, @Nullable String remoteKey, double price, double volume) {
 		long priceCount;
 		long volumeCount;
 		priceCount = Math.round(price / market.getPriceBasis());
 		volumeCount = Math.round(volume / market.getVolumeBasis());
-		return new Trade(market, time, remoteKey, priceCount, volumeCount);
+		return new TaLibIndicator(market, time, remoteKey, priceCount, volumeCount);
 
 	}
 
-	public static Trade fromDoubles(Tradeable tradeable, Instant time, Instant timeRecieved, @Nullable String remoteKey, double price, double volume) {
+	public static TaLibIndicator fromDoubles(Tradeable tradeable, Instant time, Instant timeRecieved, @Nullable String remoteKey, double price, double volume) {
 		long priceCount;
 		long volumeCount;
 		Market market = (Market) tradeable;
 		priceCount = Math.round(price / market.getPriceBasis());
 		volumeCount = Math.round(volume / market.getVolumeBasis());
-		return new Trade(market, time, remoteKey, priceCount, volumeCount);
+		return new TaLibIndicator(market, time, remoteKey, priceCount, volumeCount);
 
 	}
 
@@ -109,7 +117,7 @@ public class Trade extends PriceData {
 	 * @return
 	 */
 	@AssistedInject
-	public Trade(@Assisted Tradeable market, @Assisted Instant time, @Assisted @Nullable String remoteKey, @Assisted("tradePrice") double price,
+	public TaLibIndicator(@Assisted Tradeable market, @Assisted Instant time, @Assisted @Nullable String remoteKey, @Assisted("tradePrice") double price,
 			@Assisted("tradeVolume") double volume) {
 		this(market, time, remoteKey, Math.round(price / market.getPriceBasis()), Math.round(volume / market.getVolumeBasis()));
 
@@ -119,7 +127,7 @@ public class Trade extends PriceData {
 	}
 
 	@AssistedInject
-	public Trade(@Assisted Tradeable market, @Assisted("tradeTime") Instant time, @Assisted("timeRecieved") Instant timeRecieved,
+	public TaLibIndicator(@Assisted Tradeable market, @Assisted("tradeTime") Instant time, @Assisted("timeRecieved") Instant timeRecieved,
 			@Assisted @Nullable String remoteKey, @Assisted("tradePrice") double price, @Assisted("tradeVolume") double volume) {
 		this(market, time, timeRecieved, remoteKey, Math.round(price / market.getPriceBasis()), Math.round(volume / market.getVolumeBasis()));
 
@@ -128,29 +136,30 @@ public class Trade extends PriceData {
 	}
 
 	@AssistedInject
-	public Trade(@Assisted Tradeable market, @Assisted Instant time, @Assisted @Nullable String remoteKey, @Assisted("tradePriceCount") long priceCount,
-			@Assisted("tradeVolumeCount") long volumeCount) {
+	public TaLibIndicator(@Assisted Tradeable market, @Assisted Instant time, @Assisted @Nullable String remoteKey,
+			@Assisted("tradePriceCount") long priceCount, @Assisted("tradeVolumeCount") long volumeCount) {
 		super(time, remoteKey, market, priceCount, volumeCount);
 	}
 
 	@AssistedInject
-	public Trade(@Assisted Tradeable market, @Assisted("tradeTime") Instant time, @Assisted("tradeTimeRecieved") Instant timeRecieved,
+	public TaLibIndicator(@Assisted Tradeable market, @Assisted("tradeTime") Instant time, @Assisted("tradeTimeRecieved") Instant timeRecieved,
 			@Assisted @Nullable String remoteKey, @Assisted("tradePriceCount") long priceCount, @Assisted("tradeVolumeCount") long volumeCount) {
 		super(time, timeRecieved, remoteKey, market, priceCount, volumeCount);
 	}
 
 	@AssistedInject
-	public Trade(@Assisted Tradeable tradeable, @Assisted Instant time, @Assisted @Nullable String remoteKey, @Assisted("tradePrice") BigDecimal price,
+	public TaLibIndicator(@Assisted Tradeable tradeable, @Assisted Instant time, @Assisted @Nullable String remoteKey, @Assisted("tradePrice") BigDecimal price,
 			@Assisted("tradeVolume") BigDecimal volume) {
 		super(time, remoteKey, tradeable, price, volume);
 	}
 
-	public static void find(Interval timeInterval, Visitor<Trade> visitor) {
-		EM.queryEach(Trade.class, visitor, "select t from Trade t where time > ?1 and time < ?2", timeInterval.getStartMillis(), timeInterval.getEndMillis());
+	public static void find(Interval timeInterval, Visitor<TaLibIndicator> visitor) {
+		EM.queryEach(TaLibIndicator.class, visitor, "select t from Trade t where time > ?1 and time < ?2", timeInterval.getStartMillis(),
+				timeInterval.getEndMillis());
 	}
 
-	public static void forAll(Visitor<Trade> visitor) {
-		EM.queryEach(Trade.class, visitor, "select t from Trade t");
+	public static void forAll(Visitor<TaLibIndicator> visitor) {
+		EM.queryEach(TaLibIndicator.class, visitor, "select t from Trade t");
 	}
 
 	@Override
@@ -168,7 +177,7 @@ public class Trade extends PriceData {
 				+ SEPARATOR + "Volume=" + getVolumeAsDouble();
 	}
 
-	public Trade() {
+	public TaLibIndicator() {
 	} // JPA only
 
 	@Override

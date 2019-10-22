@@ -1,11 +1,11 @@
 package org.cryptocoinpartners.schema;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nullable;
 import javax.persistence.Basic;
 import javax.persistence.Cacheable;
 import javax.persistence.CascadeType;
@@ -24,6 +24,8 @@ import javax.persistence.Transient;
 
 import org.cryptocoinpartners.enumeration.ExecutionInstruction;
 import org.cryptocoinpartners.enumeration.FeeMethod;
+import org.cryptocoinpartners.enumeration.PersistanceAction;
+import org.cryptocoinpartners.schema.dao.MarketJpaDao;
 import org.cryptocoinpartners.util.EM;
 import org.cryptocoinpartners.util.RemainderHandler;
 
@@ -44,12 +46,14 @@ import com.google.inject.assistedinject.AssistedInject;
 		@Index(columnList = "revision") })
 public class Market extends Tradeable {
 
-	protected List<SyntheticMarket> syntheticMarkets;
+	protected List<SyntheticMarket> syntheticMarkets = new ArrayList<>();
 	protected static Set<Market> markets = new HashSet<Market>();
 	@Inject
 	protected transient static MarketFactory marketFactory;
 	@Inject
 	protected transient static ExchangeFactory exchangeFactory;
+	@Inject
+	protected transient static MarketJpaDao marketDao;
 
 	//TODO
 	//add a set of markets, that we keep and get from here, if not presnet in set go to db
@@ -69,9 +73,8 @@ public class Market extends Tradeable {
 		return null;
 	}
 
-	@Nullable
 	@ManyToMany(fetch = FetchType.EAGER)
-	//  @JoinColumn(name = "syntheticMarket")
+	//@JoinTable(name = "market_synthetic_market", joinColumns = @JoinColumn(name = "market_id"), inverseJoinColumns = @JoinColumn(name = "synthetic_id"))
 	public List<SyntheticMarket> getSyntheticMarkets() {
 		return syntheticMarkets;
 	}
@@ -103,15 +106,21 @@ public class Market extends Tradeable {
 			}
 			List<Market> results = EM.namedQueryList(Market.class, "Market.findByMarket", exchange, listing);
 			if (results != null && !results.isEmpty() && results.get(0) != null) {
-				for (Market result : results)
+				for (Market result : results) {
 					result.setPersisted(true);
-				markets.add(results.get(0));
+					if (result != null)
+						markets.add(result);
+				}
 				return results.get(0);
 			} else {
 				Market ml = marketFactory.create(exchange, listing, quoteBasis, volumeBasis);
-				markets.add(ml);
+				ml.setPeristanceAction(PersistanceAction.NEW);
+				ml.setRevision(ml.getRevision() + 1);
+				ml.getDao().persistEntities(false, ml);
+				if (ml != null)
+					markets.add(ml);
 				//  Market ml = new Market(exchange, listing, quoteBasis, volumeBasis);
-				ml.persit();
+
 				// marketDao.persist(ml);
 				return ml;
 			}
@@ -119,11 +128,25 @@ public class Market extends Tradeable {
 		} catch (NoResultException e) {
 
 			Market ml = marketFactory.create(exchange, listing, quoteBasis, volumeBasis);
-			markets.add(ml);
+			try {
+				ml.setPeristanceAction(PersistanceAction.NEW);
+				ml.setRevision(ml.getRevision() + 1);
+				marketDao.persistEntities(false, ml);
+				if (ml != null)
+					markets.add(ml);
+			} catch (Throwable e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+
 			//  Market ml = new Market(exchange, listing, quoteBasis, volumeBasis);
-			ml.persit();
+
 			// marketDao.persist(ml);
 			return ml;
+		} catch (Throwable e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
 		}
 	}
 
@@ -136,9 +159,11 @@ public class Market extends Tradeable {
 			}
 			List<Market> results = EM.namedQueryList(Market.class, "Market.findByMarket", exchange, listing);
 			if (results != null && !results.isEmpty() && results.get(0) != null) {
-				for (Market result : results)
+				for (Market result : results) {
 					result.setPersisted(true);
-				markets.add(results.get(0));
+					if (result != null)
+						markets.add(result);
+				}
 
 				if (results.get(0).getMinimumOrderSize(results.get(0)) == minOrderSize)
 					return results.get(0);
@@ -149,9 +174,19 @@ public class Market extends Tradeable {
 				}
 			} else {
 				Market ml = marketFactory.create(exchange, listing, quoteBasis, volumeBasis, minOrderSize);
-				markets.add(ml);
+				try {
+					ml.setPeristanceAction(PersistanceAction.NEW);
+					ml.setRevision(ml.getRevision() + 1);
+					marketDao.persistEntities(false, ml);
+					if (ml != null)
+						markets.add(ml);
+				} catch (Throwable e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
 				//  Market ml = new Market(exchange, listing, quoteBasis, volumeBasis);
-				ml.persit();
+
 				// marketDao.persist(ml);
 				return ml;
 			}
@@ -159,9 +194,19 @@ public class Market extends Tradeable {
 		} catch (NoResultException e) {
 
 			Market ml = marketFactory.create(exchange, listing, quoteBasis, volumeBasis, minOrderSize);
-			markets.add(ml);
+			try {
+				ml.setPeristanceAction(PersistanceAction.NEW);
+				ml.setRevision(ml.getRevision() + 1);
+				marketDao.persistEntities(false, ml);
+				if (ml != null)
+					markets.add(ml);
+			} catch (Throwable e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+
 			//  Market ml = new Market(exchange, listing, quoteBasis, volumeBasis);
-			ml.persit();
+
 			// marketDao.persist(ml);
 			return ml;
 		}
@@ -204,14 +249,14 @@ public class Market extends Tradeable {
 	@Override
 	@Basic(optional = false)
 	public double getPriceBasis() {
-		if (listing != null)
+		if (priceBasis == 0 && listing != null)
 			return listing.getPriceBasis() == 0 ? priceBasis : listing.getPriceBasis();
 		else
 			return priceBasis;
 
 	}
 
-	protected void setPriceBasis(double priceBasis) {
+	protected synchronized void setPriceBasis(double priceBasis) {
 		this.priceBasis = priceBasis;
 	}
 
@@ -248,6 +293,12 @@ public class Market extends Tradeable {
 	@Transient
 	public int getMargin() {
 		return listing.getMargin() == 0 ? exchange.getMargin() : listing.getMargin();
+
+	}
+
+	@Transient
+	public double getLiquidation() {
+		return listing.getLiquidation() == 0 ? exchange.getLiquidation() : listing.getLiquidation();
 
 	}
 
@@ -413,32 +464,71 @@ public class Market extends Tradeable {
 		if (getDao() != null) {
 
 			EntityBase dbListing = null;
+			EntityBase dbExchange = null;
 
 			if (getListing() != null) {
 				try {
-					dbListing = getListing().getDao().find(getListing().getClass(), getListing().getId());
-					if (dbListing != null && dbListing.getVersion() != getListing().getVersion()) {
-						getListing().setVersion(dbListing.getVersion());
-						if (getListing().getRevision() > dbListing.getRevision()) {
-							//  getOrder().setPeristanceAction(PersistanceAction.MERGE);
-							getListing().getDao().merge(getListing());
-						}
+					dbListing = getDao().find(getListing().getClass(), getListing().getId());
+					if (dbListing != null) {
+						dbListing = getDao().mergeEntities(false, getListing());
+						this.setListing((Listing) dbListing);
+
 					} else {
 						//getOrder().setPeristanceAction(PersistanceAction.NEW);
-						getListing().getDao().persist(getListing());
+						getDao().persistEntities(false, getListing());
 					}
-				} catch (Exception | Error ex) {
+				} catch (Throwable ex) {
 					if (dbListing != null)
 						if (getListing().getRevision() > dbListing.getRevision()) {
 							//  getOrder().setPeristanceAction(PersistanceAction.MERGE);
-							getListing().getDao().merge(getListing());
+							try {
+								getDao().mergeEntities(false, getListing());
+							} catch (Throwable e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
 						} else {
 							//   getOrder().setPeristanceAction(PersistanceAction.NEW);
-							getListing().getDao().persist(getListing());
+							try {
+								getDao().persistEntities(false, getListing());
+							} catch (Throwable e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
 						}
 				}
 			}
-
+			if (getExchange() != null) {
+				try {
+					dbExchange = getDao().find(getExchange().getClass(), getExchange().getId());
+					if (dbExchange != null) {
+						dbExchange = getDao().mergeEntities(false, getExchange());
+						this.setExchange((Exchange) dbExchange);
+					} else {
+						//getOrder().setPeristanceAction(PersistanceAction.NEW);
+						getDao().persistEntities(false, getExchange());
+					}
+				} catch (Throwable ex) {
+					if (dbExchange != null)
+						if (getExchange().getRevision() > dbExchange.getRevision()) {
+							//  getOrder().setPeristanceAction(PersistanceAction.MERGE);
+							try {
+								getDao().mergeEntities(false, getExchange());
+							} catch (Throwable e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						} else {
+							//   getOrder().setPeristanceAction(PersistanceAction.NEW);
+							try {
+								getDao().persistEntities(false, getExchange());
+							} catch (Throwable e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						}
+				}
+			}
 		}
 
 		// TODO Auto-generated method stub

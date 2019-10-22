@@ -126,12 +126,12 @@ public class PersistUtil {
 							e.printStackTrace();
 
 						} finally {
-							log.error(entity.getClass().getSimpleName() + ": Later verion of " + entity.getId().toString()
+							log.error(entity.getClass().getSimpleName() + ": Later verion of " + entity.getUuid().toString()
 									+ " already persisted to database, entity was not inserted to database after " + entity.getRetryCount() + " attempts.");
 						}
 					} else {
-						log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " after " + entity.getRetryCount()
-								+ " attempts.", ole);
+						log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getUuid().toString() + " after "
+								+ entity.getRetryCount() + " attempts.", ole);
 
 					}
 				}
@@ -158,11 +158,11 @@ public class PersistUtil {
 								e.printStackTrace();
 
 							} finally {
-								log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString()
+								log.error(entity.getClass().getSimpleName() + ": " + entity.getUuid().toString()
 										+ " had unsaved transient values. Resubmitting insert request.", ise);
 							}
 						} else {
-							log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " after "
+							log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getUuid().toString() + " after "
 									+ entity.getRetryCount() + " attempts.", ise);
 						}
 					}
@@ -192,12 +192,12 @@ public class PersistUtil {
 							e.printStackTrace();
 
 						} finally {
-							log.error(entity.getClass().getSimpleName() + ":" + entity.getId().toString() + " already exists, we need to merge records.");
+							log.error(entity.getClass().getSimpleName() + ":" + entity.getUuid().toString() + " already exists, we need to merge records.");
 
 						}
 					} else {
-						log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " after " + entity.getRetryCount()
-								+ " attempts.", pe);
+						log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getUuid().toString() + " after "
+								+ entity.getRetryCount() + " attempts.", pe);
 					}
 				}
 
@@ -224,10 +224,10 @@ public class PersistUtil {
 
 			if (persited)
 				for (EntityBase entity : entities)
-					log.trace(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " inserted to database");
+					log.trace(entity.getClass().getSimpleName() + ": " + entity.getUuid().toString() + " inserted to database");
 			else
 				for (EntityBase entity : entities)
-					log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not inserted to database");
+					log.error(entity.getClass().getSimpleName() + ": " + entity.getUuid().toString() + " not inserted to database");
 
 		}
 
@@ -292,13 +292,13 @@ public class PersistUtil {
 							e.printStackTrace();
 
 						} finally {
-							log.error(entity.getClass().getSimpleName() + ": Entity " + entity.getId().toString()
+							log.error(entity.getClass().getSimpleName() + ": Entity " + entity.getUuid().toString()
 									+ " was not already persisted to database, entity was not merged to database after " + entity.getRetryCount()
 									+ " attempts.");
 						}
 					} else {
-						log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " after " + entity.getRetryCount()
-								+ " attempts.", enf);
+						log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getUuid().toString() + " after "
+								+ entity.getRetryCount() + " attempts.", enf);
 					}
 				}
 
@@ -323,12 +323,12 @@ public class PersistUtil {
 							e.printStackTrace();
 
 						} finally {
-							log.error(entity.getClass().getSimpleName() + ": Later verion of " + entity.getId().toString()
+							log.error(entity.getClass().getSimpleName() + ": Later verion of " + entity.getUuid().toString()
 									+ " already persisted to database, entity was not merged to database after " + entity.getRetryCount() + " attempts.");
 						}
 					} else {
-						log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " after " + entity.getRetryCount()
-								+ " attempts. stack trade", ole);
+						log.error("Unable to save " + entity.getClass().getSimpleName() + ": " + entity.getUuid().toString() + " after "
+								+ entity.getRetryCount() + " attempts. stack trade", ole);
 					}
 				}
 			}
@@ -375,10 +375,10 @@ public class PersistUtil {
 
 			if (persited)
 				for (EntityBase entity : entities)
-					log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " merged to database");
+					log.debug(entity.getClass().getSimpleName() + ": " + entity.getUuid().toString() + " merged to database");
 			else
 				for (EntityBase entity : entities)
-					log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not merged to database");
+					log.error(entity.getClass().getSimpleName() + ": " + entity.getUuid().toString() + " not merged to database");
 
 		}
 		// }
@@ -480,11 +480,11 @@ public class PersistUtil {
 				PersistUtilHelper.closeEntityManager();
 			if (foundEntity != null)
 				for (EntityBase entity : entities)
-					log.debug(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " found in database");
+					log.debug(entity.getClass().getSimpleName() + ": " + entity.getUuid().toString() + " found in database");
 
 			else
 				for (EntityBase entity : entities)
-					log.error(entity.getClass().getSimpleName() + ": " + entity.getId().toString() + " not found in database");
+					log.error(entity.getClass().getSimpleName() + ": " + entity.getUuid().toString() + " not found in database");
 			return foundEntity;
 		}
 	}

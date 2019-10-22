@@ -20,6 +20,8 @@ public class Currencies {
 	public static final Currency SGD = fiat("SGD", 0.01);
 	public static final Currency TRY = fiat("TRY", 0.01);
 	public static final Currency USD = fiat("USD", 0.01);
+	public static final Currency EWC = fiat("EWC", 0.01);
+	public static final Currency EWA = fiat("EWA", 0.01);
 
 	// Cryptos
 
@@ -285,6 +287,7 @@ public class Currencies {
 	public static final Currency ICN = crypto("ICN", 1e-8);
 	public static final Currency GAS = crypto("GAS", 1e-8);
 	public static final Currency XTZ = crypto("XTZ", 1e-8);
+	public static final Currency BSV = crypto("BSV", 1e-8);
 
 	/*
 	 * these need currency basis research public static final Currency FORTY_TWO = crypto("42"); public static final Currency POINTS = crypto("Points");
