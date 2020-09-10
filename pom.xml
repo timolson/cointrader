@@ -10,7 +10,10 @@
 	<developers>
 		<developer>
 			<name>Tim Olson</name>
-			<email>tim@cryptocoinpartners.org</email>
+			<email>timolsoncrypto@gmail.com</email>
+		</developer>
+		<developer>
+			<name>Douggie Melville-Clarke</name>
 		</developer>
 	</developers>
 
@@ -113,7 +116,7 @@
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>18.0</version>
+			<version>[24.1.1,)</version>
 		</dependency>
 
 		<dependency>
