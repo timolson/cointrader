@@ -14,7 +14,7 @@ import java.lang.reflect.Field;
 /**
  * @author Tim Olson
  */
-public class LogInjector implements Module {
+public class LogInjector implements com.google.inject.Module {
 
     @Override
     public void configure(Binder binder) {
