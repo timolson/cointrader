@@ -2,13 +2,7 @@ package org.cryptocoinpartners.util;
 
 import java.util.Collection;
 import java.util.Queue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import org.joda.time.Duration;
 import org.slf4j.Logger;
@@ -29,7 +23,7 @@ public class RateLimiter implements Executor {
 	/**
 	 * Constructs a RateLimiter with a single-threaded executor
 	 * 
-	 * @see #RateLimiter(java.util.concurrent.Executor, int, org.joda.time.Duration)
+	 * @see #RateLimiter(java.util.concurrent.ExecutorService, int, org.joda.time.Duration)
 	 */
 	public RateLimiter(final int invocations, final Duration per) {
 		this(null, invocations, per);
@@ -44,16 +38,10 @@ public class RateLimiter implements Executor {
 	 * @param invocations number of queries allowed during each time window
 	 * @param per the duration of each time window
 	 */
-	public RateLimiter(Executor executor, final int invocations, final Duration per) {
+	public RateLimiter(ExecutorService executor, final int invocations, final Duration per) {
 		this.per = per;
-		if (executor != null) {
-			this.executor = executor;
-
-			this.limiter = new SimpleTimeLimiter();
-		} else {
-			this.executor = Executors.newSingleThreadExecutor();
-			this.limiter = new SimpleTimeLimiter();
-		}
+		this.executor = executor == null ? Executors.newSingleThreadExecutor() : executor;
+		this.limiter = SimpleTimeLimiter.create(this.executor);
 
 		// This thread fills the TokenBucket with available requests every time window
 		ScheduledThreadPoolExecutor replenisher = new ScheduledThreadPoolExecutor(1);
@@ -150,7 +138,7 @@ public class RateLimiter implements Executor {
 					//TODO we need to override this somehow for when we rate quering the latest trade time.
 					if (callable != null)
 						try {
-							limiter.callWithTimeout(callable, 3000, TimeUnit.MILLISECONDS, false);
+							limiter.callWithTimeout(callable, 3000, TimeUnit.MILLISECONDS);
 						} catch (UncheckedTimeoutException ute) {
 							log.error(this.getClass().getSimpleName() + ":run - unable to complete " + callable.getClass().getSimpleName() + " within "
 									+ per.getMillis() + " " + TimeUnit.MILLISECONDS);
@@ -189,7 +177,7 @@ public class RateLimiter implements Executor {
 	private final Queue<Callable> waitingCallables = new ConcurrentLinkedQueue<>();
 	protected static Logger log = LoggerFactory.getLogger("org.cryptocoinpartners.util.ratelimiter");
 
-	private final Executor executor;
+	private final ExecutorService executor;
 	private final TimeLimiter limiter;
 	private final Duration per;
 
