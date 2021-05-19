@@ -59,9 +59,9 @@ public class FeeUtilTest {
 		eosTestOrder.withPositionEffect(PositionEffect.OPEN).withExecutionInstruction(ExecutionInstruction.MAKER).withLimitPrice(BigDecimal.valueOf(5.310));
 		Fill eosTestFill = new Fill(eosTestOrder, new Instant(System.currentTimeMillis() - 2000), new Instant(System.currentTimeMillis() - 2000), eosMarket,
 				eosTestOrder.getLimitPriceCount(), eosTestOrder.getOpenVolumeCount(), "test");
-		BigDecimal eosTragetCommsbd = BigDecimal.valueOf(0.02523541);
+		BigDecimal eosTragetCommsbd = BigDecimal.valueOf(0.0252354);
 		DecimalAmount eosTragetComms = new DecimalAmount(eosTragetCommsbd).negate();
-		BigDecimal eosTragetMarginbd = BigDecimal.valueOf(6.30885123);
+		BigDecimal eosTragetMarginbd = BigDecimal.valueOf(6.308851);
 		DecimalAmount eosTragetMargin = new DecimalAmount(eosTragetMarginbd).negate();
 		Transaction eostransaction = new Transaction(eosTestFill, eosTestFill.getTime());
 
@@ -84,7 +84,7 @@ public class FeeUtilTest {
 				btcCashMarket, btcCashTestOrder.getLimitPriceCount(), btcCashTestOrder.getOpenVolumeCount(), "test");
 		BigDecimal btcCashTragetCommsbd = BigDecimal.valueOf(164.33);
 		DecimalAmount btcCashTragetComms = new DecimalAmount(btcCashTragetCommsbd).negate();
-		BigDecimal btcCashTragetMarginbd = BigDecimal.valueOf(27386.89);
+		BigDecimal btcCashTragetMarginbd = BigDecimal.valueOf(27386.88);
 		DecimalAmount btcCashTragetMargin = new DecimalAmount(btcCashTragetMarginbd).negate();
 		Transaction btctCashransaction = new Transaction(btcCashTestFill, btcCashTestFill.getTime());
 

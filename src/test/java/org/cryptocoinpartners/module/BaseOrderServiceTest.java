@@ -3,226 +3,276 @@ package org.cryptocoinpartners.module;
 import static org.junit.Assert.assertEquals;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+import java.math.RoundingMode;
 
-import org.cryptocoinpartners.enumeration.ExecutionInstruction;
+import org.apache.commons.configuration.ConfigurationException;
+import org.cryptocoinpartners.enumeration.FeeMethod;
 import org.cryptocoinpartners.enumeration.FillType;
-import org.cryptocoinpartners.enumeration.PositionEffect;
+import org.cryptocoinpartners.enumeration.TargetStrategy;
 import org.cryptocoinpartners.schema.Asset;
+import org.cryptocoinpartners.schema.Bar;
 import org.cryptocoinpartners.schema.Currency;
+import org.cryptocoinpartners.schema.DecimalAmount;
+import org.cryptocoinpartners.schema.DiscreteAmount;
 import org.cryptocoinpartners.schema.Exchange;
 import org.cryptocoinpartners.schema.GeneralOrder;
 import org.cryptocoinpartners.schema.Listing;
 import org.cryptocoinpartners.schema.Market;
-import org.cryptocoinpartners.schema.Order;
 import org.cryptocoinpartners.schema.Portfolio;
+import org.cryptocoinpartners.schema.Prompt;
+import org.cryptocoinpartners.schema.SpecificOrder;
+import org.cryptocoinpartners.util.Injector;
+import org.cryptocoinpartners.util.Remainder;
+import org.cryptocoinpartners.util.RemainderHandler;
 import org.joda.time.Instant;
+import org.junit.Before;
 import org.junit.Test;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Inject;
+
 public class BaseOrderServiceTest {
+  // @Mock MockOrderService orderService;
+  // @/Mock TradeFactory tradeFactory;
 
-	// Replay replay = new Replay(false);
+  static Injector rootInjector;
+  @Inject Context context;
 
-	//   Context context = Context.create(new EventTimeManager());
-	/*
-	 * protected Injector injector = Guice.createInjector(new AbstractModule() {
-	 * @Override protected void configure() { bind(MockOrderService.class); } }); // @Before // public void setup() { // injector.injectMembers(this);
-	 * // }
-	 * @Inject BaseOrderService orderSerivce;
-	 */
-	@Test
-	public final void test() {
+  @Before
+  public void setup() {}
 
-		//replay.getContext().attach(c)
+  public static void start(String[] args)
+      throws ConfigurationException, IllegalAccessException, InstantiationException {}
 
-		// replay.getContext().attach(MockOrderService.class);
-		//  context.attach(JMXManager.class);
-		//
+  static class MainParams {}
 
-		//..  BaseOrderService orderService = new MockOrderService();
+  @Test
+  public void testService() throws Exception {}
 
-		// orderSerivce.descendingAmountComparator
+  @Test
+  public final void setUpTest() {}
 
-		// so we create an array lists of order
-		// then we sort them
-		List<Order> trailingStopOrders = new ArrayList<Order>();
-		List<Order> stopOrders = new ArrayList<Order>();
-		// Object BaseOrderService;;
-		//BaseOrderService orderService = new MockOrderService();
-		;
-		//Object BaseOrderService();
-		// orderService=new BaseOrderService();
-		// String marketSymbol = ("OKCOIN_THISWEEK:BTC.USD.THISWEEK");
-		Exchange exchange = new Exchange("OKCOIN_THISWEEK");
-		Asset base = new Currency(false, "USD", 0.01);
-		Asset quote = new Currency(false, "BTC", 0.01);
+  // Replay replay = new Replay(false);
 
-		Listing listing = new Listing(base, quote);
-		Market market = new Market(exchange, listing, 0.01, 0.01);
-		// Market market = Market.forSymbol(marketSymbol);
-		GeneralOrder targetOrder1 = (new GeneralOrder(new Instant(System.currentTimeMillis() - 2000), new Portfolio(), market, BigDecimal.ONE,
-				FillType.TRAILING_STOP_LOSS));
-		targetOrder1.withComment("targetOrder1").withTargetPrice(BigDecimal.valueOf(1)).withPositionEffect(PositionEffect.OPEN)
-				.withExecutionInstruction(ExecutionInstruction.MAKER).withLimitPrice(BigDecimal.valueOf(3));
+  //   Context context = Context.create(new EventTimeManager());
+  /*
+   * protected Injector injector = Guice.createInjector(new AbstractModule() {
+   * @Override protected void configure() { bind(MockOrderService.class); } }); // @Before // public void setup() { // injector.injectMembers(this);
+   * // }
+   * @Inject BaseOrderService orderSerivce;
+   */
 
-		GeneralOrder targetOrder2 = (new GeneralOrder(new Instant(System.currentTimeMillis() - 2000), new Portfolio(), market, BigDecimal.ONE,
-				FillType.TRAILING_STOP_LOSS));
-		targetOrder2.withComment("targetOrder2").withTargetPrice(BigDecimal.valueOf(2)).withPositionEffect(PositionEffect.OPEN)
-				.withExecutionInstruction(ExecutionInstruction.MAKER).withLimitPrice(BigDecimal.valueOf(4));
+  public class MyModule extends AbstractModule {
+    @Override
+    protected void configure() {
+      // bind(OrderService.class).to(BaseOrderService.class);
+    }
+  }
 
-		GeneralOrder stopTargetOrder3 = (new GeneralOrder(new Instant(System.currentTimeMillis()), new Portfolio(), market, BigDecimal.ONE,
-				FillType.TRAILING_STOP_LOSS));
-		stopTargetOrder3.withComment("stopTargetOrder3").withTargetPrice(BigDecimal.valueOf(3)).withStopPrice(BigDecimal.valueOf(3))
-				.withPositionEffect(PositionEffect.OPEN).withExecutionInstruction(ExecutionInstruction.MAKER).withLimitPrice(BigDecimal.valueOf(5));
+  @Test
+  public final void test() {}
 
-		GeneralOrder stopTargetOrder4 = (new GeneralOrder(new Instant(System.currentTimeMillis()), new Portfolio(), market, BigDecimal.ONE,
-				FillType.TRAILING_STOP_LOSS));
-		stopTargetOrder4.withComment("stopTargetOrder4").withTargetPrice(BigDecimal.valueOf(4)).withStopPrice(BigDecimal.valueOf(4))
-				.withPositionEffect(PositionEffect.OPEN).withExecutionInstruction(ExecutionInstruction.MAKER).withLimitPrice(BigDecimal.valueOf(6));
+  @Test
+  public final void pairOrderPlacedOnFillTest() {
+    Exchange exchange = new Exchange("OKCOIN_THISWEEK");
+    Asset base = new Currency(false, "USD", 0.01);
+    Asset quote = new Currency(false, "BTC", 0.01);
 
-		GeneralOrder stopOrder1 = (new GeneralOrder(new Instant(System.currentTimeMillis()), new Portfolio(), market, BigDecimal.ONE,
-				FillType.TRAILING_STOP_LOSS));
-		stopOrder1.withComment("stopOrder1").withStopPrice(BigDecimal.valueOf(1)).withPositionEffect(PositionEffect.OPEN)
-				.withExecutionInstruction(ExecutionInstruction.MAKER).withLimitPrice(BigDecimal.valueOf(3));
+    Listing listing = new Listing(base, quote);
+    Market market = new Market(exchange, listing, 0.01, 0.01);
+    // Market market = Market.forSymbol(marketSymbol);
+    GeneralOrder targetOrder1 =
+        (new GeneralOrder(
+            new Instant(System.currentTimeMillis() - 2000),
+            new Portfolio(),
+            market,
+            BigDecimal.ONE,
+            FillType.TRAILING_STOP_LOSS));
+    // Injector injector = Guice.createInjector(new MyModule()); // modules are the next section
+    // OrderService orderService = injector.getInstance(OrderService.class);
 
-		GeneralOrder stopOrder2 = (new GeneralOrder(new Instant(System.currentTimeMillis()), new Portfolio(), market, BigDecimal.ONE,
-				FillType.TRAILING_STOP_LOSS));
-		stopOrder2.withComment("stopOrder2").withStopPrice(BigDecimal.valueOf(2)).withPositionEffect(PositionEffect.OPEN)
-				.withExecutionInstruction(ExecutionInstruction.MAKER).withLimitPrice(BigDecimal.valueOf(4));
+    /*    try {
+      orderService.placeOrder(targetOrder1);
+      Collection<Order> pendingOrders = orderService.getPendingOrders();
+    } catch (Throwable e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }*/
+  }
 
-		GeneralOrder order1 = (new GeneralOrder(new Instant(System.currentTimeMillis()), new Portfolio(), market, BigDecimal.ONE, FillType.TRAILING_STOP_LOSS));
-		order1.withComment("order1").withPositionEffect(PositionEffect.OPEN).withExecutionInstruction(ExecutionInstruction.MAKER);
+  @Test
+  public final void POVTest() {
+    Exchange exchange = new Exchange("OKCOIN_THISWEEK");
+    Asset base = new Currency(false, "USD", 0.01);
+    Asset quote = new Currency(false, "LTC", 0.00000001);
+    Prompt prompt =
+        new Prompt(
+            "QUARTER",
+            1d,
+            0.1,
+            quote,
+            1d,
+            0.001,
+            20,
+            FeeMethod.PercentagePerUnit,
+            0.003,
+            0.003,
+            FeeMethod.PercentagePerUnit,
+            FeeMethod.PercentagePerUnit);
 
-		GeneralOrder marketorder1 = (new GeneralOrder(new Instant(System.currentTimeMillis() - 5), new Portfolio(), market, BigDecimal.ONE, FillType.MARKET));
-		marketorder1.withComment("marketorder1").withPositionEffect(PositionEffect.OPEN).withExecutionInstruction(ExecutionInstruction.TAKER)
-				.withLimitPrice(BigDecimal.valueOf(4));
+    final RemainderHandler buyHandler =
+        new RemainderHandler() {
+          @Override
+          public RoundingMode getRoundingMode() {
+            return RoundingMode.FLOOR;
+          }
+        };
 
-		Instant myinstant = new Instant(System.currentTimeMillis());
-		GeneralOrder marketorder2 = (new GeneralOrder(myinstant, new Portfolio(), market, BigDecimal.ONE, FillType.MARKET));
-		marketorder2.withComment("marketorder2").withPositionEffect(PositionEffect.OPEN).withExecutionInstruction(ExecutionInstruction.TAKER)
-				.withLimitPrice(BigDecimal.valueOf(4));
+    final RemainderHandler sellHandler =
+        new RemainderHandler() {
+          @Override
+          public RoundingMode getRoundingMode() {
+            return RoundingMode.CEILING;
+          }
+        };
 
-		GeneralOrder marketorder3 = (new GeneralOrder(myinstant, new Portfolio(), market, BigDecimal.valueOf(2L), FillType.MARKET));
-		marketorder3.withComment("marketorder3").withPositionEffect(PositionEffect.OPEN).withExecutionInstruction(ExecutionInstruction.TAKER)
-				.withLimitPrice(BigDecimal.valueOf(4));
+    Listing listing = new Listing(base, quote, prompt);
+    Market market = new Market(exchange, listing, 0.001, 1);
+    // Market market = Market.forSymbol(marketSymbol);
+    GeneralOrder generalOrder =
+        (new GeneralOrder(
+            new Instant(System.currentTimeMillis() - 2000),
+            new Portfolio(),
+            market,
+            BigDecimal.ONE.negate(),
+            FillType.LIMIT));
+    DiscreteAmount discreteLimitPrice =
+        new DiscreteAmount(
+            DiscreteAmount.roundedCountForBasis(BigDecimal.valueOf(136.07), market.getPriceBasis()),
+            market.getPriceBasis());
 
-		GeneralOrder trailingStopOrder3 = (new GeneralOrder(new Instant(System.currentTimeMillis()), new Portfolio(), market, BigDecimal.ONE,
-				FillType.TRAILING_STOP_LOSS));
-		trailingStopOrder3.withComment("trailingStopOrder3").withStopPrice(BigDecimal.valueOf(6)).withStopAmount(BigDecimal.valueOf(1))
-				.withPositionEffect(PositionEffect.OPEN).withExecutionInstruction(ExecutionInstruction.MAKER).withLimitPrice(BigDecimal.valueOf(8));
+    generalOrder
+        .withLimitPrice(discreteLimitPrice)
+        .withPercentageOfVolume(0.0001)
+        .withPercentageOfVolumeInterval(86400.0)
+        .withTargetStrategy(TargetStrategy.PERCENTAGEOFVOLUME);
 
-		GeneralOrder trailingStopOrder2 = (new GeneralOrder(new Instant(System.currentTimeMillis()), new Portfolio(), market, BigDecimal.ONE,
-				FillType.TRAILING_STOP_LOSS));
-		trailingStopOrder2.withComment("trailingStopOrder2").withStopPrice(BigDecimal.valueOf(8)).withStopAmount(BigDecimal.valueOf(2))
-				.withPositionEffect(PositionEffect.OPEN).withExecutionInstruction(ExecutionInstruction.MAKER).withLimitPrice(BigDecimal.valueOf(4));
+    Bar bar =
+        new Bar(
+            new Instant(System.currentTimeMillis() - 2000),
+            new Instant(System.currentTimeMillis() - 2000),
+            "bar",
+            86400d,
+            70.126d,
+            72.845d,
+            75.233d,
+            69.635d,
+            648014.0,
+            28157d,
+            -28157d,
+            market);
+    //  com.google.inject.Injector injector =
+    //    Guice.createInjector(new MyModule()); // modules are the next section
+    // BaseOrderService orderService = injector.getInstance(BaseOrderService.class);
 
-		GeneralOrder trailingStopOrder1 = (new GeneralOrder(new Instant(System.currentTimeMillis()), new Portfolio(), market, BigDecimal.ONE,
-				FillType.TRAILING_STOP_LOSS));
-		trailingStopOrder1.withComment("trailingStopOrder1").withStopPrice(BigDecimal.valueOf(10)).withStopAmount(BigDecimal.valueOf(3))
-				.withPositionEffect(PositionEffect.OPEN).withExecutionInstruction(ExecutionInstruction.MAKER).withLimitPrice(BigDecimal.valueOf(5));
+    DiscreteAmount volume = BaseOrderService.getPercentageOfVolume(generalOrder, market, bar);
+    // assertEquals(volume, discreteLimitPrice);
+  }
 
-		stopOrders.add(order1);
-		stopOrders.add(stopOrder1);
-		stopOrders.add(marketorder1);
-		stopOrders.add(stopOrder2);
-		stopOrders.add(targetOrder1);
-		stopOrders.add(marketorder3);
-		stopOrders.add(targetOrder2);
-		stopOrders.add(marketorder2);
-		stopOrders.add(stopTargetOrder4);
-		stopOrders.add(stopTargetOrder3);
+  @Test
+  public final void outstandingVolumeTest() {
+    double ratioQuantity = -7.5000459;
+    DecimalAmount workngLinkedVolume = DecimalAmount.ZERO;
+    DecimalAmount filledLinkedVolume = DecimalAmount.ZERO;
 
-		// orders.add(stopOrder1);
-		// orders.add(targetOrder1);
-		// orders.add(targetOrder2);
+    Exchange exchange = new Exchange("OKCOIN_SWAP");
+    Asset base = new Currency(false, "USD", 0.01);
+    Asset quote = new Currency(false, "LTC", 0.00000001);
+    Prompt prompt =
+        new Prompt(
+            "SWAP",
+            1d,
+            0.1,
+            quote,
+            1d,
+            0.001,
+            20,
+            FeeMethod.PercentagePerUnit,
+            0.003,
+            0.003,
+            FeeMethod.PercentagePerUnit,
+            FeeMethod.PercentagePerUnit);
+    Listing listing = new Listing(base, quote, prompt);
+    Market pairMarket = new Market(exchange, listing, 0.001, 1);
+    long filledVolumeCount =
+        DiscreteAmount.roundedCountForBasis(BigDecimal.valueOf(0.0749), 0.00000001);
+    DiscreteAmount filledVolume = new DiscreteAmount(filledVolumeCount, 0.00000001);
+    DecimalAmount outstandingFilled =
+        filledVolume.times(BigDecimal.valueOf(ratioQuantity), Remainder.ROUND_UP);
+    DiscreteAmount outstandingVolume =
+        ((outstandingFilled).minus(workngLinkedVolume).minus(filledLinkedVolume))
+            .toBasis(pairMarket.getVolumeBasis(), Remainder.ROUND_DOWN);
+  }
 
-		// so why is this sometimes failing?
+  @Test
+  public final void orderConverstionTest() {
+    Exchange exchange = new Exchange("OKCOIN_THISWEEK");
+    Asset base = new Currency(false, "USD", 0.01);
+    Asset quote = new Currency(false, "LTC", 0.00000001);
 
-		Comparator<Order> smallestToLargestPrice = MockOrderService.ascendingPriceComparator;
-		Collections.sort(stopOrders, smallestToLargestPrice);
+    final RemainderHandler buyHandler =
+        new RemainderHandler() {
+          @Override
+          public RoundingMode getRoundingMode() {
+            return RoundingMode.FLOOR;
+          }
+        };
 
-		assertEquals(marketorder3, stopOrders.get(0));
-		assertEquals(marketorder1, stopOrders.get(1));
-		assertEquals(marketorder2, stopOrders.get(2));
-		assertEquals(order1, stopOrders.get(3));
-		assertEquals(targetOrder1, stopOrders.get(4));
-		assertEquals(stopOrder1, stopOrders.get(5));
-		assertEquals(targetOrder2, stopOrders.get(6));
-		assertEquals(stopOrder2, stopOrders.get(7));
-		assertEquals(stopTargetOrder3, stopOrders.get(8));
-		assertEquals(stopTargetOrder4, stopOrders.get(9));
+    final RemainderHandler sellHandler =
+        new RemainderHandler() {
+          @Override
+          public RoundingMode getRoundingMode() {
+            return RoundingMode.CEILING;
+          }
+        };
 
-		Comparator<Order> largestToSmallestPrice = MockOrderService.descendingPriceComparator;
+    Listing listing = new Listing(base, quote);
+    Market market = new Market(exchange, listing, 0.001, 1);
+    // Market market = Market.forSymbol(marketSymbol);
+    GeneralOrder generalOrder =
+        (new GeneralOrder(
+            new Instant(System.currentTimeMillis() - 2000),
+            new Portfolio(),
+            market,
+            BigDecimal.ONE.negate(),
+            FillType.LIMIT));
+    DiscreteAmount discreteLimitPrice =
+        new DiscreteAmount(
+            DiscreteAmount.roundedCountForBasis(BigDecimal.valueOf(136.07), market.getPriceBasis()),
+            market.getPriceBasis());
 
-		Collections.sort(stopOrders, largestToSmallestPrice);
-		assertEquals(marketorder3, stopOrders.get(0));
-		assertEquals(marketorder1, stopOrders.get(1));
-		assertEquals(marketorder2, stopOrders.get(2));
-		assertEquals(order1, stopOrders.get(3));
-		assertEquals(stopTargetOrder4, stopOrders.get(4));
-		assertEquals(stopTargetOrder3, stopOrders.get(5));
-		assertEquals(targetOrder2, stopOrders.get(6));
-		assertEquals(stopOrder2, stopOrders.get(7));
-		assertEquals(targetOrder1, stopOrders.get(8));
-		assertEquals(stopOrder1, stopOrders.get(9));
+    generalOrder.withLimitPrice(discreteLimitPrice);
+    DiscreteAmount volumeDiscrete =
+        new DiscreteAmount(
+            DiscreteAmount.roundedCountForBasis(BigDecimal.valueOf(-1), market.getPriceBasis()),
+            market.getPriceBasis());
 
-		Comparator<Order> smallestToLargestStopPrice = MockOrderService.ascendingStopPriceComparator;
-		Collections.sort(stopOrders, smallestToLargestStopPrice);
+    SpecificOrder specificOrder =
+        new SpecificOrder(
+            new Instant(System.currentTimeMillis() - 2000),
+            new Portfolio(),
+            market,
+            volumeDiscrete.getCount());
+    // limitPrice = generalOrder.getLimitPrice();
 
-		// assertEquals(targetOrder1, stopOrders.get(0));
-		assertEquals(stopOrder1, stopOrders.get(0));
-		//  assertEquals(targetOrder2, stopOrders.get(2));
-		assertEquals(stopOrder2, stopOrders.get(1));
-		assertEquals(stopTargetOrder3, stopOrders.get(2));
-		assertEquals(stopTargetOrder4, stopOrders.get(3));
-		// assertEquals(order1, stopOrders.get(6));
+    DecimalAmount limitPrice =
+        DecimalAmount.of(
+            specificOrder.getLegNumber() == 1
+                ? generalOrder.getLimitPrice().plus(specificOrder.getDifferentialPrice())
+                : generalOrder.getLimitPrice().minus(specificOrder.getDifferentialPrice()));
 
-		Comparator<Order> smallestToLargestTargetPrice = MockOrderService.ascendingTargetPriceComparator;
-		Collections.sort(stopOrders, smallestToLargestTargetPrice);
-
-		// assertEquals(targetOrder1, stopOrders.get(0));
-		assertEquals(targetOrder1, stopOrders.get(0));
-		//  assertEquals(targetOrder2, stopOrders.get(2));
-		assertEquals(targetOrder2, stopOrders.get(1));
-		assertEquals(stopTargetOrder3, stopOrders.get(2));
-		assertEquals(stopTargetOrder4, stopOrders.get(3));
-
-		Comparator<Order> largestToSmallestStopPrice = MockOrderService.descendingStopPriceComparator;
-
-		Collections.sort(stopOrders, largestToSmallestStopPrice);
-		assertEquals(stopTargetOrder4, stopOrders.get(0));
-		assertEquals(stopTargetOrder3, stopOrders.get(1));
-		assertEquals(stopOrder2, stopOrders.get(2));
-		assertEquals(stopOrder1, stopOrders.get(3));
-
-		Comparator<Order> largestToSmallestTargetPrice = MockOrderService.descendingTargetPriceComparator;
-
-		Collections.sort(stopOrders, largestToSmallestTargetPrice);
-		assertEquals(stopTargetOrder4, stopOrders.get(0));
-		assertEquals(stopTargetOrder3, stopOrders.get(1));
-		assertEquals(targetOrder2, stopOrders.get(2));
-		assertEquals(targetOrder1, stopOrders.get(3));
-		//assertEquals(order1, stopOrders.get(6));
-
-		trailingStopOrders.add(trailingStopOrder1);
-		trailingStopOrders.add(trailingStopOrder2);
-		trailingStopOrders.add(trailingStopOrder3);
-
-		Comparator<Order> smallestToLargestTrailingStopPrice = MockOrderService.ascendingTrailingStopPriceComparator;
-		Collections.sort(trailingStopOrders, smallestToLargestTrailingStopPrice);
-		assertEquals(trailingStopOrder3, trailingStopOrders.get(0));
-		assertEquals(trailingStopOrder2, trailingStopOrders.get(1));
-		assertEquals(trailingStopOrder1, trailingStopOrders.get(2));
-
-		Comparator<Order> largestToSmallestTrailingStopPrice = MockOrderService.descendingTrailingStopPriceComparator;
-		Collections.sort(trailingStopOrders, largestToSmallestTrailingStopPrice);
-		assertEquals(trailingStopOrder1, trailingStopOrders.get(0));
-		assertEquals(trailingStopOrder2, trailingStopOrders.get(1));
-		assertEquals(trailingStopOrder3, trailingStopOrders.get(2));
-
-	}
-
+    DiscreteAmount discreteLimit = limitPrice.toBasis(market.getPriceBasis(), buyHandler);
+    specificOrder.withLimitPrice(discreteLimit);
+    assertEquals(specificOrder.getLimitPrice(), discreteLimitPrice);
+  }
 }

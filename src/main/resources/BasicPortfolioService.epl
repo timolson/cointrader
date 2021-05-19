@@ -37,9 +37,7 @@ from
 @Priority(1)
 @Name('LOG_PORTFOLIO_VALUE')
 @Subscriber(className='org.cryptocoinpartners.schema.PortfolioManager$DataSubscriber')
-on pattern
-	[every timer:at(0, 00, *, *, *)]
-	select current_timestamp,portfolio from PortfolioWindow;
+on pattern [every timer:at(0, 00, *, *, *)] select current_timestamp,portfolio from PortfolioWindow;
 	
 @Priority(1)
 @Name('LOG_PORTFOLIO_SUBSCRIBED')

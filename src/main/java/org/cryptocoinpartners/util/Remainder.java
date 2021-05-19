@@ -12,56 +12,56 @@ import org.cryptocoinpartners.schema.Amount;
  */
 public class Remainder {
 
-    public static final RemainderHandler DISCARD = new RemainderHandler() {
-        @Override
-        public RoundingMode getRoundingMode() {
-            return RoundingMode.FLOOR;
-        }
-    };
+	public static final RemainderHandler DISCARD = new RemainderHandler() {
+		@Override
+		public RoundingMode getRoundingMode() {
+			return RoundingMode.FLOOR;
+		}
+	};
 
-    public static final RemainderHandler TO_HOUSE = new RemainderHandler() {
-        @Override
-        public void handleRemainder(Amount result, BigDecimal remainder) {
-            // todo
-        }
+	public static final RemainderHandler TO_HOUSE = new RemainderHandler() {
+		@Override
+		public void handleRemainder(Amount result, BigDecimal remainder) {
+			// todo
+		}
 
-        @Override
-        public RoundingMode getRoundingMode() {
-            return RoundingMode.FLOOR;
-        }
-    };
+		@Override
+		public RoundingMode getRoundingMode() {
+			return RoundingMode.FLOOR;
+		}
+	};
 
-    public static final RemainderHandler ROUND_EVEN = new RemainderHandler() {
-        @Override
-        public RoundingMode getRoundingMode() {
-            return RoundingMode.HALF_EVEN;
-        }
-    };
-    public static final RemainderHandler ROUND_DOWN = new RemainderHandler() {
-        @Override
-        public RoundingMode getRoundingMode() {
-            return RoundingMode.HALF_DOWN;
-        }
-    };
+	public static final RemainderHandler ROUND_EVEN = new RemainderHandler() {
+		@Override
+		public RoundingMode getRoundingMode() {
+			return RoundingMode.HALF_EVEN;
+		}
+	};
+	public static final RemainderHandler ROUND_DOWN = new RemainderHandler() {
+		@Override
+		public RoundingMode getRoundingMode() {
+			return RoundingMode.DOWN;
+		}
+	};
 
-    public static final RemainderHandler ROUND_UP = new RemainderHandler() {
-        @Override
-        public RoundingMode getRoundingMode() {
-            return RoundingMode.HALF_UP;
-        }
-    };
-    public static final RemainderHandler ROUND_CEILING = new RemainderHandler() {
-        @Override
-        public RoundingMode getRoundingMode() {
-            return RoundingMode.CEILING;
-        }
-    };
+	public static final RemainderHandler ROUND_UP = new RemainderHandler() {
+		@Override
+		public RoundingMode getRoundingMode() {
+			return RoundingMode.UP;
+		}
+	};
+	public static final RemainderHandler ROUND_CEILING = new RemainderHandler() {
+		@Override
+		public RoundingMode getRoundingMode() {
+			return RoundingMode.CEILING;
+		}
+	};
 
-    public static final RemainderHandler ROUND_FLOOR = new RemainderHandler() {
-        @Override
-        public RoundingMode getRoundingMode() {
-            return RoundingMode.FLOOR;
-        }
-    };
+	public static final RemainderHandler ROUND_FLOOR = new RemainderHandler() {
+		@Override
+		public RoundingMode getRoundingMode() {
+			return RoundingMode.FLOOR;
+		}
+	};
 
 }

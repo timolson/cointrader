@@ -1,6 +1,7 @@
 package org.cryptocoinpartners.module;
 
 import java.io.Serializable;
+import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -393,10 +394,11 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 						//  }
 
 					} catch (RuntimeException e) {
+						Thread.currentThread().interrupt();
 						log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, resubmitting thread due to "
 								+ (entity == null ? "null entity" : entity.getUuid()) + " full stack trace follows:", e);
 
-						mergeService.submit(this);
+						mergeService.submit((new batchMergeRunnable(mergeQueue)));
 						throw e;
 					} catch (Throwable e) {
 						log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, " + (entity == null ? "null entity" : entity.getUuid())
@@ -418,64 +420,92 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 
 	}
 
+	class BulkMergeExceptionHandler implements UncaughtExceptionHandler {
+		public void uncaughtException(Thread t, Throwable e) {
+			System.out.printf("An exception has been captured\n");
+			System.out.printf("Thread: %s\n", t.getId());
+			System.out.printf("Exception: %s: %s\n", e.getClass().getName(), e.getMessage());
+			System.out.printf("Stack Trace: \n");
+			e.printStackTrace(System.out);
+			System.out.printf("Thread status: %s\n", t.getState());
+			mergeService.submit((new bulkMergeRunnable(mergeQueue)));
+		}
+	}
+
 	public class bulkMergeRunnable implements Callable {
 
 		private final BlockingQueue bulkMergeQueue;
 
 		@Override
 		public Object call() throws Exception {
+			Thread.currentThread().setUncaughtExceptionHandler(new BulkMergeExceptionHandler());
 
 			EntityBase entity = null;
 			while (true) {
 
-				try {
-					entity = (EntityBase) bulkMergeQueue.take();
+				entity = (EntityBase) bulkMergeQueue.take();
 
-					if (entity == null)
-						continue;
-					// synchronized (entity) {
-					if (entity.getDao() == null)
-						Injector.root().getInjector().injectMembers(entity);
-					if (entity.getDao() == null) {
-						log.error(this.getClass().getSimpleName() + ":mergeRunnable - No DAO defined for " + entity.getClass().getSimpleName() + " "
-								+ entity.getUuid());
+				if (entity == null)
+					continue;
+				// synchronized (entity) {
+				if (entity.getDao() == null)
+					Injector.root().getInjector().injectMembers(entity);
+				if (entity.getDao() == null) {
+					log.error(this.getClass().getSimpleName() + ":mergeRunnable - No DAO defined for " + entity.getClass().getSimpleName() + " "
+							+ entity.getUuid());
 
-						//    mergeQueue.add(entity);
-						continue;
-
-					}
-					//  continue;
-
-					if (entity.getPeristanceAction() != null) {
-						switch (entity.getPeristanceAction()) {
-							case NEW:
-								entity.getDao().persistEntities(true, entity);
-								break;
-							case MERGE:
-								entity.getDao().mergeEntities(true, entity);
-								break;
-							case DELETE:
-								entity.getDao().deleteEntities(entity);
-								break;
-							default:
-								entity.getDao().mergeEntities(true, entity);
-								break;
-						}
-					} else
-						entity.getDao().mergeEntities(false, entity);
-					//  }
-
-				} catch (RuntimeException e) {
-					log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, resubmitting thread due to "
-							+ (entity == null ? "null entity" : entity.getUuid()) + " full stack trace follows:", e);
-
-					mergeService.submit(this);
-					throw e;
-				} catch (Throwable e) {
-					log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, " + (entity == null ? "null entity" : entity.getUuid())
-							+ " full stack trace follows:", e);
+					//    mergeQueue.add(entity);
+					continue;
 
 				}
+				//  continue;
+
+				if (entity.getPeristanceAction() != null) {
+					switch (entity.getPeristanceAction()) {
+						case NEW:
+							try {
+								entity.getDao().persistEntities(true, entity);
+							} catch (Throwable e) {
+								log.error(this.getClass().getSimpleName() + ":mergeRunnable - Unable to save " + entity.getClass().getSimpleName() + " "
+										+ entity.getUuid());
+							}
+
+							break;
+						case MERGE:
+							try {
+								entity.getDao().mergeEntities(true, entity);
+							} catch (Throwable e) {
+								log.error(this.getClass().getSimpleName() + ":mergeRunnable - Unable to save " + entity.getClass().getSimpleName() + " "
+										+ entity.getUuid());
+							}
+							break;
+						case DELETE:
+							try {
+								entity.getDao().deleteEntities(entity);
+							} catch (Throwable e) {
+								log.error(this.getClass().getSimpleName() + ":mergeRunnable - Unable to save " + entity.getClass().getSimpleName() + " "
+										+ entity.getUuid());
+							}
+							break;
+						default:
+							try {
+								entity.getDao().mergeEntities(true, entity);
+							} catch (Throwable e) {
+								log.error(this.getClass().getSimpleName() + ":mergeRunnable - Unable to save " + entity.getClass().getSimpleName() + " "
+										+ entity.getUuid());
+							}
+							break;
+
+					}
+
+				} else
+					try {
+						entity.getDao().mergeEntities(false, entity);
+					} catch (Throwable e) {
+						log.error(this.getClass().getSimpleName() + ":mergeRunnable - Unable to save " + entity.getClass().getSimpleName() + " "
+								+ entity.getUuid());
+					}
+
 			}
 
 		}
@@ -535,10 +565,11 @@ public class ApplicationInitializer implements Context.AttachListener, Serializa
 					//  }
 
 				} catch (RuntimeException e) {
+					Thread.currentThread().interrupt();
 					log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, resubmitting thread due to "
 							+ (entity == null ? "null entity" : entity.getUuid()) + " full stack trace follows:", e);
-
-					mergeService.submit(this);
+					//but this thread is already knackered so submit a new thread.
+					mergeService.submit((new mergeRunnable(mergeQueue)));
 					throw e;
 				} catch (Throwable e) {
 					log.error(" " + this.getClass().getSimpleName() + ":mergeRunnable, " + (entity == null ? "null entity" : entity.getUuid())
