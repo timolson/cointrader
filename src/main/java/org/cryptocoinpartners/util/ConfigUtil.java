@@ -97,7 +97,7 @@ public class ConfigUtil {
 			userConfig = new PropertiesConfiguration(filename);
 		else
 			userConfig = new PropertiesConfiguration();
-    URL defaultProps = ConfigUtil.class.getResource("/cointrader-default.properties");
+		URL defaultProps = ConfigUtil.class.getResource("/cointrader-default.properties");
 		if (defaultProps == null)
 			throw new ConfigurationException("Could not load cointrader-default.properties");
 		defaultConfig = new PropertiesConfiguration(defaultProps);

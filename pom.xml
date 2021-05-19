@@ -21,7 +21,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<xchange.version>4.4.2</xchange.version>
 		<slf4j-api.version>1.7.5</slf4j-api.version>
-		<hibernate.version>5.2.12.Final</hibernate.version>
+		<hibernate.version>5.2.18.Final</hibernate.version>
 		<antlr.version>4.2.2</antlr.version>
 	</properties>
 
@@ -85,7 +85,11 @@
 			<version>4.9.0</version>
 		</dependency>
 		<dependency>
-			<groupId>com.beust</groupId>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-math3</artifactId>
+			<version>3.2</version>
+		</dependency>		
+		<dependency>			<groupId>com.beust</groupId>
 			<artifactId>jcommander</artifactId>
 			<version>1.30</version>
 		</dependency>
@@ -101,7 +105,11 @@
 			<artifactId>guice-persist</artifactId>
 			<version>4.1.0</version>
 		</dependency>
-
+		<dependency>
+		    <groupId>javax.persistence</groupId>
+		    <artifactId>javax.persistence-api</artifactId>
+		    <version>2.2</version>
+		</dependency>
 		<dependency>
 			<groupId>com.google.inject.extensions</groupId>
 			<artifactId>guice-assistedinject</artifactId>
@@ -147,7 +155,7 @@
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
-			<version>8.0.16</version>
+			<version>8.0.23</version>
 		</dependency>
 		<dependency>
 			<groupId>org.reflections</groupId>

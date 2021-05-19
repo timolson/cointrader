@@ -190,7 +190,14 @@ public class DecimalAmount extends Amount {
 
 			if (decimalAmount.bd.equals(bd))
 				return true;
-		}
+		} else if (obj instanceof DiscreteAmount) {
+			DiscreteAmount discreteAmount = (DiscreteAmount) obj;
+
+			if (discreteAmount.asBigDecimal().equals(bd))
+				return true;
+		} else
+
+			return false;
 		return false;
 	}
 

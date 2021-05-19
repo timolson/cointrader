@@ -21,229 +21,224 @@ import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provider;
 
-/**
- * @author Tim Olson
- */
+/** @author Tim Olson */
 @SuppressWarnings("UnusedDeclaration")
 public abstract class OrderCommand extends AntlrCommandBase {
 
-	private Portfolio portfolio;
+  private Portfolio portfolio;
 
-	@Override
-	public String getUsageHelp() {
-		return (isSell ? "sell" : "buy") + " {volume} {exchange}:{base}.{quote} [limit {price}] [stop {price}] [position {open|close}]";
-	}
+  @Override
+  public String getUsageHelp() {
+    return (isSell ? "sell" : "buy")
+        + " {volume} {exchange}:{base}.{quote} [limit {price}] [stop {price}] [position {open|close}]";
+  }
 
-	@Override
-	public String getExtraHelp() {
-		String help = "Places an order for the given volume on the specified exchange." + "If a limit price is supplied, a limit order will be generated."
-				+ "Stop and stop-limit orders are not currently supported but no " + "error will be given.";
-		if (isSell)
-			help += "Selling is the same as buying with a negative volume.";
-		return help;
-	}
+  @Override
+  public String getExtraHelp() {
+    String help =
+        "Places an order for the given volume on the specified exchange."
+            + "If a limit price is supplied, a limit order will be generated."
+            + "Stop and stop-limit orders are not currently supported but no "
+            + "error will be given.";
+    if (isSell) help += "Selling is the same as buying with a negative volume.";
+    return help;
+  }
 
-	@Override
-	public Object call() {
-		//  PortfolioManager strategy = context.getInjector().getInstance(PortfolioManager.class);
-		for (Portfolio port : portfolioService.getPortfolios())
-			portfolio = port;
-		if (market != null)
-			return (placeSpecificOrder());
-		else
-			return (placeGeneralOrder());
+  @Override
+  public Object call() {
+    //  PortfolioManager strategy = context.getInjector().getInstance(PortfolioManager.class);
+    for (Portfolio port : portfolioService.getPortfolios()) portfolio = port;
+    if (market != null) return (placeSpecificOrder());
+    else return (placeGeneralOrder());
+  }
 
-	}
+  public Boolean placeSpecificOrder() {
+    // FillType.STOP_LOSS
+    volume = (isSell && volume.compareTo(BigDecimal.ZERO) > 0) ? volume.negate() : volume;
+    GeneralOrder order =
+        generalOrderFactory.create(context.getTime(), portfolio, market, volume, FillType.MARKET);
+    order.withExecutionInstruction(ExecutionInstruction.TAKER);
 
-	public Boolean placeSpecificOrder() {
-		//FillType.STOP_LOSS
-		volume = (isSell && volume.compareTo(BigDecimal.ZERO) > 0) ? volume.negate() : volume;
-		GeneralOrder order = generalOrderFactory.create(context.getTime(), portfolio, market, volume, FillType.MARKET);
-		order.withExecutionInstruction(ExecutionInstruction.TAKER);
+    if (limit != null) {
+      long limitCount = DiscreteAmount.roundedCountForBasis(limit, market.getPriceBasis());
+      order.withLimitPrice(limit);
+      order.withFillType(FillType.LIMIT);
+    }
+    if (position != null) order.withPositionEffect(position);
 
-		if (limit != null) {
-			long limitCount = DiscreteAmount.roundedCountForBasis(limit, market.getPriceBasis());
-			order.withLimitPrice(limit);
-			order.withFillType(FillType.LIMIT);
+    try {
+      orderService.placeOrder(order);
+      // orderService.cancelSpecificOrder(order);
+      return true;
+    } catch (Throwable e) {
 
-		}
-		if (position != null)
-			order.withPositionEffect(position);
+      // TODO Auto-generated catch block
+      out.println(
+          "Unable to place order " + order + ". Stack Trace " + e.getStackTrace().toString());
+      return false;
+    }
+  }
 
-		try {
-			orderService.placeOrder(order);
-			return true;
-		} catch (Throwable e) {
+  public boolean placeGeneralOrder() {
+    volume = isSell ? volume.negate() : volume;
+    // GeneralOrder longOrder = generalOrderFactory.create(context.getTime(), portfolio, market,
+    // orderDiscrete.asBigDecimal(), FillType.STOP_LOSS);
 
-			// TODO Auto-generated catch block
-			out.println("Unable to place order " + order + ". Stack Trace " + e.getStackTrace().toString());
-			return false;
-		}
+    GeneralOrder order =
+        generalOrderFactory.create(context.getTime(), portfolio, listing, volume, FillType.MARKET);
+    order.withExecutionInstruction(ExecutionInstruction.TAKER);
+    if (limit != null) {
+      order.withFillType(FillType.LIMIT);
 
-	}
+      order.withLimitPrice(limit);
+    }
 
-	public boolean placeGeneralOrder() {
-		volume = isSell ? volume.negate() : volume;
-		// GeneralOrder longOrder = generalOrderFactory.create(context.getTime(), portfolio, market, orderDiscrete.asBigDecimal(), FillType.STOP_LOSS);
+    if (stop != null) {
+      order.withFillType(FillType.STOP_LOSS);
+      order.withStopAmount(stop);
+    }
 
-		GeneralOrder order = generalOrderFactory.create(context.getTime(), portfolio, listing, volume, FillType.MARKET);
-		order.withExecutionInstruction(ExecutionInstruction.TAKER);
-		if (limit != null) {
-			order.withFillType(FillType.LIMIT);
+    if (target != null) {
+      order.withFillType(FillType.STOP_LOSS);
+      order.withTargetAmount(target);
+    }
+    if (comment != null) {
+      order.withComment(comment);
+    }
+    if (position != null) order.withPositionEffect(position);
 
-			order.withLimitPrice(limit);
+    if (timeToLive != 0) order.withTimeToLive(timeToLive);
+    if (execInst != null) order.withExecutionInstruction(execInst);
 
-		}
+    try {
+      orderService.placeOrder(order);
+      return true;
+    } catch (Throwable e) {
+      // TODO Auto-generated catch block
+      out.println(
+          "Unable to place order " + order + ". Stack Trace " + e.getStackTrace().toString());
+      return false;
+    }
+  }
 
-		if (stop != null) {
-			order.withFillType(FillType.STOP_LOSS);
-			order.withStopAmount(stop);
-		}
+  @Override
+  protected void initCommandArgs() {
+    // clear optional args
+    stop = null;
+    limit = null;
+    position = null;
+  }
 
-		if (target != null) {
-			order.withFillType(FillType.STOP_LOSS);
-			order.withTargetAmount(target);
-		}
-		if (comment != null) {
-			order.withComment(comment);
-		}
-		if (position != null)
-			order.withPositionEffect(position);
+  public OrderCommand(boolean isSell) {
+    super("org.cryptocoinpartners.command.Order");
+    this.isSell = isSell;
+  }
 
-		if (timeToLive != 0)
-			order.withTimeToLive(timeToLive);
-		if (execInst != null)
-			order.withExecutionInstruction(execInst);
+  @Override
+  protected Injector getListenerInjector(Injector parentInjector) {
+    return parentInjector.createChildInjector(
+        new Module() {
+          @Override
+          public void configure(Binder binder) {
+            binder
+                .bind(OrderCommand.class)
+                .toProvider(
+                    new Provider<OrderCommand>() {
+                      @Override
+                      public OrderCommand get() {
+                        return OrderCommand.this;
+                      }
+                    });
+          }
+        });
+  }
 
-		try {
-			orderService.placeOrder(order);
-			return true;
-		} catch (Throwable e) {
-			// TODO Auto-generated catch block
-			out.println("Unable to place order " + order + ". Stack Trace " + e.getStackTrace().toString());
-			return false;
-		}
+  public BigDecimal getVolume() {
+    return volume;
+  }
 
-	}
+  public void setVolume(BigDecimal volume) {
+    this.volume = volume;
+  }
 
-	@Override
-	protected void initCommandArgs() {
-		// clear optional args
-		stop = null;
-		limit = null;
-		position = null;
-	}
+  public Market getMarket() {
+    return market;
+  }
 
-	public OrderCommand(boolean isSell) {
-		super("org.cryptocoinpartners.command.Order");
-		this.isSell = isSell;
-	}
+  public void setMarket(Market market) {
+    this.market = market;
+    this.listing = market.getListing();
+  }
 
-	@Override
-	protected Injector getListenerInjector(Injector parentInjector) {
-		return parentInjector.createChildInjector(new Module() {
-			@Override
-			public void configure(Binder binder) {
-				binder.bind(OrderCommand.class).toProvider(new Provider<OrderCommand>() {
-					@Override
-					public OrderCommand get() {
-						return OrderCommand.this;
-					}
-				});
-			}
-		});
-	}
+  public Portfolio getPortfolio() {
+    return portfolio;
+  }
 
-	public BigDecimal getVolume() {
-		return volume;
-	}
+  public void setPortfolio(Portfolio portfolio) {
+    this.portfolio = portfolio;
+  }
 
-	public void setVolume(BigDecimal volume) {
-		this.volume = volume;
-	}
+  public Listing getListing() {
+    return listing;
+  }
 
-	public Market getMarket() {
-		return market;
-	}
+  public void setListing(Listing listing) {
+    this.listing = listing;
+    this.market = null;
+  }
 
-	public void setMarket(Market market) {
-		this.market = market;
-		this.listing = market.getListing();
-	}
+  public BigDecimal getLimit() {
+    return limit;
+  }
 
-	public Portfolio getPortfolio() {
-		return portfolio;
-	}
+  public PositionEffect getPosition() {
+    return position;
+  }
 
-	public void setPortfolio(Portfolio portfolio) {
-		this.portfolio = portfolio;
+  public void setLimit(BigDecimal limit) {
+    this.limit = limit;
+  }
 
-	}
+  public void setPosition(PositionEffect position) {
+    this.position = position;
+  }
 
-	public Listing getListing() {
-		return listing;
-	}
+  public void setComment(String comment) {
+    this.comment = comment;
+  }
 
-	public void setListing(Listing listing) {
-		this.listing = listing;
-		this.market = null;
-	}
+  public BigDecimal getStop() {
+    return stop;
+  }
 
-	public BigDecimal getLimit() {
-		return limit;
-	}
+  public void setStop(BigDecimal stop) {
+    this.stop = stop;
+  }
 
-	public PositionEffect getPosition() {
-		return position;
-	}
+  public boolean isSell() {
+    return isSell;
+  }
 
-	public void setLimit(BigDecimal limit) {
-		this.limit = limit;
-	}
+  public void setSell(boolean isSell) {
+    this.isSell = isSell;
+  }
 
-	public void setPosition(PositionEffect position) {
-		this.position = position;
-	}
+  @Inject OrderService orderService;
+  @Inject private PortfolioService portfolioService;
+  @Inject protected transient GeneralOrderFactory generalOrderFactory;
 
-	public void setComment(String comment) {
-		this.comment = comment;
-	}
+  // @Inject
+  // private Portfolio portfolio;
+  private BigDecimal volume;
+  private Market market;
+  private Listing listing;
+  private BigDecimal limit;
+  private PositionEffect position;
+  private BigDecimal stop;
+  private BigDecimal target;
+  private String comment;
+  private ExecutionInstruction execInst;
+  private long timeToLive;
 
-	public BigDecimal getStop() {
-		return stop;
-	}
-
-	public void setStop(BigDecimal stop) {
-		this.stop = stop;
-	}
-
-	public boolean isSell() {
-		return isSell;
-	}
-
-	public void setSell(boolean isSell) {
-		this.isSell = isSell;
-	}
-
-	@Inject
-	OrderService orderService;
-	@Inject
-	private PortfolioService portfolioService;
-	@Inject
-	protected transient GeneralOrderFactory generalOrderFactory;
-
-	// @Inject
-	// private Portfolio portfolio;
-	private BigDecimal volume;
-	private Market market;
-	private Listing listing;
-	private BigDecimal limit;
-	private PositionEffect position;
-	private BigDecimal stop;
-	private BigDecimal target;
-	private String comment;
-	private ExecutionInstruction execInst;
-	private long timeToLive;
-
-	private boolean isSell;
+  private boolean isSell;
 }

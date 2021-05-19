@@ -52,8 +52,13 @@ public enum FillType {
 	/** 15 This place a limit order and will limit profits on the filled order by selling at the target price */
 	TAKE_PROFIT("TAKE_PROFIT"),
 	/** 16 This will trigger a limit order at the specficed target price */
-	TARGET_LIMIT("TARGET_LIMIT");
-
+	TARGET_LIMIT("TARGET_LIMIT"),
+	/** 17 This will has multiple child orders that are adjusted as a group */
+	MULTI_LEG("MULTI_LEG"),
+	/** 18 This will be placed into the market at a given point in time */
+	TIMED("TIMED"),
+	/** 19 This will be placed  as a closing order into the market at a given point in time */
+	TIMED_EXIT("TIMED_EXIT");
 	private final String enumValue;
 
 	/**
@@ -67,12 +72,16 @@ public enum FillType {
 		return this == FillType.STOP_LIMIT || this == FillType.REENTRANT_STOP_LIMIT || this == FillType.TRAILING_STOP_LIMIT
 				|| this == FillType.REENTRANT_TRAILING_STOP_LIMIT || this == FillType.TRAILING_UNREALISED_STOP_LIMIT || this == FillType.STOP_LOSS
 				|| this == FillType.REENTRANT_STOP_LOSS || this == FillType.TRAILING_STOP_LOSS || this == FillType.REENTRANT_TRAILING_STOP_LOSS
-				|| this == FillType.TRAILING_UNREALISED_STOP_LOSS || this == FillType.TAKE_PROFIT || this == FillType.TARGET_LIMIT;
+				|| this == FillType.TRAILING_UNREALISED_STOP_LOSS || this == FillType.TAKE_PROFIT || this == FillType.TARGET_LIMIT | this == FillType.TIMED;
 	}
 
 	public boolean isTrailing() {
 		return this == FillType.TRAILING_STOP_LIMIT || this == FillType.REENTRANT_TRAILING_STOP_LIMIT || this == FillType.TRAILING_UNREALISED_STOP_LIMIT
 				|| this == FillType.TRAILING_STOP_LOSS || this == FillType.REENTRANT_TRAILING_STOP_LOSS || this == FillType.TRAILING_UNREALISED_STOP_LOSS;
+	}
+
+	public boolean isTimed() {
+		return this == FillType.TIMED || this == FillType.TIMED_EXIT;
 	}
 
 	public boolean isReentrant() {
@@ -164,6 +173,10 @@ public enum FillType {
 			FillType.values.put(MARKET.enumValue, MARKET);
 			FillType.values.put(TAKE_PROFIT.enumValue, TAKE_PROFIT);
 			FillType.values.put(TARGET_LIMIT.enumValue, TARGET_LIMIT);
+			FillType.values.put(MULTI_LEG.enumValue, MULTI_LEG);
+			FillType.values.put(TIMED.enumValue, TIMED);
+			FillType.values.put(TIMED_EXIT.enumValue, TIMED_EXIT);
+
 		}
 		synchronized (FillType.valueList) {
 			FillType.valueList.add(GOOD_TIL_CANCELLED);
@@ -179,6 +192,9 @@ public enum FillType {
 			FillType.valueList.add(MARKET);
 			FillType.valueList.add(TAKE_PROFIT);
 			FillType.valueList.add(TARGET_LIMIT);
+			FillType.valueList.add(MULTI_LEG);
+			FillType.valueList.add(TIMED);
+			FillType.valueList.add(TIMED_EXIT);
 			FillType.valueList = Collections.unmodifiableList(valueList);
 		}
 		synchronized (FillType.literals) {
@@ -195,7 +211,9 @@ public enum FillType {
 			FillType.literals.add(MARKET.enumValue);
 			FillType.literals.add(TAKE_PROFIT.enumValue);
 			FillType.literals.add(TARGET_LIMIT.enumValue);
-
+			FillType.literals.add(MULTI_LEG.enumValue);
+			FillType.literals.add(TIMED.enumValue);
+			FillType.literals.add(TIMED_EXIT.enumValue);
 			FillType.literals = Collections.unmodifiableList(literals);
 		}
 		synchronized (FillType.names) {
@@ -212,6 +230,9 @@ public enum FillType {
 			FillType.names.add("MARKET");
 			FillType.names.add("TAKE_PROFIT");
 			FillType.names.add("TARGET_LIMIT");
+			FillType.names.add("MULTI_LEG");
+			FillType.names.add("TIMED");
+			FillType.names.add("TIMED_EXIT");
 			FillType.names = Collections.unmodifiableList(names);
 		}
 	}

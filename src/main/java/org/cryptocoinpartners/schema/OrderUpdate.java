@@ -29,262 +29,311 @@ import com.google.inject.assistedinject.AssistedInject;
 
 /**
  * When Orders change OrderState, this Event is published
- * 
+ *
  * @author Tim Olson
  */
-
 @SuppressWarnings("UnusedDeclaration")
 @Entity
-//@IdClass(OrderUpdateId.class)
-//@Table(indexes = { @Index(columnList = "state") })
-//@IdClass(OrderUpdateID.class)
-//@Table(name = "\"Order\"",
-@Table(name = "order_update", indexes = { @Index(columnList = "id"), @Index(columnList = "sequence"), @Index(columnList = "state"),
-		@Index(columnList = "`order`") })
-//@NamedQueries({ @NamedQuery(name = "orderUpdate.findTriggerOrders", query = "select ou from OrderUpdate ou where  ou.sequence = (select max(ouu.sequence) from OrderUpdate ouu where ouu.order = ou.order) and state=?1") })
+// @IdClass(OrderUpdateId.class)
+// @Table(indexes = { @Index(columnList = "state") })
+// @IdClass(OrderUpdateID.class)
+// @Table(name = "\"Order\"",
+@Table(
+    name = "order_update",
+    indexes = {
+      @Index(columnList = "id"),
+      @Index(columnList = "sequence"),
+      @Index(columnList = "state"),
+      @Index(columnList = "`order`")
+    })
+// @NamedQueries({ @NamedQuery(name = "orderUpdate.findTriggerOrders", query = "select ou from
+// OrderUpdate ou where  ou.sequence = (select max(ouu.sequence) from OrderUpdate ouu where
+// ouu.order = ou.order) and state=?1") })
 //
-//@NamedEntityGraphs({
-//@NamedEntityGraph(name = "orderUpdateWithChildOrders", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "order") })
-////, subgraphs = { @NamedSubgraph(name = "ordersWithChildOrders", attributeNodes = { @NamedAttributeNode("parentFill") }) })
-// @NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "order"))
-//,@NamedSubgraph(name = "order", attributeNodes = @NamedAttributeNode("order")) 
-//})
+// @NamedEntityGraphs({
+// @NamedEntityGraph(name = "orderUpdateWithChildOrders", attributeNodes = {
+// @NamedAttributeNode(value = "order", subgraph = "order") })
+//// , subgraphs = { @NamedSubgraph(name = "ordersWithChildOrders", attributeNodes = {
+// @NamedAttributeNode("parentFill") }) })
+// @NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph =
+// "order"))
+// ,@NamedSubgraph(name = "order", attributeNodes = @NamedAttributeNode("order"))
+// })
 @NamedQueries({
-		@NamedQuery(name = "orderUpdate.findOrdersByState", query = "select ou from OrderUpdate ou where  ou.state = (select max(ouu.state) from OrderUpdate ouu where ouu.order = ou.order) and state in (?1) and  ou.order.portfolio =?2"),
-		@NamedQuery(name = "orderUpdate.findStateByOrder", query = "select ou from OrderUpdate ou where  ou.state = (select max(ouu.state) from OrderUpdate ouu where ouu.order = ou.order) and order in (?1)") })
+  @NamedQuery(
+      name = "orderUpdate.findOrdersByState",
+      query =
+          "select ou from OrderUpdate ou where  ou.state = (select max(ouu.state) from OrderUpdate ouu where ouu.order = ou.order) and state in (?1) and  ou.order.portfolio =?2"),
+  @NamedQuery(
+      name = "orderUpdate.findStateByOrder",
+      query =
+          "select ou from OrderUpdate ou where  ou.state = (select max(ouu.state) from OrderUpdate ouu where ouu.order = ou.order) and order in (?1)")
+})
 @NamedEntityGraphs({
-		// @NamedEntityGraph(name = "orderUpdateWithTransactions", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithTransactions") }, subgraphs = { @NamedSubgraph(name = "orderWithTransactions", attributeNodes = { @NamedAttributeNode("transactions") }) }),
-		// @NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithFills") }, subgraphs = { @NamedSubgraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
-		//@NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode("order.fills") })
-		@NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithFills") }, subgraphs = {
-				@NamedSubgraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
+  // @NamedEntityGraph(name = "orderUpdateWithTransactions", attributeNodes = {
+  // @NamedAttributeNode(value = "order", subgraph = "orderWithTransactions") }, subgraphs = {
+  // @NamedSubgraph(name = "orderWithTransactions", attributeNodes = {
+  // @NamedAttributeNode("transactions") }) }),
+  // @NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value =
+  // "order", subgraph = "orderWithFills") }, subgraphs = { @NamedSubgraph(name = "orderWithFills",
+  // attributeNodes = { @NamedAttributeNode("fills") }) })
+  // @NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = {
+  // @NamedAttributeNode("order.fills") })
+  @NamedEntityGraph(
+      name = "orderUpdateWithFills",
+      attributeNodes = {@NamedAttributeNode(value = "order", subgraph = "orderWithFills")},
+      subgraphs = {
+        @NamedSubgraph(
+            name = "orderWithFills",
+            attributeNodes = {@NamedAttributeNode("fills")})
+      })
 
-		//attributeNodes = @NamedAttributeNode(value = "items", subgraph = "items"), 
-		//subgraphs = @NamedSubgraph(name = "items", attributeNodes = @NamedAttributeNode("product")))
-		//  @NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value = "order", subgraph = "orderWithFills") }, subgraphs = { @NamedSubgraph(name = "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
+  // attributeNodes = @NamedAttributeNode(value = "items", subgraph = "items"),
+  // subgraphs = @NamedSubgraph(name = "items", attributeNodes = @NamedAttributeNode("product")))
+  //  @NamedEntityGraph(name = "orderUpdateWithFills", attributeNodes = { @NamedAttributeNode(value
+  // = "order", subgraph = "orderWithFills") }, subgraphs = { @NamedSubgraph(name =
+  // "orderWithFills", attributeNodes = { @NamedAttributeNode("fills") }) })
 
-		// @NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph = "order"))
-		//,@NamedSubgraph(name = "order", attributeNodes = @NamedAttributeNode("order")) 
+  // @NamedSubgraph(name = "fills", attributeNodes = @NamedAttributeNode(value = "fills", subgraph =
+  // "order"))
+  // ,@NamedSubgraph(name = "order", attributeNodes = @NamedAttributeNode("order"))
 })
 public class OrderUpdate extends Event {
 
-	//  @GeneratedValue(strategy = GenerationType.TABLE, generator = "tab")
+  //  @GeneratedValue(strategy = GenerationType.TABLE, generator = "tab")
 
-	//   @GeneratedValue(strategy = GenerationType.IDENTITY)
-	//  @Column(name = "id", unique = true, nullable = false, insertable = false, updatable = false)
+  //   @GeneratedValue(strategy = GenerationType.IDENTITY)
+  //  @Column(name = "id", unique = true, nullable = false, insertable = false, updatable = false)
 
-	// @Column(columnDefinition = "integer auto_increment")
-	//@GeneratedValue(strategy = IDENTITY)
-	//@Column(name = "columnName", unique = true, nullable = false, insertable = false, updatable = false)
-	// columnDefinition = "integer auto_increment", 
-	//@GeneratedValue(strategy = GenerationType.IDENTITY)
-	// @GeneratedValue(strategy = GenerationType.SEQUENCE)
-	// @Id
-	// @Column(columnDefinition = "integer auto_increment", name = "seq", unique = true, nullable = false, insertable = false, updatable = false)
-	@Id
-	@Column(columnDefinition = "integer auto_increment")
-	// @Transient
-	public Long getSequence() {
-		return sequence;
-	}
+  // @Column(columnDefinition = "integer auto_increment")
+  // @GeneratedValue(strategy = IDENTITY)
+  // @Column(name = "columnName", unique = true, nullable = false, insertable = false, updatable =
+  // false)
+  // columnDefinition = "integer auto_increment",
+  // @GeneratedValue(strategy = GenerationType.IDENTITY)
+  // @GeneratedValue(strategy = GenerationType.SEQUENCE)
+  // @Id
+  // @Column(columnDefinition = "integer auto_increment", name = "seq", unique = true, nullable =
+  // false, insertable = false, updatable = false)
+  @Id
+  @Column(columnDefinition = "integer auto_increment")
+  // @Transient
+  public Long getSequence() {
+    return sequence;
+  }
 
-	// @PrePersist
-	@Override
-	public synchronized void prePersist() {
-		if (getDao() != null) {
+  // @PrePersist
+  @Override
+  public synchronized void prePersist() {
+    if (getDao() != null) {
 
-			EntityBase dbOrder = null;
-			try {
-				dbOrder = getDao().find(getOrder().getClass(), getOrder().getId());
-				if (dbOrder != null) {
-					getOrder().setVersion(dbOrder.getVersion());
-					if (getOrder().getRevision() > dbOrder.getRevision()) {
-						getOrder().setPeristanceAction(PersistanceAction.MERGE);
-						getDao().merge(getOrder());
-					}
-				} else {
-					getOrder().setPeristanceAction(PersistanceAction.NEW);
-					getDao().persist(getOrder());
-				}
-			} catch (Exception | Error ex) {
-				if (dbOrder != null)
-					if (getOrder().getRevision() > dbOrder.getRevision()) {
-						getOrder().setPeristanceAction(PersistanceAction.MERGE);
-						getDao().merge(getOrder());
-					} else {
-						getOrder().setPeristanceAction(PersistanceAction.NEW);
-						getDao().persist(getOrder());
-					}
-			}
+      EntityBase dbOrder = null;
+      try {
+        dbOrder =
+            getOrder().getId() == null
+                ? null
+                : getDao().find(getOrder().getClass(), getOrder().getId());
+        if (dbOrder != null) {
+          getOrder().setVersion(dbOrder.getVersion());
+          if (getOrder().getRevision() > dbOrder.getRevision()) {
+            getOrder().setPeristanceAction(PersistanceAction.MERGE);
+            getDao().merge(getOrder());
+          }
+        } else {
+          getOrder().setPeristanceAction(PersistanceAction.NEW);
+          getDao().persist(getOrder());
+        }
+      } catch (Exception | Error ex) {
+        if (dbOrder != null)
+          if (getOrder().getRevision() > dbOrder.getRevision()) {
+            getOrder().setPeristanceAction(PersistanceAction.MERGE);
+            getDao().merge(getOrder());
+          } else {
+            getOrder().setPeristanceAction(PersistanceAction.NEW);
+            getDao().persist(getOrder());
+          }
+      }
+    }
+  }
 
-		}
-	}
+  // @Id
+  // @Override
+  // @ManyToOne
+  //  @Override
+  // @Transient
+  // public UUID getId() {
+  //    return id;
+  // }
 
-	//@Id
-	//@Override
-	//@ManyToOne
-	//  @Override
-	// @Transient
-	// public UUID getId() {
-	//    return id;
-	//}
+  // @ManyToOne
+  // @JoinColumn(name = "`order`")
+  //  @Transient
+  // Ordres added to state mape before placned on exchange.
+  public @ManyToOne
+  // (cascade = { CascadeType.MERGE })
+  @JoinColumn(name = "`order`") Order getOrder() {
+    return order;
+  }
 
-	// @ManyToOne
-	// @JoinColumn(name = "`order`")
-	//  @Transient
-	//Ordres added to state mape before placned on exchange.
-	public @ManyToOne
-	//(cascade = { CascadeType.MERGE })
-	@JoinColumn(name = "`order`") Order getOrder() {
-		return order;
-	}
+  @Override
+  @Transient
+  public EntityBase getParent() {
 
-	@Override
-	@Transient
-	public EntityBase getParent() {
+    return getOrder();
+  }
 
-		return getOrder();
-	}
+  public OrderState getLastState() {
+    return lastState;
+  }
 
-	public OrderState getLastState() {
-		return lastState;
-	}
+  public OrderState getState() {
+    return state;
+  }
 
-	public OrderState getState() {
-		return state;
-	}
+  @AssistedInject
+  public OrderUpdate(
+      @Assisted Instant time,
+      @Assisted Order order,
+      @Assisted("orderUpdateLastState") OrderState lastState,
+      @Assisted("orderUpdateState") OrderState state) {
+    super(time);
+    this.order = order;
+    this.lastState = lastState;
+    this.state = state;
+  }
 
-	@AssistedInject
-	public OrderUpdate(@Assisted Instant time, @Assisted Order order, @Assisted("orderUpdateLastState") OrderState lastState,
-			@Assisted("orderUpdateState") OrderState state) {
-		super(time);
-		this.order = order;
-		this.lastState = lastState;
-		this.state = state;
+  @Override
+  public synchronized EntityBase refresh() {
+    return orderUpdateDao.refresh(this);
+  }
 
-	}
+  @Override
+  public synchronized void persit() {
 
-	@Override
-	public synchronized EntityBase refresh() {
-		return orderUpdateDao.refresh(this);
-	}
+    try {
+      log.debug(
+          this.getClass().getSimpleName()
+              + " - Persist : Persit of Order Update "
+              + this.getUuid()
+              + " called from class "
+              + Thread.currentThread().getStackTrace()[2]);
 
-	@Override
-	public synchronized void persit() {
+      this.setPeristanceAction(PersistanceAction.NEW);
+      this.setRevision(this.getRevision() + 1);
 
-		try {
-			log.debug(this.getClass().getSimpleName() + " - Persist : Persit of Order Update " + this.getUuid() + " called from class "
-					+ Thread.currentThread().getStackTrace()[2]);
+      orderUpdateDao.persist(this);
 
-			this.setPeristanceAction(PersistanceAction.NEW);
-			this.setRevision(this.getRevision() + 1);
+      // if (duplicate == null || duplicate.isEmpty())
+    } catch (Exception | Error ex) {
 
-			orderUpdateDao.persist(this);
+      System.out.println(
+          "Unable to perform request in "
+              + this.getClass().getSimpleName()
+              + ":persist, full stack trace follows:"
+              + ex);
+      // ex.printStackTrace();
 
-			//if (duplicate == null || duplicate.isEmpty())
-		} catch (Exception | Error ex) {
+    }
 
-			System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":persist, full stack trace follows:" + ex);
-			// ex.printStackTrace();
+    //  try {
 
-		}
+  }
 
-		//  try {
+  // JPA
+  protected OrderUpdate() {}
 
-	}
+  public synchronized void setOrder(Order order) {
+    this.order = order;
+  }
 
-	// JPA
-	protected OrderUpdate() {
-	}
+  protected synchronized void setSequence(Long sequence) {
+    this.sequence = sequence;
+  }
 
-	public synchronized void setOrder(Order order) {
-		this.order = order;
-	}
+  @Override
+  protected synchronized void setUuid(UUID uuid) {
+    this.uuid = uuid;
+  }
 
-	protected synchronized void setSequence(Long sequence) {
-		this.sequence = sequence;
-	}
+  protected synchronized void setLastState(OrderState lastState) {
+    this.lastState = lastState;
+  }
 
-	@Override
-	protected synchronized void setUuid(UUID uuid) {
-		this.uuid = uuid;
-	}
+  protected synchronized void setState(OrderState state) {
+    this.state = state;
+  }
 
-	protected synchronized void setLastState(OrderState lastState) {
-		this.lastState = lastState;
-	}
+  @Inject protected transient OrderUpdateDao orderUpdateDao;
 
-	protected synchronized void setState(OrderState state) {
-		this.state = state;
-	}
+  private Order order;
+  private Long sequence;
+  private OrderState lastState;
+  private OrderState state;
 
-	@Inject
-	protected transient OrderUpdateDao orderUpdateDao;
+  @Override
+  public synchronized void detach() {
+    orderUpdateDao.detach(this);
+    // TODO Auto-generated method stub
 
-	private Order order;
-	private Long sequence;
-	private OrderState lastState;
-	private OrderState state;
+  }
 
-	@Override
-	public synchronized void detach() {
-		orderUpdateDao.detach(this);
-		// TODO Auto-generated method stub
+  @Override
+  public synchronized void merge() {
 
-	}
+    try {
+      log.debug(
+          this.getClass().getSimpleName()
+              + " - Merge : Merge of Order Update "
+              + this.getUuid()
+              + " called from class "
+              + Thread.currentThread().getStackTrace()[2]);
 
-	@Override
-	public synchronized void merge() {
+      this.setPeristanceAction(PersistanceAction.NEW);
+      this.setRevision(this.getRevision() + 1);
 
-		try {
-			log.debug(this.getClass().getSimpleName() + " - Merge : Merge of Order Update " + this.getUuid() + " called from class "
-					+ Thread.currentThread().getStackTrace()[2]);
+      orderUpdateDao.merge(this);
 
-			this.setPeristanceAction(PersistanceAction.NEW);
-			this.setRevision(this.getRevision() + 1);
+      // if (duplicate == null || duplicate.isEmpty())
+    } catch (Exception | Error ex) {
 
-			orderUpdateDao.merge(this);
+      System.out.println(
+          "Unable to perform request in "
+              + this.getClass().getSimpleName()
+              + ":merge, full stack trace follows:"
+              + ex);
+      // ex.printStackTrace();
 
-			//if (duplicate == null || duplicate.isEmpty())
-		} catch (Exception | Error ex) {
+    }
+  }
 
-			System.out.println("Unable to perform request in " + this.getClass().getSimpleName() + ":merge, full stack trace follows:" + ex);
-			// ex.printStackTrace();
+  @Override
+  @Transient
+  public Dao getDao() {
+    return orderUpdateDao;
+  }
 
-		}
-	}
+  @Override
+  @Transient
+  public synchronized void setDao(Dao dao) {
+    orderUpdateDao = (OrderUpdateDao) dao;
+    // TODO Auto-generated method stub
+    //  return null;
+  }
 
-	@Override
-	@Transient
-	public Dao getDao() {
-		return orderUpdateDao;
-	}
+  @Override
+  public synchronized void delete() {
+    // TODO Auto-generated method stub
 
-	@Override
-	@Transient
-	public synchronized void setDao(Dao dao) {
-		orderUpdateDao = (OrderUpdateDao) dao;
-		// TODO Auto-generated method stub
-		//  return null;
-	}
+  }
 
-	@Override
-	public synchronized void delete() {
-		// TODO Auto-generated method stub
+  @Override
+  public synchronized void postPersist() {
+    // TODO Auto-generated method stub
 
-	}
+  }
 
-	@Override
-	public synchronized void postPersist() {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void persitParents() {
-		if (getOrder() != null)
-			getDao().merge(getOrder());
-
-	}
-
+  @Override
+  public void persitParents() {
+    if (getOrder() != null) getDao().merge(getOrder());
+  }
 }

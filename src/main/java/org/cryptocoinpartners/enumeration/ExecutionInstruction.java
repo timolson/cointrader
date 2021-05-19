@@ -14,136 +14,139 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 
- */
+/** */
 public enum ExecutionInstruction {
 
-    /** Order add current order to book */
-    MAKER("MAKER"),
-    /** Order takes current order of book */
-    TAKER("TAKER"),
-    /** Manually created order that should not be placed on exchange order of book */
-    MANUAL("MANUAL"),
-    /** Order adds to current order book then after ttl period it takes from current order book */
-    MAKERTOTAKER("MAKERTOTAKER");
+  /** Order add current order to book */
+  MAKER("MAKER"),
+  /** Order takes current order of book */
+  TAKER("TAKER"),
+  /** Manually created order that should not be placed on exchange order of book */
+  MANUAL("MANUAL"),
+  /** Order adds to current order book then after ttl period it takes from current order book */
+  MAKERTOTAKER("MAKERTOTAKER"),
+  /** Order adjusted to keep differnentail with a fill */
+  PEGTOFILL("PEGTOFILL"),
+  /** Order adjusted to keep differnentail with a fill */
+  PEGTOBOOK("PEGTOBOOK");
 
-    private final String enumValue;
+  private final String enumValue;
 
-    /**
-     * The constructor with enumeration literal value allowing
-     * super classes to access it.
-     */
-    private ExecutionInstruction(String value) {
-        this.enumValue = value;
+  /** The constructor with enumeration literal value allowing super classes to access it. */
+  private ExecutionInstruction(String value) {
+    this.enumValue = value;
+  }
+
+  /**
+   * Retrieves an instance of Status from <code>its name</code>.
+   *
+   * @param name the name to create the Status from.
+   * @return The enumeration literal named after the 'name' argument
+   */
+  public static ExecutionInstruction fromString(String name) {
+    return ExecutionInstruction.valueOf(name);
+  }
+
+  /**
+   * Returns an enumeration literal String <code>value</code>. Required by JAXB2 enumeration
+   * implementation
+   *
+   * @return String with corresponding value
+   */
+  public String value() {
+    return this.enumValue;
+  }
+
+  /**
+   * Returns an instance of Status from String <code>value</code>. Required by JAXB2 enumeration
+   * implementation
+   *
+   * @param value the value to create the Status from.
+   * @return static Enumeration with corresponding value
+   */
+  public static ExecutionInstruction fromValue(String value) {
+    for (ExecutionInstruction enumName : ExecutionInstruction.values()) {
+      if (enumName.getValue().equals(value)) {
+        return enumName;
+      }
     }
+    throw new IllegalArgumentException("Status.fromValue(" + value + ')');
+  }
 
-    /**
-     * Retrieves an instance of Status from <code>its name</code>.
-     *
-     * @param name the name to create the Status from.
-     * @return The enumeration literal named after the 'name' argument
-     */
-    public static ExecutionInstruction fromString(String name) {
-        return ExecutionInstruction.valueOf(name);
+  /**
+   * Gets the underlying value of this type safe enumeration. This method is necessary to comply
+   * with DaoBase implementation.
+   *
+   * @return The name of this literal.
+   */
+  public String getValue() {
+    return this.enumValue;
+  }
+
+  /**
+   * Returns an unmodifiable list containing the literals that are known by this enumeration.
+   *
+   * @return A List containing the actual literals defined by this enumeration, this list can not be
+   *     modified.
+   */
+  public static List<String> literals() {
+    return ExecutionInstruction.literals;
+  }
+
+  /**
+   * Returns an unmodifiable list containing the names of the literals that are known by this
+   * enumeration.
+   *
+   * @return A List containing the actual names of the literals defined by this enumeration, this
+   *     list can not be modified.
+   */
+  public static List<String> names() {
+    return ExecutionInstruction.names;
+  }
+
+  private static Map<String, ExecutionInstruction> values =
+      new LinkedHashMap<String, ExecutionInstruction>(7, 1);
+  private static List<String> literals = new ArrayList<String>(7);
+  private static List<String> names = new ArrayList<String>(7);
+  private static List<ExecutionInstruction> valueList = new ArrayList<ExecutionInstruction>(7);
+
+  /** Initializes the values. */
+  static {
+    synchronized (ExecutionInstruction.values) {
+      ExecutionInstruction.values.put(MAKER.enumValue, MAKER);
+      ExecutionInstruction.values.put(TAKER.enumValue, TAKER);
+      ExecutionInstruction.values.put(MANUAL.enumValue, MANUAL);
+      ExecutionInstruction.values.put(MAKERTOTAKER.enumValue, MAKERTOTAKER);
+      ExecutionInstruction.values.put(PEGTOFILL.enumValue, PEGTOFILL);
+      ExecutionInstruction.values.put(PEGTOBOOK.enumValue, PEGTOBOOK);
     }
-
-    /**
-     * Returns an enumeration literal String <code>value</code>.
-     * Required by JAXB2 enumeration implementation
-     *
-     * @return String with corresponding value
-     */
-    public String value() {
-        return this.enumValue;
+    synchronized (ExecutionInstruction.valueList) {
+      ExecutionInstruction.valueList.add(MAKER);
+      ExecutionInstruction.valueList.add(TAKER);
+      ExecutionInstruction.valueList.add(MANUAL);
+      ExecutionInstruction.valueList.add(MAKERTOTAKER);
+      ExecutionInstruction.valueList.add(PEGTOFILL);
+      ExecutionInstruction.valueList.add(PEGTOBOOK);
+      ExecutionInstruction.valueList = Collections.unmodifiableList(valueList);
     }
-
-    /**
-     * Returns an instance of Status from String <code>value</code>.
-     * Required by JAXB2 enumeration implementation
-     *
-     * @param value the value to create the Status from.
-     * @return static Enumeration with corresponding value
-     */
-    public static ExecutionInstruction fromValue(String value) {
-        for (ExecutionInstruction enumName : ExecutionInstruction.values()) {
-            if (enumName.getValue().equals(value)) {
-                return enumName;
-            }
-        }
-        throw new IllegalArgumentException("Status.fromValue(" + value + ')');
+    synchronized (ExecutionInstruction.literals) {
+      ExecutionInstruction.literals.add(MAKER.enumValue);
+      ExecutionInstruction.literals.add(TAKER.enumValue);
+      ExecutionInstruction.literals.add(MANUAL.enumValue);
+      ExecutionInstruction.literals.add(MAKERTOTAKER.enumValue);
+      ExecutionInstruction.literals.add(PEGTOFILL.enumValue);
+      ExecutionInstruction.literals.add(PEGTOBOOK.enumValue);
+      ExecutionInstruction.literals = Collections.unmodifiableList(literals);
     }
-
-    /**
-     * Gets the underlying value of this type safe enumeration.
-     * This method is necessary to comply with DaoBase implementation.
-     * @return The name of this literal.
-     */
-    public String getValue() {
-        return this.enumValue;
+    synchronized (ExecutionInstruction.names) {
+      ExecutionInstruction.names.add("MAKER");
+      ExecutionInstruction.names.add("TAKER");
+      ExecutionInstruction.names.add("MANUAL");
+      ExecutionInstruction.names.add("MAKERTOTAKER");
+      ExecutionInstruction.names.add("PEGTOFILL");
+      ExecutionInstruction.names.add("PEGTOBOOK");
+      ExecutionInstruction.names = Collections.unmodifiableList(names);
     }
-
-    /**
-     * Returns an unmodifiable list containing the literals that are known by this enumeration.
-     *
-     * @return A List containing the actual literals defined by this enumeration, this list
-     *         can not be modified.
-     */
-    public static List<String> literals() {
-        return ExecutionInstruction.literals;
-    }
-
-    /**
-     * Returns an unmodifiable list containing the names of the literals that are known
-     * by this enumeration.
-     *
-     * @return A List containing the actual names of the literals defined by this
-     *         enumeration, this list can not be modified.
-     */
-    public static List<String> names() {
-        return ExecutionInstruction.names;
-    }
-
-    private static Map<String, ExecutionInstruction> values = new LinkedHashMap<String, ExecutionInstruction>(7, 1);
-    private static List<String> literals = new ArrayList<String>(7);
-    private static List<String> names = new ArrayList<String>(7);
-    private static List<ExecutionInstruction> valueList = new ArrayList<ExecutionInstruction>(7);
-
-    /**
-     * Initializes the values.
-     */
-    static {
-        synchronized (ExecutionInstruction.values) {
-            ExecutionInstruction.values.put(MAKER.enumValue, MAKER);
-            ExecutionInstruction.values.put(TAKER.enumValue, TAKER);
-            ExecutionInstruction.values.put(MANUAL.enumValue, MANUAL);
-            ExecutionInstruction.values.put(MAKERTOTAKER.enumValue, MAKERTOTAKER);
-
-        }
-        synchronized (ExecutionInstruction.valueList) {
-            ExecutionInstruction.valueList.add(MAKER);
-            ExecutionInstruction.valueList.add(TAKER);
-            ExecutionInstruction.valueList.add(MANUAL);
-            ExecutionInstruction.valueList.add(MAKERTOTAKER);
-
-            ExecutionInstruction.valueList = Collections.unmodifiableList(valueList);
-        }
-        synchronized (ExecutionInstruction.literals) {
-            ExecutionInstruction.literals.add(MAKER.enumValue);
-            ExecutionInstruction.literals.add(TAKER.enumValue);
-            ExecutionInstruction.literals.add(MANUAL.enumValue);
-            ExecutionInstruction.literals.add(MAKERTOTAKER.enumValue);
-
-            ExecutionInstruction.literals = Collections.unmodifiableList(literals);
-        }
-        synchronized (ExecutionInstruction.names) {
-            ExecutionInstruction.names.add("MAKER");
-            ExecutionInstruction.names.add("TAKER");
-            ExecutionInstruction.names.add("MANUAL");
-            ExecutionInstruction.names.add("MAKERTOTAKER");
-
-            ExecutionInstruction.names = Collections.unmodifiableList(names);
-        }
-    }
-    // type-safe-enumeration-object java merge-point
+  }
+  // type-safe-enumeration-object java merge-point
 }
