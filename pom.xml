@@ -21,7 +21,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<xchange.version>4.4.2</xchange.version>
 		<slf4j-api.version>1.7.5</slf4j-api.version>
-		<hibernate.version>5.2.18.Final</hibernate.version>
+		<hibernate.version>5.4.24.Final</hibernate.version>
 		<antlr.version>4.2.2</antlr.version>
 	</properties>
 
